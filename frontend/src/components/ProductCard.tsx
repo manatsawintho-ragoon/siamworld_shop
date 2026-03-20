@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { api, getToken } from '@/lib/api';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Product {
   id: number;
@@ -49,6 +50,7 @@ export default function ProductCard({ product, servers }: { product: Product; se
       });
       setResult({ success: true, message: (data.message as string) || 'ซื้อสำเร็จ! ไอเทมถูกส่งเข้าเกมแล้ว' });
       await refresh();
+      setTimeout(() => setShowBuy(false), 2000);
     } catch (err: unknown) {
       setResult({ success: false, message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด' });
     } finally {
@@ -58,103 +60,121 @@ export default function ProductCard({ product, servers }: { product: Product; se
 
   return (
     <>
-      <div className="card overflow-hidden group hover:shadow-theme-md transition-all duration-300 hover:-translate-y-0.5">
-        <div className="relative h-36 bg-gray-100 dark:bg-gray-700 overflow-hidden">
-          {imgSrc ? (
-            <img src={imgSrc} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-300 dark:text-gray-500">
-              <i className="fas fa-cube text-3xl"></i>
-            </div>
-          )}
-          {discount > 0 && (
-            <span className="absolute top-2 right-2 bg-error-500 text-white px-2 py-0.5 rounded-lg text-xs font-bold shadow-sm">
-              -{discount}%
-            </span>
-          )}
-          {product.category_name && (
-            <span className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm text-white px-2.5 py-0.5 rounded-lg text-xs font-medium">
-              {product.category_name}
-            </span>
-          )}
-        </div>
-        <div className="p-3.5">
-          <h3 className="font-semibold text-sm mb-1 truncate dark:text-white">{product.name}</h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 line-clamp-2">{product.description}</p>
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="font-bold text-gray-900 dark:text-white">{product.price.toLocaleString()} ฿</span>
-              {discount > 0 && (
-                <span className="text-xs text-gray-400 line-through ml-1.5">{product.original_price?.toLocaleString()}</span>
+      <article onClick={() => setShowBuy(true)} className="group relative block cursor-pointer transition-transform hover:-translate-y-1">
+        {/* Minecraft Slot Style Box */}
+        <div className="bg-[#8b8b8b] p-1 rounded-sm shadow-[inset_-2px_-2px_0_rgba(0,0,0,0.5),inset_2px_2px_0_rgba(255,255,255,0.5)]">
+          <div className="bg-[#373737] relative aspect-square shadow-[inset_2px_2px_0_rgba(0,0,0,0.8),inset_-2px_-2px_0_rgba(255,255,255,0.2)] overflow-hidden flex flex-col justify-between group-hover:bg-[#4a4a4a] transition-colors">
+            
+            {/* Image Center */}
+            <div className="flex-1 flex items-center justify-center p-4">
+              {imgSrc ? (
+                <img src={imgSrc} alt={product.name} className="w-20 h-20 object-contain drop-shadow-[2px_2px_0_rgba(0,0,0,0.8)] group-hover:scale-110 transition-transform pixelated" style={{ imageRendering: 'pixelated' }} />
+              ) : (
+                <i className="fas fa-cube text-4xl text-white/30 drop-shadow-md" aria-hidden="true"></i>
               )}
             </div>
-            <button
-              onClick={() => user ? setShowBuy(true) : undefined}
-              disabled={!user}
-              className={`text-xs px-3.5 py-1.5 rounded-lg font-medium transition-all duration-200 ${
-                user
-                  ? 'bg-brand-500 text-white hover:bg-brand-600 shadow-theme-xs hover:shadow-theme-sm'
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500'
-              }`}
+
+            {/* Bottom Info Bar inside slot */}
+            <div className="bg-black/40 px-2 py-1 flex items-center justify-between text-[10px] text-white font-bold font-mono shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
+              <span className="truncate mr-1 drop-shadow-md">{product.name}</span>
+              <span className="text-warning drop-shadow-md whitespace-nowrap">
+                {product.price.toLocaleString()} ฿
+              </span>
+            </div>
+
+            {discount > 0 && (
+              <span className="absolute top-1 right-1 bg-error text-white px-1.5 py-0.5 text-[9px] font-black shadow-md border border-red-800">
+                -{discount}%
+              </span>
+            )}
+          </div>
+        </div>
+      </article>
+
+      {/* Buy Confirmation Modal - Classic Window Style */}
+      <AnimatePresence>
+        {showBuy && (
+          <div className="modal-overlay" onClick={() => !buying && setShowBuy(false)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className="w-full max-w-sm bg-[#c6c6c6] border-[3px] border-white border-b-[#555] border-r-[#555] p-1 font-mono"
+              onClick={(e) => e.stopPropagation()}
             >
-              ซื้อ
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {showBuy && (
-        <div className="modal-overlay" onClick={() => !buying && setShowBuy(false)}>
-          <div className="modal-content max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <div className="h-1 bg-gradient-to-r from-brand-500 to-brand-400 rounded-t-2xl"></div>
-            <div className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold dark:text-white">ยืนยันการซื้อ</h3>
-                <button onClick={() => !buying && setShowBuy(false)} className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-300 transition-colors">
-                  <i className="fas fa-xmark"></i>
+              {/* Header */}
+              <div className="bg-[#000080] text-white px-2 py-1 flex justify-between items-center text-xs font-bold font-sans">
+                <span>ยืนยันการทำรายการ</span>
+                <button onClick={() => !buying && setShowBuy(false)} className="bg-[#c6c6c6] text-black w-4 h-4 flex items-center justify-center border-t-white border-l-white border-b-[#555] border-r-[#555] border active:border-t-[#555] active:border-l-[#555] active:border-b-white active:border-r-white font-bold leading-none pb-0.5 focus:outline-none">
+                  x
                 </button>
               </div>
 
-              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3.5 mb-4">
-                <p className="font-semibold text-sm dark:text-white">{product.name}</p>
-                <p className="font-bold text-brand-600 dark:text-brand-400">{product.price.toLocaleString()} ฿</p>
-              </div>
-
-              {servers.length > 0 && (
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">เลือกเซิร์ฟเวอร์</label>
-                  <select value={selectedServer} onChange={(e) => setSelectedServer(Number(e.target.value))} className="input">
-                    {servers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
+              <div className="p-4 flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-[#373737] p-2 flex items-center justify-center shadow-[inset_2px_2px_0_rgba(0,0,0,0.8),inset_-2px_-2px_0_rgba(255,255,255,0.2)] mb-3">
+                  {imgSrc ? (
+                    <img src={imgSrc} alt="item" className="w-12 h-12 object-contain pixelated" style={{ imageRendering: 'pixelated' }} />
+                  ) : <i className="fas fa-cube text-white/30 text-2xl"></i>}
                 </div>
-              )}
-
-              <div className="bg-warning-50 dark:bg-warning-500/10 border border-warning-200 dark:border-warning-500/20 rounded-lg p-3 mb-4 text-xs text-warning-700 dark:text-warning-400">
-                <i className="fas fa-exclamation-triangle mr-1"></i>
-                คุณต้องออนไลน์อยู่ในเกมขณะซื้อ ไม่งั้นจะไม่สามารถส่งของได้
-              </div>
-
-              {result && (
-                <div className={`rounded-lg p-3 mb-4 text-sm flex items-center gap-2 ${
-                  result.success
-                    ? 'bg-success-50 dark:bg-success-500/10 border border-success-200 dark:border-success-500/20 text-success-700 dark:text-success-400'
-                    : 'bg-error-50 dark:bg-error-500/10 border border-error-200 dark:border-error-500/20 text-error-700 dark:text-error-400'
-                }`}>
-                  <i className={`fas ${result.success ? 'fa-check-circle' : 'fa-exclamation-circle'}`}></i>
-                  {result.message}
+                
+                <h3 className="font-bold text-black text-sm mb-1">{product.name}</h3>
+                <p className="text-xs text-black/70 mb-3">{product.description}</p>
+                <div className="text-sm font-black text-amber-700 bg-white/50 px-3 py-1 border border-black/10 shadow-inner mb-4">
+                  ราคา {product.price.toLocaleString()} ฿
                 </div>
-              )}
 
-              <div className="flex gap-2">
-                <button onClick={() => setShowBuy(false)} disabled={buying} className="btn-ghost flex-1 justify-center">ยกเลิก</button>
-                <button onClick={handleBuy} disabled={buying} className="btn-primary flex-1 justify-center">
-                  {buying ? 'กำลังซื้อ...' : 'ยืนยันซื้อ'}
-                </button>
+                {!user ? (
+                  <div className="text-xs text-red-600 font-bold mb-4">คุณต้องเข้าสู่ระบบก่อนทำรายการ</div>
+                ) : (
+                  <>
+                    {servers.length > 0 && (
+                      <div className="w-full mb-3 text-left">
+                        <label className="block text-[10px] font-bold text-black mb-1">เลือกเซิร์ฟเวอร์ปลายทาง:</label>
+                        <select 
+                          value={selectedServer} 
+                          onChange={(e) => setSelectedServer(Number(e.target.value))} 
+                          className="w-full p-1.5 text-xs bg-white border-t-[#555] border-l-[#555] border-b-white border-r-white border text-black focus:outline-none"
+                        >
+                          {servers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                      </div>
+                    )}
+                    <div className="text-[10px] text-red-600 font-bold mb-4 text-left w-full border border-red-300 bg-red-50 p-1.5">
+                      ⚠️ แจ้งเตือน: กรุณาออนไลน์ในเซิร์ฟเวอร์ก่อนกดซื้อ
+                    </div>
+                  </>
+                )}
+
+                {result && (
+                  <div className={`w-full text-xs font-bold p-2 mb-3 border ${result.success ? 'bg-green-100 text-green-800 border-green-400' : 'bg-red-100 text-red-800 border-red-400'}`}>
+                    {result.message}
+                  </div>
+                )}
+
+                <div className="flex gap-2 w-full justify-center">
+                  {user && (
+                    <button 
+                      onClick={handleBuy} 
+                      disabled={buying} 
+                      className="px-6 py-1.5 bg-[#c6c6c6] text-black text-xs font-bold border-t-white border-l-white border-b-[#555] border-r-[#555] border-[2px] active:border-t-[#555] active:border-l-[#555] active:border-b-white active:border-r-white outline-none focus:outline-none"
+                    >
+                      {buying ? 'กำลังส่งข้อมูล...' : 'ซื้อไอเทม'}
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => setShowBuy(false)} 
+                    disabled={buying} 
+                    className="px-6 py-1.5 bg-[#c6c6c6] text-black text-xs font-bold border-t-white border-l-white border-b-[#555] border-r-[#555] border-[2px] active:border-t-[#555] active:border-l-[#555] active:border-b-white active:border-r-white outline-none focus:outline-none"
+                  >
+                    ปิดหน้าต่าง
+                  </button>
+                </div>
               </div>
-            </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </>
   );
 }

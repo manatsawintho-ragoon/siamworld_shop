@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import MainLayout from '@/components/MainLayout';
 import ProductCard from '@/components/ProductCard';
-import OnlinePlayersWidget from '@/components/OnlinePlayersWidget';
 import { api } from '@/lib/api';
 
 interface Product {
@@ -52,104 +51,89 @@ export default function ShopPage() {
 
   return (
     <MainLayout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2 dark:text-white">
-            <i className="fas fa-store mr-2 text-brand-500"></i>ร้านค้า
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400">เลือกซื้อไอเทม แรงค์ และสิทธิพิเศษสำหรับเซิร์ฟเวอร์ Minecraft</p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Sidebar */}
-          <div className="space-y-4">
-            {/* Search */}
-            <div className="card p-4">
-              <div className="relative">
-                <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-sm"></i>
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="input !pl-9"
-                  placeholder="ค้นหาสินค้า..."
-                />
-              </div>
+      <div className="w-full space-y-6">
+        
+        {/* Header & Search */}
+        <div className="card overflow-hidden">
+          <div className="card-header-mc flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <i className="fas fa-store text-primary text-xl" aria-hidden="true"></i>
+              <span className="text-lg">Itemshop <span className="text-xs text-foreground-subtle ml-1 font-normal">ร้านค้าไอเทมและยศ</span></span>
             </div>
-
-            {/* Categories */}
-            <div className="card p-4">
-              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">
-                <i className="fas fa-tags mr-1.5 text-brand-400"></i>หมวดหมู่
-              </h3>
-              <div className="space-y-1">
+            
+            <div className="relative w-full md:w-64 flex-shrink-0">
+              <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-white/50 text-xs" aria-hidden="true"></i>
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full bg-black/40 border border-white/10 text-white text-xs py-2 pl-8 pr-8 focus:outline-none focus:border-primary transition-colors"
+                placeholder="ค้นหาสินค้า..."
+              />
+              {search && (
                 <button
-                  onClick={() => setSelectedCategory(null)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    !selectedCategory
-                      ? 'bg-brand-500 text-white shadow-theme-xs'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                  onClick={() => setSearch('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors"
+                  aria-label="ล้างการค้นหา"
+                >
+                  <i className="fas fa-times text-xs" aria-hidden="true"></i>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Categories Tab Bar */}
+          <div className="bg-[#1e1e1e] border-y border-black/50 overflow-x-auto no-scrollbar flex">
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className={`flex-shrink-0 px-6 py-3 text-xs font-bold transition-colors border-b-[3px] flex items-center gap-2 ${
+                !selectedCategory
+                  ? 'bg-black/20 text-primary border-primary'
+                  : 'text-foreground-muted border-transparent hover:bg-white/5 hover:text-white'
+              }`}
+            >
+              <i className="fas fa-layer-group"></i> All Items 
+              <span className="opacity-50 font-normal">({products.length})</span>
+            </button>
+            {categories.map(c => {
+              const count = products.filter(p => p.category_id === c.id).length;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => setSelectedCategory(c.id)}
+                  className={`flex-shrink-0 px-6 py-3 text-xs font-bold transition-colors border-b-[3px] flex items-center gap-2 ${
+                    selectedCategory === c.id
+                      ? 'bg-black/20 text-primary border-primary'
+                      : 'text-foreground-muted border-transparent hover:bg-white/5 hover:text-white'
                   }`}
                 >
-                  ทั้งหมด ({products.length})
+                  {c.icon ? <i className={c.icon}></i> : <i className="fas fa-box"></i>} {c.name}
+                  <span className="opacity-50 font-normal">({count})</span>
                 </button>
-                {categories.map(c => {
-                  const count = products.filter(p => p.category_id === c.id).length;
-                  return (
-                    <button
-                      key={c.id}
-                      onClick={() => setSelectedCategory(c.id)}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex justify-between transition-all duration-200 ${
-                        selectedCategory === c.id
-                          ? 'bg-brand-500 text-white shadow-theme-xs'
-                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                      }`}
-                    >
-                      <span>{c.icon ? `${c.icon} ` : ''}{c.name}</span>
-                      <span className="text-xs opacity-60">{count}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <OnlinePlayersWidget />
+              );
+            })}
           </div>
 
           {/* Products Grid */}
-          <div className="lg:col-span-3">
+          <div className="p-4 bg-[#8b8b8b]/10 min-h-[400px]">
             {loading ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="card h-64 animate-pulse">
-                    <div className="h-36 bg-gray-100 dark:bg-gray-700 rounded-t-xl"></div>
-                    <div className="p-3.5 space-y-2">
-                      <div className="h-4 bg-gray-100 dark:bg-gray-700 rounded w-3/4"></div>
-                      <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded w-1/2"></div>
-                    </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4">
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="bg-[#8b8b8b] p-1 rounded-sm opacity-50 animate-pulse">
+                    <div className="bg-[#373737] aspect-square"></div>
                   </div>
                 ))}
               </div>
             ) : filtered.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center">
-                  <i className="fas fa-box-open text-2xl text-gray-300 dark:text-gray-600"></i>
-                </div>
-                <p className="text-gray-500 dark:text-gray-400 font-medium">ไม่พบสินค้า</p>
-                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">ลองค้นด้วยคำอื่น</p>
+              <div className="text-center py-20 animate-fade-in">
+                <i className="fas fa-box-open text-4xl text-white/20 mb-4 drop-shadow-md" aria-hidden="true"></i>
+                <p className="text-white font-bold text-lg drop-shadow-md mb-1">ไม่พบสินค้าในหมวดหมู่นี้</p>
+                <p className="text-xs text-foreground-subtle">กรุณาลองค้นหาด้วยคำอื่น หรือเลือกหมวดหมู่อีกครั้ง</p>
               </div>
             ) : (
-              <>
-                <div className="flex items-center justify-between mb-4">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    พบ <span className="font-semibold text-gray-700 dark:text-gray-200">{filtered.length}</span> รายการ
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {filtered.map(p => <ProductCard key={p.id} product={p} servers={servers} />)}
-                </div>
-              </>
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4">
+                {filtered.map(p => <ProductCard key={p.id} product={p} servers={servers} />)}
+              </div>
             )}
           </div>
         </div>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import MainLayout from '@/components/MainLayout';
 import { api, getToken } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface LootBoxItem {
   id: number;
@@ -42,17 +43,15 @@ const RARITY_CONFIG: Record<string, { label: string; color: string; glow: string
   common:    { label: 'Common',    color: '#95A5A6', glow: '0 0 30px #95A5A6aa', bg: 'from-gray-800/60 to-gray-600/20' },
 };
 
-const ITEM_WIDTH = 168; // px (width + gap)
-const VISIBLE_COUNT = 7; // items visible in viewport
-const WINNER_INDEX = 44; // 0-based index of the winning item in 50-item array
+const ITEM_WIDTH = 168;
+const VISIBLE_COUNT = 7;
+const WINNER_INDEX = 44;
 const TOTAL_ITEMS = 50;
 
-/** Build the 50-item reel: positions 0-43 dummy, 44 = winner, 45-49 dummy */
 function buildReel(items: LootBoxItem[], winner: WonItem): LootBoxItem[] {
   const reel: LootBoxItem[] = [];
   for (let i = 0; i < TOTAL_ITEMS; i++) {
     if (i === WINNER_INDEX) {
-      // Insert a synthetic item matching the won item
       const found = items.find(it => it.id === winner.id) || items[0];
       reel.push({ ...found, id: winner.id });
     } else {
@@ -62,7 +61,6 @@ function buildReel(items: LootBoxItem[], winner: WonItem): LootBoxItem[] {
   return reel;
 }
 
-/** Generate a short tick sound using Web Audio API */
 function playTick(ctx: AudioContext) {
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -103,15 +101,11 @@ export default function LootBoxOpenPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  /** Watch reel position and fire tick sounds when item edges cross the center */
   const watchTicks = useCallback((trackEl: HTMLDivElement, centerX: number) => {
     const items = trackEl.querySelectorAll<HTMLDivElement>('[data-item]');
-
     items.forEach(el => {
       const rect = el.getBoundingClientRect();
       const itemCenterX = rect.left + rect.width / 2;
-
-      // Detect crossing center line (left→right direction means itemCenter passes centerX from right)
       if (itemCenterX < centerX && lastTickXRef.current > 0 && el.dataset.ticked !== '1') {
         el.dataset.ticked = '1';
         if (!audioCtxRef.current) {
@@ -130,7 +124,6 @@ export default function LootBoxOpenPage() {
     setWonItem(null);
     setShowResult(false);
 
-    // Reset tick state
     lastTickXRef.current = 0;
     if (trackRef.current) {
       trackRef.current.querySelectorAll<HTMLDivElement>('[data-item]').forEach(el => {
@@ -155,38 +148,22 @@ export default function LootBoxOpenPage() {
 
     const won = result.wonItem;
     setWonItem(won);
-
-    // Refresh wallet balance immediately (not waiting for animation to finish)
     refresh();
 
-    // Build reel with winner at index WINNER_INDEX
     const reelItems = buildReel(box.items, won);
     setReel(reelItems);
-
-    // Reset position to start
     setTranslateX(0);
 
-    // Calculate final translate: bring winner item to center
-    // Must use the ACTUAL rendered width of the reel container (maxWidth:100% makes it
-    // narrower than VISIBLE_COUNT*ITEM_WIDTH on most screens), otherwise the stop
-    // position drifts and the wrong tile sits under the yellow indicator.
-    await new Promise(r => setTimeout(r, 50)); // let DOM render
+    await new Promise(r => setTimeout(r, 50));
 
     if (!reelRef.current) { setSpinning(false); return; }
 
-    // Actual pixel center of the visible viewport (matches the yellow center indicator)
     const containerCenterX = reelRef.current.offsetWidth / 2;
-
-    // Item center in track coords:
-    //   padding(8) + index * (itemWidth(160) + gap(8)) + itemWidth/2(80)
-    //   = 8 + index * 168 + 80  =  index * 168 + 88
     const winnerCenterX = WINNER_INDEX * ITEM_WIDTH + 88;
-    // Small random overshoot (±20px) so it never lands pixel-perfect
     const offset = (Math.random() - 0.5) * 40;
     const finalTranslate = -(winnerCenterX - containerCenterX + offset);
 
-    // Start animation
-    const duration = 6500; // ms
+    const duration = 6500;
     const startTime = performance.now();
     const startX = 0;
 
@@ -202,7 +179,6 @@ export default function LootBoxOpenPage() {
       const currentX = startX + (finalTranslate - startX) * eased;
       setTranslateX(currentX);
 
-      // Tick detection using BoundingClientRect
       if (trackEl && reelEl) {
         const reelRect = reelEl.getBoundingClientRect();
         const centerX = reelRect.left + reelRect.width / 2;
@@ -215,7 +191,6 @@ export default function LootBoxOpenPage() {
       } else {
         setSpinning(false);
         setShowResult(true);
-        // wallet already refreshed above, no need to call again
       }
     };
 
@@ -232,7 +207,7 @@ export default function LootBoxOpenPage() {
     return (
       <MainLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
-          <i className="fas fa-spinner fa-spin text-3xl text-gray-400"></i>
+          <i className="fas fa-spinner fa-spin text-3xl text-foreground-subtle" aria-hidden="true"></i>
         </div>
       </MainLayout>
     );
@@ -245,12 +220,12 @@ export default function LootBoxOpenPage() {
 
   return (
     <MainLayout>
-      <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 py-8 px-4">
+      <div className="min-h-screen bg-gradient-to-b from-[#1e1e1e] to-[#141414] py-8 px-4">
         <div className="max-w-4xl mx-auto">
 
           {/* Back link */}
           <Link href="/lootbox" className="inline-flex items-center gap-2 text-gray-400 hover:text-white text-sm mb-6 transition-colors">
-            <i className="fas fa-arrow-left"></i> กลับไปยังกล่องสุ่ม
+            <i className="fas fa-arrow-left" aria-hidden="true"></i> กลับไปยังกล่องสุ่ม
           </Link>
 
           {/* Box header */}
@@ -258,23 +233,22 @@ export default function LootBoxOpenPage() {
             {box.image ? (
               <img src={box.image} alt={box.name} className="w-24 h-24 object-contain mx-auto mb-3 drop-shadow-2xl" />
             ) : (
-              <div className="w-24 h-24 rounded-xl bg-gray-800 flex items-center justify-center mx-auto mb-3">
-                <i className="fas fa-box text-4xl text-gray-600"></i>
+              <div className="w-24 h-24 rounded-2xl bg-[#252526] flex items-center justify-center mx-auto mb-3">
+                <i className="fas fa-box text-4xl text-gray-600" aria-hidden="true"></i>
               </div>
             )}
             <h1 className="text-2xl font-black text-white">{box.name}</h1>
             {box.description && <p className="text-gray-400 text-sm mt-1">{box.description}</p>}
           </div>
 
-          {/* ─── Reel ─────────────────────────────────────────── */}
+          {/* ─── Reel ─── */}
           <div className="relative mb-6">
-            {/* Center indicator line */}
+            {/* Center indicator */}
             <div className="absolute top-0 bottom-0 left-1/2 -translate-x-px z-30 pointer-events-none flex flex-col">
               <div className="w-0.5 h-2 bg-yellow-400 mx-auto"></div>
               <div className="w-0.5 flex-1 bg-yellow-400/80 mx-auto"></div>
               <div className="w-0.5 h-2 bg-yellow-400 mx-auto"></div>
             </div>
-            {/* Top/bottom triangle pointers */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 z-30 w-0 h-0
               border-l-[8px] border-r-[8px] border-t-[12px]
               border-l-transparent border-r-transparent border-t-yellow-400" />
@@ -283,13 +257,13 @@ export default function LootBoxOpenPage() {
               border-l-transparent border-r-transparent border-b-yellow-400" />
 
             {/* Fade edges */}
-            <div className="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-gray-950 to-transparent z-20 pointer-events-none" />
-            <div className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-gray-950 to-transparent z-20 pointer-events-none" />
+            <div className="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-[#1e1e1e] to-transparent z-20 pointer-events-none" />
+            <div className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-[#1e1e1e] to-transparent z-20 pointer-events-none" />
 
             {/* Viewport */}
             <div
               ref={reelRef}
-              className="rounded-xl border border-gray-700 bg-gray-900"
+              className="rounded-2xl border border-[#333] bg-[#1e1e1e]"
               style={{
                 width: `${containerWidth}px`,
                 maxWidth: '100%',
@@ -317,7 +291,7 @@ export default function LootBoxOpenPage() {
                           key={i}
                           data-item="1"
                           data-ticked=""
-                          className="flex-shrink-0 flex flex-col items-center justify-center rounded-lg border"
+                          className="flex-shrink-0 flex flex-col items-center justify-center rounded-xl border"
                           style={{
                             width: `${ITEM_WIDTH - 8}px`,
                             height: '140px',
@@ -329,7 +303,7 @@ export default function LootBoxOpenPage() {
                           {item.image ? (
                             <img src={item.image} alt={item.name} className="w-16 h-16 object-contain mb-1 drop-shadow-lg" />
                           ) : (
-                            <i className="fas fa-cube text-3xl mb-2" style={{ color: rc.color }}></i>
+                            <i className="fas fa-cube text-3xl mb-2" style={{ color: rc.color }} aria-hidden="true"></i>
                           )}
                           <p className="text-xs text-center text-gray-300 font-medium px-1 leading-tight line-clamp-2">{item.name}</p>
                           <div className="mt-1 text-xs font-bold px-2 py-0.5 rounded" style={{ color: rc.color, backgroundColor: rc.color + '22' }}>
@@ -338,13 +312,12 @@ export default function LootBoxOpenPage() {
                         </div>
                       );
                     })
-                  : // Placeholder items when not spinning — show ALL items at full opacity
-                    box.items.map((item, i) => {
+                  : box.items.map((item, i) => {
                       const rc = rarityConfig[item.rarity] || rarityConfig.common;
                       return (
                         <div
                           key={i}
-                          className="flex-shrink-0 flex flex-col items-center justify-center rounded-lg border"
+                          className="flex-shrink-0 flex flex-col items-center justify-center rounded-xl border"
                           style={{
                             width: `${ITEM_WIDTH - 8}px`,
                             height: '140px',
@@ -355,7 +328,7 @@ export default function LootBoxOpenPage() {
                           {item.image ? (
                             <img src={item.image} alt={item.name} className="w-16 h-16 object-contain mb-1 drop-shadow-lg" style={{ filter: `drop-shadow(0 0 6px ${rc.color}88)` }} />
                           ) : (
-                            <i className="fas fa-cube text-3xl mb-2" style={{ color: rc.color }}></i>
+                            <i className="fas fa-cube text-3xl mb-2" style={{ color: rc.color }} aria-hidden="true"></i>
                           )}
                           <p className="text-xs text-center text-gray-300 font-medium px-1 leading-tight line-clamp-2">{item.name}</p>
                           <div className="mt-1 text-xs font-bold px-2 py-0.5 rounded" style={{ color: rc.color, backgroundColor: rc.color + '22' }}>
@@ -370,8 +343,8 @@ export default function LootBoxOpenPage() {
 
           {/* Open button */}
           {error && (
-            <div className="bg-red-900/50 border border-red-500/50 text-red-300 text-sm px-4 py-3 rounded-lg mb-4 text-center">
-              <i className="fas fa-exclamation-triangle mr-2"></i>{error}
+            <div className="bg-red-900/50 border border-red-500/50 text-red-300 text-sm px-4 py-3 rounded-xl mb-4 text-center animate-fade-in">
+              <i className="fas fa-exclamation-triangle mr-2" aria-hidden="true"></i>{error}
             </div>
           )}
 
@@ -379,7 +352,7 @@ export default function LootBoxOpenPage() {
             <button
               onClick={openBox}
               disabled={spinning}
-              className="group relative overflow-hidden px-10 py-4 rounded-xl font-black text-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group relative overflow-hidden px-10 py-4 rounded-2xl font-black text-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 min-h-[56px]"
               style={!spinning ? {
                 background: 'linear-gradient(135deg, #f59e0b, #d97706)',
                 boxShadow: '0 4px 20px rgba(245,158,11,0.4)',
@@ -391,12 +364,12 @@ export default function LootBoxOpenPage() {
             >
               {spinning ? (
                 <span className="flex items-center gap-2">
-                  <i className="fas fa-spinner fa-spin"></i> กำลังสุ่ม...
+                  <i className="fas fa-spinner fa-spin" aria-hidden="true"></i> กำลังสุ่ม...
                 </span>
               ) : (
                 <span className="flex items-center gap-2">
-                  <i className="fas fa-box-open"></i>
-                  เปิดกล่อง — ฿{parseFloat(String(box.price)).toLocaleString()}
+                  <i className="fas fa-box-open" aria-hidden="true"></i>
+                  เปิดกล่อง — <span className="tabular-nums">฿{parseFloat(String(box.price)).toLocaleString()}</span>
                 </span>
               )}
             </button>
@@ -405,11 +378,11 @@ export default function LootBoxOpenPage() {
             )}
           </div>
 
-          {/* ─── Items in this box ─────────────────────────────── */}
-          <div className="mt-10">
-            <h2 className="text-white font-bold text-base mb-4">
-              <i className="fas fa-list mr-2 text-gray-400"></i>ไอเทมในกล่องนี้
-              <span className="text-gray-500 font-normal text-sm ml-2">({box.items.length} ชิ้น)</span>
+          {/* ─── Items in this box ─── */}
+          <div className="mt-12">
+            <h2 className="text-white font-bold text-base mb-5 flex items-center gap-2">
+              <i className="fas fa-list text-gray-400" aria-hidden="true"></i>ไอเทมในกล่องนี้
+              <span className="text-gray-500 font-normal text-sm tabular-nums">({box.items.length} ชิ้น)</span>
             </h2>
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
               {box.items.map(item => {
@@ -419,19 +392,19 @@ export default function LootBoxOpenPage() {
                 return (
                   <div
                     key={item.id}
-                    className="group relative rounded-lg p-2 text-center border transition-all hover:scale-105"
+                    className="group relative rounded-xl p-2 text-center border transition-all hover:scale-105"
                     style={{
                       borderColor: rc.color + '55',
                       background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
                     }}
                   >
-                    <div className="absolute top-1 right-1 text-xs font-bold" style={{ color: rc.color }}>
+                    <div className="absolute top-1 right-1 text-xs font-bold tabular-nums" style={{ color: rc.color }}>
                       {chance}%
                     </div>
                     {item.image ? (
                       <img src={item.image} alt={item.name} className="w-12 h-12 object-contain mx-auto mb-1" />
                     ) : (
-                      <i className="fas fa-cube text-2xl mb-2 block" style={{ color: rc.color }}></i>
+                      <i className="fas fa-cube text-2xl mb-2 block" style={{ color: rc.color }} aria-hidden="true"></i>
                     )}
                     <p className="text-gray-200 text-xs font-medium leading-tight line-clamp-2">{item.name}</p>
                     <div className="mt-1 text-xs px-1 py-px rounded font-semibold inline-block" style={{ color: rc.color, backgroundColor: rc.color + '22' }}>
@@ -445,73 +418,77 @@ export default function LootBoxOpenPage() {
         </div>
       </div>
 
-      {/* ─── Result Modal ─────────────────────────────────────── */}
-      {showResult && wonItem && (() => {
-        const rc = rarityConfig[wonItem.rarity] || rarityConfig.common;
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Backdrop */}
-            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowResult(false)} />
+      {/* ─── Result Modal ─── */}
+      <AnimatePresence>
+        {showResult && wonItem && (() => {
+          const rc = rarityConfig[wonItem.rarity] || rarityConfig.common;
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowResult(false)} />
 
-            <div
-              className="relative z-10 rounded-2xl p-1 max-w-sm w-full"
-              style={{ background: `linear-gradient(135deg, ${rc.color}66, ${rc.color}11)`, boxShadow: rc.glow }}
-            >
-              <div className="bg-gray-950 rounded-xl p-6 text-center">
-                {/* Rays animation */}
-                <div className="relative inline-block mb-4">
-                  <div
-                    className="absolute inset-0 rounded-full animate-ping"
-                    style={{ backgroundColor: rc.color + '22', animationDuration: '1.5s' }}
-                  />
-                  {wonItem.image ? (
-                    <img
-                      src={wonItem.image}
-                      alt={wonItem.name}
-                      className="relative w-32 h-32 object-contain drop-shadow-2xl"
-                      style={{ filter: `drop-shadow(0 0 20px ${rc.color})` }}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+                className="relative z-10 rounded-2xl p-1 max-w-sm w-full"
+                style={{ background: `linear-gradient(135deg, ${rc.color}66, ${rc.color}11)`, boxShadow: rc.glow }}
+              >
+                <div className="bg-[#0d0d0d] rounded-xl p-6 text-center">
+                  <div className="relative inline-block mb-4">
+                    <div
+                      className="absolute inset-0 rounded-full animate-ping"
+                      style={{ backgroundColor: rc.color + '22', animationDuration: '1.5s' }}
                     />
-                  ) : (
-                    <div className="relative w-32 h-32 flex items-center justify-center rounded-xl"
-                      style={{ backgroundColor: rc.color + '22', border: `2px solid ${rc.color}66` }}>
-                      <i className="fas fa-cube text-5xl" style={{ color: rc.color }}></i>
-                    </div>
+                    {wonItem.image ? (
+                      <img
+                        src={wonItem.image}
+                        alt={wonItem.name}
+                        className="relative w-32 h-32 object-contain drop-shadow-2xl"
+                        style={{ filter: `drop-shadow(0 0 20px ${rc.color})` }}
+                      />
+                    ) : (
+                      <div className="relative w-32 h-32 flex items-center justify-center rounded-xl"
+                        style={{ backgroundColor: rc.color + '22', border: `2px solid ${rc.color}66` }}>
+                        <i className="fas fa-cube text-5xl" style={{ color: rc.color }} aria-hidden="true"></i>
+                      </div>
+                    )}
+                  </div>
+
+                  <div
+                    className="inline-flex items-center gap-1 text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full mb-2"
+                    style={{ backgroundColor: rc.color + '22', color: rc.color, border: `1px solid ${rc.color}55` }}
+                  >
+                    <i className="fas fa-star text-[10px]" aria-hidden="true"></i> {rc.label}
+                  </div>
+
+                  <h3 className="text-white text-xl font-black mt-1">{wonItem.name}</h3>
+                  {wonItem.description && (
+                    <p className="text-gray-400 text-sm mt-1">{wonItem.description}</p>
                   )}
-                </div>
 
-                <div
-                  className="inline-flex items-center gap-1 text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full mb-2"
-                  style={{ backgroundColor: rc.color + '22', color: rc.color, border: `1px solid ${rc.color}55` }}
-                >
-                  <i className="fas fa-star text-[10px]"></i> {rc.label}
+                  <div className="mt-5 space-y-2">
+                    <Link
+                      href="/inventory"
+                      className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl font-bold text-sm text-black min-h-[48px] active:scale-95 transition-transform"
+                      style={{ background: `linear-gradient(135deg, ${rc.color}, ${rc.color}bb)` }}
+                      onClick={() => setShowResult(false)}
+                    >
+                      <i className="fas fa-box" aria-hidden="true"></i> ไปรับของที่คลัง
+                    </Link>
+                    <button
+                      onClick={() => setShowResult(false)}
+                      className="w-full py-3.5 rounded-xl font-bold text-sm text-gray-300 bg-[#252526] hover:bg-[#333] transition-colors min-h-[48px] active:scale-95"
+                    >
+                      <i className="fas fa-xmark mr-2" aria-hidden="true"></i>ปิด
+                    </button>
+                  </div>
                 </div>
-
-                <h3 className="text-white text-xl font-black mt-1">{wonItem.name}</h3>
-                {wonItem.description && (
-                  <p className="text-gray-400 text-sm mt-1">{wonItem.description}</p>
-                )}
-
-                <div className="mt-5 space-y-2">
-                  <Link
-                    href="/inventory"
-                    className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-sm text-black"
-                    style={{ background: `linear-gradient(135deg, ${rc.color}, ${rc.color}bb)` }}
-                    onClick={() => setShowResult(false)}
-                  >
-                    <i className="fas fa-box"></i> ไปรับของที่คลัง
-                  </Link>
-                  <button
-                    onClick={() => setShowResult(false)}
-                    className="w-full py-3 rounded-xl font-bold text-sm text-gray-300 bg-gray-800 hover:bg-gray-700 transition-colors"
-                  >
-                    <i className="fas fa-xmark mr-2"></i>ปิด
-                  </button>
-                </div>
-              </div>
+              </motion.div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
+      </AnimatePresence>
     </MainLayout>
   );
 }

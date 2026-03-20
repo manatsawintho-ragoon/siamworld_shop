@@ -1,9 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import MainLayout from '@/components/MainLayout';
 import HeroCarousel from '@/components/HeroCarousel';
 import ProductCard from '@/components/ProductCard';
-import OnlinePlayersWidget from '@/components/OnlinePlayersWidget';
 import { useSettings } from '@/context/SettingsContext';
 import { api } from '@/lib/api';
 
@@ -23,11 +23,20 @@ interface Server {
   name: string;
 }
 
+interface LootBox {
+  id: number;
+  name: string;
+  description?: string;
+  image?: string;
+  price: number;
+}
+
 export default function HomePage() {
   const [slides, setSlides] = useState([]);
   const [featured, setFeatured] = useState<Product[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [servers, setServers] = useState<Server[]>([]);
+  const [lootboxes, setLootboxes] = useState<LootBox[]>([]);
   const { settings } = useSettings();
 
   useEffect(() => {
@@ -36,141 +45,125 @@ export default function HomePage() {
       api('/public/products/featured').then(d => setFeatured((d.products as Product[]) || [])).catch(() => {}),
       api('/public/products').then(d => setProducts((d.products as Product[]) || [])).catch(() => {}),
       api('/public/servers').then(d => setServers((d.servers as Server[]) || [])).catch(() => {}),
+      api('/shop/lootboxes').then(d => setLootboxes((d.boxes as LootBox[]) || [])).catch(() => {}),
     ]);
   }, []);
 
-  const newArrivals = [...products].sort((a, b) => b.id - a.id).slice(0, 4);
+  const newArrivals = [...products].sort((a, b) => b.id - a.id).slice(0, 8);
   const onSale = products.filter(p => p.original_price && p.original_price > p.price).slice(0, 4);
+  const topLootboxes = [...lootboxes].slice(0, 4);
 
   return (
     <MainLayout>
-      <HeroCarousel slides={slides} />
-
+      {/* 1. Website Broadcast */}
       {settings.welcome_message && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-6">
-          <div className="bg-brand-50 dark:bg-brand-500/10 border border-brand-100 dark:border-brand-500/20 rounded-xl p-4 text-center">
-            <p className="text-gray-700 dark:text-gray-300">
-              <i className="fas fa-bullhorn text-brand-500 mr-2"></i>
-              {settings.welcome_message}
-            </p>
-          </div>
+        <div className="bg-primary/20 border-l-4 border-primary rounded-r-lg p-3 text-sm font-bold text-white mb-6 shadow-md animate-fade-in flex items-center">
+          <i className="fas fa-bullhorn text-primary mr-3 text-lg" aria-hidden="true"></i>
+          {settings.welcome_message}
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-10">
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard icon="fa-cube" label="สินค้า" value={`${products.length}+`} color="brand" />
-          <StatCard icon="fa-server" label="เซิร์ฟเวอร์" value={`${servers.length}`} color="blue" />
-          <StatCard icon="fa-bolt" label="ส่งอัตโนมัติ" value="ทันที" color="warning" />
-          <StatCard icon="fa-shield-halved" label="ปลอดภัย" value="100%" color="success" />
+      {/* 2. Hero Section (Replaces Carousel with classic box style) */}
+      <div className="card overflow-hidden mb-6">
+        <div className="w-full relative aspect-[21/9] md:aspect-[3/1] bg-[#1e1e1e] border-b border-black/50">
+          {slides.length > 0 ? (
+            <HeroCarousel slides={slides} />
+          ) : (
+            <div className="w-full h-full relative flex items-center justify-center overflow-hidden bg-[url('https://i.imgur.com/3Q6ZQ6q.png')] bg-cover bg-center">
+              <div className="absolute inset-0 bg-black/40"></div>
+              <div className="relative z-10 text-center animate-fade-in-up">
+                <img src="https://i.imgur.com/G5fG5z6.png" className="max-w-[150px] md:max-w-[200px] mx-auto mb-2 drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] pixelated" alt="Dirt Block" style={{ imageRendering: 'pixelated' }} />
+                <h2 className="text-white text-3xl font-black tracking-widest drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]">NEW iMC SERVER</h2>
+                <p className="text-primary font-bold drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] mt-1">Survive • Build • Conquer</p>
+              </div>
+            </div>
+          )}
         </div>
+        <div className="bg-black/40 p-3 flex items-center justify-between text-xs text-foreground-muted border-t border-white/5 shadow-inner">
+          <div className="font-bold text-white">
+            <span className="text-primary">New iMC</span> <span className="font-normal opacity-70">ระบบร้านค้ามายคราฟ</span>
+          </div>
+          <div className="flex gap-1">
+            <span className="w-2 h-2 rounded-full bg-white opacity-50"></span>
+            <span className="w-2 h-2 rounded-full bg-white opacity-50"></span>
+            <span className="w-2 h-2 rounded-full bg-white"></span>
+          </div>
+        </div>
+      </div>
 
-        {/* Featured */}
-        {featured.length > 0 && (
-          <section>
-            <SectionHeader icon="fa-star" title="สินค้าแนะนำ" />
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {featured.map(p => <ProductCard key={p.id} product={p} servers={servers} />)}
+      <div className="space-y-6">
+        {/* 3. Newest Item Section (Matching Reference iMC) */}
+        {newArrivals.length > 0 && (
+          <section className="card overflow-hidden">
+            <div className="card-header-mc flex items-center justify-between">
+              <span><i className="fas fa-cube mr-2"></i>Newest Item สินค้าใหม่ล่าสุด</span>
+              <Link href="/shop" className="bg-primary/80 hover:bg-primary text-white text-[10px] px-3 py-1 rounded shadow-sm transition-colors uppercase font-bold border border-white/10">
+                เพิ่มเติม <i className="fas fa-angle-double-right ml-1"></i>
+              </Link>
+            </div>
+            <div className="p-4 bg-[#8b8b8b]/10">
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4">
+                {newArrivals.map(p => <ProductCard key={p.id} product={p} servers={servers} />)}
+              </div>
             </div>
           </section>
         )}
 
-        {/* Main grid with sidebar */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-10">
-            {newArrivals.length > 0 && (
-              <section>
-                <SectionHeader icon="fa-clock" title="สินค้ามาใหม่" />
-                <div className="grid grid-cols-2 gap-4">
-                  {newArrivals.map(p => <ProductCard key={p.id} product={p} servers={servers} />)}
-                </div>
-              </section>
-            )}
-
-            {onSale.length > 0 && (
-              <section>
-                <SectionHeader icon="fa-tags" title="สินค้าลดราคา" badge="SALE" />
-                <div className="grid grid-cols-2 gap-4">
-                  {onSale.map(p => <ProductCard key={p.id} product={p} servers={servers} />)}
-                </div>
-              </section>
-            )}
-          </div>
-
-          <div className="space-y-6">
-            <OnlinePlayersWidget />
-
-            <div className="card p-5">
-              <h3 className="font-semibold text-lg mb-3 dark:text-white">
-                <i className="fas fa-link mr-2 text-brand-400"></i>ลิงก์ด่วน
-              </h3>
-              <div className="space-y-2">
-                <QuickLink href="/shop" icon="fa-store" label="ร้านค้าทั้งหมด" />
-                <QuickLink href="/topup" icon="fa-wallet" label="เติมเงิน" />
-                {settings.discord_invite && (
-                  <QuickLink href={settings.discord_invite} icon="fa-brands fa-discord" label="Discord" external />
-                )}
+        {/* 4. Sale Products (If any) */}
+        {onSale.length > 0 && (
+          <section className="card overflow-hidden">
+            <div className="card-header-mc flex items-center justify-between bg-error/10 border-error/30 text-error-foreground">
+              <span><i className="fas fa-tags mr-2 text-error"></i>Hot Sale สินค้าลดราคาพิเศษ</span>
+            </div>
+            <div className="p-4 bg-[#8b8b8b]/10">
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4">
+                {onSale.map(p => <ProductCard key={p.id} product={p} servers={servers} />)}
               </div>
             </div>
-          </div>
-        </div>
+          </section>
+        )}
 
-        {/* CTA */}
-        <div className="text-center">
-          <a href="/shop" className="btn-primary text-base py-3 px-10 shadow-theme-md hover:shadow-theme-lg transition-all duration-300">
-            <i className="fas fa-store"></i> ดูสินค้าทั้งหมด
-          </a>
-        </div>
+        {/* 5. Crate (Lootbox) New & Popular */}
+        {topLootboxes.length > 0 && (
+          <section className="card overflow-hidden">
+            <div className="card-header-mc flex items-center justify-between">
+              <span><i className="fas fa-box-open mr-2 text-warning"></i>Gacha กล่องสุ่ม</span>
+              <Link href="/lootbox" className="bg-warning/80 hover:bg-warning text-black text-[10px] px-3 py-1 rounded shadow-sm transition-colors uppercase font-bold border border-black/20">
+                สุ่มเลย <i className="fas fa-angle-double-right ml-1"></i>
+              </Link>
+            </div>
+            <div className="p-4 bg-[#8b8b8b]/10">
+              <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4">
+                {topLootboxes.map(box => (
+                  <Link
+                    key={box.id}
+                    href={`/lootbox/${box.id}`}
+                    className="group relative bg-[#373737] rounded-sm overflow-hidden shadow-[inset_2px_2px_0_rgba(0,0,0,0.8),inset_-2px_-2px_0_rgba(255,255,255,0.2)] hover:bg-[#4a4a4a] transition-all duration-300 border-[3px] border-[#8b8b8b]"
+                  >
+                    <div className="aspect-square flex items-center justify-center p-6 relative">
+                      {box.image ? (
+                        <img src={box.image} alt={box.name} className="w-24 h-24 object-contain group-hover:scale-110 transition-transform duration-300 drop-shadow-[2px_2px_0_rgba(0,0,0,0.8)] pixelated" style={{ imageRendering: 'pixelated' }} />
+                      ) : (
+                        <i className="fas fa-box text-5xl text-white/20 group-hover:text-warning/50 transition-colors drop-shadow-md" aria-hidden="true"></i>
+                      )}
+                      
+                      <div className="absolute top-2 right-2 bg-warning text-black text-[10px] font-black px-2 py-0.5 shadow-md border border-neutral-800">
+                        {parseFloat(String(box.price)).toLocaleString()} ฿
+                      </div>
+                    </div>
+                    <div className="bg-black/40 p-2 flex flex-col items-center justify-center border-t border-white/10">
+                      <p className="text-white font-bold text-xs truncate drop-shadow-md mb-1.5">{box.name}</p>
+                      <div className="bg-[#787878] group-hover:bg-[#8b8b8b] text-white text-[10px] font-bold px-3 py-1 rounded-sm border-t-white/50 border-l-white/50 border-b-black/80 border-r-black/80 border w-full text-center transition-all shadow-inner active:border-t-black/80 active:border-l-black/80 active:border-b-white/50 active:border-r-white/50">
+                        <i className="fas fa-box-open mr-1"></i> สุ่มไอเทม
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
       </div>
     </MainLayout>
-  );
-}
-
-function SectionHeader({ icon, title, badge }: { icon: string; title: string; badge?: string }) {
-  return (
-    <div className="flex items-center gap-3 mb-5">
-      <div className="w-8 h-8 bg-brand-50 dark:bg-brand-500/10 rounded-lg flex items-center justify-center">
-        <i className={`fas ${icon} text-brand-500 text-sm`}></i>
-      </div>
-      <h2 className="text-xl font-bold dark:text-white">{title}</h2>
-      {badge && (
-        <span className="bg-error-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{badge}</span>
-      )}
-    </div>
-  );
-}
-
-function StatCard({ icon, label, value, color }: { icon: string; label: string; value: string; color: string }) {
-  const colorMap: Record<string, string> = {
-    brand: 'bg-brand-50 text-brand-500 dark:bg-brand-500/10',
-    blue: 'bg-blue-50 text-blue-500 dark:bg-blue-500/10',
-    warning: 'bg-warning-50 text-warning-500 dark:bg-warning-500/10',
-    success: 'bg-success-50 text-success-500 dark:bg-success-500/10',
-  };
-  return (
-    <div className="card p-4 text-center hover:shadow-theme-md transition-all duration-300 group">
-      <div className={`w-12 h-12 mx-auto rounded-xl flex items-center justify-center mb-3 ${colorMap[color]} transition-transform duration-300 group-hover:scale-110`}>
-        <i className={`fas ${icon} text-xl`}></i>
-      </div>
-      <div className="text-xl font-bold dark:text-white">{value}</div>
-      <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
-    </div>
-  );
-}
-
-function QuickLink({ href, icon, label, external }: { href: string; icon: string; label: string; external?: boolean }) {
-  const Tag = external ? 'a' : 'a';
-  const extraProps = external ? { target: '_blank', rel: 'noopener noreferrer' } : {};
-  return (
-    <a
-      href={href}
-      {...extraProps}
-      className="flex items-center gap-3 p-2.5 rounded-lg bg-gray-50 hover:bg-brand-50 dark:bg-gray-700/50 dark:hover:bg-brand-500/10 transition-colors duration-200 group"
-    >
-      <i className={`fas ${icon} text-gray-400 group-hover:text-brand-500 w-5 text-center transition-colors`}></i>
-      <span className="text-sm dark:text-gray-300">{label}</span>
-      <i className="fas fa-chevron-right text-xs text-gray-300 dark:text-gray-600 ml-auto group-hover:text-brand-400 transition-colors"></i>
-    </a>
   );
 }

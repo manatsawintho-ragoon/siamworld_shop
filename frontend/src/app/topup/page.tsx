@@ -1,251 +1,159 @@
 'use client';
 import { useState } from 'react';
 import MainLayout from '@/components/MainLayout';
-import { useAuth } from '@/context/AuthContext';
 import { api, getToken } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const AMOUNTS = [50, 100, 200, 300, 500, 1000];
+const AMOUNTS = [20, 50, 100, 200, 300, 500, 1000];
 
 export default function TopupPage() {
   const { user, refresh, loading: authLoading } = useAuth();
-  const [method, setMethod] = useState<'truemoney' | 'promptpay'>('truemoney');
-  const [code, setCode] = useState('');
-  const [amount, setAmount] = useState(100);
+  const router = useRouter();
+  const [tab, setTab] = useState<'truemoney' | 'promptpay'>('truemoney');
+  const [voucherUrl, setVoucherUrl] = useState('');
+  const [amount, setAmount] = useState<number>(100);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [pendingRef, setPendingRef] = useState<{ reference: string; amount: number } | null>(null);
+  const [qr, setQr] = useState<{ url: string; transactionId: string } | null>(null);
   const [confirming, setConfirming] = useState(false);
 
-  if (authLoading) {
-    return (
-      <MainLayout>
-        <div className="max-w-md mx-auto px-4 py-20 text-center">
-          <i className="fas fa-spinner fa-spin text-3xl text-brand-400 mb-4"></i>
-          <p className="text-gray-400 dark:text-gray-500">กำลังโหลด...</p>
-        </div>
-      </MainLayout>
-    );
-  }
-
-  if (!user) {
-    return (
-      <MainLayout>
-        <div className="max-w-md mx-auto px-4 py-20 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center">
-            <i className="fas fa-lock text-2xl text-gray-300 dark:text-gray-600"></i>
-          </div>
-          <h2 className="text-xl font-bold mb-2 dark:text-white">กรุณาเข้าสู่ระบบ</h2>
-          <p className="text-gray-500 dark:text-gray-400">คุณต้องเข้าสู่ระบบก่อนจึงจะเติมเงินได้</p>
-        </div>
-      </MainLayout>
-    );
-  }
+  if (!authLoading && !user) { router.push('/'); return null; }
 
   const handleTruemoney = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setResult(null);
+    setLoading(true); setResult(null);
     try {
-      const data = await api('/payment/truemoney/redeem', {
-        method: 'POST',
-        token: getToken()!,
-        body: { giftLink: code },
-      });
-      setResult({ success: true, message: data.message as string || 'เติมเงินสำเร็จ!' });
-      setCode('');
-      refresh();
-    } catch (err: unknown) {
-      setResult({ success: false, message: err instanceof Error ? err.message : 'เติมเงินไม่สำเร็จ' });
-    } finally {
-      setLoading(false);
-    }
+      const d = await api('/payment/truemoney/redeem', { method: 'POST', token: getToken()!, body: { voucherUrl } }) as any;
+      setResult({ success: true, message: d.message || `เติมเงินสำเร็จ! ได้รับ ฿${d.amount?.toLocaleString() || '?'}` });
+      refresh(); setVoucherUrl('');
+    } catch (err: any) { setResult({ success: false, message: err?.message || 'เกิดข้อผิดพลาด' }); }
+    setLoading(false);
   };
 
   const handlePromptpay = async () => {
-    setLoading(true);
-    setResult(null);
-    setPendingRef(null);
+    setLoading(true); setResult(null); setQr(null);
     try {
-      const data = await api('/payment/promptpay/create', {
-        method: 'POST',
-        token: getToken()!,
-        body: { amount },
-      });
-      const reference = (data as Record<string, unknown>).reference as string;
-      setPendingRef({ reference, amount });
-      setResult({ success: true, message: `สร้าง QR สำเร็จ — Reference: ${reference}` });
-    } catch (err: unknown) {
-      setResult({ success: false, message: err instanceof Error ? err.message : 'สร้าง QR ไม่สำเร็จ' });
-    } finally {
-      setLoading(false);
-    }
+      const d = await api('/payment/promptpay/create', { method: 'POST', token: getToken()!, body: { amount } }) as any;
+      setQr({ url: d.qrUrl || d.qr_url, transactionId: d.transactionId || d.transaction_id });
+    } catch (err: any) { setResult({ success: false, message: err?.message || 'เกิดข้อผิดพลาด' }); }
+    setLoading(false);
   };
 
-  const handleConfirmPromptpay = async () => {
-    if (!pendingRef) return;
-    setConfirming(true);
-    setResult(null);
+  const confirmPromptpay = async () => {
+    if (!qr) return;
+    setConfirming(true); setResult(null);
     try {
-      await api('/payment/promptpay/confirm', {
-        method: 'POST',
-        token: getToken()!,
-        body: { reference: pendingRef.reference },
-      });
-      setResult({ success: true, message: `เติมเงิน ${pendingRef.amount.toLocaleString()} ฿ สำเร็จ!` });
-      setPendingRef(null);
-      await refresh();
-    } catch (err: unknown) {
-      setResult({ success: false, message: err instanceof Error ? err.message : 'ยืนยันการชำระไม่สำเร็จ' });
-    } finally {
-      setConfirming(false);
-    }
+      const d = await api('/payment/promptpay/confirm', { method: 'POST', token: getToken()!, body: { transactionId: qr.transactionId } }) as any;
+      setResult({ success: true, message: d.message || 'เติมเงินสำเร็จ!' });
+      refresh(); setQr(null);
+    } catch (err: any) { setResult({ success: false, message: err?.message || 'ยังไม่พบการชำระเงิน กรุณาลองใหม่' }); }
+    setConfirming(false);
   };
 
   return (
     <MainLayout>
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-2 dark:text-white">
-          <i className="fas fa-wallet mr-2 text-brand-500"></i>เติมเงิน
+      <div className="max-w-lg mx-auto px-4 sm:px-6 py-10">
+        <h1 className="text-2xl font-black text-foreground flex items-center gap-2 mb-2">
+          <i className="fas fa-wallet text-primary" aria-hidden="true"></i>เติมเงิน
         </h1>
-        <p className="text-gray-500 dark:text-gray-400 mb-6">เติมเงินเข้ากระเป๋าเพื่อซื้อไอเทมในร้านค้า</p>
+        <p className="text-foreground-muted text-sm mb-6">เติมเงินเข้ากระเป๋าเพื่อซื้อสินค้าและเปิดกล่องสุ่ม</p>
 
-        {/* Balance Card */}
-        <div className="card p-5 mb-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/5 dark:bg-brand-500/10 rounded-full -translate-y-8 translate-x-8"></div>
-          <div className="flex items-center justify-between relative">
-            <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">ยอดเงินคงเหลือ</p>
-              <p className="text-3xl font-bold text-success-600 dark:text-success-400">{user.wallet_balance?.toLocaleString()} ฿</p>
-            </div>
-            <div className="w-14 h-14 bg-brand-50 dark:bg-brand-500/10 rounded-2xl flex items-center justify-center">
-              <i className="fas fa-coins text-2xl text-brand-500"></i>
-            </div>
-          </div>
+        {/* Balance */}
+        <div className="card p-5 mb-6 bg-gradient-to-br from-primary/5 to-primary/0 border-primary/20">
+          <p className="text-sm text-foreground-muted">ยอดเงินคงเหลือ</p>
+          <p className="text-3xl font-black text-foreground tabular-nums mt-1">
+            ฿{user?.wallet_balance?.toLocaleString() || '0'}
+          </p>
         </div>
 
-        {/* Method Tabs */}
-        <div className="flex gap-2 mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
-          <button
-            onClick={() => setMethod('truemoney')}
-            className={`flex-1 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 text-sm transition-all duration-200 ${
-              method === 'truemoney'
-                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-theme-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-          >
-            <i className="fas fa-gift"></i> TrueMoney Wallet
+        {/* Tabs */}
+        <div className="flex gap-1 mb-6 bg-surface-hover p-1 rounded-xl">
+          <button onClick={() => { setTab('truemoney'); setResult(null); setQr(null); }}
+            className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-all min-h-[44px] ${tab === 'truemoney' ? 'bg-surface shadow-theme-xs text-foreground' : 'text-foreground-muted'}`}>
+            <i className="fas fa-mobile-screen mr-1.5" aria-hidden="true"></i>TrueMoney
           </button>
-          <button
-            onClick={() => setMethod('promptpay')}
-            className={`flex-1 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 text-sm transition-all duration-200 ${
-              method === 'promptpay'
-                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-theme-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-          >
-            <i className="fas fa-qrcode"></i> PromptPay
+          <button onClick={() => { setTab('promptpay'); setResult(null); setQr(null); }}
+            className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-all min-h-[44px] ${tab === 'promptpay' ? 'bg-surface shadow-theme-xs text-foreground' : 'text-foreground-muted'}`}>
+            <i className="fas fa-qrcode mr-1.5" aria-hidden="true"></i>PromptPay
           </button>
         </div>
 
         {/* Result */}
-        {result && (
-          <div className={`rounded-xl p-4 mb-6 ${
-            result.success
-              ? 'bg-success-50 dark:bg-success-500/10 border border-success-200 dark:border-success-500/20'
-              : 'bg-error-50 dark:bg-error-500/10 border border-error-200 dark:border-error-500/20'
-          }`}>
-            <div className={`flex gap-2 text-sm ${result.success ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400'}`}>
-              <i className={`fas ${result.success ? 'fa-check-circle' : 'fa-exclamation-circle'} mt-0.5`}></i>
-              <span>{result.message}</span>
-            </div>
-          </div>
-        )}
+        <AnimatePresence>
+          {result && (
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+              className={`rounded-xl p-3 mb-4 text-sm flex items-center gap-2 ${result.success
+                ? 'bg-success-light border border-success/20 text-success-foreground'
+                : 'bg-error-light border border-error/20 text-error-foreground'}`}>
+              <i className={`fas ${result.success ? 'fa-check-circle' : 'fa-exclamation-circle'}`} aria-hidden="true"></i>
+              {result.message}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* TrueMoney Form */}
-        {method === 'truemoney' && (
-          <div className="card p-5">
-            <h3 className="font-semibold mb-4 dark:text-white">
-              <i className="fas fa-gift mr-2 text-brand-400"></i>เติมด้วย TrueMoney Voucher
-            </h3>
-            <form onSubmit={handleTruemoney} className="space-y-4">
-              <div>
-                <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1.5">ลิงก์ Gift Voucher (TrueMoney)</label>
-                <input
-                  type="text"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  className="input"
-                  placeholder="https://gift.truemoney.com/campaign/?v=XXXXXXXX"
-                  required
-                  maxLength={200}
-                />
-              </div>
-              <button type="submit" disabled={loading} className="btn-primary w-full justify-center py-3">
-                {loading ? (
-                  <><i className="fas fa-spinner fa-spin"></i> กำลังตรวจสอบ...</>
-                ) : (
-                  <><i className="fas fa-check"></i> เติมเงิน</>
-                )}
+        {/* TrueMoney */}
+        {tab === 'truemoney' && (
+          <div className="card p-5 animate-fade-in">
+            <h2 className="font-bold text-foreground mb-1">TrueMoney e-Voucher</h2>
+            <p className="text-xs text-foreground-muted mb-4">วางลิงก์ซองของขวัญ TrueMoney Wallet</p>
+            <form onSubmit={handleTruemoney} className="space-y-3">
+              <input type="text" value={voucherUrl} onChange={e => setVoucherUrl(e.target.value)} placeholder="https://gift.truemoney.com/campaign/?v=..."
+                className="input" required aria-label="ลิงก์ TrueMoney e-Voucher" />
+              <button type="submit" disabled={loading || !voucherUrl.trim()} className="btn-success w-full justify-center py-2.5 min-h-[44px]">
+                {loading ? <><i className="fas fa-spinner fa-spin" aria-hidden="true"></i> กำลังตรวจสอบ...</> : <><i className="fas fa-check" aria-hidden="true"></i> เติมเงิน</>}
               </button>
             </form>
           </div>
         )}
 
-        {/* PromptPay Form */}
-        {method === 'promptpay' && (
-          <div className="card p-5">
-            <h3 className="font-semibold mb-4 dark:text-white">
-              <i className="fas fa-qrcode mr-2 text-brand-400"></i>เติมด้วย PromptPay QR
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-gray-600 dark:text-gray-400 mb-2">เลือกจำนวนเงิน</label>
-                <div className="grid grid-cols-3 gap-2">
+        {/* PromptPay */}
+        {tab === 'promptpay' && (
+          <div className="card p-5 animate-fade-in">
+            {!qr ? (
+              <>
+                <h2 className="font-bold text-foreground mb-1">PromptPay QR Code</h2>
+                <p className="text-xs text-foreground-muted mb-4">เลือกจำนวนเงินที่ต้องการเติม</p>
+                <div className="grid grid-cols-4 gap-2 mb-4">
                   {AMOUNTS.map(a => (
-                    <button
-                      key={a}
-                      onClick={() => { setAmount(a); setPendingRef(null); setResult(null); }}
-                      className={`py-3 rounded-xl font-bold text-sm transition-all duration-200 ${
-                        amount === a
-                          ? 'bg-brand-500 text-white shadow-theme-sm'
-                          : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      {a.toLocaleString()} ฿
+                    <button key={a} onClick={() => setAmount(a)}
+                      className={`py-2.5 rounded-xl text-sm font-semibold transition-all min-h-[44px] tabular-nums ${amount === a
+                        ? 'bg-primary text-white shadow-theme-xs' : 'bg-surface-hover text-foreground-muted hover:bg-border'}`}>
+                      ฿{a}
                     </button>
                   ))}
                 </div>
-              </div>
-              <button onClick={handlePromptpay} disabled={loading || confirming} className="btn-primary w-full justify-center py-3">
-                {loading ? (
-                  <><i className="fas fa-spinner fa-spin"></i> กำลังสร้าง QR...</>
-                ) : (
-                  <><i className="fas fa-qrcode"></i> สร้าง QR Code ({amount.toLocaleString()} ฿)</>
-                )}
-              </button>
-              {pendingRef && (
-                <div className="border border-warning-200 dark:border-warning-500/20 bg-warning-50 dark:bg-warning-500/10 rounded-xl p-4 space-y-3">
-                  <p className="text-sm text-warning-700 dark:text-warning-400">
-                    <i className="fas fa-info-circle mr-1"></i>
-                    สแกน QR แล้วกด <strong>ยืนยันการชำระเงิน</strong> เพื่อรับเงินเข้ากระเป๋า
-                  </p>
-                  <p className="text-xs text-warning-600 dark:text-warning-500 break-all">Reference: {pendingRef.reference}</p>
-                  <button
-                    onClick={handleConfirmPromptpay}
-                    disabled={confirming}
-                    className="w-full py-2.5 rounded-lg font-medium bg-success-500 hover:bg-success-600 text-white flex items-center justify-center gap-2 transition-colors"
-                  >
-                    {confirming ? (
-                      <><i className="fas fa-spinner fa-spin"></i> กำลังยืนยัน...</>
-                    ) : (
-                      <><i className="fas fa-check-circle"></i> ยืนยันการชำระเงิน</>
-                    )}
-                  </button>
+                <button onClick={handlePromptpay} disabled={loading} className="btn-primary w-full justify-center py-2.5 min-h-[44px]">
+                  {loading ? <><i className="fas fa-spinner fa-spin" aria-hidden="true"></i> กำลังสร้าง QR...</>
+                    : <><i className="fas fa-qrcode" aria-hidden="true"></i> สร้าง QR Code (฿{amount})</>}
+                </button>
+              </>
+            ) : (
+              <div className="text-center">
+                <p className="text-sm text-foreground font-medium mb-3">สแกน QR เพื่อชำระเงิน</p>
+                <div className="bg-white rounded-2xl p-4 inline-block mb-4">
+                  <img src={qr.url} alt="PromptPay QR Code" className="w-48 h-48 object-contain" />
                 </div>
-              )}
-            </div>
+                <p className="text-lg font-black text-foreground tabular-nums mb-4">฿{amount.toLocaleString()}</p>
+                <div className="space-y-2">
+                  <button onClick={confirmPromptpay} disabled={confirming} className="btn-success w-full justify-center py-2.5 min-h-[44px]">
+                    {confirming ? <><i className="fas fa-spinner fa-spin" aria-hidden="true"></i> กำลังตรวจสอบ...</>
+                      : <><i className="fas fa-check" aria-hidden="true"></i> ชำระเงินแล้ว ยืนยัน</>}
+                  </button>
+                  <button onClick={() => setQr(null)} className="btn-ghost w-full justify-center">สร้าง QR ใหม่</button>
+                </div>
+              </div>
+            )}
           </div>
         )}
+
+        {/* Info */}
+        <div className="mt-6 bg-primary/5 border border-primary/10 rounded-xl p-4 text-xs text-foreground-muted space-y-1">
+          <p><i className="fas fa-info-circle text-primary mr-1" aria-hidden="true"></i>เงินจะเข้ากระเป๋าทันทีหลังเติมสำเร็จ</p>
+          <p><i className="fas fa-shield-halved text-primary mr-1" aria-hidden="true"></i>ระบบมีความปลอดภัย ข้อมูลถูกเข้ารหัส</p>
+          <p><i className="fas fa-headset text-primary mr-1" aria-hidden="true"></i>พบปัญหา? ติดต่อเราผ่าน Discord</p>
+        </div>
       </div>
     </MainLayout>
   );

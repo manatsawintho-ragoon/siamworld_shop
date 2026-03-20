@@ -79,4 +79,20 @@ router.get('/online-players', async (req: Request, res: Response, next: NextFunc
   } catch (err) { next(err); }
 });
 
+router.get('/topup-ranking', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const db = require('../lib/db').default;
+    const [rows] = await db.query(`
+      SELECT u.username, SUM(t.amount) as total_topup 
+      FROM transactions t 
+      JOIN users u ON t.user_id = u.id 
+      WHERE t.type = 'topup' AND t.status = 'success'
+      GROUP BY t.user_id, u.username
+      ORDER BY total_topup DESC 
+      LIMIT 10
+    `);
+    res.json({ success: true, ranking: rows });
+  } catch (err) { next(err); }
+});
+
 export default router;

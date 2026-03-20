@@ -1,6 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function LoginModal({ onClose }: { onClose: () => void }) {
   const { login } = useAuth();
@@ -8,6 +9,11 @@ export default function LoginModal({ onClose }: { onClose: () => void }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,55 +30,93 @@ export default function LoginModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content max-w-sm" onClick={(e) => e.stopPropagation()}>
-        {/* Header accent bar */}
-        <div className="h-1 bg-gradient-to-r from-brand-500 to-brand-400 rounded-t-2xl"></div>
+    <AnimatePresence>
+      <div className="modal-overlay" onClick={onClose}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 8 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 8 }}
+          transition={{ duration: 0.2, ease: 'easeOut' }}
+          className="modal-content max-w-sm"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header accent bar */}
+          <div className="h-1 bg-gradient-to-r from-primary to-primary/70 rounded-t-2xl"></div>
 
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-brand-50 dark:bg-brand-500/10 rounded-xl flex items-center justify-center">
-                <i className="fas fa-sign-in-alt text-brand-500"></i>
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                  <i className="fas fa-sign-in-alt text-primary" aria-hidden="true"></i>
+                </div>
+                <h2 className="text-lg font-bold text-foreground">เข้าสู่ระบบ</h2>
               </div>
-              <h2 className="text-lg font-bold dark:text-white">เข้าสู่ระบบ</h2>
+              <button
+                onClick={onClose}
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-foreground-subtle hover:text-foreground hover:bg-surface-hover transition-colors"
+                aria-label="ปิด"
+              >
+                <i className="fas fa-xmark" aria-hidden="true"></i>
+              </button>
             </div>
-            <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-300 transition-colors">
-              <i className="fas fa-xmark"></i>
-            </button>
+
+            <div className="text-sm text-foreground-muted mb-5 bg-primary/5 border border-primary/10 rounded-xl p-3">
+              <i className="fas fa-info-circle text-primary mr-1.5" aria-hidden="true"></i>
+              ใช้ Username & Password เดียวกับที่ลงทะเบียนในเกม (AuthMe)
+            </div>
+
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-error-light border border-error/20 rounded-xl p-3 mb-4 text-sm text-error flex items-center gap-2"
+              >
+                <i className="fas fa-exclamation-circle" aria-hidden="true"></i>
+                {error}
+              </motion.div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="login-username" className="block text-sm font-medium text-foreground mb-1.5">
+                  Username
+                </label>
+                <input
+                  ref={inputRef}
+                  id="login-username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  className="input"
+                  placeholder="ชื่อในเกม"
+                />
+              </div>
+              <div>
+                <label htmlFor="login-password" className="block text-sm font-medium text-foreground mb-1.5">
+                  Password
+                </label>
+                <input
+                  id="login-password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="input"
+                  placeholder="รหัสผ่าน"
+                />
+              </div>
+              <button type="submit" disabled={loading} className="btn-primary w-full justify-center py-2.5">
+                {loading ? (
+                  <><i className="fas fa-spinner fa-spin" aria-hidden="true"></i> กำลังเข้าสู่ระบบ...</>
+                ) : (
+                  <><i className="fas fa-sign-in-alt" aria-hidden="true"></i> เข้าสู่ระบบ</>
+                )}
+              </button>
+            </form>
           </div>
-
-          <div className="text-sm text-gray-500 dark:text-gray-400 mb-5 bg-brand-50 dark:bg-brand-500/10 border border-brand-100 dark:border-brand-500/20 rounded-lg p-3">
-            <i className="fas fa-info-circle text-brand-500 mr-1.5"></i>
-            ใช้ Username & Password เดียวกับที่ลงทะเบียนในเกม (AuthMe)
-          </div>
-
-          {error && (
-            <div className="bg-error-50 dark:bg-error-500/10 border border-error-200 dark:border-error-500/20 rounded-lg p-3 mb-4 text-sm text-error-600 dark:text-error-400 flex items-center gap-2">
-              <i className="fas fa-exclamation-circle"></i>
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Username</label>
-              <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required className="input" placeholder="ชื่อในเกม" autoFocus />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Password</label>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="input" placeholder="รหัสผ่าน" />
-            </div>
-            <button type="submit" disabled={loading} className="btn-primary w-full justify-center py-2.5">
-              {loading ? (
-                <><i className="fas fa-spinner fa-spin"></i> กำลังเข้าสู่ระบบ...</>
-              ) : (
-                <><i className="fas fa-sign-in-alt"></i> เข้าสู่ระบบ</>
-              )}
-            </button>
-          </form>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </AnimatePresence>
   );
 }

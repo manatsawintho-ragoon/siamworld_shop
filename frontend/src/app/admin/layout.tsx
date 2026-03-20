@@ -1,141 +1,274 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
-import { useTheme } from '@/context/ThemeContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const MENU = [
-  { href: '/admin', icon: 'fa-chart-line', label: 'Dashboard' },
-  { href: '/admin/products', icon: 'fa-cube', label: 'สินค้า' },
-  { href: '/admin/lootboxes', icon: 'fa-box-open', label: 'กล่องสุ่ม' },
-  { href: '/admin/servers', icon: 'fa-server', label: 'เซิร์ฟเวอร์' },
-  { href: '/admin/users', icon: 'fa-users', label: 'ผู้ใช้' },
-  { href: '/admin/purchases', icon: 'fa-receipt', label: 'ธุรกรรม' },
-  { href: '/admin/slides', icon: 'fa-images', label: 'สไลด์' },
-  { href: '/admin/settings', icon: 'fa-gear', label: 'ตั้งค่า' },
-  { href: '/admin/setup', icon: 'fa-wand-magic-sparkles', label: 'Setup Wizard' },
+// Menu Categorization (Verity Style)
+const MENU_CATEGORIES = [
+  {
+    category: null,
+    items: [
+      { href: '/admin', icon: 'fa-chart-pie', label: 'แดชบอร์ด' },
+    ]
+  },
+  {
+    category: 'MANAGEMENT',
+    items: [
+      { href: '/admin/users', icon: 'fa-users', label: 'ระบบจัดการสมาชิก' },
+      // Sub-menu for Shop
+      { 
+        id: 'shop',
+        icon: 'fa-store', 
+        label: 'ระบบร้านค้า',
+        subItems: [
+          { href: '/admin/products', label: 'สินค้าปกติ' },
+          { href: '/admin/lootboxes', label: 'กล่องสุ่ม' },
+        ]
+      },
+      { href: '/admin/codes', icon: 'fa-ticket-alt', label: 'จัดการโค้ดไอเทม' },
+    ]
+  },
+  {
+    category: 'PAGE MANAGER',
+    items: [
+      { href: '/admin/settings', icon: 'fa-paint-roller', label: 'ตั้งค่าหน้าเว็บ' },
+      { href: '/admin/slides', icon: 'fa-images', label: 'ตั้งค่าสไลด์' },
+    ]
+  },
+  {
+    category: 'SYSTEM',
+    items: [
+      { href: '/admin/purchases', icon: 'fa-wallet', label: 'ระบบเติมเงิน / ธุรกรรม' },
+      { href: '/admin/servers', icon: 'fa-server', label: 'จัดการเซิร์ฟเวอร์' },
+      { href: '/admin/setup', icon: 'fa-wand-magic-sparkles', label: 'Setup Wizard' },
+    ]
+  }
 ];
 
 function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const { user, isAdmin, loading, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({
+    'shop': pathname.includes('/admin/products') || pathname.includes('/admin/lootboxes')
+  });
+  const [time, setTime] = useState<string>('');
+
+  useEffect(() => {
+    // Force dark mode context inside the sidebar but light inside the main wrapper visually,
+    // though the best approach here is just to hardcode colors for Verity theme.
+    // Verity features: #131416 sidebar, #f97316 accent, #f3f4f6 bg.
+    // Date timer
+    const updateTime = () => {
+      setTime(new Date().toLocaleString('th-TH', { 
+        year: 'numeric', month: '2-digit', day: '2-digit', 
+        hour: '2-digit', minute: '2-digit', second: '2-digit' 
+      }));
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const toggleSubMenu = (id: string) => {
+    setOpenSubMenus(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors">
-        <i className="fas fa-spinner fa-spin text-3xl text-brand-500"></i>
+      <div className="min-h-screen flex items-center justify-center bg-[#f3f4f6]">
+        <i className="fas fa-spinner fa-spin text-3xl text-[#f97316]"></i>
       </div>
     );
   }
 
   if (!user || !isAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors">
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-error-50 dark:bg-error-500/10 rounded-2xl flex items-center justify-center">
-            <i className="fas fa-shield-halved text-2xl text-error-500"></i>
+      <div className="min-h-screen flex items-center justify-center bg-[#f3f4f6]">
+        <div className="text-center bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
+          <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-2xl flex items-center justify-center">
+            <i className="fas fa-shield-halved text-2xl text-red-600"></i>
           </div>
-          <h2 className="text-xl font-bold mb-2 dark:text-white">ไม่มีสิทธิ์เข้าถึง</h2>
-          <p className="text-gray-500 dark:text-gray-400 mb-4">คุณต้องเป็น Admin เพื่อเข้าหน้านี้</p>
-          <Link href="/" className="btn-primary">
-            <i className="fas fa-home"></i> กลับหน้าแรก
+          <h2 className="text-xl font-bold mb-2 text-gray-900">ไม่มีสิทธิ์เข้าถึง</h2>
+          <p className="text-gray-500 mb-6">คุณต้องเป็น Admin เพื่อเข้าหน้านี้</p>
+          <Link href="/" className="px-6 py-2.5 bg-[#f97316] hover:bg-[#ea580c] text-white font-bold rounded-xl transition-colors">
+            <i className="fas fa-home mr-2"></i> กลับหน้าแรก
           </Link>
         </div>
       </div>
     );
   }
 
+  // Verity Color Palette References:
+  // Sidebar: #18191c / #131416
+  // Orange: #ea580c / #f97316
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex transition-colors duration-200">
-      {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-all duration-300 lg:translate-x-0 lg:relative ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex flex-col h-full">
-          {/* Sidebar Header */}
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-            <Link href="/admin" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 bg-brand-500 rounded-xl flex items-center justify-center shadow-theme-sm group-hover:shadow-theme-md transition-all">
-                <i className="fas fa-shield-halved text-white text-sm"></i>
-              </div>
-              <div>
-                <span className="font-bold dark:text-white">Admin Panel</span>
-                <p className="text-xs text-gray-400 dark:text-gray-500">SiamWorld Shop</p>
-              </div>
-            </Link>
-          </div>
+    <div className="min-h-screen bg-[#f8f9fa] flex text-gray-800 font-sans selection:bg-[#f97316] selection:text-white">
+      {/* Sidebar (Dark) */}
+      <aside className={`fixed inset-y-0 left-0 z-50 w-[260px] bg-[#18191c] transform transition-transform duration-300 lg:translate-x-0 lg:relative ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col shadow-2xl lg:shadow-none`}>
+        {/* Logo Area */}
+        <div className="h-[72px] flex items-center px-6 border-b border-gray-800 flex-shrink-0">
+          <Link href="/admin" className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-white text-black flex flex-col items-center justify-center font-black rounded-lg text-xs leading-none">
+              <span className="mb-[1px]">V</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="font-black text-white text-lg tracking-wide leading-none">VERITY</span>
+              <span className="text-[10px] font-bold text-[#f97316] tracking-[0.2em] mt-1 -mr-1">ADMIN PANEL</span>
+            </div>
+          </Link>
+        </div>
 
-          {/* Nav Menu */}
-          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-            {MENU.map(item => {
-              const active = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    active
-                      ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50'
-                  }`}
-                >
-                  <i className={`fas ${item.icon} w-5 text-center ${active ? 'text-brand-500' : 'text-gray-400 dark:text-gray-500'}`}></i>
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto py-5 px-3 space-y-6 custom-scrollbar-dark">
+          {MENU_CATEGORIES.map((cat, i) => (
+            <div key={i}>
+              {cat.category && (
+                <h4 className="px-4 text-[10px] font-bold text-gray-500 mb-2 tracking-wider">
+                  {cat.category}
+                </h4>
+              )}
+              <ul className="space-y-1">
+                {cat.items.map((item: any, j) => {
+                  if (item.subItems) {
+                    const isOpen = openSubMenus[item.id];
+                    const hasActiveChild = item.subItems.some((sub: any) => pathname === sub.href);
+                    
+                    return (
+                      <li key={j}>
+                        <button
+                          onClick={() => toggleSubMenu(item.id)}
+                          className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 text-sm font-medium ${
+                            hasActiveChild ? 'text-[#f97316]' : 'text-gray-400 hover:text-white hover:bg-white/5'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <i className={`fas ${item.icon} w-5 text-center`}></i>
+                            {item.label}
+                          </div>
+                          <i className={`fas fa-chevron-down text-[10px] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}></i>
+                        </button>
+                        <AnimatePresence>
+                          {isOpen && (
+                            <motion.ul
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="overflow-hidden bg-black/20 rounded-xl mt-1 space-y-0.5 relative"
+                            >
+                              <div className="absolute left-[22px] top-0 bottom-0 w-[1px] bg-gray-800"></div>
+                              {item.subItems.map((sub: any, k: number) => {
+                                const active = pathname === sub.href;
+                                return (
+                                  <li key={k}>
+                                    <Link
+                                      href={sub.href}
+                                      onClick={() => setSidebarOpen(false)}
+                                      className={`block py-2.5 pl-12 pr-4 text-sm font-medium transition-colors relative ${
+                                        active ? 'text-[#f97316]' : 'text-gray-400 hover:text-white'
+                                      }`}
+                                    >
+                                      {active && (
+                                        <div className="absolute left-[21px] top-1/2 -translate-y-1/2 w-[3px] h-[3px] rounded-full bg-[#f97316]"></div>
+                                      )}
+                                      {sub.label}
+                                    </Link>
+                                  </li>
+                                );
+                              })}
+                            </motion.ul>
+                          )}
+                        </AnimatePresence>
+                      </li>
+                    );
+                  }
 
-          {/* Sidebar Footer */}
-          <div className="p-3 border-t border-gray-200 dark:border-gray-700 space-y-1">
-            <Link href="/" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors">
-              <i className="fas fa-home w-5 text-center text-gray-400"></i> กลับหน้าเว็บ
-            </Link>
-            <button onClick={logout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-error-50 dark:hover:bg-error-500/10 hover:text-error-600 dark:hover:text-error-400 transition-colors">
-              <i className="fas fa-right-from-bracket w-5 text-center"></i> ออกจากระบบ
-            </button>
-          </div>
+                  const active = pathname === item.href;
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        onClick={() => setSidebarOpen(false)}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sm font-medium relative overflow-hidden group ${
+                          active
+                            ? 'text-white'
+                            : 'text-gray-400 hover:text-white hover:bg-white/5'
+                        }`}
+                      >
+                        {active && (
+                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#f97316] rounded-r-md"></div>
+                        )}
+                        {active && (
+                          <div className="absolute inset-0 bg-gradient-to-r from-[#f97316]/20 to-transparent"></div>
+                        )}
+                        <i className={`fas ${item.icon} w-5 text-center ${active ? 'text-[#f97316]' : 'group-hover:text-white'}`}></i>
+                        <span className="relative z-10">{item.label}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </nav>
+
+        {/* Footer info */}
+        <div className="p-5 border-t border-gray-800">
+          <Link href="/" className="flex items-center gap-3 text-gray-400 hover:text-white mb-4 text-sm font-medium transition-colors p-2 -mx-2 rounded-lg hover:bg-white/5">
+            <i className="fas fa-arrow-left"></i> กลับหน้าเว็บไซต์
+          </Link>
         </div>
       </aside>
 
       {/* Overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Main Content */}
-      <div className="flex-1 min-w-0">
-        {/* Admin Header */}
-        <header className="sticky top-0 z-30 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-700 transition-colors">
-          <div className="flex items-center justify-between px-4 h-16">
-            <button onClick={() => setSidebarOpen(true)} className="lg:hidden w-9 h-9 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-              <i className="fas fa-bars"></i>
+      {/* Main Content Wrap */}
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+        {/* Top Header (White) */}
+        <header className="h-[72px] bg-white border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0 sticky top-0 z-30">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden text-gray-500 hover:text-gray-900 transition-colors"
+            >
+              <i className="fas fa-bars text-xl"></i>
             </button>
-            <div className="flex items-center gap-3 ml-auto">
-              {/* Theme Toggle */}
-              <button
-                onClick={toggleTheme}
-                className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
-                title={theme === 'light' ? 'Dark Mode' : 'Light Mode'}
-              >
-                {theme === 'light' ? (
-                  <i className="fas fa-moon text-sm"></i>
-                ) : (
-                  <i className="fas fa-sun text-sm text-warning-400"></i>
-                )}
-              </button>
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700">
-                <div className="w-6 h-6 rounded-full bg-brand-500/10 flex items-center justify-center">
-                  <i className="fas fa-user text-xs text-brand-500"></i>
-                </div>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{user.username}</span>
-              </div>
+            <div className="hidden sm:flex items-center gap-2 text-sm font-medium text-gray-500 bg-gray-50 px-4 py-2 rounded-full border border-gray-100 shadow-sm">
+              <i className="far fa-clock"></i>
+              {time || '...'}
             </div>
           </div>
+
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 px-2 py-1.5 rounded-xl border border-gray-100 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer group">
+              <div className="w-8 h-8 rounded-lg bg-[#18191c] flex items-center justify-center text-white">
+                <i className="fas fa-user-shield text-xs"></i>
+              </div>
+              <div className="pr-1 flex items-center gap-2">
+                <span className="text-sm font-bold text-gray-800">{user.username}</span>
+                <i className="fas fa-chevron-down text-[10px] text-gray-400 group-hover:text-gray-600 transition-colors"></i>
+              </div>
+            </div>
+            <button
+              onClick={logout}
+              className="w-10 h-10 flex items-center justify-center rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-colors border border-red-100"
+              title="ออกจากระบบ"
+            >
+              <i className="fas fa-power-off"></i>
+            </button>
+          </div>
         </header>
-        <main className="p-4 md:p-6">{children}</main>
+
+        {/* Content Area */}
+        <main className="flex-1 p-6 md:p-8">
+          {children}
+        </main>
       </div>
     </div>
   );
