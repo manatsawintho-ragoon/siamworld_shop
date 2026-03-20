@@ -1,0 +1,80 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    './src/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  darkMode: 'class',
+  theme: {
+    extend: {
+      fontFamily: {
+        kanit: ['Kanit', 'sans-serif'],
+        inter: ['Inter', 'sans-serif'],
+        outfit: ['Outfit', 'sans-serif'],
+      },
+      colors: {
+        brand: {
+          25: '#F2F7FF',
+          50: '#ECF3FF',
+          100: '#DDE9FF',
+          200: '#C2D6FF',
+          300: '#9CB9FF',
+          400: '#7592FF',
+          500: '#465FFF',
+          600: '#3641F5',
+          700: '#2A31D8',
+          800: '#252DAE',
+          900: '#262E89',
+          950: '#161950',
+        },
+        success: {
+          50: '#ECFDF3',
+          100: '#D1FADF',
+          200: '#A6F4C5',
+          300: '#6CE9A6',
+          400: '#32D583',
+          500: '#12B76A',
+          600: '#039855',
+          700: '#027A48',
+        },
+        error: {
+          50: '#FEF3F2',
+          100: '#FEE4E2',
+          200: '#FECDCA',
+          300: '#FDA29B',
+          400: '#F97066',
+          500: '#F04438',
+          600: '#D92D20',
+          700: '#B42318',
+        },
+        warning: {
+          50: '#FFFAEB',
+          100: '#FEF0C7',
+          200: '#FEDF89',
+          300: '#FEC84B',
+          400: '#FDB022',
+          500: '#F79009',
+          600: '#DC6803',
+          700: '#B54708',
+        },
+        gray: {
+          dark: '#1A2231',
+        },
+      },
+      boxShadow: {
+        'theme-xs': '0px 1px 2px 0px rgba(16, 24, 40, 0.05)',
+        'theme-sm': '0px 1px 3px 0px rgba(16, 24, 40, 0.10), 0px 1px 2px 0px rgba(16, 24, 40, 0.06)',
+        'theme-md': '0px 4px 8px -2px rgba(16, 24, 40, 0.10), 0px 2px 4px -2px rgba(16, 24, 40, 0.06)',
+        'theme-lg': '0px 12px 16px -4px rgba(16, 24, 40, 0.08), 0px 4px 6px -2px rgba(16, 24, 40, 0.03)',
+        'theme-xl': '0px 20px 24px -4px rgba(16, 24, 40, 0.08), 0px 8px 8px -4px rgba(16, 24, 40, 0.03)',
+      },
+      spacing: {
+        4.5: '1.125rem',
+        5.5: '1.375rem',
+        6.5: '1.625rem',
+        13: '3.25rem',
+        15: '3.75rem',
+      },
+    },
+  },
+  plugins: [],
+};
