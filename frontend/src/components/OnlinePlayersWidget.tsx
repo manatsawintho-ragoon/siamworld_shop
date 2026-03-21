@@ -9,15 +9,15 @@ export default function OnlinePlayersWidget() {
       <div className="card-header-mc flex items-center justify-between">
         <span><i className="fas fa-server mr-2 text-success"></i>Server Status</span>
       </div>
-      <div className="p-4 bg-black/20">
-        <div className="flex items-center gap-3 mb-4 bg-black/40 p-3 rounded-lg border border-white/5 shadow-inner">
+      <div className="p-4 bg-gray-50">
+        <div className="flex items-center gap-3 mb-4 bg-green-50 p-3 rounded-lg border border-green-100">
           <span className="relative flex h-3 w-3">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
             <span className="relative inline-flex rounded-full h-3 w-3 bg-success"></span>
           </span>
           <div>
             <div className="text-[10px] font-bold text-foreground-muted uppercase tracking-wider mb-0.5">สถานะเซิร์ฟเวอร์ (Online)</div>
-            <h3 className="text-sm font-black text-white">ผู้เล่นปัจจุบัน <span className="text-success ml-1">{totalOnline}</span> คน</h3>
+            <h3 className="text-sm font-black text-gray-900">ผู้เล่นปัจจุบัน <span className="text-success ml-1">{totalOnline}</span> คน</h3>
           </div>
         </div>
         
@@ -26,12 +26,12 @@ export default function OnlinePlayersWidget() {
         ) : (
           <div className="space-y-3">
             {servers.map((s) => (
-              <div key={s.serverId} className="bg-white/5 rounded-lg p-3 border border-white/5">
+              <div key={s.serverId} className="bg-white rounded-lg p-3 border border-gray-200">
                 <div className="flex justify-between text-xs mb-2">
-                  <span className="font-bold text-white drop-shadow-md">{s.serverName}</span>
+                  <span className="font-bold text-gray-900">{s.serverName}</span>
                   <span className="text-primary font-black drop-shadow-sm">{s.count} <span className="text-foreground-muted text-[10px]">/ {s.maxPlayers || '?'}</span></span>
                 </div>
-                <div className="h-1.5 bg-black/50 rounded-full overflow-hidden border border-white/5">
+                <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-primary/80 to-primary rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(14,165,233,0.5)]"
                     style={{ width: `${Math.min((s.count / (s.maxPlayers || 1)) * 100, 100)}%` }}

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -33,8 +33,7 @@ const MENU_CATEGORIES = [
   {
     category: 'PAGE MANAGER',
     items: [
-      { href: '/admin/settings', icon: 'fa-paint-roller', label: 'ตั้งค่าหน้าเว็บ' },
-      { href: '/admin/slides', icon: 'fa-images', label: 'ตั้งค่าสไลด์' },
+      { href: '/admin/settings', icon: 'fa-paint-roller', label: 'ตั้งค่าหน้าเว็บไซต์' },
     ]
   },
   {
@@ -54,12 +53,13 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({
     'shop': pathname.includes('/admin/products') || pathname.includes('/admin/lootboxes')
   });
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [time, setTime] = useState<string>('');
 
   useEffect(() => {
     // Force dark mode context inside the sidebar but light inside the main wrapper visually,
     // though the best approach here is just to hardcode colors for Verity theme.
-    // Verity features: #131416 sidebar, #f97316 accent, #f3f4f6 bg.
+    // Verity features: #131416 sidebar, #22c55e accent, #f3f4f6 bg.
     // Date timer
     const updateTime = () => {
       setTime(new Date().toLocaleString('th-TH', { 
@@ -79,7 +79,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f3f4f6]">
-        <i className="fas fa-spinner fa-spin text-3xl text-[#f97316]"></i>
+        <i className="fas fa-spinner fa-spin text-3xl text-[#22c55e]"></i>
       </div>
     );
   }
@@ -93,7 +93,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           </div>
           <h2 className="text-xl font-bold mb-2 text-gray-900">ไม่มีสิทธิ์เข้าถึง</h2>
           <p className="text-gray-500 mb-6">คุณต้องเป็น Admin เพื่อเข้าหน้านี้</p>
-          <Link href="/" className="px-6 py-2.5 bg-[#f97316] hover:bg-[#ea580c] text-white font-bold rounded-xl transition-colors">
+          <Link href="/" className="px-6 py-2.5 bg-[#22c55e] hover:bg-[#16a34a] text-white font-bold rounded-xl transition-colors">
             <i className="fas fa-home mr-2"></i> กลับหน้าแรก
           </Link>
         </div>
@@ -103,21 +103,18 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
   // Verity Color Palette References:
   // Sidebar: #18191c / #131416
-  // Orange: #ea580c / #f97316
+  // Orange: #16a34a / #22c55e
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] flex text-gray-800 font-sans selection:bg-[#f97316] selection:text-white">
+    <div className="min-h-screen bg-[#f8f9fa] flex text-gray-800 font-sans selection:bg-[#22c55e] selection:text-white">
       {/* Sidebar (Dark) */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-[260px] bg-[#18191c] transform transition-transform duration-300 lg:translate-x-0 lg:relative ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col shadow-2xl lg:shadow-none`}>
         {/* Logo Area */}
         <div className="h-[72px] flex items-center px-6 border-b border-gray-800 flex-shrink-0">
           <Link href="/admin" className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-white text-black flex flex-col items-center justify-center font-black rounded-lg text-xs leading-none">
-              <span className="mb-[1px]">V</span>
-            </div>
             <div className="flex flex-col">
-              <span className="font-black text-white text-lg tracking-wide leading-none">VERITY</span>
-              <span className="text-[10px] font-bold text-[#f97316] tracking-[0.2em] mt-1 -mr-1">ADMIN PANEL</span>
+              <span className="font-black text-white text-lg tracking-wide leading-none">SIAMWORLD</span>
+              <span className="text-[10px] font-bold text-[#22c55e] tracking-[0.2em] mt-1 -mr-1">ADMIN PANEL</span>
             </div>
           </Link>
         </div>
@@ -142,7 +139,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                         <button
                           onClick={() => toggleSubMenu(item.id)}
                           className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 text-sm font-medium ${
-                            hasActiveChild ? 'text-[#f97316]' : 'text-gray-400 hover:text-white hover:bg-white/5'
+                            hasActiveChild ? 'text-[#22c55e]' : 'text-gray-400 hover:text-white hover:bg-white/5'
                           }`}
                         >
                           <div className="flex items-center gap-3">
@@ -168,11 +165,11 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                       href={sub.href}
                                       onClick={() => setSidebarOpen(false)}
                                       className={`block py-2.5 pl-12 pr-4 text-sm font-medium transition-colors relative ${
-                                        active ? 'text-[#f97316]' : 'text-gray-400 hover:text-white'
+                                        active ? 'text-[#22c55e]' : 'text-gray-400 hover:text-white'
                                       }`}
                                     >
                                       {active && (
-                                        <div className="absolute left-[21px] top-1/2 -translate-y-1/2 w-[3px] h-[3px] rounded-full bg-[#f97316]"></div>
+                                        <div className="absolute left-[21px] top-1/2 -translate-y-1/2 w-[3px] h-[3px] rounded-full bg-[#22c55e]"></div>
                                       )}
                                       {sub.label}
                                     </Link>
@@ -192,20 +189,14 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                       <Link
                         href={item.href}
                         onClick={() => setSidebarOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sm font-medium relative overflow-hidden group ${
+                        className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 text-sm font-medium ${
                           active
-                            ? 'text-white'
+                            ? 'bg-[#16a34a] text-white shadow-[0_4px_0_#0d6b2e,0_2px_8px_rgba(22,163,74,0.35)]'
                             : 'text-gray-400 hover:text-white hover:bg-white/5'
                         }`}
                       >
-                        {active && (
-                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#f97316] rounded-r-md"></div>
-                        )}
-                        {active && (
-                          <div className="absolute inset-0 bg-gradient-to-r from-[#f97316]/20 to-transparent"></div>
-                        )}
-                        <i className={`fas ${item.icon} w-5 text-center ${active ? 'text-[#f97316]' : 'group-hover:text-white'}`}></i>
-                        <span className="relative z-10">{item.label}</span>
+                        <i className={`fas ${item.icon} w-5 text-center ${active ? 'text-white' : ''}`}></i>
+                        <span>{item.label}</span>
                       </Link>
                     </li>
                   );
@@ -217,9 +208,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
         {/* Footer info */}
         <div className="p-5 border-t border-gray-800">
-          <Link href="/" className="flex items-center gap-3 text-gray-400 hover:text-white mb-4 text-sm font-medium transition-colors p-2 -mx-2 rounded-lg hover:bg-white/5">
-            <i className="fas fa-arrow-left"></i> กลับหน้าเว็บไซต์
-          </Link>
+          <p className="text-[10px] text-gray-600 text-center">SIAMWORLD ADMIN PANEL</p>
         </div>
       </aside>
 
@@ -246,22 +235,114 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3 px-2 py-1.5 rounded-xl border border-gray-100 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer group">
-              <div className="w-8 h-8 rounded-lg bg-[#18191c] flex items-center justify-center text-white">
-                <i className="fas fa-user-shield text-xs"></i>
-              </div>
-              <div className="pr-1 flex items-center gap-2">
-                <span className="text-sm font-bold text-gray-800">{user.username}</span>
-                <i className="fas fa-chevron-down text-[10px] text-gray-400 group-hover:text-gray-600 transition-colors"></i>
-              </div>
+            <div className="relative">
+              <button
+                onClick={() => setUserMenuOpen(v => !v)}
+                className="flex items-center gap-3 px-2 py-1.5 rounded-xl border border-gray-100 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer group"
+              >
+                <div className="w-8 h-8 rounded-lg overflow-hidden bg-[#18191c] flex items-center justify-center shrink-0">
+                  <img
+                    src={`https://mc-heads.net/avatar/${user.username}/32`}
+                    alt={user.username}
+                    width={32}
+                    height={32}
+                    className="w-full h-full"
+                    style={{ imageRendering: 'pixelated' }}
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+                    }}
+                  />
+                  <i className="fas fa-user-shield text-xs text-white hidden" style={{ display: 'none' }}></i>
+                </div>
+                <div className="pr-1 flex items-center gap-2">
+                  <span className="text-sm font-bold text-gray-800">{user.username}</span>
+                  <i className={`fas fa-chevron-down text-[10px] text-gray-400 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`}></i>
+                </div>
+              </button>
+
+              {/* Dropdown */}
+              <AnimatePresence>
+                {userMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.12)] border border-gray-100 overflow-hidden z-50"
+                    >
+                      {/* User info card */}
+                      <div className="px-4 pt-4 pb-3">
+                        {/* Avatar + name */}
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="relative shrink-0">
+                            {/* Minecraft skin head */}
+                            <img
+                              src={`https://mc-heads.net/avatar/${user.username}/40`}
+                              alt={user.username}
+                              width={40}
+                              height={40}
+                              className="w-10 h-10 rounded-lg"
+                              style={{ imageRendering: 'pixelated' }}
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+                              }}
+                            />
+                            {/* Fallback icon */}
+                            <div className="w-10 h-10 rounded-lg bg-[#18191c] items-center justify-center text-white hidden" style={{ display: 'none' }}>
+                              <i className="fas fa-user-shield text-sm"></i>
+                            </div>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-gray-900 truncate">{user.username}</p>
+                            <span className="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-500 text-white uppercase tracking-wide shadow-[0_2px_0_#c2410c]">
+                              <i className="fas fa-star text-[8px]"></i>
+                              {user.role}
+                            </span>
+                          </div>
+                        </div>
+                        {/* Stats grid */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="bg-gray-100 border border-gray-200 rounded-lg px-3 py-2">
+                            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5">User ID</p>
+                            <p className="text-sm font-bold text-gray-800">#{user.id}</p>
+                          </div>
+                          <div className="bg-gray-100 border border-gray-200 rounded-lg px-3 py-2">
+                            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5">ยอดเงิน</p>
+                            <p className="text-sm font-bold text-gray-800">
+                              {user.wallet_balance?.toLocaleString('th-TH') ?? '0'}
+                              <span className="text-[10px] font-normal text-gray-400 ml-1">฿</span>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="h-px bg-gray-100" />
+
+                      <Link
+                        href="/"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors duration-150"
+                      >
+                        <i className="fas fa-arrow-left w-4 text-center text-gray-400"></i>
+                        <span className="font-medium">กลับหน้าเว็บไซต์</span>
+                      </Link>
+                      <div className="h-px bg-gray-100 mx-3" />
+                      <button
+                        onClick={() => { setUserMenuOpen(false); logout(); }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:text-red-700 hover:bg-red-100 transition-colors duration-150"
+                      >
+                        <i className="fas fa-power-off w-4 text-center"></i>
+                        <span className="font-medium">ออกจากระบบ</span>
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
             </div>
-            <button
-              onClick={logout}
-              className="w-10 h-10 flex items-center justify-center rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-colors border border-red-100"
-              title="ออกจากระบบ"
-            >
-              <i className="fas fa-power-off"></i>
-            </button>
           </div>
         </header>
 
@@ -281,3 +362,5 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     </AuthProvider>
   );
 }
+
+

@@ -5,80 +5,81 @@
 @tailwind utilities;
 
 /* ══════════════════════════════════════════════
-   DESIGN SYSTEM: Deep Aquatic / Minecraft Classic
-   Fixed Dark Theme with vibrant accents
+   DESIGN SYSTEM: Minecraft Green + White
+   Light Theme — Green primary, white surfaces
    ══════════════════════════════════════════════ */
 
 @layer base {
   :root {
-    /* Background & Surface */
-    --color-background: 8 15 25;          /* Very dark aquatic blue #080f19 */
-    --color-surface: 16 26 40;            /* Dark semi-transparent boxes #101a28 */
-    --color-surface-hover: 24 36 54;      /* Lighter box hover #182436 */
-    --color-surface-elevated: 24 36 54;
+    /* ── Light Theme: Minecraft Green + White ── */
 
-    /* Borders */
-    --color-border: 30 45 65;             /* Subtle borders */
-    --color-border-muted: 24 36 54;
+    /* Background & Surface — LIGHT */
+    --color-background: 240 253 244;           /* green-50 #f0fdf4 */
+    --color-surface: 255 255 255;              /* Pure white */
+    --color-surface-hover: 240 253 244;        /* green-50 on hover */
+    --color-surface-elevated: 255 255 255;
 
-    /* Text */
-    --color-foreground: 248 250 252;      /* Off-white #f8fafc */
-    --color-foreground-muted: 148 163 184;/* Slate 400 */
-    --color-foreground-subtle: 100 116 139;/* Slate 500 */
+    /* Borders — green-tinted */
+    --color-border: 187 247 208;               /* green-200 #bbf7d0 */
+    --color-border-muted: 220 252 231;         /* green-100 #dcfce7 */
 
-    /* Primary (Vibrant Cyan / Aquatic) */
-    --color-primary: 14 165 233;          /* Sky 500 #0ea5e9 */
-    --color-primary-hover: 2 132 199;     /* Sky 600 */
-    --color-primary-light: 56 189 248;    /* Sky 400 */
+    /* Text — dark for readability on white */
+    --color-foreground: 17 24 39;              /* gray-900 #111827 */
+    --color-foreground-muted: 75 85 99;        /* gray-600 #4b5563 */
+    --color-foreground-subtle: 107 114 128;    /* gray-500 #6b7280 — WCAG AA compliant */
+
+    /* Primary — Minecraft Green */
+    --color-primary: 34 197 94;                /* Green-500 #22c55e */
+    --color-primary-hover: 22 163 74;          /* Green-600 #16a34a */
+    --color-primary-light: 74 222 128;         /* Green-400 #4ade80 */
     --color-primary-foreground: 255 255 255;
-    --color-primary-muted: 12 74 110;     /* Sky 900 */
+    --color-primary-muted: 187 247 208;        /* green-200 — button shadow */
 
-    /* Generic Actions */
-    --color-success: 16 185 129;          /* Emerald 500 */
-    --color-success-light: 6 78 59;       /* Emerald 900 */
-    --color-success-foreground: 209 250 229; /* Emerald 100 */
+    /* Actions */
+    --color-success: 16 185 129;
+    --color-success-light: 167 243 208;        /* green-200 */
+    --color-success-foreground: 6 78 59;
 
-    --color-error: 239 68 68;             /* Red 500 */
-    --color-error-light: 127 29 29;       /* Red 900 */
-    --color-error-foreground: 254 226 226; /* Red 100 */
+    --color-error: 220 38 38;                  /* red-600 */
+    --color-error-light: 254 202 202;          /* red-200 */
+    --color-error-foreground: 127 29 29;
 
-    --color-warning: 245 158 11;          /* Amber 500 */
-    --color-warning-light: 120 53 15;     /* Amber 900 */
-    --color-warning-foreground: 254 243 199; /* Amber 100 */
+    --color-warning: 217 119 6;                /* amber-600 */
+    --color-warning-light: 254 243 199;        /* amber-100 */
+    --color-warning-foreground: 120 53 15;
 
-    /* Shadows */
-    --shadow-xs: 0px 1px 2px rgba(0, 0, 0, 0.5);
-    --shadow-sm: 0px 4px 6px -1px rgba(0, 0, 0, 0.5), 0px 2px 4px -1px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0px 10px 15px -3px rgba(0, 0, 0, 0.5), 0px 4px 6px -2px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0px 20px 25px -5px rgba(0, 0, 0, 0.5), 0px 10px 10px -5px rgba(0, 0, 0, 0.3);
-    --shadow-xl: 0px 24px 48px -8px rgba(0, 0, 0, 0.7);
+    /* Shadows — lighter for white theme */
+    --shadow-xs: 0px 1px 2px rgba(0,0,0,0.05);
+    --shadow-sm: 0px 1px 3px rgba(0,0,0,0.08), 0px 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0px 4px 6px -1px rgba(0,0,0,0.07), 0px 2px 4px -1px rgba(0,0,0,0.04);
+    --shadow-lg: 0px 10px 15px -3px rgba(0,0,0,0.08), 0px 4px 6px -2px rgba(0,0,0,0.04);
+    --shadow-xl: 0px 20px 25px -5px rgba(0,0,0,0.10), 0px 8px 10px -6px rgba(0,0,0,0.06);
   }
 
-  /* Since we force dark mode styling, we just map .dark to the same exact variables to not break next-themes if it is on */
   .dark {
-    --color-background: 8 15 25;
-    --color-surface: 16 26 40;
-    --color-surface-hover: 24 36 54;
-    --color-surface-elevated: 24 36 54;
-    --color-border: 30 45 65;
-    --color-border-muted: 24 36 54;
-    --color-foreground: 248 250 252;
-    --color-foreground-muted: 148 163 184;
-    --color-foreground-subtle: 100 116 139;
-    --color-primary: 14 165 233;
-    --color-primary-hover: 2 132 199;
-    --color-primary-light: 56 189 248;
+    --color-background: 240 253 244;
+    --color-surface: 255 255 255;
+    --color-surface-hover: 240 253 244;
+    --color-surface-elevated: 255 255 255;
+    --color-border: 187 247 208;
+    --color-border-muted: 220 252 231;
+    --color-foreground: 17 24 39;
+    --color-foreground-muted: 75 85 99;
+    --color-foreground-subtle: 107 114 128;
+    --color-primary: 34 197 94;
+    --color-primary-hover: 22 163 74;
+    --color-primary-light: 74 222 128;
     --color-primary-foreground: 255 255 255;
-    --color-primary-muted: 12 74 110;
+    --color-primary-muted: 187 247 208;
     --color-success: 16 185 129;
-    --color-success-light: 6 78 59;
-    --color-success-foreground: 209 250 229;
-    --color-error: 239 68 68;
-    --color-error-light: 127 29 29;
-    --color-error-foreground: 254 226 226;
-    --color-warning: 245 158 11;
-    --color-warning-light: 120 53 15;
-    --color-warning-foreground: 254 243 199;
+    --color-success-light: 167 243 208;
+    --color-success-foreground: 6 78 59;
+    --color-error: 220 38 38;
+    --color-error-light: 254 202 202;
+    --color-error-foreground: 127 29 29;
+    --color-warning: 217 119 6;
+    --color-warning-light: 254 243 199;
+    --color-warning-foreground: 120 53 15;
   }
 }
 
@@ -88,15 +89,12 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: rgb(var(--color-background));
-  /* A beautiful dark aquatic gradient for the base if an image isn't loaded */
-  background-image: radial-gradient(circle at 50% 0%, #152c46 0%, #080f19 70%, #04080c 100%);
-  background-attachment: fixed;
   color: rgb(var(--color-foreground));
 }
 
 /* Selection */
 ::selection {
-  background: rgba(14, 165, 233, 0.4);
+  background: rgba(34, 197, 94, 0.4);
   color: white;
 }
 
@@ -113,13 +111,13 @@ body {
   border-radius: 4px;
 }
 
-/* ── MC Header Menu Styles (for Navbar later) ── */
+/* ── MC Header Menu Styles ── */
 .mc-nav-link {
   @apply relative px-5 py-4 text-sm font-bold tracking-wide uppercase transition-colors duration-200;
-  color: rgb(var(--color-foreground-muted));
+  color: rgb(55 65 81); /* gray-700 — dark text on white nav */
 }
 .mc-nav-link:hover, .mc-nav-link.active {
-  color: rgb(var(--color-primary-light));
+  color: rgb(var(--color-primary));
 }
 .mc-nav-link::after {
   content: '';
@@ -138,24 +136,24 @@ body {
 
 /* ── Card (Boxed Style) ── */
 .card {
-  background: rgba(var(--color-surface), 0.85); /* Slightly transparent */
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(var(--color-border), 0.5);
-  border-radius: 0.5rem; /* squarer borders for MC feel */
-  box-shadow: var(--shadow-md);
+  background: rgb(var(--color-surface));
+  border: 1.5px solid rgb(var(--color-border));
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow-sm);
   transition: all 0.2s ease;
 }
 
-/* Dark Header for sidebars (e.g. Member Login) */
+/* Green-accented Header for sidebars (e.g. Member Login) */
 .card-header-mc {
-  background: rgba(0, 0, 0, 0.2);
-  border-bottom: 1px solid rgba(var(--color-border), 0.3);
+  background: rgb(var(--color-surface));
+  border-bottom: 2px solid rgb(var(--color-border));
+  border-left: 4px solid rgb(var(--color-primary));
   padding: 0.75rem 1rem;
   font-weight: bold;
   font-size: 0.875rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  color: rgb(var(--color-foreground));
 }
 
 /* ── Buttons ── */
@@ -204,12 +202,13 @@ body {
 
 .btn-ghost {
   @apply btn;
-  background: rgba(255, 255, 255, 0.05);
-  color: rgb(var(--color-foreground));
-  border-color: rgba(255, 255, 255, 0.1);
+  background: rgb(var(--color-surface-hover));
+  color: rgb(var(--color-foreground-muted));
+  border-color: rgb(var(--color-border));
 }
 .btn-ghost:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(var(--color-border-muted));
+  color: rgb(var(--color-foreground));
 }
 
 .btn-success {
@@ -230,8 +229,8 @@ body {
 /* ── Input ── */
 .input {
   @apply w-full px-3.5 py-2.5 rounded-md text-sm;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgb(var(--color-surface));
+  border: 1px solid rgb(var(--color-border));
   color: rgb(var(--color-foreground));
   transition: all 0.2s ease;
 }
@@ -240,9 +239,9 @@ body {
 }
 .input:focus {
   outline: none;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgb(var(--color-surface));
   border-color: rgb(var(--color-primary));
-  box-shadow: 0 0 10px rgba(var(--color-primary), 0.3);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
 }
 
 /* ── Badge ── */
@@ -258,9 +257,9 @@ body {
 }
 .modal-content {
   background: rgb(var(--color-surface));
-  border: 1px solid rgb(var(--color-border));
+  border: 1.5px solid rgb(var(--color-border));
   @apply rounded-lg w-full max-h-[90vh] overflow-y-auto;
-  box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+  box-shadow: var(--shadow-xl);
 }
 
 /* ── Table ── */
@@ -271,7 +270,7 @@ table.data-table thead th {
   @apply px-4 py-3 text-xs font-bold uppercase tracking-wider;
   color: rgb(var(--color-foreground-muted));
   border-bottom: 1px solid rgb(var(--color-border));
-  background: rgba(0,0,0,0.2);
+  background: rgb(var(--color-surface-hover));
 }
 table.data-table tbody td {
   @apply px-4 py-3;
@@ -284,7 +283,7 @@ table.data-table tbody tr {
   transition: background 0.15s ease;
 }
 table.data-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(240, 253, 244, 0.8);
 }
 
 /* ── Animated Skeleton ── */
@@ -294,11 +293,48 @@ table.data-table tbody tr:hover {
 }
 .skeleton {
   background: linear-gradient(90deg,
-    rgba(255,255,255,0.05) 25%,
-    rgba(255,255,255,0.1) 50%,
-    rgba(255,255,255,0.05) 75%
+    rgba(220, 252, 231, 0.6) 25%,
+    rgba(187, 247, 208, 0.9) 50%,
+    rgba(220, 252, 231, 0.6) 75%
   );
   background-size: 800px 100%;
   animation: shimmer 1.5s ease-in-out infinite;
   border-radius: 0.25rem;
+}
+
+/* ── Logo float animation ── */
+@keyframes mc-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+.logo-float {
+  animation: mc-float 3s ease-in-out infinite;
+  display: inline-block;
+}
+
+/* ── Animations ── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fade-in 0.4s ease both; }
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up { animation: fade-in-up 0.6s ease both; }
+
+/* ── Broadcast Marquee ── */
+@keyframes marquee-scroll {
+  0%   { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+.marquee-track {
+  display: flex;
+  animation: marquee-scroll 20s linear infinite;
+  white-space: nowrap;
+}
+.marquee-track:hover {
+  animation-play-state: paused;
 }

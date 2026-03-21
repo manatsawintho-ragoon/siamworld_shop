@@ -26,7 +26,7 @@ export default function LootBoxListPage() {
   return (
     <MainLayout>
       {/* Hero Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-[#1e1e1e] via-[#252526] to-[#1e1e1e] py-10 px-4 rounded-2xl mb-8 border border-[#333]">
+      <div className="relative overflow-hidden bg-gradient-to-br from-green-800 via-green-700 to-green-900 py-10 px-4 rounded-2xl mb-8 border border-green-600">
         <div className="absolute inset-0 opacity-15"
           style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, rgb(var(--color-primary)) 0%, transparent 70%)' }} />
         <div className="relative max-w-3xl mx-auto text-center text-white">
@@ -69,11 +69,11 @@ export default function LootBoxListPage() {
                 <Link
                   key={box.id}
                   href={`/lootbox/${box.id}`}
-                  className="group relative bg-[#1e1e1e] rounded-2xl overflow-hidden border border-[#333] hover:border-primary/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10"
+                  className="group relative bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-primary/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/80 z-10 pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/20 z-10 pointer-events-none" />
 
-                  <div className="aspect-square flex items-center justify-center p-6 relative overflow-hidden bg-gradient-to-br from-[#252526] to-[#1e1e1e]">
+                  <div className="aspect-square flex items-center justify-center p-6 relative overflow-hidden bg-gray-50">
                     {box.image ? (
                       <img
                         src={box.image}
@@ -91,9 +91,9 @@ export default function LootBoxListPage() {
                   </div>
 
                   <div className="relative z-20 px-3 pb-3">
-                    <p className="text-white font-bold text-sm truncate">{box.name}</p>
+                    <p className="text-gray-900 font-bold text-sm truncate">{box.name}</p>
                     {box.description && (
-                      <p className="text-gray-400 text-xs truncate mt-0.5">{box.description}</p>
+                      <p className="text-gray-500 text-xs truncate mt-0.5">{box.description}</p>
                     )}
                     <div className="mt-2 bg-primary hover:bg-primary-hover text-white text-xs font-bold py-2 rounded-xl text-center transition-colors min-h-[36px] flex items-center justify-center">
                       <i className="fas fa-box-open mr-1" aria-hidden="true"></i>เปิดกล่อง

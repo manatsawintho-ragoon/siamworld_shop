@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { api, getToken } from '@/lib/api';
@@ -22,21 +22,21 @@ interface Server {
 
 export default function ProductCard({ product, servers }: { product: Product; servers: Server[] }) {
   const { user, refresh } = useAuth();
-  const [buying, setBuying] = useState(false);
   const [showBuy, setShowBuy] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
+  const [buying, setBuying] = useState(false);
   const [selectedServer, setSelectedServer] = useState<number>(0);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
 
   useEffect(() => {
-    if (servers.length > 0 && selectedServer === 0) {
-      setSelectedServer(servers[0].id);
-    }
+    if (servers.length > 0 && selectedServer === 0) setSelectedServer(servers[0].id);
   }, [servers]);
 
   const imgSrc = product.image_url || product.image;
-  const discount = product.original_price && product.original_price > product.price
-    ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
-    : 0;
+  const discount =
+    product.original_price && product.original_price > product.price
+      ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
+      : 0;
 
   const handleBuy = async () => {
     if (!user || selectedServer === 0) return;
@@ -60,114 +60,182 @@ export default function ProductCard({ product, servers }: { product: Product; se
 
   return (
     <>
-      <article onClick={() => setShowBuy(true)} className="group relative block cursor-pointer transition-transform hover:-translate-y-1">
-        {/* Minecraft Slot Style Box */}
-        <div className="bg-[#8b8b8b] p-1 rounded-sm shadow-[inset_-2px_-2px_0_rgba(0,0,0,0.5),inset_2px_2px_0_rgba(255,255,255,0.5)]">
-          <div className="bg-[#373737] relative aspect-square shadow-[inset_2px_2px_0_rgba(0,0,0,0.8),inset_-2px_-2px_0_rgba(255,255,255,0.2)] overflow-hidden flex flex-col justify-between group-hover:bg-[#4a4a4a] transition-colors">
-            
-            {/* Image Center */}
-            <div className="flex-1 flex items-center justify-center p-4">
-              {imgSrc ? (
-                <img src={imgSrc} alt={product.name} className="w-20 h-20 object-contain drop-shadow-[2px_2px_0_rgba(0,0,0,0.8)] group-hover:scale-110 transition-transform pixelated" style={{ imageRendering: 'pixelated' }} />
-              ) : (
-                <i className="fas fa-cube text-4xl text-white/30 drop-shadow-md" aria-hidden="true"></i>
-              )}
-            </div>
+      {/* Card */}
+      <article className="group relative flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-primary/40 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_0_20px_rgba(34,197,94,0.15)]">
+        {/* Image area */}
+        <div className="relative aspect-square bg-gray-50 flex items-center justify-center p-4 overflow-hidden">
+          {imgSrc ? (
+            <img
+              src={imgSrc}
+              alt={product.name}
+              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+            />
+          ) : (
+            <i className="fas fa-cube text-4xl text-primary/20 group-hover:text-primary/40 transition-colors" aria-hidden="true"></i>
+          )}
+          {discount > 0 && (
+            <span className="absolute top-2 left-2 bg-error text-white text-[10px] font-black px-2 py-0.5 rounded shadow-lg">
+              -{discount}%
+            </span>
+          )}
+        </div>
 
-            {/* Bottom Info Bar inside slot */}
-            <div className="bg-black/40 px-2 py-1 flex items-center justify-between text-[10px] text-white font-bold font-mono shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
-              <span className="truncate mr-1 drop-shadow-md">{product.name}</span>
-              <span className="text-warning drop-shadow-md whitespace-nowrap">
-                {product.price.toLocaleString()} ฿
-              </span>
-            </div>
-
-            {discount > 0 && (
-              <span className="absolute top-1 right-1 bg-error text-white px-1.5 py-0.5 text-[9px] font-black shadow-md border border-red-800">
-                -{discount}%
+        {/* Info */}
+        <div className="p-3 flex flex-col gap-1.5 flex-1">
+          <p className="text-gray-900 font-bold text-sm leading-tight line-clamp-2">{product.name}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            {discount > 0 && product.original_price && (
+              <span className="text-foreground-subtle text-[10px] line-through">
+                {product.original_price.toLocaleString()} ฿
               </span>
             )}
+            <span className="text-warning font-black text-sm">
+              {product.price.toLocaleString()} ฿
+            </span>
+          </div>
+          <div className="flex gap-1.5 mt-auto pt-1">
+            <button
+              onClick={() => setShowDetail(true)}
+              className="flex-1 py-2.5 px-2 text-xs font-bold rounded-lg border border-gray-200 bg-gray-50 hover:bg-green-50 text-gray-600 hover:text-primary transition-colors min-h-[44px]"
+            >
+              <i className="fas fa-info-circle mr-1"></i>รายละเอียด
+            </button>
+            <button
+              onClick={() => setShowBuy(true)}
+              className="flex-[2] py-2.5 px-2 text-xs font-bold rounded-lg bg-primary hover:bg-primary/80 text-white transition-colors shadow-[0_0_10px_rgba(34,197,94,0.3)] min-h-[44px]"
+            >
+              <i className="fas fa-shopping-cart mr-1"></i>ซื้อเลย
+            </button>
           </div>
         </div>
       </article>
 
-      {/* Buy Confirmation Modal - Classic Window Style */}
+      {/* Detail Modal */}
+      <AnimatePresence>
+        {showDetail && (
+          <div className="modal-overlay" onClick={() => setShowDetail(false)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.15 }}
+              className="modal-content max-w-sm"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="p-5">
+                <div className="flex items-start justify-between mb-4">
+                  <h3 className="font-black text-gray-900 text-base leading-tight flex-1 pr-3">{product.name}</h3>
+                  <button onClick={() => setShowDetail(false)} className="w-7 h-7 rounded-md bg-gray-100 hover:bg-red-50 text-gray-500 hover:text-red-500 flex items-center justify-center transition-colors text-xs">
+                    <i className="fas fa-times"></i>
+                  </button>
+                </div>
+                {imgSrc && (
+                  <div className="w-24 h-24 mx-auto mb-4 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-200">
+                    <img src={imgSrc} alt={product.name} className="w-20 h-20 object-contain" />
+                  </div>
+                )}
+                {product.description && (
+                  <p className="text-foreground-muted text-xs leading-relaxed mb-4">{product.description}</p>
+                )}
+                {product.category_name && (
+                  <div className="text-[10px] text-foreground-subtle mb-3">
+                    <i className="fas fa-tag mr-1"></i>หมวดหมู่: <span className="text-foreground-muted">{product.category_name}</span>
+                  </div>
+                )}
+                <div className="bg-black/30 rounded-lg p-3 border border-white/5 mb-4">
+                  {discount > 0 && product.original_price ? (
+                    <div className="flex items-center gap-3">
+                      <span className="text-error text-sm font-black">-{discount}%</span>
+                      <div>
+                        <div className="text-foreground-subtle text-xs line-through">{product.original_price.toLocaleString()} ฿</div>
+                        <div className="text-warning font-black text-lg">{product.price.toLocaleString()} ฿</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-warning font-black text-lg">{product.price.toLocaleString()} ฿</div>
+                  )}
+                </div>
+                <button onClick={() => { setShowDetail(false); setShowBuy(true); }} className="btn-primary w-full justify-center py-2.5">
+                  <i className="fas fa-shopping-cart mr-2"></i>ซื้อสินค้า
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Buy Modal */}
       <AnimatePresence>
         {showBuy && (
           <div className="modal-overlay" onClick={() => !buying && setShowBuy(false)}>
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ duration: 0.15 }}
-              className="w-full max-w-sm bg-[#c6c6c6] border-[3px] border-white border-b-[#555] border-r-[#555] p-1 font-mono"
-              onClick={(e) => e.stopPropagation()}
+              className="modal-content max-w-sm"
+              onClick={e => e.stopPropagation()}
             >
-              {/* Header */}
-              <div className="bg-[#000080] text-white px-2 py-1 flex justify-between items-center text-xs font-bold font-sans">
-                <span>ยืนยันการทำรายการ</span>
-                <button onClick={() => !buying && setShowBuy(false)} className="bg-[#c6c6c6] text-black w-4 h-4 flex items-center justify-center border-t-white border-l-white border-b-[#555] border-r-[#555] border active:border-t-[#555] active:border-l-[#555] active:border-b-white active:border-r-white font-bold leading-none pb-0.5 focus:outline-none">
-                  x
-                </button>
-              </div>
-
-              <div className="p-4 flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-[#373737] p-2 flex items-center justify-center shadow-[inset_2px_2px_0_rgba(0,0,0,0.8),inset_-2px_-2px_0_rgba(255,255,255,0.2)] mb-3">
+              <div className="p-5">
+                <div className="flex items-start justify-between mb-4">
+                  <h3 className="font-black text-white text-sm">ยืนยันการซื้อสินค้า</h3>
+                  <button onClick={() => !buying && setShowBuy(false)} className="w-7 h-7 rounded-md bg-white/5 hover:bg-error/20 text-foreground-muted hover:text-error-foreground flex items-center justify-center transition-colors text-xs">
+                    <i className="fas fa-times"></i>
+                  </button>
+                </div>
+                <div className="flex items-center gap-3 bg-black/30 rounded-lg p-3 border border-white/5 mb-4">
                   {imgSrc ? (
-                    <img src={imgSrc} alt="item" className="w-12 h-12 object-contain pixelated" style={{ imageRendering: 'pixelated' }} />
-                  ) : <i className="fas fa-cube text-white/30 text-2xl"></i>}
+                    <img src={imgSrc} alt={product.name} className="w-12 h-12 object-contain flex-shrink-0" />
+                  ) : (
+                    <div className="w-12 h-12 flex-shrink-0 bg-primary/10 rounded-md flex items-center justify-center">
+                      <i className="fas fa-cube text-primary text-xl"></i>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-white font-bold text-sm">{product.name}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {discount > 0 && product.original_price && (
+                        <span className="text-foreground-subtle text-xs line-through">{product.original_price.toLocaleString()} ฿</span>
+                      )}
+                      <span className="text-warning font-black">{product.price.toLocaleString()} ฿</span>
+                      {discount > 0 && <span className="bg-error text-white text-[9px] font-black px-1 rounded">-{discount}%</span>}
+                    </div>
+                  </div>
                 </div>
-                
-                <h3 className="font-bold text-black text-sm mb-1">{product.name}</h3>
-                <p className="text-xs text-black/70 mb-3">{product.description}</p>
-                <div className="text-sm font-black text-amber-700 bg-white/50 px-3 py-1 border border-black/10 shadow-inner mb-4">
-                  ราคา {product.price.toLocaleString()} ฿
-                </div>
-
                 {!user ? (
-                  <div className="text-xs text-red-600 font-bold mb-4">คุณต้องเข้าสู่ระบบก่อนทำรายการ</div>
+                  <div className="text-xs text-error-foreground font-bold bg-error/10 border border-error/20 rounded-lg px-3 py-2 mb-4 text-center">
+                    กรุณาเข้าสู่ระบบก่อนทำรายการ
+                  </div>
                 ) : (
                   <>
                     {servers.length > 0 && (
-                      <div className="w-full mb-3 text-left">
-                        <label className="block text-[10px] font-bold text-black mb-1">เลือกเซิร์ฟเวอร์ปลายทาง:</label>
-                        <select 
-                          value={selectedServer} 
-                          onChange={(e) => setSelectedServer(Number(e.target.value))} 
-                          className="w-full p-1.5 text-xs bg-white border-t-[#555] border-l-[#555] border-b-white border-r-white border text-black focus:outline-none"
-                        >
-                          {servers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      <div className="mb-3">
+                        <label className="block text-[11px] font-bold text-foreground-muted mb-1.5">เลือกเซิร์ฟเวอร์ปลายทาง</label>
+                        <select value={selectedServer} onChange={e => setSelectedServer(Number(e.target.value))} className="input text-xs py-2" disabled={buying}>
+                          {servers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                       </div>
                     )}
-                    <div className="text-[10px] text-red-600 font-bold mb-4 text-left w-full border border-red-300 bg-red-50 p-1.5">
-                      ⚠️ แจ้งเตือน: กรุณาออนไลน์ในเซิร์ฟเวอร์ก่อนกดซื้อ
+                    <div className="text-[10px] text-warning bg-warning/10 border border-warning/20 rounded px-2 py-1.5 mb-4 flex items-start gap-1.5">
+                      <i className="fas fa-exclamation-triangle mt-0.5 flex-shrink-0"></i>
+                      <span>กรุณาออนไลน์ในเซิร์ฟเวอร์ก่อนกดซื้อ เพื่อรับไอเทมทันที</span>
                     </div>
                   </>
                 )}
-
                 {result && (
-                  <div className={`w-full text-xs font-bold p-2 mb-3 border ${result.success ? 'bg-green-100 text-green-800 border-green-400' : 'bg-red-100 text-red-800 border-red-400'}`}>
+                  <div className={`text-xs font-bold p-2.5 rounded-lg mb-3 border flex items-start gap-2 ${result.success ? 'bg-primary/10 text-primary border-primary/30' : 'bg-error/10 text-error-foreground border-error/30'}`}>
+                    <i className={`fas ${result.success ? 'fa-check-circle' : 'fa-exclamation-circle'} flex-shrink-0 mt-0.5`}></i>
                     {result.message}
                   </div>
                 )}
-
-                <div className="flex gap-2 w-full justify-center">
-                  {user && (
-                    <button 
-                      onClick={handleBuy} 
-                      disabled={buying} 
-                      className="px-6 py-1.5 bg-[#c6c6c6] text-black text-xs font-bold border-t-white border-l-white border-b-[#555] border-r-[#555] border-[2px] active:border-t-[#555] active:border-l-[#555] active:border-b-white active:border-r-white outline-none focus:outline-none"
-                    >
-                      {buying ? 'กำลังส่งข้อมูล...' : 'ซื้อไอเทม'}
+                <div className="flex gap-2">
+                  {user && !result?.success && (
+                    <button onClick={handleBuy} disabled={buying} className="btn-primary flex-1 justify-center py-2.5 text-xs">
+                      {buying ? <i className="fas fa-spinner fa-spin"></i> : <><i className="fas fa-shopping-cart mr-1"></i>ยืนยันซื้อ</>}
                     </button>
                   )}
-                  <button 
-                    onClick={() => setShowBuy(false)} 
-                    disabled={buying} 
-                    className="px-6 py-1.5 bg-[#c6c6c6] text-black text-xs font-bold border-t-white border-l-white border-b-[#555] border-r-[#555] border-[2px] active:border-t-[#555] active:border-l-[#555] active:border-b-white active:border-r-white outline-none focus:outline-none"
-                  >
-                    ปิดหน้าต่าง
+                  <button onClick={() => setShowBuy(false)} disabled={buying} className="btn-ghost flex-1 justify-center py-2.5 text-xs">
+                    ยกเลิก
                   </button>
                 </div>
               </div>

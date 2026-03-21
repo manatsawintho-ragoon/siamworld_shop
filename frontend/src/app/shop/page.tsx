@@ -62,18 +62,18 @@ export default function ShopPage() {
             </div>
             
             <div className="relative w-full md:w-64 flex-shrink-0">
-              <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-white/50 text-xs" aria-hidden="true"></i>
+              <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs" aria-hidden="true"></i>
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-black/40 border border-white/10 text-white text-xs py-2 pl-8 pr-8 focus:outline-none focus:border-primary transition-colors"
+                className="w-full bg-white border border-gray-200 text-gray-900 text-sm py-2.5 pl-8 pr-8 rounded-lg focus:outline-none focus:border-primary transition-colors placeholder:text-gray-400 min-h-[44px]"
                 placeholder="ค้นหาสินค้า..."
               />
               {search && (
                 <button
                   onClick={() => setSearch('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors"
                   aria-label="ล้างการค้นหา"
                 >
                   <i className="fas fa-times text-xs" aria-hidden="true"></i>
@@ -83,51 +83,55 @@ export default function ShopPage() {
           </div>
 
           {/* Categories Tab Bar */}
-          <div className="bg-[#1e1e1e] border-y border-black/50 overflow-x-auto no-scrollbar flex">
-            <button
-              onClick={() => setSelectedCategory(null)}
-              className={`flex-shrink-0 px-6 py-3 text-xs font-bold transition-colors border-b-[3px] flex items-center gap-2 ${
-                !selectedCategory
-                  ? 'bg-black/20 text-primary border-primary'
-                  : 'text-foreground-muted border-transparent hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              <i className="fas fa-layer-group"></i> All Items 
-              <span className="opacity-50 font-normal">({products.length})</span>
-            </button>
-            {categories.map(c => {
-              const count = products.filter(p => p.category_id === c.id).length;
-              return (
-                <button
-                  key={c.id}
-                  onClick={() => setSelectedCategory(c.id)}
-                  className={`flex-shrink-0 px-6 py-3 text-xs font-bold transition-colors border-b-[3px] flex items-center gap-2 ${
-                    selectedCategory === c.id
-                      ? 'bg-black/20 text-primary border-primary'
-                      : 'text-foreground-muted border-transparent hover:bg-white/5 hover:text-white'
-                  }`}
-                >
-                  {c.icon ? <i className={c.icon}></i> : <i className="fas fa-box"></i>} {c.name}
-                  <span className="opacity-50 font-normal">({count})</span>
-                </button>
-              );
-            })}
+          <div className="relative">
+            <div className="bg-gray-50 border-y border-gray-200 overflow-x-auto no-scrollbar flex">
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className={`flex-shrink-0 px-6 py-3 text-sm font-bold transition-colors border-b-[3px] flex items-center gap-2 ${
+                  !selectedCategory
+                    ? 'bg-green-50 text-primary border-primary'
+                    : 'text-gray-500 border-transparent hover:bg-green-50 hover:text-primary'
+                }`}
+              >
+                <i className="fas fa-layer-group"></i> All Items 
+                <span className="opacity-50 font-normal">({products.length})</span>
+              </button>
+              {categories.map(c => {
+                const count = products.filter(p => p.category_id === c.id).length;
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => setSelectedCategory(c.id)}
+                    className={`flex-shrink-0 px-6 py-3 text-sm font-bold transition-colors border-b-[3px] flex items-center gap-2 ${
+                      selectedCategory === c.id
+                        ? 'bg-green-50 text-primary border-primary'
+                        : 'text-gray-500 border-transparent hover:bg-green-50 hover:text-primary'
+                    }`}
+                  >
+                    {c.icon ? <i className={c.icon}></i> : <i className="fas fa-box"></i>} {c.name}
+                    <span className="opacity-50 font-normal">({count})</span>
+                  </button>
+                );
+              })}
+            </div>
+            {/* Scroll fade indicators */}
+            <div className="absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-gray-50 to-transparent pointer-events-none" />
           </div>
 
           {/* Products Grid */}
-          <div className="p-4 bg-[#8b8b8b]/10 min-h-[400px]">
+          <div className="p-4 bg-gray-50 min-h-[400px]">
             {loading ? (
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4">
                 {[...Array(8)].map((_, i) => (
-                  <div key={i} className="bg-[#8b8b8b] p-1 rounded-sm opacity-50 animate-pulse">
-                    <div className="bg-[#373737] aspect-square"></div>
+                  <div key={i} className="bg-green-100 p-1 rounded-sm opacity-60 animate-pulse">
+                    <div className="bg-green-200 aspect-square rounded-sm"></div>
                   </div>
                 ))}
               </div>
             ) : filtered.length === 0 ? (
               <div className="text-center py-20 animate-fade-in">
-                <i className="fas fa-box-open text-4xl text-white/20 mb-4 drop-shadow-md" aria-hidden="true"></i>
-                <p className="text-white font-bold text-lg drop-shadow-md mb-1">ไม่พบสินค้าในหมวดหมู่นี้</p>
+                <i className="fas fa-box-open text-4xl text-gray-300 mb-4" aria-hidden="true"></i>
+                <p className="text-gray-700 font-bold text-lg mb-1">ไม่พบสินค้าในหมวดหมู่นี้</p>
                 <p className="text-xs text-foreground-subtle">กรุณาลองค้นหาด้วยคำอื่น หรือเลือกหมวดหมู่อีกครั้ง</p>
               </div>
             ) : (

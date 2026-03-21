@@ -29,7 +29,7 @@ export default function RankingWidget() {
         <div className="p-4 space-y-3">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="flex items-center gap-3">
-              <div className="w-6 h-6 rounded bg-white/5 border border-white/10 flex items-center justify-center font-bold text-[10px] text-foreground-muted">
+              <div className="w-6 h-6 rounded bg-gray-100 border border-gray-200 flex items-center justify-center font-bold text-[10px] text-foreground-muted">
                 {i + 1}
               </div>
               <div className="h-4 w-24 skeleton" />
@@ -64,14 +64,14 @@ export default function RankingWidget() {
                 index === 0 ? 'bg-warning/10 border-warning/30 shadow-[0_0_10px_rgba(245,158,11,0.1)]' : 
                 index === 1 ? 'bg-gray-400/10 border-gray-400/30' :
                 index === 2 ? 'bg-amber-700/10 border-amber-700/30' :
-                'bg-black/20 border-white/5 hover:bg-white/5'
+                'bg-gray-50 border-gray-100 hover:bg-green-50/60'
               }`}
             >
-              <div className="w-6 h-6 flex items-center justify-center flex-shrink-0 bg-black/40 rounded-full border border-white/5">
+              <div className="w-6 h-6 flex items-center justify-center flex-shrink-0 bg-gray-100 rounded-full border border-gray-200">
                 {rankIcon}
               </div>
               
-              <div className="w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center flex-shrink-0 border border-white/10 overflow-hidden shadow-inner">
+              <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 border border-gray-200 overflow-hidden shadow-inner">
                 <img 
                   src={`https://mc-heads.net/avatar/${user.username}/32`} 
                   alt={user.username}

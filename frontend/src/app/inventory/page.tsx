@@ -208,14 +208,14 @@ export default function InventoryPage() {
           <div className="modal-overlay" onClick={() => setRedeemModal(null)}>
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.2 }} className="modal-content max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
-              <div className="bg-[#1e1e1e] px-6 py-4">
+              <div className="bg-green-700 px-6 py-4">
                 {(() => { const rc = RARITY_CONFIG[redeemModal.item_rarity] || RARITY_CONFIG.common; return (
                   <div className="flex items-center gap-3">
                     {redeemModal.item_image ? <img src={redeemModal.item_image} alt={redeemModal.item_name} className="w-14 h-14 object-contain drop-shadow-lg" style={{ filter: `drop-shadow(0 0 8px ${rc.color})` }} />
                       : <i className="fas fa-cube text-3xl" style={{ color: rc.color }} aria-hidden="true"></i>}
                     <div><div className="text-xs font-bold mb-0.5" style={{ color: rc.color }}>{rc.label}</div>
                       <h3 className="text-white font-bold text-base leading-tight">{redeemModal.item_name}</h3>
-                      <p className="text-gray-400 text-xs">{redeemModal.box_name}</p></div>
+                      <p className="text-white/70 text-xs">{redeemModal.box_name}</p></div>
                   </div>); })()}
               </div>
               <div className="p-5">
@@ -246,9 +246,9 @@ export default function InventoryPage() {
           <div className="modal-overlay" onClick={() => !redeemAllLoading && setRedeemAllModal(false)}>
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.2 }} className="modal-content max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
-              <div className="bg-[#1e1e1e] px-6 py-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center"><i className="fas fa-gamepad text-primary text-lg" aria-hidden="true"></i></div>
-                <div><h3 className="text-white font-bold">รับทั้งหมด</h3><p className="text-gray-400 text-xs tabular-nums">{pendingCount} ไอเทมรอการรับ</p></div>
+              <div className="bg-green-700 px-6 py-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center"><i className="fas fa-gamepad text-white text-lg" aria-hidden="true"></i></div>
+                <div><h3 className="text-white font-bold">รับทั้งหมด</h3><p className="text-white/70 text-xs tabular-nums">{pendingCount} ไอเทมรอการรับ</p></div>
               </div>
               <div className="p-5">
                 <p className="text-sm text-foreground font-medium mb-1">เลือกเซิร์ฟเวอร์ที่คุณออนไลน์อยู่</p>

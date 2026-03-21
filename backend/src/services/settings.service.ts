@@ -48,6 +48,12 @@ class SettingsService {
     return { id: (result as any).insertId, ...data };
   }
 
+  async reorderSlides(order: { id: number; sort_order: number }[]) {
+    for (const item of order) {
+      await pool.execute('UPDATE slides SET sort_order = ? WHERE id = ?', [item.sort_order, item.id]);
+    }
+  }
+
   async updateSlide(id: number, data: Record<string, any>) {
     const fields: string[] = [];
     const values: (string | number)[] = [];

@@ -1,4 +1,5 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+// Use relative path so all API calls go through the Next.js proxy (fixes external access CORS)
+const API_URL = '/api';
 
 interface ApiOptions {
   method?: string;

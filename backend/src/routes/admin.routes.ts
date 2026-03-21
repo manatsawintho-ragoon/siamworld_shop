@@ -214,6 +214,15 @@ router.post('/slides', validate(createSlideSchema), async (req: Request, res: Re
   } catch (err) { next(err); }
 });
 
+router.put('/slides/reorder', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { order } = req.body as { order: { id: number; sort_order: number }[] };
+    if (!Array.isArray(order)) { res.status(400).json({ success: false, message: 'Invalid order' }); return; }
+    await settingsService.reorderSlides(order);
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
 router.put('/slides/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = parseInt(req.params.id);
@@ -347,6 +356,51 @@ router.get('/inventory', async (req: Request, res: Response, next: NextFunction)
     query += ' ORDER BY wi.won_at DESC LIMIT 200';
     const [rows] = await pool.execute(query, params);
     res.json({ success: true, inventory: rows });
+  } catch (err) { next(err); }
+});
+
+// ─── Downloads ──────────────────────────────────────────────
+
+router.get('/downloads', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const [rows] = await pool.execute('SELECT * FROM downloads ORDER BY sort_order ASC, created_at DESC');
+    res.json({ success: true, downloads: rows });
+  } catch (err) { next(err); }
+});
+
+router.post('/downloads', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { filename, description, file_size, download_url, category, active, sort_order } = req.body;
+    if (!filename || !download_url) return res.status(400).json({ success: false, message: 'filename and download_url are required' });
+    const [result] = await pool.execute(
+      'INSERT INTO downloads (filename, description, file_size, download_url, category, active, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [filename, description || '', file_size || '', download_url, category || '', active !== false ? 1 : 0, sort_order || 0]
+    );
+    const id = (result as any).insertId;
+    const [rows] = await pool.execute('SELECT * FROM downloads WHERE id = ?', [id]);
+    res.json({ success: true, download: (rows as any[])[0] });
+  } catch (err) { next(err); }
+});
+
+router.put('/downloads/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { filename, description, file_size, download_url, category, active, sort_order } = req.body;
+    if (!filename || !download_url) return res.status(400).json({ success: false, message: 'filename and download_url are required' });
+    await pool.execute(
+      'UPDATE downloads SET filename=?, description=?, file_size=?, download_url=?, category=?, active=?, sort_order=?, updated_at=NOW() WHERE id=?',
+      [filename, description || '', file_size || '', download_url, category || '', active !== false ? 1 : 0, sort_order || 0, id]
+    );
+    const [rows] = await pool.execute('SELECT * FROM downloads WHERE id = ?', [id]);
+    res.json({ success: true, download: (rows as any[])[0] });
+  } catch (err) { next(err); }
+});
+
+router.delete('/downloads/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    await pool.execute('DELETE FROM downloads WHERE id = ?', [id]);
+    res.json({ success: true, message: 'Download deleted' });
   } catch (err) { next(err); }
 });
 

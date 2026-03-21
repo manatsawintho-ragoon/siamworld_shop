@@ -4,14 +4,12 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import RankingWidget from '@/components/RankingWidget';
-import OnlinePlayersWidget from '@/components/OnlinePlayersWidget';
 import SidebarLogin from '@/components/SidebarLogin';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const { user, logout, loading, isAdmin } = useAuth();
-  
   return (
-    <div className="flex flex-col min-h-screen transition-colors duration-200">
+    <div className="flex flex-col min-h-screen transition-colors duration-200 relative">
       <Navbar />
       
       {/* Boxed Content Layout (Classic MC style) */}
@@ -37,7 +35,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               
               {loading ? (
                 <div className="space-y-4 py-2">
-                  <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 mx-auto animate-pulse" />
+                  <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-200 mx-auto animate-pulse" />
                   <div className="h-4 w-1/2 mx-auto skeleton" />
                   <div className="h-8 w-full skeleton" />
                 </div>
@@ -47,7 +45,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                     <img 
                       src={`https://mc-heads.net/avatar/${user.username}/64`} 
                       alt={user.username}
-                      className="relative w-16 h-16 mx-auto rounded-lg border border-white/10 shadow-lg"
+                      className="relative w-16 h-16 mx-auto rounded-lg border border-green-200 shadow-lg"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = 'https://mc-heads.net/avatar/steve/64';
                       }}
@@ -59,9 +57,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                     )}
                   </div>
 
-                  <h3 className="font-black text-lg text-white truncate drop-shadow-md tracking-wide mt-1">{user.username}</h3>
+                  <h3 className="font-black text-lg text-gray-900 truncate tracking-wide mt-1">{user.username}</h3>
                   
-                  <div className="mt-4 bg-black/30 rounded-lg p-3 border border-white/5">
+                  <div className="mt-4 bg-green-50 rounded-lg p-3 border border-green-100">
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-[10px] font-bold text-foreground-muted uppercase tracking-wider">ยอดเงินคงเหลือ</span>
                       <i className="fas fa-coins text-warning text-xs drop-shadow-md" aria-hidden="true"></i>
@@ -79,6 +77,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                       <i className="fas fa-user-circle"></i> โปรไฟล์
                     </Link>
                   </div>
+                  <Link href="/inventory" className="mt-2 w-full btn-ghost text-xs py-2 shadow-lg flex items-center justify-center gap-2 border border-green-200 hover:border-primary/60">
+                    <i className="fas fa-box text-primary"></i> คลังไอเทม
+                  </Link>
+                  {isAdmin && (
+                    <Link href="/admin" className="mt-2 w-full flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-sm transition-all">
+                      <i className="fas fa-shield-alt"></i> Admin Panel
+                    </Link>
+                  )}
                   
                   <button 
                     onClick={logout} 
@@ -93,31 +99,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             </div>
           </div>
 
-          {/* Quick Menu (New iMC เมนู) */}
-          <div className="card overflow-hidden hidden lg:block">
-            <div className="card-header-mc flex items-center justify-between">
-              <span><i className="fas fa-bars mr-2 text-primary"></i>Menu เมนูหลัก</span>
-            </div>
-            <div className="p-2 space-y-1">
-              <Link href="/register" className="flex items-center gap-3 px-4 py-2.5 rounded text-sm font-bold text-foreground-muted hover:bg-white/5 hover:text-white transition-colors border-l-2 border-transparent hover:border-primary">
-                <i className="fas fa-user-plus w-4 text-center text-primary/70"></i> สมัครสมาชิก
-              </Link>
-              <Link href="/topup" className="flex items-center gap-3 px-4 py-2.5 rounded text-sm font-bold text-foreground-muted hover:bg-white/5 hover:text-white transition-colors border-l-2 border-transparent hover:border-primary">
-                <i className="fas fa-coins w-4 text-center text-warning/70"></i> เติมเงิน
-              </Link>
-              <Link href="/shop" className="flex items-center gap-3 px-4 py-2.5 rounded text-sm font-bold text-foreground-muted hover:bg-white/5 hover:text-white transition-colors border-l-2 border-transparent hover:border-primary">
-                <i className="fas fa-shopping-cart w-4 text-center text-primary/70"></i> ไอเท็มชอป
-              </Link>
-              <Link href="/download" className="flex items-center gap-3 px-4 py-2.5 rounded text-sm font-bold text-foreground-muted hover:bg-white/5 hover:text-white transition-colors border-l-2 border-transparent hover:border-primary">
-                <i className="fas fa-download w-4 text-center text-success/70"></i> ดาวน์โหลดเกมส์
-              </Link>
-              <Link href="/" className="flex items-center gap-3 px-4 py-2.5 rounded text-sm font-bold text-foreground-muted hover:bg-white/5 hover:text-white transition-colors border-l-2 border-transparent hover:border-primary">
-                <i className="fas fa-info-circle w-4 text-center text-primary/70"></i> แนะนำผู้เล่นใหม่
-              </Link>
-            </div>
-          </div>
-
-          <OnlinePlayersWidget />
           <RankingWidget />
         </aside>
       </main>

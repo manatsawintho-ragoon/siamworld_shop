@@ -1,4 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import { pool } from '../database/connection';
 import { settingsService } from '../services/settings.service';
 import { shopService } from '../services/shop.service';
 import { serverService } from '../services/server.service';
@@ -10,7 +11,7 @@ router.get('/settings', async (_req: Request, res: Response, next: NextFunction)
   try {
     const allSettings = await settingsService.getAll();
     // Only expose non-sensitive settings
-    const publicKeys = ['shop_name', 'shop_description', 'welcome_message', 'currency', 'currency_symbol', 'maintenance_mode', 'logo_url', 'discord_invite'];
+    const publicKeys = ['shop_name', 'shop_subtitle', 'shop_description', 'welcome_message', 'currency', 'currency_symbol', 'maintenance_mode', 'logo_url', 'favicon_url', 'banner_url', 'facebook_url', 'discord_invite', 'website_bg_url'];
     const settings: Record<string, string> = {};
     for (const [key, value] of Object.entries(allSettings)) {
       if (publicKeys.includes(key)) {
@@ -92,6 +93,13 @@ router.get('/topup-ranking', async (_req: Request, res: Response, next: NextFunc
       LIMIT 10
     `);
     res.json({ success: true, ranking: rows });
+  } catch (err) { next(err); }
+});
+
+router.get('/downloads', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const [rows] = await pool.execute('SELECT * FROM downloads WHERE active = 1 ORDER BY sort_order ASC, created_at DESC');
+    res.json({ success: true, downloads: rows });
   } catch (err) { next(err); }
 });
 

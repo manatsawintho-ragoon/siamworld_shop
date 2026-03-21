@@ -5,6 +5,15 @@ export const loginSchema = z.object({
   password: z.string().min(1).max(255),
 });
 
+export const registerSchema = z.object({
+  username: z.string()
+    .min(3, 'Username must be at least 3 characters')
+    .max(32, 'Username too long')
+    .regex(/^[a-zA-Z0-9_]+$/, 'Username may only contain letters, numbers and underscores'),
+  password: z.string().min(6, 'Password must be at least 6 characters').max(255),
+  email: z.string().email('Invalid email format').max(255),
+});
+
 export const topupSchema = z.object({
   amount: z.number().positive().max(999999999),
   description: z.string().max(500).optional(),

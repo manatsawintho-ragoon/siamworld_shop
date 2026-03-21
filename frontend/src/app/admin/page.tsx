@@ -124,7 +124,7 @@ export default function AdminDashboard() {
                 <i className="fas fa-wallet"></i>
               </div>
             </div>
-            <p className="text-[10px] text-gray-400 mt-4 flex items-center gap-1 text-green-500"><i className="fas fa-arrow-up"></i> ยอดจำแนกทั้งหมด</p>
+            <p className="text-[10px] text-green-500 mt-4 flex items-center gap-1"><i className="fas fa-arrow-up"></i> ยอดจำแนกทั้งหมด</p>
           </div>
         </div>
       </div>

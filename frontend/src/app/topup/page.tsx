@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const AMOUNTS = [20, 50, 100, 200, 300, 500, 1000];
+const AMOUNTS = [20, 50, 100, 200, 300, 500, 1000, 2000];
 
 export default function TopupPage() {
   const { user, refresh, loading: authLoading } = useAuth();
@@ -69,13 +69,13 @@ export default function TopupPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 bg-surface-hover p-1 rounded-xl">
+        <div className="flex gap-1 mb-6 bg-gray-100 border border-gray-200 p-1 rounded-xl">
           <button onClick={() => { setTab('truemoney'); setResult(null); setQr(null); }}
-            className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-all min-h-[44px] ${tab === 'truemoney' ? 'bg-surface shadow-theme-xs text-foreground' : 'text-foreground-muted'}`}>
+            className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-all min-h-[44px] ${tab === 'truemoney' ? 'bg-primary text-white shadow-md' : 'text-foreground-muted hover:bg-gray-200'}`}>
             <i className="fas fa-mobile-screen mr-1.5" aria-hidden="true"></i>TrueMoney
           </button>
           <button onClick={() => { setTab('promptpay'); setResult(null); setQr(null); }}
-            className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-all min-h-[44px] ${tab === 'promptpay' ? 'bg-surface shadow-theme-xs text-foreground' : 'text-foreground-muted'}`}>
+            className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-all min-h-[44px] ${tab === 'promptpay' ? 'bg-primary text-white shadow-md' : 'text-foreground-muted hover:bg-gray-200'}`}>
             <i className="fas fa-qrcode mr-1.5" aria-hidden="true"></i>PromptPay
           </button>
         </div>

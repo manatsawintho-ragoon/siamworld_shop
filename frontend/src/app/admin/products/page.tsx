@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { api, getToken } from '@/lib/api';
 
 interface Product {
@@ -168,62 +168,67 @@ export default function AdminProducts() {
         )}
       </div>
 
-      {editing && (
-        <div className="modal-overlay" onClick={() => !saving && setEditing(null)}>
-          <div className="modal-content max-w-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold">{editing.id ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่'}</h3>
-                <button onClick={() => setEditing(null)} className="text-gray-400 hover:text-black"><i className="fas fa-xmark"></i></button>
+      {editing && (() => { const bd = { current: false }; return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto"
+          onMouseDown={e => { bd.current = e.target === e.currentTarget; }}
+          onMouseUp={e => { if (bd.current && e.target === e.currentTarget && !saving) setEditing(null); }}>
+          <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-full max-w-2xl my-4 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
+              <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
+                <i className="fas fa-store text-green-600 text-xs"></i>
               </div>
-
-              {error && (
-                <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4 text-sm text-red-700">
-                  <i className="fas fa-exclamation-circle mr-1.5"></i>{error}
-                </div>
-              )}
+              <div className="flex-1 text-center">
+                <h3 className="font-bold text-gray-900 text-base">{editing.id ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่'}</h3>
+                <p className="text-[11px] text-gray-400">{editing.id ? 'แก้ไขรายละเอียดสินค้าที่เลือก' : 'กำหนดรายละเอียดและ RCON commands'}</p>
+              </div>
+              <button onClick={() => setEditing(null)} className="w-8 h-8 rounded-lg bg-red-500 flex items-center justify-center text-white shadow-[0_4px_0_#b91c1c] flex-shrink-0">
+                <i className="fas fa-times text-xs"></i>
+              </button>
+            </div>
+            <div className="p-5">
+              {error && <div className="text-red-500 text-xs bg-red-50 px-3 py-2 rounded-lg border border-red-100 flex items-center gap-1.5 mb-4"><i className="fas fa-exclamation-circle"></i> {error}</div>}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <label className="block text-sm text-gray-600 mb-1">ชื่อสินค้า *</label>
-                  <input value={editing.name || ''} onChange={e => setEditing({ ...editing, name: e.target.value })} className="input" placeholder="เช่น VIP Rank" />
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">ชื่อสินค้า *</label>
+                  <input value={editing.name || ''} onChange={e => setEditing({ ...editing, name: e.target.value })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" placeholder="เช่น VIP Rank" />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm text-gray-600 mb-1">รายละเอียด</label>
-                  <textarea value={editing.description || ''} onChange={e => setEditing({ ...editing, description: e.target.value })} className="input h-20 resize-none" placeholder="รายละเอียดสินค้า..." />
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">รายละเอียด</label>
+                  <textarea value={editing.description || ''} onChange={e => setEditing({ ...editing, description: e.target.value })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 h-20 resize-none" placeholder="รายละเอียดสินค้า..." />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">ราคา (฿) *</label>
-                  <input type="number" value={editing.price || ''} onChange={e => setEditing({ ...editing, price: Number(e.target.value) })} className="input" min={0} />
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">ราคา (฿) *</label>
+                  <input type="number" value={editing.price || ''} onChange={e => setEditing({ ...editing, price: Number(e.target.value) })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" min={0} />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">ราคาเดิม (฿)</label>
-                  <input type="number" value={editing.original_price || ''} onChange={e => setEditing({ ...editing, original_price: Number(e.target.value) })} className="input" min={0} placeholder="ไม่บังคับ (แสดงส่วนลด)" />
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">ราคาเดิม (฿)</label>
+                  <input type="number" value={editing.original_price || ''} onChange={e => setEditing({ ...editing, original_price: Number(e.target.value) })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" min={0} placeholder="ไม่บังคับ (แสดงส่วนลด)" />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">หมวดหมู่</label>
-                  <select value={editing.category_id || ''} onChange={e => setEditing({ ...editing, category_id: Number(e.target.value) })} className="input">
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">หมวดหมู่</label>
+                  <select value={editing.category_id || ''} onChange={e => setEditing({ ...editing, category_id: Number(e.target.value) })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20">
                     <option value="">-- เลือก --</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">Image URL</label>
-                  <input value={editing.image || ''} onChange={e => setEditing({ ...editing, image: e.target.value })} className="input" placeholder="https://..." />
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">Image URL</label>
+                  <input value={editing.image || ''} onChange={e => setEditing({ ...editing, image: e.target.value })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" placeholder="https://..." />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm text-gray-600 mb-1">RCON Commands *</label>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">RCON Commands *</label>
                   <textarea
                     value={editing.command || ''}
                     onChange={e => setEditing({ ...editing, command: e.target.value })}
-                    className="input h-20 resize-none font-mono text-sm"
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 h-20 resize-none font-mono"
                     placeholder="give {username} diamond 1&#10;say {username} bought an item!"
                   />
                   <p className="text-xs text-gray-400 mt-1">ใช้ <code className="bg-gray-100 px-1 rounded">{'{username}'}</code> แทนชื่อผู้เล่น (หนึ่งคำสั่งต่อบรรทัด)</p>
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm text-gray-600 mb-2">เซิร์ฟเวอร์ที่ใช้ได้</label>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">เซิร์ฟเวอร์ที่ใช้ได้</label>
                   <div className="flex flex-wrap gap-2">
                     {servers.map(s => {
                       const checked = editing.server_ids?.includes(s.id) || false;
@@ -257,16 +262,18 @@ export default function AdminProducts() {
                 </div>
               </div>
 
-              <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
-                <button onClick={() => setEditing(null)} className="btn-ghost flex-1 justify-center">ยกเลิก</button>
-                <button onClick={handleSave} disabled={saving} className="btn-primary flex-1 justify-center">
-                  {saving ? <><i className="fas fa-spinner fa-spin"></i> กำลังบันทึก...</> : <><i className="fas fa-save"></i> บันทึก</>}
-                </button>
-              </div>
+            </div>
+            <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">
+              <button onClick={() => setEditing(null)} className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-800 shadow-[0_4px_0_#d1d5db]">
+                <i className="fas fa-times text-[12px]"></i> ยกเลิก
+              </button>
+              <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-5 py-2.5 bg-[#1e2735] disabled:opacity-50 text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#38404d]">
+                {saving ? <><i className="fas fa-spinner fa-spin text-[12px]"></i> บันทึก...</> : <><i className="fas fa-save text-[12px]"></i> บันทึก</>}
+              </button>
             </div>
           </div>
         </div>
-      )}
+      ); })()}
     </div>
   );
 }

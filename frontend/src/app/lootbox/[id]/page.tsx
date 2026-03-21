@@ -220,11 +220,11 @@ export default function LootBoxOpenPage() {
 
   return (
     <MainLayout>
-      <div className="min-h-screen bg-gradient-to-b from-[#1e1e1e] to-[#141414] py-8 px-4">
+      <div className="py-8 px-4">
         <div className="max-w-4xl mx-auto">
 
           {/* Back link */}
-          <Link href="/lootbox" className="inline-flex items-center gap-2 text-gray-400 hover:text-white text-sm mb-6 transition-colors">
+          <Link href="/lootbox" className="inline-flex items-center gap-2 text-gray-500 hover:text-primary text-sm mb-6 transition-colors">
             <i className="fas fa-arrow-left" aria-hidden="true"></i> กลับไปยังกล่องสุ่ม
           </Link>
 
@@ -233,12 +233,12 @@ export default function LootBoxOpenPage() {
             {box.image ? (
               <img src={box.image} alt={box.name} className="w-24 h-24 object-contain mx-auto mb-3 drop-shadow-2xl" />
             ) : (
-              <div className="w-24 h-24 rounded-2xl bg-[#252526] flex items-center justify-center mx-auto mb-3">
-                <i className="fas fa-box text-4xl text-gray-600" aria-hidden="true"></i>
+              <div className="w-24 h-24 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                <i className="fas fa-box text-4xl text-primary/30" aria-hidden="true"></i>
               </div>
             )}
-            <h1 className="text-2xl font-black text-white">{box.name}</h1>
-            {box.description && <p className="text-gray-400 text-sm mt-1">{box.description}</p>}
+            <h1 className="text-2xl font-black text-foreground">{box.name}</h1>
+            {box.description && <p className="text-foreground-muted text-sm mt-1">{box.description}</p>}
           </div>
 
           {/* ─── Reel ─── */}
@@ -257,13 +257,13 @@ export default function LootBoxOpenPage() {
               border-l-transparent border-r-transparent border-b-yellow-400" />
 
             {/* Fade edges */}
-            <div className="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-[#1e1e1e] to-transparent z-20 pointer-events-none" />
-            <div className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-[#1e1e1e] to-transparent z-20 pointer-events-none" />
+            <div className="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-gray-900 to-transparent z-20 pointer-events-none rounded-l-2xl" />
+            <div className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-gray-900 to-transparent z-20 pointer-events-none rounded-r-2xl" />
 
             {/* Viewport */}
             <div
               ref={reelRef}
-              className="rounded-2xl border border-[#333] bg-[#1e1e1e]"
+              className="rounded-2xl border border-gray-700 bg-gray-900 shadow-lg"
               style={{
                 width: `${containerWidth}px`,
                 maxWidth: '100%',
@@ -343,7 +343,7 @@ export default function LootBoxOpenPage() {
 
           {/* Open button */}
           {error && (
-            <div className="bg-red-900/50 border border-red-500/50 text-red-300 text-sm px-4 py-3 rounded-xl mb-4 text-center animate-fade-in">
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl mb-4 text-center animate-fade-in">
               <i className="fas fa-exclamation-triangle mr-2" aria-hidden="true"></i>{error}
             </div>
           )}
@@ -374,15 +374,15 @@ export default function LootBoxOpenPage() {
               )}
             </button>
             {!user && (
-              <p className="text-gray-500 text-sm">กรุณา<button className="text-yellow-400 underline">เข้าสู่ระบบ</button>เพื่อเปิดกล่อง</p>
+              <p className="text-gray-500 text-sm">กรุณา<button className="text-primary font-bold underline">เข้าสู่ระบบ</button>เพื่อเปิดกล่อง</p>
             )}
           </div>
 
           {/* ─── Items in this box ─── */}
           <div className="mt-12">
-            <h2 className="text-white font-bold text-base mb-5 flex items-center gap-2">
-              <i className="fas fa-list text-gray-400" aria-hidden="true"></i>ไอเทมในกล่องนี้
-              <span className="text-gray-500 font-normal text-sm tabular-nums">({box.items.length} ชิ้น)</span>
+            <h2 className="text-foreground font-bold text-base mb-5 flex items-center gap-2">
+              <i className="fas fa-list text-primary" aria-hidden="true"></i>ไอเทมในกล่องนี้
+              <span className="text-foreground-muted font-normal text-sm tabular-nums">({box.items.length} ชิ้น)</span>
             </h2>
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
               {box.items.map(item => {
@@ -392,10 +392,9 @@ export default function LootBoxOpenPage() {
                 return (
                   <div
                     key={item.id}
-                    className="group relative rounded-xl p-2 text-center border transition-all hover:scale-105"
+                    className="group relative rounded-xl p-2 text-center border bg-white transition-all hover:scale-105 hover:shadow-md"
                     style={{
-                      borderColor: rc.color + '55',
-                      background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
+                      borderColor: rc.color + '44',
                     }}
                   >
                     <div className="absolute top-1 right-1 text-xs font-bold tabular-nums" style={{ color: rc.color }}>
@@ -406,8 +405,8 @@ export default function LootBoxOpenPage() {
                     ) : (
                       <i className="fas fa-cube text-2xl mb-2 block" style={{ color: rc.color }} aria-hidden="true"></i>
                     )}
-                    <p className="text-gray-200 text-xs font-medium leading-tight line-clamp-2">{item.name}</p>
-                    <div className="mt-1 text-xs px-1 py-px rounded font-semibold inline-block" style={{ color: rc.color, backgroundColor: rc.color + '22' }}>
+                    <p className="text-gray-700 text-xs font-medium leading-tight line-clamp-2">{item.name}</p>
+                    <div className="mt-1 text-xs px-1 py-px rounded font-semibold inline-block" style={{ color: rc.color, backgroundColor: rc.color + '15' }}>
                       {rc.label}
                     </div>
                   </div>
@@ -478,7 +477,7 @@ export default function LootBoxOpenPage() {
                     </Link>
                     <button
                       onClick={() => setShowResult(false)}
-                      className="w-full py-3.5 rounded-xl font-bold text-sm text-gray-300 bg-[#252526] hover:bg-[#333] transition-colors min-h-[48px] active:scale-95"
+                      className="w-full py-3.5 rounded-xl font-bold text-sm text-gray-300 bg-gray-800 hover:bg-gray-700 transition-colors min-h-[48px] active:scale-95"
                     >
                       <i className="fas fa-xmark mr-2" aria-hidden="true"></i>ปิด
                     </button>

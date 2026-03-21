@@ -26,7 +26,12 @@ export function useOnlinePlayers() {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:4000';
+    // Use the current page's hostname so external users connect to the correct server
+    const wsUrl =
+      process.env.NEXT_PUBLIC_WS_URL ||
+      (typeof window !== 'undefined'
+        ? `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:4000`
+        : 'ws://localhost:4000');
     const socket = io(wsUrl, { transports: ['websocket', 'polling'] });
     socketRef.current = socket;
 

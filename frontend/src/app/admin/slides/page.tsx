@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { api, getToken } from '@/lib/api';
 
 interface Slide {
@@ -116,51 +116,62 @@ export default function AdminSlides() {
         </div>
       )}
 
-      {editing && (
-        <div className="modal-overlay" onClick={() => !saving && setEditing(null)}>
-          <div className="modal-content max-w-lg" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6">
-              <h3 className="text-xl font-bold mb-6">{editing.id ? 'แก้ไขสไลด์' : 'เพิ่มสไลด์ใหม่'}</h3>
-              {error && <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4 text-sm text-red-700">{error}</div>}
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">ชื่อสไลด์</label>
-                  <input value={editing.title || ''} onChange={e => setEditing({ ...editing, title: e.target.value })} className="input" placeholder="เช่น โปรโมชั่นพิเศษ" />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">Image URL *</label>
-                  <input value={editing.image_url || ''} onChange={e => setEditing({ ...editing, image_url: e.target.value })} className="input" placeholder="https://example.com/banner.jpg" />
-                </div>
-                {editing.image_url && (
-                  <div className="rounded-md overflow-hidden h-32 bg-gray-100">
-                    <img src={editing.image_url} alt="Preview" className="w-full h-full object-cover" onError={e => (e.currentTarget.style.display = 'none')} />
-                  </div>
-                )}
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">Link URL</label>
-                  <input value={editing.link_url || ''} onChange={e => setEditing({ ...editing, link_url: e.target.value })} className="input" placeholder="https://... (ไม่บังคับ)" />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">ลำดับ</label>
-                  <input type="number" value={editing.sort_order || 0} onChange={e => setEditing({ ...editing, sort_order: Number(e.target.value) })} className="input" min={0} />
-                </div>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={editing.active !== false} onChange={e => setEditing({ ...editing, active: e.target.checked })} className="accent-black w-4 h-4" />
-                  <span className="text-sm">เปิดใช้งาน</span>
-                </label>
+      {editing && (() => { const bd = { current: false }; return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/50"
+          onMouseDown={e => { bd.current = e.target === e.currentTarget; }}
+          onMouseUp={e => { if (bd.current && e.target === e.currentTarget && !saving) setEditing(null); }}>
+          <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-full max-w-lg overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
+              <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
+                <i className="fas fa-images text-green-600 text-xs"></i>
               </div>
-
-              <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
-                <button onClick={() => setEditing(null)} className="btn-ghost flex-1 justify-center">ยกเลิก</button>
-                <button onClick={handleSave} disabled={saving} className="btn-primary flex-1 justify-center">
-                  {saving ? <><i className="fas fa-spinner fa-spin"></i> บันทึก...</> : <><i className="fas fa-save"></i> บันทึก</>}
-                </button>
+              <div className="flex-1 text-center">
+                <h3 className="font-bold text-gray-900 text-base">{editing.id ? 'แก้ไขสไลด์' : 'เพิ่มสไลด์ใหม่'}</h3>
+                <p className="text-[11px] text-gray-400">{editing.id ? 'แก้ไขข้อมูลสไลด์ที่เลือก' : 'เพิ่มสไลด์แสดงผลใหม่'}</p>
               </div>
+              <button onClick={() => setEditing(null)} className="w-8 h-8 rounded-lg bg-red-500 flex items-center justify-center text-white shadow-[0_4px_0_#b91c1c] flex-shrink-0">
+                <i className="fas fa-times text-xs"></i>
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              {error && <div className="text-red-500 text-xs bg-red-50 px-3 py-2 rounded-lg border border-red-100 flex items-center gap-1.5"><i className="fas fa-exclamation-circle"></i> {error}</div>}
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">ชื่อสไลด์</label>
+                <input value={editing.title || ''} onChange={e => setEditing({ ...editing, title: e.target.value })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300" placeholder="เช่น โปรโมชั่นพิเศษ" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">Image URL <span className="text-red-400">*</span></label>
+                <input value={editing.image_url || ''} onChange={e => setEditing({ ...editing, image_url: e.target.value })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300" placeholder="https://example.com/banner.jpg" />
+              </div>
+              {editing.image_url && (
+                <div className="rounded-lg overflow-hidden h-24 bg-gray-100 border border-gray-200">
+                  <img src={editing.image_url} alt="Preview" className="w-full h-full object-cover" onError={e => (e.currentTarget.style.display = 'none')} />
+                </div>
+              )}
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">Link URL</label>
+                <input value={editing.link_url || ''} onChange={e => setEditing({ ...editing, link_url: e.target.value })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300" placeholder="https://... (ไม่บังคับ)" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">ลำดับ</label>
+                <input type="number" value={editing.sort_order || 0} onChange={e => setEditing({ ...editing, sort_order: Number(e.target.value) })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" min={0} />
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={editing.active !== false} onChange={e => setEditing({ ...editing, active: e.target.checked })} className="accent-[#16a34a] w-4 h-4" />
+                <span className="text-sm text-gray-700">เปิดใช้งาน</span>
+              </label>
+            </div>
+            <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">
+              <button onClick={() => setEditing(null)} className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-800 shadow-[0_4px_0_#d1d5db]">
+                <i className="fas fa-times text-[12px]"></i> ยกเลิก
+              </button>
+              <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-5 py-2.5 bg-[#1e2735] disabled:opacity-50 text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#38404d]">
+                {saving ? <><i className="fas fa-spinner fa-spin text-[12px]"></i> บันทึก...</> : <><i className="fas fa-save text-[12px]"></i> บันทึก</>}
+              </button>
             </div>
           </div>
         </div>
-      )}
+      ); })()}
     </div>
   );
 }

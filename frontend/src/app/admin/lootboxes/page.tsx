@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { api, getToken } from '@/lib/api';
 
 // ─── Types ────────────────────────────────────────────────────
@@ -406,234 +406,233 @@ export default function AdminLootBoxes() {
       </div>
 
       {/* ─── Box Modal ───────────────────────────────────────────── */}
-      {boxModal && (
-        <div className="modal-overlay" onClick={() => !boxSaving && setBoxModal(null)}>
-          <div className="modal-content max-w-lg" onClick={e => e.stopPropagation()}>
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-xl font-bold">
+      {boxModal && (() => { const bd = { current: false }; return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/50"
+          onMouseDown={e => { bd.current = e.target === e.currentTarget; }}
+          onMouseUp={e => { if (bd.current && e.target === e.currentTarget && !boxSaving) setBoxModal(null); }}>
+          <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-full max-w-lg overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
+              <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
+                <i className="fas fa-box-open text-green-600 text-xs"></i>
+              </div>
+              <div className="flex-1 text-center">
+                <h3 className="font-bold text-gray-900 text-base">
                   {boxModal.id ? 'แก้ไขกล่องสุ่ม' : 'สร้างกล่องสุ่มใหม่'}
                 </h3>
-                <button onClick={() => setBoxModal(null)} className="text-gray-400 hover:text-black">
-                  <i className="fas fa-xmark text-xl"></i>
-                </button>
+                <p className="text-[11px] text-gray-400">{boxModal.id ? 'แก้ไขรายละเอียดกล่องที่เลือก' : 'ตั้งค่าราคาและรายละเอียด'}</p>
+              </div>
+              <button onClick={() => setBoxModal(null)} className="w-8 h-8 rounded-lg bg-red-500 flex items-center justify-center text-white shadow-[0_4px_0_#b91c1c] flex-shrink-0">
+                <i className="fas fa-times text-xs"></i>
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {boxError && <div className="text-red-500 text-xs bg-red-50 px-3 py-2 rounded-lg border border-red-100 flex items-center gap-1.5"><i className="fas fa-exclamation-circle"></i> {boxError}</div>}
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">ชื่อกล่อง *</label>
+                <input
+                  value={boxModal.name || ''}
+                  onChange={e => setBoxModal({ ...boxModal, name: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                  placeholder="เช่น กล่องสุ่มอาวุธ S+"
+                  autoFocus
+                />
               </div>
 
-              {boxError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg mb-4">
-                  <i className="fas fa-exclamation-circle mr-1.5"></i>{boxError}
-                </div>
-              )}
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">ชื่อกล่อง *</label>
-                  <input
-                    value={boxModal.name || ''}
-                    onChange={e => setBoxModal({ ...boxModal, name: e.target.value })}
-                    className="input"
-                    placeholder="เช่น กล่องสุ่มอาวุธ S+"
-                    autoFocus
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">คำอธิบาย</label>
-                  <textarea
-                    value={boxModal.description || ''}
-                    onChange={e => setBoxModal({ ...boxModal, description: e.target.value })}
-                    className="input h-16 resize-none"
-                    placeholder="รายละเอียดกล่อง..."
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">ราคา (฿) *</label>
-                    <input
-                      type="number"
-                      value={boxModal.price || ''}
-                      onChange={e => setBoxModal({ ...boxModal, price: Number(e.target.value) })}
-                      className="input"
-                      min={1}
-                      placeholder="100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">ลำดับการแสดง</label>
-                    <input
-                      type="number"
-                      value={boxModal.sort_order ?? 0}
-                      onChange={e => setBoxModal({ ...boxModal, sort_order: Number(e.target.value) })}
-                      className="input"
-                      min={0}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">URL รูปภาพกล่อง</label>
-                  <input
-                    value={boxModal.image || ''}
-                    onChange={e => setBoxModal({ ...boxModal, image: e.target.value })}
-                    className="input"
-                    placeholder="https://..."
-                  />
-                  {boxModal.image && (
-                    <img src={boxModal.image} alt="" className="mt-2 h-16 rounded-lg object-contain border border-gray-200" />
-                  )}
-                </div>
-
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={boxModal.active !== false}
-                    onChange={e => setBoxModal({ ...boxModal, active: e.target.checked })}
-                    className="accent-black w-4 h-4"
-                  />
-                  <span className="text-sm"><i className="fas fa-eye text-green-600 mr-1"></i>เปิดการขาย</span>
-                </label>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">คำอธิบาย</label>
+                <textarea
+                  value={boxModal.description || ''}
+                  onChange={e => setBoxModal({ ...boxModal, description: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 h-16 resize-none"
+                  placeholder="รายละเอียดกล่อง..."
+                />
               </div>
 
-              <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
-                <button onClick={() => setBoxModal(null)} className="btn-ghost flex-1 justify-center">ยกเลิก</button>
-                <button onClick={handleSaveBox} disabled={boxSaving} className="btn-primary flex-1 justify-center">
-                  {boxSaving
-                    ? <><i className="fas fa-spinner fa-spin"></i> กำลังบันทึก...</>
-                    : <><i className="fas fa-save"></i> บันทึก</>}
-                </button>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">ราคา (฿) *</label>
+                  <input
+                    type="number"
+                    value={boxModal.price || ''}
+                    onChange={e => setBoxModal({ ...boxModal, price: Number(e.target.value) })}
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                    min={1}
+                    placeholder="100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">ลำดับการแสดง</label>
+                  <input
+                    type="number"
+                    value={boxModal.sort_order ?? 0}
+                    onChange={e => setBoxModal({ ...boxModal, sort_order: Number(e.target.value) })}
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                    min={0}
+                  />
+                </div>
               </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">URL รูปภาพกล่อง</label>
+                <input
+                  value={boxModal.image || ''}
+                  onChange={e => setBoxModal({ ...boxModal, image: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                  placeholder="https://..."
+                />
+                {boxModal.image && (
+                  <img src={boxModal.image} alt="" className="mt-2 h-16 rounded-lg object-contain border border-gray-200" />
+                )}
+              </div>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={boxModal.active !== false}
+                  onChange={e => setBoxModal({ ...boxModal, active: e.target.checked })}
+                  className="accent-black w-4 h-4"
+                />
+                <span className="text-sm"><i className="fas fa-eye text-green-600 mr-1"></i>เปิดการขาย</span>
+              </label>
+            </div>
+            <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">
+              <button onClick={() => setBoxModal(null)} className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-800 shadow-[0_4px_0_#d1d5db]">
+                <i className="fas fa-times text-[12px]"></i> ยกเลิก
+              </button>
+              <button onClick={handleSaveBox} disabled={boxSaving} className="flex items-center gap-2 px-5 py-2.5 bg-[#1e2735] disabled:opacity-50 text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#38404d]">
+                {boxSaving ? <><i className="fas fa-spinner fa-spin text-[12px]"></i> บันทึก...</> : <><i className="fas fa-save text-[12px]"></i> บันทึก</>}
+              </button>
             </div>
           </div>
         </div>
-      )}
+      ); })()}
 
       {/* ─── Item Modal ──────────────────────────────────────────── */}
-      {itemModal && activeBox && (
-        <div className="modal-overlay" onClick={() => !itemSaving && setItemModal(null)}>
-          <div className="modal-content max-w-lg" onClick={e => e.stopPropagation()}>
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-xl font-bold">
+      {itemModal && activeBox && (() => { const bd = { current: false }; return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto"
+          onMouseDown={e => { bd.current = e.target === e.currentTarget; }}
+          onMouseUp={e => { if (bd.current && e.target === e.currentTarget && !itemSaving) setItemModal(null); }}>
+          <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-full max-w-lg my-4 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
+              <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
+                <i className="fas fa-gem text-green-600 text-xs"></i>
+              </div>
+              <div className="flex-1 text-center">
+                <h3 className="font-bold text-gray-900 text-base">
                   {itemModal.id ? 'แก้ไขไอเทม' : `เพิ่มไอเทมใน "${activeBox.name}"`}
                 </h3>
-                <button onClick={() => setItemModal(null)} className="text-gray-400 hover:text-black">
-                  <i className="fas fa-xmark text-xl"></i>
-                </button>
+                <p className="text-[11px] text-gray-400">{itemModal.id ? 'แก้ไขรายละเอียดไอเทมที่เลือก' : 'กำหนด RCON command และน้ำหนักการสุ่ม'}</p>
+              </div>
+              <button onClick={() => setItemModal(null)} className="w-8 h-8 rounded-lg bg-red-500 flex items-center justify-center text-white shadow-[0_4px_0_#b91c1c] flex-shrink-0">
+                <i className="fas fa-times text-xs"></i>
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              {itemError && <div className="text-red-500 text-xs bg-red-50 px-3 py-2 rounded-lg border border-red-100 flex items-center gap-1.5"><i className="fas fa-exclamation-circle"></i> {itemError}</div>}
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">ชื่อไอเทม *</label>
+                <input
+                  value={itemModal.name || ''}
+                  onChange={e => setItemModal({ ...itemModal, name: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                  placeholder="เช่น Netherite Sword"
+                  autoFocus
+                />
               </div>
 
-              {itemError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg mb-4">
-                  <i className="fas fa-exclamation-circle mr-1.5"></i>{itemError}
-                </div>
-              )}
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">คำอธิบาย</label>
+                <input
+                  value={itemModal.description || ''}
+                  onChange={e => setItemModal({ ...itemModal, description: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                  placeholder="คำอธิบายสั้นๆ..."
+                />
+              </div>
 
-              <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">RCON Command *</label>
+                <textarea
+                  value={itemModal.command || ''}
+                  onChange={e => setItemModal({ ...itemModal, command: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 h-20 resize-none font-mono"
+                  placeholder="give {player} minecraft:netherite_sword 1&#10;say {player} got a Netherite Sword!"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  ใช้ <code className="bg-gray-100 px-1 rounded">{'{player}'}</code> แทนชื่อผู้เล่น — รองรับหลายบรรทัด
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">ชื่อไอเทม *</label>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">
+                    น้ำหนักการสุ่ม (Weight) *
+                    <span className="text-gray-400 font-normal ml-1">— ยิ่งมากยิ่งออกบ่อย</span>
+                  </label>
                   <input
-                    value={itemModal.name || ''}
-                    onChange={e => setItemModal({ ...itemModal, name: e.target.value })}
-                    className="input"
-                    placeholder="เช่น Netherite Sword"
-                    autoFocus
+                    type="number"
+                    value={itemModal.weight ?? 100}
+                    onChange={e => setItemModal({ ...itemModal, weight: Number(e.target.value) })}
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                    min={1}
                   />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">คำอธิบาย</label>
-                  <input
-                    value={itemModal.description || ''}
-                    onChange={e => setItemModal({ ...itemModal, description: e.target.value })}
-                    className="input"
-                    placeholder="คำอธิบายสั้นๆ..."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">RCON Command *</label>
-                  <textarea
-                    value={itemModal.command || ''}
-                    onChange={e => setItemModal({ ...itemModal, command: e.target.value })}
-                    className="input h-20 resize-none font-mono text-sm"
-                    placeholder="give {player} minecraft:netherite_sword 1&#10;say {player} got a Netherite Sword!"
-                  />
-                  <p className="text-xs text-gray-400 mt-1">
-                    ใช้ <code className="bg-gray-100 px-1 rounded">{'{player}'}</code> แทนชื่อผู้เล่น — รองรับหลายบรรทัด
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">
-                      น้ำหนักการสุ่ม (Weight) *
-                      <span className="text-gray-400 font-normal ml-1">— ยิ่งมากยิ่งออกบ่อย</span>
-                    </label>
-                    <input
-                      type="number"
-                      value={itemModal.weight ?? 100}
-                      onChange={e => setItemModal({ ...itemModal, weight: Number(e.target.value) })}
-                      className="input"
-                      min={1}
-                    />
-                    {/* Live chance preview */}
-                    {activeBox.items.length > 0 && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        โอกาส ≈{' '}
-                        <strong>
-                          {((Number(itemModal.weight || 0) / (activeBox.items.reduce((s, it) => s + it.weight, 0) + (itemModal.id ? 0 : Number(itemModal.weight || 0)))) * 100).toFixed(2)}%
-                        </strong>
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Rarity</label>
-                    <select
-                      value={itemModal.rarity || 'common'}
-                      onChange={e => setItemModal({ ...itemModal, rarity: e.target.value as LootBoxItem['rarity'] })}
-                      className="input"
-                    >
-                      {RARITY_OPTIONS.map(r => (
-                        <option key={r} value={r}>{RARITY_CONFIG[r].label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Rarity color preview */}
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-6 h-6 rounded-full border border-gray-300"
-                    style={{ backgroundColor: itemModal.color || RARITY_CONFIG[itemModal.rarity || 'common'].color }}
-                  />
-                  <div className="flex-1">
-                    <label className="block text-sm text-gray-600 mb-1">สีไอเทม (Custom)</label>
-                    <input
-                      value={itemModal.color || ''}
-                      onChange={e => setItemModal({ ...itemModal, color: e.target.value })}
-                      className="input"
-                      placeholder={`ปล่อยว่างเพื่อใช้สีตาม rarity (${RARITY_CONFIG[itemModal.rarity || 'common'].color})`}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">URL รูปภาพไอเทม</label>
-                  <input
-                    value={itemModal.image || ''}
-                    onChange={e => setItemModal({ ...itemModal, image: e.target.value })}
-                    className="input"
-                    placeholder="https://..."
-                  />
-                  {itemModal.image && (
-                    <img src={itemModal.image} alt="" className="mt-2 h-14 rounded-lg object-contain border border-gray-200" />
+                  {activeBox.items.length > 0 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      โอกาส ≈{' '}
+                      <strong>
+                        {((Number(itemModal.weight || 0) / (activeBox.items.reduce((s, it) => s + it.weight, 0) + (itemModal.id ? 0 : Number(itemModal.weight || 0)))) * 100).toFixed(2)}%
+                      </strong>
+                    </p>
                   )}
                 </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">Rarity</label>
+                  <select
+                    value={itemModal.rarity || 'common'}
+                    onChange={e => setItemModal({ ...itemModal, rarity: e.target.value as LootBoxItem['rarity'] })}
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                  >
+                    {RARITY_OPTIONS.map(r => (
+                      <option key={r} value={r}>{RARITY_CONFIG[r].label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              {/* Weight reference */}
-              <div className="mt-4 bg-gray-50 rounded-lg p-3 text-xs text-gray-500">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-6 h-6 rounded-full border border-gray-300 flex-shrink-0"
+                  style={{ backgroundColor: itemModal.color || RARITY_CONFIG[itemModal.rarity || 'common'].color }}
+                />
+                <div className="flex-1">
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">สีไอเทม (Custom)</label>
+                  <input
+                    value={itemModal.color || ''}
+                    onChange={e => setItemModal({ ...itemModal, color: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                    placeholder={`ปล่อยว่างเพื่อใช้สีตาม rarity (${RARITY_CONFIG[itemModal.rarity || 'common'].color})`}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">URL รูปภาพไอเทม</label>
+                <input
+                  value={itemModal.image || ''}
+                  onChange={e => setItemModal({ ...itemModal, image: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                  placeholder="https://..."
+                />
+                {itemModal.image && (
+                  <img src={itemModal.image} alt="" className="mt-2 h-14 rounded-lg object-contain border border-gray-200" />
+                )}
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-500">
                 <p className="font-semibold mb-1 text-gray-700">Weight แนะนำตาม Rarity:</p>
                 <div className="flex flex-wrap gap-2">
                   {RARITY_OPTIONS.map(r => {
@@ -653,19 +652,18 @@ export default function AdminLootBoxes() {
                   })}
                 </div>
               </div>
-
-              <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
-                <button onClick={() => setItemModal(null)} className="btn-ghost flex-1 justify-center">ยกเลิก</button>
-                <button onClick={handleSaveItem} disabled={itemSaving} className="btn-primary flex-1 justify-center">
-                  {itemSaving
-                    ? <><i className="fas fa-spinner fa-spin"></i> กำลังบันทึก...</>
-                    : <><i className="fas fa-save"></i> บันทึก</>}
-                </button>
-              </div>
+            </div>
+            <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">
+              <button onClick={() => setItemModal(null)} className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-800 shadow-[0_4px_0_#d1d5db]">
+                <i className="fas fa-times text-[12px]"></i> ยกเลิก
+              </button>
+              <button onClick={handleSaveItem} disabled={itemSaving} className="flex items-center gap-2 px-5 py-2.5 bg-[#1e2735] disabled:opacity-50 text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#38404d]">
+                {itemSaving ? <><i className="fas fa-spinner fa-spin text-[12px]"></i> บันทึก...</> : <><i className="fas fa-save text-[12px]"></i> บันทึก</>}
+              </button>
             </div>
           </div>
         </div>
-      )}
+      ); })()}
     </div>
   );
 }
