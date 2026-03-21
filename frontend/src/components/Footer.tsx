@@ -18,6 +18,7 @@ export default function Footer() {
           <nav className="flex items-center gap-6" aria-label="Footer navigation">
             <a href="/shop" className="hover:text-primary transition-colors duration-200">ร้านค้า</a>
             <a href="/topup" className="hover:text-primary transition-colors duration-200">เติมเงิน</a>
+            <a href="/redeem" className="hover:text-primary transition-colors duration-200">ใช้โค้ด</a>
             {settings.discord_invite && (
               <a
                 href={settings.discord_invite}

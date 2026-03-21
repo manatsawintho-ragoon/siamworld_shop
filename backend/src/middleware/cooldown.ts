@@ -40,35 +40,3 @@ export function purchaseCooldown(cooldownSeconds: number = 5) {
   };
 }
 
-/**
- * Generic per-user rate limiter using Redis.
- * maxRequests per windowSeconds.
- */
-export function userRateLimit(maxRequests: number, windowSeconds: number, prefix: string = 'rl') {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user) return next();
-
-    const key = `${prefix}:${req.user.userId}`;
-    try {
-      const current = await redis.incr(key);
-      if (current === 1) {
-        await redis.expire(key, windowSeconds);
-      }
-
-      if (current > maxRequests) {
-        const ttl = await redis.ttl(key);
-        res.status(429).json({
-          success: false,
-          error: 'Too many requests',
-          code: 'RATE_LIMITED',
-          retryAfter: ttl,
-        });
-        return;
-      }
-
-      next();
-    } catch {
-      next();
-    }
-  };
-}

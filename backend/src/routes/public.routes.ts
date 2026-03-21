@@ -82,8 +82,7 @@ router.get('/online-players', async (req: Request, res: Response, next: NextFunc
 
 router.get('/topup-ranking', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const db = require('../lib/db').default;
-    const [rows] = await db.query(`
+    const [rows] = await pool.execute(`
       SELECT u.username, SUM(t.amount) as total_topup 
       FROM transactions t 
       JOIN users u ON t.user_id = u.id 

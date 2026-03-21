@@ -59,11 +59,11 @@ export default function ProfilePage() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-3 gap-3 mb-8">
-          <a href="/topup" className="card p-4 text-center group hover:shadow-theme-md transition-all hover:-translate-y-0.5">
+          <a href="/redeem" className="card p-4 text-center group hover:shadow-theme-md transition-all hover:-translate-y-0.5">
             <div className="w-10 h-10 mx-auto rounded-xl bg-success/10 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-              <i className="fas fa-wallet text-success" aria-hidden="true"></i>
+              <i className="fas fa-ticket-alt text-success" aria-hidden="true"></i>
             </div>
-            <span className="text-xs font-medium text-foreground">เติมเงิน</span>
+            <span className="text-xs font-medium text-foreground">ใช้โค้ด</span>
           </a>
           <a href="/inventory" className="card p-4 text-center group hover:shadow-theme-md transition-all hover:-translate-y-0.5">
             <div className="w-10 h-10 mx-auto rounded-xl bg-warning/10 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">

@@ -128,7 +128,7 @@ export default function Navbar() {
               <MobileLink href="/" icon="fa-home" pathname={pathname}>หน้าแรก</MobileLink>
               <MobileLink href="/shop" icon="fa-shopping-cart" pathname={pathname}>ไอเท็มชอป</MobileLink>
               <MobileLink href="/lootbox" icon="fa-box-open" pathname={pathname}>กล่องสุ่ม</MobileLink>
-              <MobileLink href="/topup" icon="fa-coins" pathname={pathname}>เติมเครดิต</MobileLink>
+              <MobileLink href="/topup" icon="fa-coins" pathname={pathname}>เติมเงิน</MobileLink>
               <MobileLink href="/download" icon="fa-download" pathname={pathname}>ดาวน์โหลด</MobileLink>
               {user && <MobileLink href="/inventory" icon="fa-box" pathname={pathname}>คลังไอเทม</MobileLink>}
               {user && <MobileLink href="/profile" icon="fa-user" pathname={pathname}>โปรไฟล์</MobileLink>}

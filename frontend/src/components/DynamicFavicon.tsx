@@ -6,11 +6,13 @@ export default function DynamicFavicon() {
   const { settings } = useSettings();
 
   useEffect(() => {
-    const faviconUrl = settings.favicon_url || settings.logo_url;
+    const faviconUrl = (settings.favicon_url !== undefined && settings.favicon_url !== '')
+      ? settings.favicon_url
+      : settings.logo_url;
     const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
 
     if (!faviconUrl) {
-      if (link) link.remove();
+      if (link) link.href = 'data:,';
       return;
     }
 

@@ -19,22 +19,8 @@ export const topupSchema = z.object({
   description: z.string().max(500).optional(),
 });
 
-export const updateRoleSchema = z.object({
-  role: z.enum(['user', 'admin']),
-});
-
-export const adminTopupSchema = z.object({
-  userId: z.number().int().positive(),
-  amount: z.number().positive(),
-  description: z.string().max(500).optional(),
-});
-
 export const promptPayCreateSchema = z.object({
   amount: z.number().positive().max(100000),
-});
-
-export const promptPayConfirmSchema = z.object({
-  reference: z.string().min(1),
 });
 
 export const trueMoneyRedeemSchema = z.object({
@@ -153,4 +139,55 @@ export const createSlideSchema = z.object({
   link_url: z.string().max(500).optional().nullable(),
   sort_order: z.number().int().optional(),
   active: z.preprocess((v) => Boolean(v), z.boolean()).optional(),
+});
+
+// ─── Downloads ──────────────────────────────────────────────
+
+export const createDownloadSchema = z.object({
+  filename: z.string().min(1, 'Filename is required').max(255),
+  description: z.string().max(2000).optional().nullable(),
+  file_size: z.string().max(50).optional().nullable(),
+  download_url: z.string().url('Invalid URL format').min(1).max(1000),
+  category: z.string().max(100).optional().nullable(),
+  active: z.preprocess((v) => v !== false && v !== 0 ? true : false, z.boolean()).optional(),
+  sort_order: z.number().int().optional(),
+});
+
+export const updateDownloadSchema = z.object({
+  filename: z.string().min(1).max(255),
+  description: z.string().max(2000).optional().nullable(),
+  file_size: z.string().max(50).optional().nullable(),
+  download_url: z.string().url('Invalid URL format').min(1).max(1000),
+  category: z.string().max(100).optional().nullable(),
+  active: z.preprocess((v) => v !== false && v !== 0 ? true : false, z.boolean()).optional(),
+  sort_order: z.number().int().optional(),
+});
+
+// ─── Redeem Codes ───────────────────────────────────────────
+
+export const createRedeemCodeSchema = z.object({
+  code: z.string().min(1, 'Code is required').max(100).regex(/^[a-zA-Z0-9_-]+$/, 'Code may only contain letters, numbers, hyphens and underscores'),
+  description: z.string().max(500).optional().nullable(),
+  reward_type: z.enum(['rcon', 'point']).optional(),
+  point_amount: z.number().positive().optional().nullable(),
+  command: z.string().max(5000).optional().nullable(),
+  max_uses: z.number().int().min(0).optional(),
+  active: z.preprocess((v) => Boolean(v), z.boolean()).optional(),
+  expires_at: z.string().optional().nullable(),
+});
+
+export const updateRedeemCodeSchema = z.object({
+  code: z.string().min(1).max(100).regex(/^[a-zA-Z0-9_-]+$/, 'Code may only contain letters, numbers, hyphens and underscores').optional(),
+  description: z.string().max(500).optional().nullable(),
+  reward_type: z.enum(['rcon', 'point']).optional(),
+  point_amount: z.number().positive().optional().nullable(),
+  command: z.string().max(5000).optional().nullable(),
+  max_uses: z.number().int().min(0).optional(),
+  active: z.preprocess((v) => Boolean(v), z.boolean()).optional(),
+  expires_at: z.string().optional().nullable(),
+});
+
+export const redeemCodeSchema = z.object({
+  code: z.string().min(1, 'Code is required').max(100),
+  serverId: z.number().int().positive().optional(),
 });

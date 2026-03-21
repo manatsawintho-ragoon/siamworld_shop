@@ -12,7 +12,7 @@ class WalletService {
     return rows[0];
   }
 
-  async topup(userId: number, amount: number, method?: string, reference?: string, description?: string) {
+  async topup(userId: number, amount: number, method?: string, reference?: string, description?: string, txType: string = 'topup') {
     if (amount <= 0) throw new ValidationError('Amount must be positive');
     const conn = await pool.getConnection();
     try {
@@ -29,7 +29,7 @@ class WalletService {
       await conn.execute('UPDATE wallets SET balance = balance + ? WHERE user_id = ?', [amount, userId]);
       await conn.execute(
         'INSERT INTO transactions (user_id, amount, type, method, status, reference, description) VALUES (?,?,?,?,?,?,?)',
-        [userId, amount, 'topup', method || 'system', 'success', reference || null, description || 'Top-up']
+        [userId, amount, txType, method || 'system', 'success', reference || null, description || 'Top-up']
       );
 
       // Wallet log for audit trail
@@ -40,7 +40,7 @@ class WalletService {
 
       await conn.commit();
       const wallet = await this.getWallet(userId);
-      logger.info('Wallet topup', { userId, amount, method });
+      logger.info('Wallet topup', { userId, amount, method, txType });
       return wallet;
     } catch (err) {
       await conn.rollback();

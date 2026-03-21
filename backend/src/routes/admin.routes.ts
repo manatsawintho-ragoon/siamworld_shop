@@ -15,6 +15,8 @@ import {
   updateSettingsSchema, createSlideSchema,
   createLootBoxSchema, updateLootBoxSchema,
   createLootBoxItemSchema, updateLootBoxItemSchema,
+  createDownloadSchema, updateDownloadSchema,
+  createRedeemCodeSchema, updateRedeemCodeSchema,
 } from '../validators/schemas';
 
 const router = Router();
@@ -60,7 +62,7 @@ router.post('/users/:id/topup', async (req: Request, res: Response, next: NextFu
   try {
     const id = parseInt(req.params.id);
     const { amount, description } = req.body;
-    const wallet = await walletService.topup(id, amount, 'admin', undefined, description || 'Admin top-up');
+    const wallet = await walletService.topup(id, amount, 'admin', undefined, description || 'Admin adjust', 'admin_adjust');
     res.json({ success: true, wallet });
   } catch (err) { next(err); }
 });
@@ -368,10 +370,9 @@ router.get('/downloads', async (_req: Request, res: Response, next: NextFunction
   } catch (err) { next(err); }
 });
 
-router.post('/downloads', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/downloads', validate(createDownloadSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { filename, description, file_size, download_url, category, active, sort_order } = req.body;
-    if (!filename || !download_url) return res.status(400).json({ success: false, message: 'filename and download_url are required' });
     const [result] = await pool.execute(
       'INSERT INTO downloads (filename, description, file_size, download_url, category, active, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)',
       [filename, description || '', file_size || '', download_url, category || '', active !== false ? 1 : 0, sort_order || 0]
@@ -382,11 +383,10 @@ router.post('/downloads', async (req: Request, res: Response, next: NextFunction
   } catch (err) { next(err); }
 });
 
-router.put('/downloads/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.put('/downloads/:id', validate(updateDownloadSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = parseInt(req.params.id);
     const { filename, description, file_size, download_url, category, active, sort_order } = req.body;
-    if (!filename || !download_url) return res.status(400).json({ success: false, message: 'filename and download_url are required' });
     await pool.execute(
       'UPDATE downloads SET filename=?, description=?, file_size=?, download_url=?, category=?, active=?, sort_order=?, updated_at=NOW() WHERE id=?',
       [filename, description || '', file_size || '', download_url, category || '', active !== false ? 1 : 0, sort_order || 0, id]
@@ -401,6 +401,79 @@ router.delete('/downloads/:id', async (req: Request, res: Response, next: NextFu
     const id = parseInt(req.params.id);
     await pool.execute('DELETE FROM downloads WHERE id = ?', [id]);
     res.json({ success: true, message: 'Download deleted' });
+  } catch (err) { next(err); }
+});
+
+// ─── Redeem Codes ───────────────────────────────────────────
+
+router.get('/codes', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT rc.*, 
+        (SELECT COUNT(*) FROM redeem_logs rl WHERE rl.code_id = rc.id) as actual_used
+       FROM redeem_codes rc ORDER BY rc.created_at DESC`
+    );
+    res.json({ success: true, codes: rows });
+  } catch (err) { next(err); }
+});
+
+router.post('/codes', validate(createRedeemCodeSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { code, description, command, max_uses, active, expires_at, reward_type, point_amount } = req.body;
+    const [result] = await pool.execute(
+      'INSERT INTO redeem_codes (code, description, reward_type, point_amount, command, max_uses, active, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [code, description || null, reward_type || 'rcon', point_amount || null, command || null, max_uses ?? 1, active !== false ? 1 : 0, expires_at || null]
+    );
+    const id = (result as any).insertId;
+    const [rows] = await pool.execute('SELECT * FROM redeem_codes WHERE id = ?', [id]);
+    res.json({ success: true, code: (rows as any[])[0] });
+  } catch (err) { next(err); }
+});
+
+router.put('/codes/:id', validate(updateRedeemCodeSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const fields: string[] = [];
+    const values: any[] = [];
+    const allowed = ['code', 'description', 'reward_type', 'point_amount', 'command', 'max_uses', 'active', 'expires_at'];
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) {
+        if (key === 'active') {
+          fields.push(`${key}=?`);
+          values.push(req.body[key] ? 1 : 0);
+        } else {
+          fields.push(`${key}=?`);
+          values.push(req.body[key]);
+        }
+      }
+    }
+    if (fields.length === 0) return res.status(400).json({ success: false, message: 'No fields to update' });
+    values.push(id);
+    await pool.execute(`UPDATE redeem_codes SET ${fields.join(', ')}, updated_at=NOW() WHERE id=?`, values);
+    const [rows] = await pool.execute('SELECT * FROM redeem_codes WHERE id = ?', [id]);
+    res.json({ success: true, code: (rows as any[])[0] });
+  } catch (err) { next(err); }
+});
+
+router.delete('/codes/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    await pool.execute('DELETE FROM redeem_codes WHERE id = ?', [id]);
+    res.json({ success: true, message: 'Code deleted' });
+  } catch (err) { next(err); }
+});
+
+// Get redeem logs for a specific code
+router.get('/codes/:id/logs', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [rows] = await pool.execute(
+      `SELECT rl.*, u.username FROM redeem_logs rl 
+       JOIN users u ON rl.user_id = u.id 
+       WHERE rl.code_id = ? ORDER BY rl.redeemed_at DESC`,
+      [id]
+    );
+    res.json({ success: true, logs: rows });
   } catch (err) { next(err); }
 });
 

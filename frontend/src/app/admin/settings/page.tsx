@@ -225,6 +225,14 @@ export default function AdminSettings() {
     try { await api(`/admin/downloads/${id}`, { method: 'DELETE', token: getToken()! }); loadDownloads(); } catch { }
   };
 
+  const handleToggleDl = async (dl: Download) => {
+    const newActive = dl.active ? 0 : 1;
+    setDownloads(prev => prev.map(d => d.id === dl.id ? { ...d, active: newActive } : d));
+    try {
+      await api(`/admin/downloads/${dl.id}`, { method: 'PUT', token: getToken()!, body: { filename: dl.filename, download_url: dl.download_url, description: dl.description, file_size: dl.file_size, category: dl.category, sort_order: dl.sort_order, active: newActive } });
+    } catch { loadDownloads(); }
+  };
+
   if (loading) {
     return <div className="p-8 text-center"><i className="fas fa-spinner fa-spin text-2xl text-green-500"></i></div>;
   }
@@ -312,16 +320,16 @@ export default function AdminSettings() {
                       <p className="text-[10px] text-gray-400 truncate mt-0.5">{s.image_url}</p>
                     </div>
                     {/* Actions */}
-                    <div className="flex items-center gap-0.5 flex-shrink-0">
+                    <div className="flex items-center gap-1 flex-shrink-0">
                       <button
                         onClick={() => handleToggleSlide(s)}
-                        className={`p-1.5 rounded transition-colors ${s.active ? 'text-green-500 hover:bg-green-50' : 'text-gray-300 hover:bg-gray-100'}`}
+                        className={`w-8 h-8 rounded-lg border flex items-center justify-center text-white hover:brightness-110 transition-all active:translate-y-[2px] ${s.active ? 'bg-green-500 border-green-600 shadow-[0_3px_0_#15803d] active:shadow-[0_1px_0_#15803d]' : 'bg-gray-400 border-gray-500 shadow-[0_3px_0_#6b7280] active:shadow-[0_1px_0_#6b7280]'}`}
                         title={s.active ? 'เปิดอยู่ — คลิกเพื่อปิด' : 'ปิดอยู่ — คลิกเพื่อเปิด'}
                       >
-                        <i className={`fas ${s.active ? 'fa-eye' : 'fa-eye-slash'} text-xs`}></i>
+                        <i className={`fas ${s.active ? 'fa-eye' : 'fa-eye-slash'} text-[11px]`}></i>
                       </button>
-                      <button onClick={() => setEditingSlide({ ...s })} className="p-1.5 rounded text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors"><i className="fas fa-pen text-xs"></i></button>
-                      <button onClick={() => handleDeleteSlide(s.id)} className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"><i className="fas fa-trash text-xs"></i></button>
+                      <button onClick={() => setEditingSlide({ ...s })} className="w-8 h-8 rounded-lg bg-amber-500 border border-amber-600 flex items-center justify-center text-white shadow-[0_3px_0_#b45309] hover:brightness-110 transition-all active:shadow-[0_1px_0_#b45309] active:translate-y-[2px]" title="แก้ไข"><i className="fas fa-pen text-[11px]"></i></button>
+                      <button onClick={() => handleDeleteSlide(s.id)} className="w-8 h-8 rounded-lg bg-red-500 border border-red-600 flex items-center justify-center text-white shadow-[0_3px_0_#b91c1c] hover:brightness-110 transition-all active:shadow-[0_1px_0_#b91c1c] active:translate-y-[2px]" title="ลบ"><i className="fas fa-trash text-[11px]"></i></button>
                     </div>
                   </div>
                 ))}
@@ -348,25 +356,30 @@ export default function AdminSettings() {
                 <p className="text-gray-400 text-xs">ยังไม่มีรายการดาวน์โหลด</p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="divide-y divide-gray-100">
                 {downloads.map(dl => (
-                  <div key={dl.id} className="flex items-center gap-3 p-2 rounded-xl border border-gray-100 hover:shadow-md transition-all">
-                    <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
-                      <i className="fas fa-file-archive text-green-600 text-xs"></i>
+                  <div key={dl.id} className="flex items-center gap-4 py-3 px-1 group hover:bg-gray-50/50 transition-colors -mx-1 rounded-lg">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center flex-shrink-0 shadow-sm">
+                      <i className="fas fa-file-zipper text-green-600 text-sm"></i>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-gray-800 truncate">{dl.filename}</p>
-                      <div className="flex items-center gap-2 text-[10px] text-gray-400">
-                        {dl.file_size && <span>{dl.file_size}</span>}
-                        {dl.category && <span className="text-green-600 font-medium">{dl.category}</span>}
+                      <p className="text-[13px] font-bold text-gray-800 truncate">{dl.filename}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {dl.file_size && <span className="text-[11px] text-gray-400 font-medium">{dl.file_size}</span>}
+                        {dl.file_size && dl.category && <span className="text-gray-200">·</span>}
+                        {dl.category && <span className="text-[11px] text-green-600/80 font-semibold">{dl.category}</span>}
                       </div>
                     </div>
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${dl.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                      {dl.active ? 'เปิด' : 'ปิด'}
-                    </span>
                     <div className="flex items-center gap-1 flex-shrink-0">
-                      <button onClick={() => setEditingDl({ ...dl })} className="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors"><i className="fas fa-pen text-xs"></i></button>
-                      <button onClick={() => handleDeleteDl(dl.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"><i className="fas fa-trash text-xs"></i></button>
+                      <button
+                        onClick={() => handleToggleDl(dl)}
+                        className={`w-8 h-8 rounded-lg border flex items-center justify-center text-white hover:brightness-110 transition-all active:translate-y-[2px] ${dl.active ? 'bg-green-500 border-green-600 shadow-[0_3px_0_#15803d] active:shadow-[0_1px_0_#15803d]' : 'bg-gray-400 border-gray-500 shadow-[0_3px_0_#6b7280] active:shadow-[0_1px_0_#6b7280]'}`}
+                        title={dl.active ? 'เปิดอยู่ — คลิกเพื่อปิด' : 'ปิดอยู่ — คลิกเพื่อเปิด'}
+                      >
+                        <i className={`fas ${dl.active ? 'fa-eye' : 'fa-eye-slash'} text-[11px]`}></i>
+                      </button>
+                      <button onClick={() => setEditingDl({ ...dl })} className="w-8 h-8 rounded-lg bg-amber-500 border border-amber-600 flex items-center justify-center text-white shadow-[0_3px_0_#b45309] hover:brightness-110 transition-all active:shadow-[0_1px_0_#b45309] active:translate-y-[2px]" title="แก้ไข"><i className="fas fa-pen text-[11px]"></i></button>
+                      <button onClick={() => handleDeleteDl(dl.id)} className="w-8 h-8 rounded-lg bg-red-500 border border-red-600 flex items-center justify-center text-white shadow-[0_3px_0_#b91c1c] hover:brightness-110 transition-all active:shadow-[0_1px_0_#b91c1c] active:translate-y-[2px]" title="ลบ"><i className="fas fa-trash text-[11px]"></i></button>
                     </div>
                   </div>
                 ))}
@@ -382,15 +395,21 @@ export default function AdminSettings() {
             actions={<ActionButtons saving={!!sectionSaving.favicon} saved={!!sectionSaved.favicon} onSave={() => handleSaveKeys('favicon', ['favicon_url'])} onClear={() => handleClearUrl(['favicon_url'], 'favicon')} />}
           >
             <div className="space-y-3">
-              {settings.favicon_url && (
-                <div className="flex items-center gap-3 mb-1">
-                  <div className="w-10 h-10 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
-                    <img src={settings.favicon_url} alt="Favicon" className="w-8 h-8 object-contain" onError={e => (e.currentTarget.style.display = 'none')} />
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-12 h-12 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/80 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {settings.favicon_url ? (
+                    <img src={settings.favicon_url} alt="Favicon" className="w-9 h-9 object-contain" onError={e => { e.currentTarget.style.display = 'none'; (e.currentTarget.nextElementSibling as HTMLElement)!.style.display = 'flex'; }} />
+                  ) : null}
+                  <div className={`flex-col items-center justify-center ${settings.favicon_url ? 'hidden' : 'flex'}`}>
+                    <i className="fas fa-image text-gray-300 text-base"></i>
                   </div>
-                  <span className="text-[10px] text-gray-400">ตัวอย่าง Favicon ปัจจุบัน</span>
                 </div>
-              )}
-              <FieldInput label="URL รูป Favicon" value={settings.favicon_url || ''} onChange={v => set('favicon_url', v)} placeholder="https://example.com/favicon.webp" icon="fa-image" hint="แนะนำขนาด 32×32 หรือ 64×64 px" />
+                <div>
+                  <p className="text-[11px] font-semibold text-gray-500">{settings.favicon_url ? 'ตัวอย่าง Favicon ปัจจุบัน' : 'ยังไม่ได้ตั้ง Favicon'}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">แนะนำขนาด 32×32 หรือ 64×64 px</p>
+                </div>
+              </div>
+              <FieldInput label="URL รูป Favicon" value={settings.favicon_url || ''} onChange={v => set('favicon_url', v)} placeholder="https://example.com/favicon.webp" icon="fa-image" hint="วาง URL รูปภาพ .ico .png .webp" />
             </div>
           </SectionCard>
 
@@ -415,8 +434,30 @@ export default function AdminSettings() {
             actions={<ActionButtons saving={!!sectionSaving.social} saved={!!sectionSaved.social} onSave={() => handleSaveKeys('social', ['facebook_url', 'discord_invite'])} />}
           >
             <div className="space-y-4">
-              <FieldInput label="Facebook URL" value={settings.facebook_url || ''} onChange={v => set('facebook_url', v)} placeholder="https://facebook.com/yourpage" icon="fab fa-facebook" hint="ลิงก์ไปยังเพจ Facebook ของคุณ" />
-              <FieldInput label="ลิงก์เชิญ Discord" value={settings.discord_invite || ''} onChange={v => set('discord_invite', v)} placeholder="https://discord.gg/yourinvite" icon="fab fa-discord" hint="ลิงก์เชิญเข้า Discord Server ของคุณ" />
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">Facebook URL</label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#1877F2]">
+                    <i className="fab fa-facebook text-sm"></i>
+                  </div>
+                  <input value={settings.facebook_url || ''} onChange={e => set('facebook_url', e.target.value)}
+                    className="w-full pl-9 pr-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#1877F2] focus:ring-2 focus:ring-[#1877F2]/20 placeholder:text-gray-300"
+                    placeholder="https://facebook.com/yourpage" />
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1">ลิงก์ไปยังเพจ Facebook ของคุณ</p>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">ลิงก์เชิญ Discord</label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5865F2]">
+                    <i className="fab fa-discord text-sm"></i>
+                  </div>
+                  <input value={settings.discord_invite || ''} onChange={e => set('discord_invite', e.target.value)}
+                    className="w-full pl-9 pr-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#5865F2] focus:ring-2 focus:ring-[#5865F2]/20 placeholder:text-gray-300"
+                    placeholder="https://discord.gg/yourinvite" />
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1">ลิงก์เชิญเข้า Discord Server ของคุณ</p>
+              </div>
             </div>
           </SectionCard>
         </div>

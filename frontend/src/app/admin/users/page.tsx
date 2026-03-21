@@ -44,15 +44,15 @@ export default function AdminUsers() {
   };
 
   const handleRoleChange = async (userId: number, role: string) => {
-    if (!confirm(`à¹€à¸›à¸¥à¸µà¹ˆà¸¢à¸™ role à¹€à¸›à¹‡à¸™ ${role}?`)) return;
+    if (!confirm(`เปลี่ยน role เป็น ${role}?`)) return;
     try {
       setError('');
       await api(`/admin/users/${userId}/role`, { method: 'PUT', token: getToken()!, body: { role } });
       load();
     } catch (err: any) {
-      const msg = err?.message || 'à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”';
+      const msg = err?.message || 'เกิดข้อผิดพลาด';
       if (msg.includes('401') || msg.includes('Unauthorized') || msg.includes('403') || msg.includes('forbidden') || msg.includes('Access denied')) {
-        setError('Token à¸«à¸¡à¸”à¸­à¸²à¸¢à¸¸ à¸à¸£à¸¸à¸“à¸²à¸­à¸­à¸à¸ˆà¸²à¸à¸£à¸°à¸šà¸šà¹à¸¥à¹‰à¸§à¹€à¸‚à¹‰à¸²à¸ªà¸¹à¹ˆà¸£à¸°à¸šà¸šà¹ƒà¸«à¸¡à¹ˆ');
+        setError('Token หมดอายุ กรุณาออกจากระบบแล้วเข้าสู่ระบบใหม่');
       } else {
         setError(msg);
       }
@@ -69,7 +69,7 @@ export default function AdminUsers() {
       setTopupAmount('');
       load();
     } catch (err: any) {
-      setError(err?.message || 'à¹€à¸à¸´à¸”à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸”');
+      setError(err?.message || 'เกิดข้อผิดพลาด');
     }
     setTopupLoading(false);
   };
@@ -111,12 +111,12 @@ export default function AdminUsers() {
               <i className="fas fa-users text-green-600 text-xs"></i>
             </div>
             <div>
-              <h3 className="font-bold text-gray-900 text-sm">à¸ˆà¸±à¸”à¸à¸²à¸£à¸ªà¸¡à¸²à¸Šà¸´à¸</h3>
-              <p className="text-[11px] text-gray-400">à¸„à¹‰à¸™à¸«à¸² à¸•à¸£à¸§à¸ˆà¸ªà¸­à¸š à¹à¸¥à¸°à¹à¸à¹‰à¹„à¸‚à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¸¡à¸²à¸Šà¸´à¸à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”à¹ƒà¸™à¸£à¸°à¸šà¸š</p>
+              <h3 className="font-bold text-gray-900 text-sm">จัดการสมาชิก</h3>
+              <p className="text-[11px] text-gray-400">ค้นหา ตรวจสอบ และแก้ไขข้อมูลสมาชิกทั้งหมดในระบบ</p>
             </div>
           </div>
           <span className="text-xs font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-            {total.toLocaleString()} à¸„à¸™
+            {total.toLocaleString()} คน
           </span>
         </div>
 
@@ -129,12 +129,12 @@ export default function AdminUsers() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 className="w-full pl-9 pr-3.5 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300"
-                placeholder="à¸„à¹‰à¸™à¸«à¸²à¸Šà¸·à¹ˆà¸­à¸œà¸¹à¹‰à¹ƒà¸Šà¹‰..."
+                placeholder="ค้นหาชื่อผู้ใช้..."
               />
             </div>
           </form>
           <div className="flex items-center gap-2 text-xs text-gray-500 shrink-0">
-            <span>à¹à¸ªà¸”à¸‡à¸„à¸£à¸±à¹‰à¸‡à¸¥à¸°</span>
+            <span>แสดงครั้งละ</span>
             <select
               value={limit}
               onChange={e => { const l = Number(e.target.value); setLimit(l); setPage(1); load(1, search, l); }}
@@ -144,7 +144,7 @@ export default function AdminUsers() {
               <option value={50}>50</option>
               <option value={100}>100</option>
             </select>
-            <span>à¸£à¸²à¸¢à¸à¸²à¸£</span>
+            <span>รายการ</span>
           </div>
         </div>
 
@@ -152,12 +152,12 @@ export default function AdminUsers() {
         {loading ? (
           <div className="py-20 text-center">
             <i className="fas fa-spinner fa-spin text-2xl text-gray-300"></i>
-            <p className="text-sm text-gray-400 mt-2">à¸à¸³à¸¥à¸±à¸‡à¹‚à¸«à¸¥à¸”...</p>
+            <p className="text-sm text-gray-400 mt-2">กำลังโหลด...</p>
           </div>
         ) : users.length === 0 ? (
           <div className="py-20 text-center">
             <i className="fas fa-users-slash text-3xl text-gray-200 mb-3 block"></i>
-            <p className="text-sm text-gray-400">à¹„à¸¡à¹ˆà¸žà¸šà¸ªà¸¡à¸²à¸Šà¸´à¸</p>
+            <p className="text-sm text-gray-400">ไม่พบสมาชิก</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -165,11 +165,11 @@ export default function AdminUsers() {
               <thead>
                 <tr className="border-b border-gray-100">
                   <th className="text-left px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wide w-16">ID</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wide">à¸Šà¸·à¹ˆà¸­à¸œà¸¹à¹‰à¹ƒà¸Šà¹‰</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wide">à¸ªà¸¡à¸±à¸„à¸£à¹€à¸¡à¸·à¹ˆà¸­</th>
-                  <th className="text-right px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wide">à¸¢à¸­à¸”à¹€à¸‡à¸´à¸™</th>
+                  <th className="text-left px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wide">ชื่อผู้ใช้</th>
+                  <th className="text-left px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wide">สมัครเมื่อ</th>
+                  <th className="text-right px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wide">ยอดเงิน</th>
                   <th className="text-center px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wide">Role</th>
-                  <th className="text-center px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wide">à¸ˆà¸±à¸”à¸à¸²à¸£</th>
+                  <th className="text-center px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wide">จัดการ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -195,14 +195,14 @@ export default function AdminUsers() {
                         {new Date(u.created_at).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                       </p>
                       <p className="text-[11px] text-gray-400">
-                        {new Date(u.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} à¸™.
+                        {new Date(u.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
                       </p>
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <span className="font-bold text-gray-800">
                         {parseFloat(String(u.wallet_balance || 0)).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                       </span>
-                      <span className="text-xs text-gray-400 ml-1">à¸¿</span>
+                      <span className="text-xs text-gray-400 ml-1">฿</span>
                     </td>
                     <td className="px-5 py-3.5 text-center">
                       <select
@@ -223,7 +223,7 @@ export default function AdminUsers() {
                         <button
                           onClick={() => { setTopupModal(u); setTopupAmount(''); }}
                           className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#16a34a] text-white shadow-[0_3px_0_#0d6b2e] hover:brightness-110 transition-all"
-                          title="à¹€à¸•à¸´à¸¡à¹€à¸‡à¸´à¸™"
+                          title="เติมเงิน"
                         >
                           <i className="fas fa-wallet text-xs"></i>
                         </button>
@@ -240,7 +240,7 @@ export default function AdminUsers() {
         {totalPages > 1 && (
           <div className="px-5 py-3.5 border-t border-gray-100 flex items-center justify-between">
             <p className="text-xs text-gray-400">
-              à¹à¸ªà¸”à¸‡ {Math.min((page - 1) * limit + 1, total).toLocaleString()}â€“{Math.min(page * limit, total).toLocaleString()} à¸ˆà¸²à¸ {total.toLocaleString()} à¸£à¸²à¸¢à¸à¸²à¸£
+              แสดง {Math.min((page - 1) * limit + 1, total).toLocaleString()}&ndash;{Math.min(page * limit, total).toLocaleString()} จาก {total.toLocaleString()} รายการ
             </p>
             <div className="flex items-center gap-1">
               <button
@@ -252,7 +252,7 @@ export default function AdminUsers() {
               </button>
               {getPageNumbers().map((p, i) =>
                 p === '...' ? (
-                  <span key={`e${i}`} className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">â€¦</span>
+                  <span key={`e${i}`} className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">&hellip;</span>
                 ) : (
                   <button
                     key={p}
@@ -296,8 +296,8 @@ export default function AdminUsers() {
                 <i className="fas fa-wallet text-green-600 text-xs"></i>
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-gray-900 text-sm">à¹€à¸•à¸´à¸¡à¹€à¸‡à¸´à¸™</h3>
-                <p className="text-[11px] text-gray-400 truncate">à¹€à¸žà¸´à¹ˆà¸¡à¸¢à¸­à¸”à¹€à¸‡à¸´à¸™à¹ƒà¸«à¹‰à¸ªà¸¡à¸²à¸Šà¸´à¸ {topupModal.username}</p>
+                <h3 className="font-bold text-gray-900 text-sm">เติมเงิน</h3>
+                <p className="text-[11px] text-gray-400 truncate">เพิ่มยอดเงินให้สมาชิก {topupModal.username}</p>
               </div>
               <button
                 onClick={() => setTopupModal(null)}
@@ -322,14 +322,14 @@ export default function AdminUsers() {
                 <div>
                   <p className="font-bold text-sm text-gray-800">{topupModal.username}</p>
                   <p className="text-xs text-gray-400">
-                    à¸¢à¸­à¸”à¸›à¸±à¸ˆà¸ˆà¸¸à¸šà¸±à¸™: <span className="font-bold text-gray-700">{parseFloat(String(topupModal.wallet_balance || 0)).toLocaleString('th-TH', { minimumFractionDigits: 2 })} à¸¿</span>
+                    ยอดปัจจุบัน: <span className="font-bold text-gray-700">{parseFloat(String(topupModal.wallet_balance || 0)).toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
                   </p>
                 </div>
               </div>
 
               {/* Amount input */}
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1.5">à¸ˆà¸³à¸™à¸§à¸™à¹€à¸‡à¸´à¸™à¸—à¸µà¹ˆà¸•à¹‰à¸­à¸‡à¸à¸²à¸£à¹€à¸•à¸´à¸¡</label>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">จำนวนเงินที่ต้องการเติม</label>
                 <div className="relative">
                   <i className="fas fa-baht-sign absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-sm"></i>
                   <input
@@ -350,7 +350,7 @@ export default function AdminUsers() {
                   onClick={() => setTopupModal(null)}
                   className="flex-1 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-800 shadow-[0_4px_0_#d1d5db]"
                 >
-                  à¸¢à¸à¹€à¸¥à¸´à¸
+                  ยกเลิก
                 </button>
                 <button
                   onClick={handleTopup}
@@ -358,8 +358,8 @@ export default function AdminUsers() {
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#16a34a] disabled:opacity-50 text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#0d6b2e]"
                 >
                   {topupLoading
-                    ? <><i className="fas fa-spinner fa-spin text-[12px]"></i> à¸à¸³à¸¥à¸±à¸‡à¹€à¸•à¸´à¸¡...</>
-                    : <><i className="fas fa-plus text-[12px]"></i> à¹€à¸•à¸´à¸¡à¹€à¸‡à¸´à¸™</>
+                    ? <><i className="fas fa-spinner fa-spin text-[12px]"></i> กำลังเติม...</>
+                    : <><i className="fas fa-plus text-[12px]"></i> เติมเงิน</>
                   }
                 </button>
               </div>

@@ -70,8 +70,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   </div>
 
                   <div className="mt-4 grid grid-cols-2 gap-2">
-                    <Link href="/topup" className="btn-success text-xs py-2 shadow-lg">
-                      <i className="fas fa-credit-card"></i> เติมเงิน
+                    <Link href="/redeem" className="btn-success text-xs py-2 shadow-lg">
+                      <i className="fas fa-ticket-alt"></i> ใช้โค้ด
                     </Link>
                     <Link href="/profile" className="btn-primary text-xs py-2 shadow-lg">
                       <i className="fas fa-user-circle"></i> โปรไฟล์
