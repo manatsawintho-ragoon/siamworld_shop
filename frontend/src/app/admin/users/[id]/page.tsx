@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api, getToken } from '@/lib/api';
+import RconModal from '@/components/RconModal';
+import { fmtDate, fmtMoney } from '@/lib/dateFormat';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -42,48 +44,6 @@ interface TabState {
 
 const PREVIEW_LIMIT = 5;
 const initTab = (): TabState => ({ logs: [], total: 0, page: 1, loading: false });
-
-const fmtMoney = (v?: number) =>
-  parseFloat(String(v || 0)).toLocaleString('th-TH', { minimumFractionDigits: 2 });
-
-const fmtDate = (s: string) => {
-  const d = new Date(s);
-  return {
-    date: d.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-    time: d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
-  };
-};
-
-// ─── RCON View Modal ──────────────────────────────────────────────────────────
-
-function RconModal({ command, onClose }: { command: string; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
-      onClick={onClose}
-    >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-purple-50 border border-purple-100 flex items-center justify-center flex-shrink-0">
-            <i className="fas fa-terminal text-purple-500 text-sm" />
-          </div>
-          <div className="flex-1">
-            <p className="font-bold text-gray-800 text-sm">RCON Command</p>
-            <p className="text-[10px] text-gray-400">คำสั่งที่จะถูกส่งไปยังเซิร์ฟเวอร์</p>
-          </div>
-          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors">
-            <i className="fas fa-times text-xs" />
-          </button>
-        </div>
-        <div className="p-5">
-          <pre className="bg-[#1e2735] text-green-400 rounded-xl px-4 py-3 text-[12px] font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap break-all">{command || '(ไม่มีคำสั่ง)'}</pre>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ─── History Mini Card ────────────────────────────────────────────────────────
 
@@ -256,7 +216,7 @@ export default function AdminUserDetail() {
   );
 
   return (
-    <div className="flex flex-col gap-4 max-w-[1400px] mx-auto overflow-hidden" style={{ height: 'calc(100vh - 136px)' }}>
+    <div className="flex flex-col gap-4 max-w-[1400px] mx-auto" style={{ height: 'calc(100vh - 136px)' }}>
 
       {/* ── Page Header ── */}
       <div className="flex items-center justify-between flex-shrink-0">
@@ -296,15 +256,10 @@ export default function AdminUserDetail() {
         {/* ── User Card ── */}
         <div className="lg:col-span-1 bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
 
-          {/* Banner */}
-          <div className="h-12 bg-gradient-to-r from-[#1e2735] to-[#2d3a50] relative">
-            <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, #fff 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
-          </div>
-
-          <div className="px-4 pb-4">
+          <div className="px-4 pt-4 pb-4">
             {/* Avatar + name */}
-            <div className="flex items-end gap-3 -mt-7 mb-2">
-              <div className="rounded-2xl border-[3px] border-white shadow-lg bg-white flex-shrink-0 overflow-hidden" style={{ width: 64, height: 64 }}>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="rounded-xl bg-gray-100 flex-shrink-0 overflow-hidden border border-gray-200" style={{ width: 56, height: 56 }}>
                 <img
                   src={`https://mc-heads.net/avatar/${user.username}/64`}
                   alt={user.username}

@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api, getToken } from '@/lib/api';
+import RconModal from '@/components/RconModal';
+import { fmtDate } from '@/lib/dateFormat';
 
 interface HistoryLog {
   id: number;
@@ -14,37 +16,6 @@ interface HistoryLog {
   reference_id?: string;
   reward_type?: string;
   command?: string;
-}
-
-// ─── RCON View Modal ──────────────────────────────────────────────────────────
-
-function RconModal({ command, onClose }: { command: string; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
-      onClick={onClose}
-    >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-purple-50 border border-purple-100 flex items-center justify-center flex-shrink-0">
-            <i className="fas fa-terminal text-purple-500 text-sm" />
-          </div>
-          <div className="flex-1">
-            <p className="font-bold text-gray-800 text-sm">RCON Command</p>
-            <p className="text-[10px] text-gray-400">คำสั่งที่จะถูกส่งไปยังเซิร์ฟเวอร์</p>
-          </div>
-          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors">
-            <i className="fas fa-times text-xs" />
-          </button>
-        </div>
-        <div className="p-5">
-          <pre className="bg-[#1e2735] text-green-400 rounded-xl px-4 py-3 text-[12px] font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap break-all">{command || '(ไม่มีคำสั่ง)'}</pre>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 // ─── Page ────────────────────────────────────────────────────────────────────
@@ -63,14 +34,6 @@ export default function UserHistoryPage() {
   const [viewingRcon, setViewingRcon] = useState<string | null>(null);
 
   const totalPages = Math.ceil(totalLogs / limit);
-
-  const fmtDate = (s: string) => {
-    const d = new Date(s);
-    return {
-      date: d.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-      time: d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
-    };
-  };
 
   const loadLogs = (p = page, tab = activeTab) => {
     setLogsLoading(true);
