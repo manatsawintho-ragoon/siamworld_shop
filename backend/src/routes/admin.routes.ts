@@ -51,6 +51,45 @@ router.get('/users', async (req: Request, res: Response, next: NextFunction) => 
   } catch (err) { next(err); }
 });
 
+router.get('/users/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const user = await userService.getProfile(id);
+    res.json({ success: true, user });
+  } catch (err) { next(err); }
+});
+
+router.get('/users/:id/history', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const type = req.query.type as 'topup' | 'purchase' | 'redeem' || 'topup';
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    
+    const history = await userService.getUserHistory(id, type, page, limit);
+    res.json({ success: true, ...history });
+  } catch (err) { next(err); }
+});
+
+router.put('/users/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { email, password, balance, role } = req.body;
+    
+    // Convert balance to number if present
+    const balanceNum = balance !== undefined ? Number(balance) : undefined;
+    
+    await userService.updateUserProfile(id, {
+      email,
+      password,
+      balance: balanceNum,
+      role
+    });
+    
+    res.json({ success: true, message: 'บันทึกข้อมูลสำเร็จ' });
+  } catch (err) { next(err); }
+});
+
 router.put('/users/:id/role', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = parseInt(req.params.id);

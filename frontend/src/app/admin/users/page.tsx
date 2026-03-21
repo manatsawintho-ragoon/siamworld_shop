@@ -1,7 +1,8 @@
-﻿'use client';
+'use client';
 import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { api, getToken } from '@/lib/api';
+import Link from 'next/link';
 
 interface User {
   id: number;
@@ -174,12 +175,12 @@ export default function AdminUsers() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100">
-                  <th className="text-left px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wide w-16">ID</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wide">ชื่อผู้ใช้</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wide">สมัครเมื่อ</th>
-                  <th className="text-right px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wide">ยอดเงิน</th>
-                  <th className="text-center px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Role</th>
-                  <th className="text-center px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wide">จัดการ</th>
+                  <th className="text-left px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-widest w-16">ID</th>
+                  <th className="text-left px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-widest">ชื่อผู้ใช้</th>
+                  <th className="text-left px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-widest">สมัครเมื่อ</th>
+                  <th className="text-right px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-widest">ยอดเงิน</th>
+                  <th className="text-center px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-widest">สถานะ (ROLE)</th>
+                  <th className="text-right px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-widest">จัดการ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -215,28 +216,27 @@ export default function AdminUsers() {
                       <span className="text-xs text-gray-500 ml-1">฿</span>
                     </td>
                     <td className="px-5 py-3.5 text-center">
-                      <select
-                        value={u.role}
-                        onChange={e => handleRoleChange(u.id, e.target.value)}
-                        className={`text-[11px] font-bold px-3 py-1 rounded-full border-0 focus:outline-none focus:ring-2 cursor-pointer appearance-none ${
-                          u.role === 'admin'
-                            ? 'bg-orange-100 text-orange-600 focus:ring-orange-300'
-                            : 'bg-gray-100 text-gray-600 focus:ring-gray-300'
-                        }`}
-                      >
-                        <option value="user">Member</option>
-                        <option value="admin">Admin</option>
-                      </select>
+                      <div className="flex justify-center">
+                        {u.role === 'admin' ? (
+                          <span className="px-3 py-1 bg-gradient-to-r from-orange-400 to-[#f97316] text-white text-[10px] font-black rounded-full uppercase tracking-widest shadow-[0_2px_0_rgba(194,65,12,0.4)] flex items-center gap-1.5">
+                            <i className="fas fa-star text-[8px]"></i> ADMIN
+                          </span>
+                        ) : (
+                          <span className="px-3 py-1 bg-gray-100 text-gray-500 text-[10px] font-black rounded-full uppercase tracking-widest border border-gray-200 shadow-sm flex items-center gap-1.5">
+                            <i className="fas fa-user text-[8px]"></i> MEMBER
+                          </span>
+                        )}
+                      </div>
                     </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center justify-center">
-                        <button
-                          onClick={() => { setTopupModal(u); setTopupAmount(''); }}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#16a34a] text-white shadow-[0_3px_0_#0d6b2e] hover:brightness-110 transition-all"
-                          title="เติมเงิน"
+                    <td className="px-5 py-3.5 text-right">
+                      <div className="flex items-center justify-end">
+                        <Link
+                          href={`/admin/users/${u.id}`}
+                          className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-100 border border-gray-200 text-gray-600 hover:bg-white hover:text-[#f97316] hover:border-[#f97316] transition-all shadow-sm"
+                          title="แก้ไขข้อมูล"
                         >
-                          <i className="fas fa-wallet text-xs"></i>
-                        </button>
+                          <i className="fas fa-edit text-sm"></i>
+                        </Link>
                       </div>
                     </td>
                   </tr>
