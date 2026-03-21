@@ -220,7 +220,7 @@ CREATE TABLE IF NOT EXISTS loot_box_items (
   image VARCHAR(500) DEFAULT NULL,
   command TEXT NOT NULL COMMENT 'RCON command, use {player} as placeholder',
   weight INT NOT NULL DEFAULT 100 COMMENT 'Higher weight = more likely to drop',
-  rarity ENUM('common','uncommon','rare','epic','legendary') DEFAULT 'common',
+  rarity ENUM('common','uncommon','rare','epic','legendary','mythic') DEFAULT 'common',
   color VARCHAR(20) DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),

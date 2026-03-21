@@ -258,7 +258,7 @@ export default function AdminDashboard() {
 
         {/* Chart */}
         <div className="lg:col-span-2 bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden flex flex-col">
-          <div className="px-5 py-3.5 border-b border-gray-100 bg-slate-50/70 flex items-center justify-between flex-shrink-0">
+          <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/60 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-chart-line text-orange-500 text-xs"></i>
@@ -435,7 +435,7 @@ export default function AdminDashboard() {
 
         {/* ขายดี (Point) */}
         <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 bg-slate-50/70 flex items-center gap-2">
+          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/60 flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
               <i className="fas fa-trophy text-amber-500 text-xs"></i>
             </div>
@@ -472,7 +472,7 @@ export default function AdminDashboard() {
 
         {/* ขายดี (RP) */}
         <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 bg-slate-50/70 flex items-center gap-2">
+          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/60 flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
               <i className="fas fa-trophy text-purple-500 text-xs"></i>
             </div>
@@ -509,7 +509,7 @@ export default function AdminDashboard() {
 
         {/* เติมสูงสุด (เดือนนี้) */}
         <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 bg-slate-50/70 flex items-center justify-between gap-2">
+          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/60 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-coins text-amber-500 text-xs"></i>
@@ -542,7 +542,7 @@ export default function AdminDashboard() {
 
         {/* เติมล่าสุด */}
         <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 bg-slate-50/70 flex items-center gap-2">
+          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/60 flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
               <i className="fas fa-credit-card text-green-500 text-xs"></i>
             </div>
@@ -576,7 +576,7 @@ export default function AdminDashboard() {
 
       {/* ═══ Row 3: ผู้เล่นที่สมัครล่าสุด ═══ */}
       <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-gray-100 bg-slate-50/70 flex items-center justify-between">
+        <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/60 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
               <i className="fas fa-users text-green-600 text-xs"></i>
@@ -603,7 +603,7 @@ export default function AdminDashboard() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {s?.recentUsers?.map((u, i) => (
-                <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
+                <tr key={u.id} className="hover:bg-gray-50/60 transition-colors">
                   <td className="px-5 py-3 text-center">
                     <span className="text-xs font-bold text-gray-500">{i + 1}</span>
                   </td>

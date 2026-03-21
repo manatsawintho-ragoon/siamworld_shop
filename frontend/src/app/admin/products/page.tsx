@@ -200,7 +200,7 @@ export default function AdminProducts() {
       <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
 
         {/* Card header */}
-        <div className="px-5 py-3.5 border-b border-gray-100 bg-slate-50/70 flex items-center justify-between">
+        <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/60 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
               <i className="fas fa-store text-[#f97316] text-xs"></i>
@@ -232,7 +232,7 @@ export default function AdminProducts() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {products.map(p => (
-                  <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
+                  <tr key={p.id} className="hover:bg-gray-50/60 transition-colors">
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -331,7 +331,7 @@ export default function AdminProducts() {
           onMouseUp={e => { if (bd.current && e.target === e.currentTarget && !saving) setEditing(null); }}>
           <div className="bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-full max-w-2xl my-4 overflow-hidden"
             onMouseDown={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-gray-100 bg-slate-50/70 flex items-center">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
               <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-cube text-[#f97316] text-xs"></i>
               </div>
@@ -417,7 +417,7 @@ export default function AdminProducts() {
               </div>
 
             </div>
-            <div className="px-5 py-3.5 border-t border-gray-100 bg-slate-50/70 flex items-center justify-end gap-2">
+            <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">
               <button onClick={() => setEditing(null)} className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-800 shadow-[0_4px_0_#d1d5db] hover:brightness-95 transition-all">
                 <i className="fas fa-times text-[12px]"></i> ยกเลิก
               </button>
@@ -435,7 +435,7 @@ export default function AdminProducts() {
           onMouseDown={e => { bd.current = e.target === e.currentTarget; }}
           onMouseUp={e => { if (bd.current && e.target === e.currentTarget) setBuyersModal(null); }}>
           <div className="bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-full max-w-xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 bg-slate-50/70 flex items-center">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
               <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-users text-purple-500 text-xs"></i>
               </div>
@@ -514,7 +514,7 @@ export default function AdminProducts() {
           onMouseDown={e => { bd.current = e.target === e.currentTarget; }}
           onMouseUp={e => { if (bd.current && e.target === e.currentTarget) setViewingCmd(null); }}>
           <div className="bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-full max-w-lg overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 bg-slate-50/70 flex items-center">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
               <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-terminal text-blue-500 text-xs"></i>
               </div>
@@ -542,7 +542,7 @@ export default function AdminProducts() {
           onMouseDown={e => { bd.current = e.target === e.currentTarget; }}
           onMouseUp={e => { if (bd.current && e.target === e.currentTarget && !catSaving) { setCatModalOpen(false); setCatEditing(null); } }}>
           <div className="bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-full max-w-xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 bg-slate-50/70 flex items-center">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
               <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-tags text-[#f97316] text-xs"></i>
               </div>

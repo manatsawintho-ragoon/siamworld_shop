@@ -66,7 +66,7 @@ export const createLootBoxItemSchema = z.object({
   image: z.string().max(500).optional().nullable(),
   command: z.string().min(1).max(5000),
   weight: z.number().int().positive(),
-  rarity: z.enum(['common', 'uncommon', 'rare', 'epic', 'legendary']).optional(),
+  rarity: z.enum(['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic']).optional(),
   color: z.string().max(20).optional().nullable(),
 });
 
@@ -76,7 +76,7 @@ export const updateLootBoxItemSchema = z.object({
   image: z.string().max(500).optional().nullable(),
   command: z.string().min(1).max(5000).optional(),
   weight: z.number().int().positive().optional(),
-  rarity: z.enum(['common', 'uncommon', 'rare', 'epic', 'legendary']).optional(),
+  rarity: z.enum(['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic']).optional(),
   color: z.string().max(20).optional().nullable(),
 });
 

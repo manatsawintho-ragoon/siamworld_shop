@@ -14,7 +14,7 @@ const EMPTY_DL: Omit<Download, 'id'> = { filename: '', description: '', file_siz
 /* ── Reusable components ── */
 const SectionCard = ({ icon, title, description, children, actions }: { icon: string; title: string; description: string; children: React.ReactNode; actions?: React.ReactNode }) => (
   <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
-    <div className="px-5 py-3.5 border-b border-gray-100 bg-slate-50/70 flex items-center justify-between">
+    <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/60 flex items-center justify-between">
       <div className="flex items-center gap-2.5">
         <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
           <i className={`${icon.includes('fab') ? icon : `fas ${icon}`} text-green-600 text-xs`}></i>
@@ -471,7 +471,7 @@ export default function AdminSettings() {
           onMouseUp={e => { if (slideBackdropDown.current && e.target === e.currentTarget && !slideSaving) setEditingSlide(null); }}>
           <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-full max-w-lg overflow-hidden">
             {/* Header */}
-            <div className="relative px-6 py-4 border-b border-gray-100 bg-slate-50/70 flex items-center">
+            <div className="relative px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
               <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-images text-green-600 text-xs"></i>
               </div>
@@ -511,7 +511,7 @@ export default function AdminSettings() {
               </div>
             </div>
             {/* Footer */}
-            <div className="px-5 py-3.5 border-t border-gray-100 bg-slate-50/70 flex items-center justify-end gap-2">
+            <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">
               <button onClick={() => setEditingSlide(null)}
                 className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-800 shadow-[0_4px_0_#d1d5db]">
                 <i className="fas fa-times text-[12px]"></i> ยกเลิก
@@ -533,7 +533,7 @@ export default function AdminSettings() {
           onMouseUp={e => { if (dlBackdropDown.current && e.target === e.currentTarget && !dlSaving) setEditingDl(null); }}>
           <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-full max-w-lg overflow-hidden">
             {/* Header */}
-            <div className="relative px-6 py-4 border-b border-gray-100 bg-slate-50/70 flex items-center">
+            <div className="relative px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
               <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-download text-green-600 text-xs"></i>
               </div>
@@ -585,7 +585,7 @@ export default function AdminSettings() {
               </label>
             </form>
             {/* Footer */}
-            <div className="px-5 py-3.5 border-t border-gray-100 bg-slate-50/70 flex items-center justify-end gap-2">
+            <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">
               <button type="button" onClick={() => setEditingDl(null)}
                 className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-800 shadow-[0_4px_0_#d1d5db]">
                 <i className="fas fa-times text-[12px]"></i> ยกเลิก

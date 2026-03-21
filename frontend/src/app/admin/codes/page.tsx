@@ -185,7 +185,7 @@ export default function AdminCodeManager() {
 
       {/* Table */}
       <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-gray-100 bg-slate-50/70 flex items-center gap-2.5">
+        <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/60 flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
             <i className="fas fa-ticket-alt text-orange-500 text-xs"></i>
           </div>
@@ -222,7 +222,7 @@ export default function AdminCodeManager() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {codes.map(code => (
-                  <tr key={code.id} className="hover:bg-slate-50/70 transition-colors">
+                  <tr key={code.id} className="hover:bg-gray-50/60 transition-colors">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
                         <code className="bg-gray-200/80 px-3 py-1.5 rounded text-[15px] font-mono font-black text-gray-800 tracking-wider">{code.code}</code>
@@ -235,7 +235,7 @@ export default function AdminCodeManager() {
                     </td>
                     <td className="px-5 py-4 text-center">
                       {code.reward_type === 'point' ? (
-                        <span className="text-xs font-bold px-2.5 py-1 rounded bg-amber-500 text-white"><i className="fas fa-coins mr-1"></i>เติมเงิน</span>
+                        <span className="text-xs font-bold px-2.5 py-1 rounded bg-amber-500 text-white"><i className="fas fa-coins mr-1"></i>Promo Code</span>
                       ) : (
                         <span className="text-xs font-bold px-2.5 py-1 rounded bg-blue-500 text-white"><i className="fas fa-terminal mr-1"></i>RCON</span>
                       )}
@@ -315,199 +315,240 @@ export default function AdminCodeManager() {
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm"
           onMouseDown={e => { backdropDown.current = e.target === e.currentTarget; }}
           onMouseUp={e => { if (backdropDown.current && e.target === e.currentTarget && !saving) setEditing(null); }}>
-          <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-full max-w-lg overflow-hidden">
-            {/* Header */}
-            <div className="relative px-6 py-4 border-b border-gray-100 bg-slate-50/70 flex items-center">
-              <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
-                <i className="fas fa-ticket-alt text-orange-500 text-xs"></i>
+          <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_8px_40px_rgba(0,0,0,0.18)] w-full max-w-2xl overflow-hidden">
+
+            {/* ── Header ── */}
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0 border border-orange-100">
+                <i className="fas fa-ticket-alt text-orange-500 text-sm"></i>
               </div>
-              <div className="flex-1 text-center">
-                <h3 className="font-bold text-gray-900 text-base">{editing.id ? 'แก้ไขโค้ด' : 'สร้างโค้ดใหม่'}</h3>
-                <p className="text-[11px] text-gray-500">{editing.id ? 'แก้ไขข้อมูลโค้ดที่เลือก' : 'กรอกข้อมูลเพื่อสร้างโค้ดไอเทม'}</p>
+              <div className="flex-1">
+                <h3 className="font-black text-gray-900 text-base leading-tight">{editing.id ? 'แก้ไขโค้ด' : 'สร้างโค้ดใหม่'}</h3>
+                <p className="text-xs text-gray-400 mt-0.5">{editing.id ? 'แก้ไขข้อมูลโค้ดที่เลือก' : 'กรอกข้อมูลเพื่อสร้างโค้ดไอเทม'}</p>
               </div>
-              <button onClick={() => setEditing(null)} className="w-8 h-8 rounded-lg bg-red-500 border border-red-600 flex items-center justify-center text-white shadow-[0_4px_0_#b91c1c] flex-shrink-0">
+              <button onClick={() => setEditing(null)} className="w-8 h-8 rounded-lg bg-red-500 border border-red-600 flex items-center justify-center text-white shadow-[0_4px_0_#b91c1c] hover:brightness-110 active:translate-y-[1px] transition-all flex-shrink-0">
                 <i className="fas fa-times text-xs"></i>
               </button>
             </div>
-            {/* Body */}
-            <div className="p-4 space-y-3">
-              {error && <div className="text-red-500 text-xs bg-red-50 px-3 py-2 rounded-lg border border-red-100 flex items-center gap-1.5"><i className="fas fa-exclamation-circle"></i> {error}</div>}
 
-              {/* Row 1: code + random */}
-              <div className="flex gap-2">
-                <div className="flex-1 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm font-mono text-gray-700 select-all flex items-center min-w-0">
-                  {editing.code || <span className="text-gray-300">กดสุ่มโค้ด</span>}
-                </div>
-                <button type="button" onClick={() => setEditing({ ...editing, code: generateCode() })}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-orange-500 text-white text-xs font-bold rounded-lg shadow-[0_3px_0_#c2410c] hover:brightness-110 transition-all active:shadow-[0_1px_0_#c2410c] active:translate-y-[2px] whitespace-nowrap flex-shrink-0">
-                  <i className="fas fa-random text-[10px]"></i> สุ่มโค้ด
-                </button>
-              </div>
-
-              {/* Row 2: description + max_uses */}
-              <div className="grid grid-cols-[1fr_100px] gap-2">
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-500 mb-1">คำอธิบาย</label>
-                  <input value={editing.description || ''} onChange={e => setEditing({ ...editing, description: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300"
-                    placeholder="เช่น ต้อนรับสมาชิกใหม่" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-500 mb-1">ครั้งใช้ได้ <span className="font-normal text-gray-400">(0=∞)</span></label>
-                  <input type="number" value={editing.max_uses ?? 1} onChange={e => setEditing({ ...editing, max_uses: parseInt(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 text-center" min={0} />
-                </div>
-              </div>
-
-              {/* Row 3: reward type toggle */}
-              <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => setEditing({ ...editing, reward_type: 'rcon' })}
-                  className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 text-xs font-bold transition-all ${
-                    (editing.reward_type || 'rcon') === 'rcon'
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 bg-white text-gray-400 hover:border-gray-300'
-                  }`}>
-                  <i className="fas fa-terminal"></i> คำสั่ง RCON
-                </button>
-                <button type="button" onClick={() => setEditing({ ...editing, reward_type: 'point' })}
-                  className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 text-xs font-bold transition-all ${
-                    editing.reward_type === 'point'
-                      ? 'border-amber-500 bg-amber-50 text-amber-700'
-                      : 'border-gray-200 bg-white text-gray-400 hover:border-gray-300'
-                  }`}>
-                  <i className="fas fa-coins"></i> แจกเงินรางวัล
-                </button>
-              </div>
-
-              {/* Row 4: RCON or amount */}
-              {(editing.reward_type || 'rcon') === 'rcon' ? (
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-500 mb-1">คำสั่ง RCON <span className="text-red-400">*</span> <span className="font-normal text-gray-400">— ใช้ {'{player}'} แทนชื่อผู้เล่น</span></label>
-                  <textarea value={editing.command || ''} onChange={e => setEditing({ ...editing, command: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm font-mono focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 resize-none"
-                    rows={2} placeholder="give {player} diamond 64" />
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-500 mb-1">จำนวนเงิน (บาท) <span className="text-red-400">*</span></label>
-                  <div className="relative">
-                    <input type="number" value={editing.point_amount ?? ''} onChange={e => setEditing({ ...editing, point_amount: parseFloat(e.target.value) || null })}
-                      className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 pr-12"
-                      placeholder="100" min={0} step="0.01" />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-bold">บาท</span>
-                  </div>
+            {/* ── Body ── */}
+            <div className="px-6 py-5 space-y-4">
+              {error && (
+                <div className="text-red-600 text-xs bg-red-50 px-3 py-2.5 rounded-lg border border-red-100 flex items-center gap-2">
+                  <i className="fas fa-exclamation-circle"></i> {error}
                 </div>
               )}
 
-              {/* Row 5: expiry — flexible presets + custom */}
+              {/* ── Code display row ── */}
               <div>
-                <label className="block text-[10px] font-bold text-gray-500 mb-1.5">วันหมดอายุ</label>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">รหัสโค้ด</label>
+                <div className="flex gap-2.5">
+                  <div className="flex-1 px-4 py-2.5 rounded-lg border-2 border-gray-200 bg-gray-50 font-mono font-black text-gray-800 tracking-[0.2em] text-[15px] select-all flex items-center min-w-0">
+                    {editing.code || <span className="text-gray-300 font-normal tracking-normal text-sm">กดสุ่มโค้ด →</span>}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditing({ ...editing, code: generateCode() })}
+                    className="flex items-center gap-1.5 px-4 py-2.5 bg-orange-500 text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#c2410c] hover:brightness-110 transition-all active:shadow-[0_1px_0_#c2410c] active:translate-y-[2px] whitespace-nowrap flex-shrink-0"
+                  >
+                    <i className="fas fa-random text-[11px]"></i> สุ่มโค้ด
+                  </button>
+                </div>
+              </div>
 
-                {/* Preset grid: short → long */}
-                {(() => {
-                  const presets = [
-                    { label: '1 นาที', mins: 1 },
-                    { label: '5 นาที', mins: 5 },
-                    { label: '30 นาที', mins: 30 },
-                    { label: '1 ชม.', mins: 60 },
-                    { label: '6 ชม.', mins: 360 },
-                    { label: '12 ชม.', mins: 720 },
-                    { label: '1 วัน', mins: 1440 },
-                    { label: '7 วัน', mins: 10080 },
-                    { label: '30 วัน', mins: 43200 },
-                    { label: '90 วัน', mins: 129600 },
-                  ];
-                  return (
-                <div className="grid grid-cols-5 gap-1 mb-1.5">
-                  {presets.map(({ label, mins }) => {
-                    const target = new Date(Date.now() + mins * 60000);
-                    const val = toLocalISOString(target);
-                    const isSelected = editing.expires_at
-                      ? Math.abs(new Date(editing.expires_at).getTime() - target.getTime()) < 60000
-                      : false;
-                    return (
-                      <button key={mins} type="button"
-                        onClick={() => setEditing({ ...editing, expires_at: val })}
-                        className={`py-1.5 rounded-lg text-[10px] font-bold border-2 transition-all text-center ${
-                          isSelected
-                            ? 'border-[#637469] bg-[#637469]/10 text-[#637469]'
-                            : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                        }`}>
-                        {label}
+              {/* ── 2-Column Grid ── */}
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+
+                {/* ─ Left column ─ */}
+                <div className="space-y-4">
+
+                  {/* Description */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1.5">คำอธิบาย</label>
+                    <input
+                      value={editing.description || ''}
+                      onChange={e => setEditing({ ...editing, description: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 transition-colors"
+                      placeholder="เช่น ต้อนรับสมาชิกใหม่"
+                    />
+                  </div>
+
+                  {/* Reward type */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1.5">ประเภทรางวัล</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditing({ ...editing, reward_type: 'rcon' })}
+                        className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border-2 text-xs font-bold transition-all ${
+                          (editing.reward_type || 'rcon') === 'rcon'
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-gray-200 bg-white text-gray-400 hover:border-gray-300'
+                        }`}
+                      >
+                        <i className="fas fa-terminal text-xs"></i> คำสั่ง RCON
                       </button>
-                    );
-                  })}
-                </div>
-                  );
-                })()}
-
-                {/* Custom input + ไม่จำกัด */}
-                <div className="flex gap-1.5 mb-1.5">
-                  <input
-                    type="number" min={1}
-                    placeholder="ตัวเลข"
-                    id="custom-exp-val"
-                    className="w-20 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 text-center flex-shrink-0"
-                  />
-                  <select id="custom-exp-unit"
-                    className="flex-1 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20">
-                    <option value="1">นาที</option>
-                    <option value="60">ชั่วโมง</option>
-                    <option value="1440">วัน</option>
-                    <option value="10080">สัปดาห์</option>
-                  </select>
-                  <button type="button"
-                    onClick={() => {
-                      const valEl = document.getElementById('custom-exp-val') as HTMLInputElement;
-                      const unitEl = document.getElementById('custom-exp-unit') as HTMLSelectElement;
-                      const n = parseFloat(valEl?.value || '0');
-                      const u = parseFloat(unitEl?.value || '1');
-                      if (n > 0) {
-                        const t = new Date(Date.now() + n * u * 60000);
-                        setEditing({ ...editing, expires_at: toLocalISOString(t) });
-                      }
-                    }}
-                    className="px-3 py-1.5 bg-[#1e2735] text-white text-[10px] font-bold rounded-lg shadow-[0_2px_0_#38404d] hover:brightness-110 transition-all active:shadow-none active:translate-y-[1px] flex-shrink-0">
-                    ตั้งค่า
-                  </button>
-                  <button type="button"
-                    onClick={() => setEditing({ ...editing, expires_at: '' })}
-                    className={`px-3 py-1.5 rounded-lg text-[10px] font-bold border-2 transition-all flex-shrink-0 ${
-                      !editing.expires_at
-                        ? 'border-gray-700 bg-gray-100 text-gray-700'
-                        : 'border-gray-200 text-gray-400 hover:border-gray-300'
-                    }`}>
-                    <i className="fas fa-infinity mr-0.5 text-[9px]"></i> ∞
-                  </button>
-                </div>
-
-                {/* Preview */}
-                {editing.expires_at ? (
-                  <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
-                    <i className="fas fa-clock text-amber-500 text-[10px]"></i>
-                    <span className="text-[11px] text-amber-700 font-medium">
-                      {new Date(editing.expires_at).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      {' '}{new Date(editing.expires_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
-                    </span>
-                    <span className="ml-auto text-[10px] text-amber-500 font-bold whitespace-nowrap">({timeUntil(editing.expires_at)})</span>
+                      <button
+                        type="button"
+                        onClick={() => setEditing({ ...editing, reward_type: 'point' })}
+                        className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border-2 text-xs font-bold transition-all ${
+                          editing.reward_type === 'point'
+                            ? 'border-amber-500 bg-amber-50 text-amber-700'
+                            : 'border-gray-200 bg-white text-gray-400 hover:border-gray-300'
+                        }`}
+                      >
+                        <i className="fas fa-coins text-xs"></i> Promo Code
+                      </button>
+                    </div>
                   </div>
-                ) : (
-                  <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
-                    <i className="fas fa-infinity text-gray-400 text-[10px]"></i>
-                    <span className="text-[11px] text-gray-400">ไม่มีวันหมดอายุ</span>
+
+                  {/* RCON command / Amount */}
+                  {(editing.reward_type || 'rcon') === 'rcon' ? (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1.5">
+                        คำสั่ง RCON <span className="text-red-400">*</span>
+                        <span className="ml-1.5 font-normal text-gray-400">ใช้ {'{player}'} แทนชื่อผู้เล่น</span>
+                      </label>
+                      <textarea
+                        value={editing.command || ''}
+                        onChange={e => setEditing({ ...editing, command: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm font-mono focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 resize-none bg-gray-50 transition-colors"
+                        rows={4}
+                        placeholder="give {player} diamond 64"
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1.5">
+                        จำนวนเงิน (บาท) <span className="text-red-400">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          value={editing.point_amount ?? ''}
+                          onChange={e => setEditing({ ...editing, point_amount: parseFloat(e.target.value) || null })}
+                          className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 pr-12 transition-colors"
+                          placeholder="100" min={0} step="0.01"
+                        />
+                        <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-bold">บาท</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* ─ Right column ─ */}
+                <div className="space-y-4">
+
+                  {/* Max uses */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1.5">
+                      จำนวนครั้งที่ใช้ได้
+                      <span className="ml-1.5 font-normal text-gray-400">0 = ไม่จำกัด</span>
+                    </label>
+                    <div className="relative">
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300">
+                        <i className="fas fa-hashtag text-xs"></i>
+                      </div>
+                      <input
+                        type="number"
+                        value={editing.max_uses ?? 1}
+                        onChange={e => setEditing({ ...editing, max_uses: parseInt(e.target.value) || 0 })}
+                        className="w-full pl-8 pr-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 transition-colors"
+                        min={0}
+                      />
+                    </div>
                   </div>
-                )}
+
+                  {/* Expiry */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1.5">วันหมดอายุ</label>
+
+                    {/* Input row */}
+                    <div className="flex gap-2 mb-2.5">
+                      <input
+                        type="number" min={1}
+                        placeholder="เช่น 7"
+                        id="custom-exp-val"
+                        className="w-20 px-2.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 text-center flex-shrink-0 transition-colors"
+                      />
+                      <select
+                        id="custom-exp-unit"
+                        className="flex-1 px-2.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 transition-colors"
+                      >
+                        <option value="1">นาที</option>
+                        <option value="60">ชั่วโมง</option>
+                        <option value="1440">วัน</option>
+                        <option value="10080">สัปดาห์</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const valEl = document.getElementById('custom-exp-val') as HTMLInputElement;
+                          const unitEl = document.getElementById('custom-exp-unit') as HTMLSelectElement;
+                          const n = parseFloat(valEl?.value || '0');
+                          const u = parseFloat(unitEl?.value || '1');
+                          if (n > 0) {
+                            const t = new Date(Date.now() + n * u * 60000);
+                            setEditing({ ...editing, expires_at: toLocalISOString(t) });
+                          }
+                        }}
+                        className="px-3 py-2.5 bg-[#1e2735] text-white text-[13px] font-bold rounded-lg shadow-[0_3px_0_#38404d] hover:brightness-110 transition-all active:shadow-none active:translate-y-[1px] flex-shrink-0"
+                      >
+                        ตั้งค่า
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditing({ ...editing, expires_at: '' })}
+                        className={`px-3 py-2.5 rounded-lg text-xs font-bold border-2 transition-all flex-shrink-0 ${
+                          !editing.expires_at
+                            ? 'border-gray-700 bg-gray-100 text-gray-700'
+                            : 'border-gray-200 text-gray-400 hover:border-gray-300'
+                        }`}
+                      >
+                        <i className="fas fa-infinity text-xs"></i>
+                      </button>
+                    </div>
+
+                    {/* Preview */}
+                    {editing.expires_at ? (
+                      <div className="flex items-center gap-2.5 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+                        <i className="fas fa-clock text-amber-500 text-sm flex-shrink-0"></i>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-amber-700">
+                            {new Date(editing.expires_at).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            {' '}{new Date(editing.expires_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                          </p>
+                          <p className="text-[10px] text-amber-500 mt-0.5">{timeUntil(editing.expires_at)}</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2.5 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5">
+                        <i className="fas fa-infinity text-gray-400 text-sm flex-shrink-0"></i>
+                        <p className="text-xs text-gray-400 font-medium">ไม่มีวันหมดอายุ</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
-            {/* Footer */}
-            <div className="px-5 py-3.5 border-t border-gray-100 bg-slate-50/70 flex items-center justify-end gap-2">
-              <button onClick={() => setEditing(null)}
-                className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-800 shadow-[0_4px_0_#d1d5db]">
+
+            {/* ── Footer ── */}
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">
+              <button
+                onClick={() => setEditing(null)}
+                className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-700 shadow-[0_4px_0_#d1d5db] hover:brightness-95 transition-all active:shadow-[0_1px_0_#d1d5db] active:translate-y-[2px]"
+              >
                 <i className="fas fa-times text-[12px]"></i> ยกเลิก
               </button>
-              <button onClick={handleSave} disabled={saving}
-                className="flex items-center gap-2 px-5 py-2.5 bg-[#1e2735] disabled:opacity-50 text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#38404d]">
-                {saving ? <><i className="fas fa-spinner fa-spin text-[12px]"></i> บันทึก...</> : <><i className="fas fa-save text-[12px]"></i> บันทึกโค้ด</>}
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#1e2735] disabled:opacity-50 text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#38404d] hover:brightness-110 transition-all active:shadow-[0_1px_0_#38404d] active:translate-y-[2px]"
+              >
+                {saving
+                  ? <><i className="fas fa-spinner fa-spin text-[12px]"></i> บันทึก...</>
+                  : <><i className="fas fa-save text-[12px]"></i> บันทึกโค้ด</>
+                }
               </button>
             </div>
           </div>
@@ -521,7 +562,7 @@ export default function AdminCodeManager() {
           onMouseDown={e => { logsBackdropDown.current = e.target === e.currentTarget; }}
           onMouseUp={e => { if (logsBackdropDown.current && e.target === e.currentTarget) setViewingLogs(null); }}>
           <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-full max-w-md overflow-hidden">
-            <div className="relative px-6 py-4 border-b border-gray-100 bg-slate-50/70 flex items-center">
+            <div className="relative px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
               <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-history text-blue-500 text-xs"></i>
               </div>
@@ -566,7 +607,7 @@ export default function AdminCodeManager() {
           onMouseDown={e => { cmdBackdropDown.current = e.target === e.currentTarget; }}
           onMouseUp={e => { if (cmdBackdropDown.current && e.target === e.currentTarget) setViewingCmd(null); }}>
           <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-full max-w-md overflow-hidden">
-            <div className="relative px-6 py-4 border-b border-gray-100 bg-slate-50/70 flex items-center">
+            <div className="relative px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
               <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-terminal text-blue-500 text-xs"></i>
               </div>

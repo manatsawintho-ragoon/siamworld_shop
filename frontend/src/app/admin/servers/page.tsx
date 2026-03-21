@@ -168,7 +168,7 @@ export default function AdminServers() {
           onMouseDown={e => { bd.current = e.target === e.currentTarget; }}
           onMouseUp={e => { if (bd.current && e.target === e.currentTarget && !saving) setEditing(null); }}>
           <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-full max-w-lg overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 bg-slate-50/70 flex items-center">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
               <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-server text-green-600 text-xs"></i>
               </div>
@@ -221,7 +221,7 @@ export default function AdminServers() {
                 <span className="text-sm text-gray-700">เปิดใช้งาน</span>
               </label>
             </div>
-            <div className="px-5 py-3.5 border-t border-gray-100 bg-slate-50/70 flex items-center justify-end gap-2">
+            <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">
               <button onClick={() => setEditing(null)} className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-800 shadow-[0_4px_0_#d1d5db]">
                 <i className="fas fa-times text-[12px]"></i> ยกเลิก
               </button>
