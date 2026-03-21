@@ -1,6 +1,25 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Mandatory Startup Sequence
+
+**Run this EVERY time before any task — no exceptions.**
+
+### Step 1 — Load all context (always)
+```bash
+find .agents/context -type f | sort
+```
+Read every file returned.
+
+### Step 2 — Discover available skills (always)
+```bash
+find .agents/skills -name "SKILL.md" | sort
+```
+Read only the frontmatter/description block of each SKILL.md (first ~10 lines).
+
+### Step 3 — Load matching skills (on demand)
+If the task matches a skill's description, read that skill's full SKILL.md before starting.
+
+---
 
 ## Project Overview
 

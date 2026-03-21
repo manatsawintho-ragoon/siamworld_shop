@@ -1,7 +1,37 @@
+# Node modules and build outputs
 node_modules/
+dist/
+
+# Dependency lock files
+package-lock.json
+
+# Environment files
+.env
+.env.*
+
+# Docker
+*.log
+docker-compose.override.yml
+
+# VSCode
+.vscode/
+
+# Claude/agent files
+CLAUDE.md
+.agents/
+
+# OS/Editor
+.DS_Store
+Thumbs.db
+
+# Misc
+*.sqlite
+*.sqlite3
+*.baknode_modules/
 .env
 dist/
 .next/
 coverage/
 *.log
 .DS_Store
+skills-lock.json

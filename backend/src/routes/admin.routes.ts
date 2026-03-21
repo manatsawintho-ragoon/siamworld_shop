@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { authenticate, authorize } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { pool } from '../database/connection';
+import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { adminStatsService } from '../services/admin-stats.service';
 import { shopService } from '../services/shop.service';
 import { lootBoxService } from '../services/loot-box.service';
@@ -29,6 +30,13 @@ router.get('/stats', async (_req: Request, res: Response, next: NextFunction) =>
   try {
     const stats = await adminStatsService.getDashboardStats();
     res.json({ success: true, stats });
+  } catch (err) { next(err); }
+});
+
+router.get('/financial-summary', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const summary = await adminStatsService.getFinancialSummary();
+    res.json({ success: true, ...summary });
   } catch (err) { next(err); }
 });
 
@@ -95,6 +103,66 @@ router.delete('/products/:id', async (req: Request, res: Response, next: NextFun
     const id = parseInt(req.params.id);
     await shopService.deleteProduct(id);
     res.json({ success: true, message: 'Product deleted' });
+  } catch (err) { next(err); }
+});
+
+// ─── Product Buyers ─────────────
+router.get('/products/:id/buyers', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [purchases] = await pool.execute<RowDataPacket[]>(
+      `SELECT p.id, p.price, p.status, p.created_at, u.username, s.name as server_name
+       FROM purchases p
+       JOIN users u ON p.user_id = u.id
+       JOIN servers s ON p.server_id = s.id
+       WHERE p.product_id = ?
+       ORDER BY p.created_at DESC
+       LIMIT 20`,
+      [id]
+    );
+    res.json({ success: true, purchases });
+  } catch (err) { next(err); }
+});
+
+// ─── Categories ─────────────────
+router.get('/categories', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const [categories] = await pool.execute<RowDataPacket[]>('SELECT * FROM categories ORDER BY sort_order ASC, name ASC');
+    res.json({ success: true, categories });
+  } catch (err) { next(err); }
+});
+
+router.post('/categories', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { name, slug, icon, sort_order } = req.body;
+    if (!name || !slug) return res.status(400).json({ success: false, message: 'name and slug are required' });
+    const [result] = await pool.execute<ResultSetHeader>(
+      'INSERT INTO categories (name, slug, icon, sort_order) VALUES (?, ?, ?, ?)',
+      [name, slug.toLowerCase().replace(/\s+/g, '-'), icon || null, sort_order || 0]
+    );
+    const [rows] = await pool.execute<RowDataPacket[]>('SELECT * FROM categories WHERE id = ?', [result.insertId]);
+    res.json({ success: true, category: rows[0] });
+  } catch (err) { next(err); }
+});
+
+router.put('/categories/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { name, slug, icon, sort_order } = req.body;
+    await pool.execute(
+      'UPDATE categories SET name=?, slug=?, icon=?, sort_order=? WHERE id=?',
+      [name, slug ? slug.toLowerCase().replace(/\s+/g, '-') : slug, icon || null, sort_order ?? 0, id]
+    );
+    const [rows] = await pool.execute<RowDataPacket[]>('SELECT * FROM categories WHERE id = ?', [id]);
+    res.json({ success: true, category: rows[0] });
+  } catch (err) { next(err); }
+});
+
+router.delete('/categories/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    await pool.execute('DELETE FROM categories WHERE id = ?', [id]);
+    res.json({ success: true, message: 'Category deleted' });
   } catch (err) { next(err); }
 });
 

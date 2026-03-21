@@ -77,7 +77,7 @@ export default function AdminPurchases() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gray-50/50 text-[10px] text-gray-400 uppercase tracking-wider">
+                <tr className="bg-gray-50/50 text-[10px] text-gray-500 uppercase tracking-wider">
                   <th className="px-5 py-4 font-semibold w-[5%]">#</th>
                   <th className="px-5 py-4 font-semibold w-[20%]">ผู้ซื้อ</th>
                   <th className="px-5 py-4 font-semibold w-[25%]">สินค้า</th>
@@ -90,7 +90,7 @@ export default function AdminPurchases() {
               <tbody className="divide-y divide-gray-100">
                 {purchases.map(p => (
                   <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-5 py-3 text-xs text-gray-400 font-medium">#{p.id}</td>
+                    <td className="px-5 py-3 text-xs text-gray-500 font-medium">#{p.id}</td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
                         <img src={`https://mc-heads.net/avatar/${p.username}/24`} alt="" className="w-6 h-6 rounded-md" />
@@ -121,7 +121,7 @@ export default function AdminPurchases() {
                          p.status === 'failed' ? <><i className="fas fa-times-circle mr-1"></i> ล้มเหลว</> :
                          p.status === 'refunded' ? <><i className="fas fa-rotate-left mr-1"></i> คืนเงิน</> : p.status}
                       </span>
-                      <p className="text-[10px] text-gray-400 mt-1">{new Date(p.created_at).toLocaleString('th-TH')}</p>
+                      <p className="text-[10px] text-gray-500 mt-1">{new Date(p.created_at).toLocaleString('th-TH')}</p>
                     </td>
                     <td className="px-5 py-3 text-right">
                       {(p.status === 'failed' || p.status === 'pending') && (

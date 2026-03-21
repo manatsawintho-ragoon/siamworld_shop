@@ -1,5 +1,6 @@
 ﻿'use client';
 import { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { api, getToken } from '@/lib/api';
 
 interface User {
@@ -92,6 +93,15 @@ export default function AdminUsers() {
 
   return (
     <div className="space-y-4">
+
+      {/* Page header */}
+      <div>
+        <h1 className="text-xl font-bold text-gray-800">
+          <i className="fas fa-users mr-2 text-[#f97316]"></i>ระบบจัดการสมาชิก
+        </h1>
+        <p className="text-sm text-gray-500 mt-0.5">ค้นหา ตรวจสอบ เปลี่ยน Role และเติมเงินให้สมาชิก</p>
+      </div>
+
       {/* Error banner */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-2 text-sm">
@@ -102,17 +112,17 @@ export default function AdminUsers() {
       )}
 
       {/* Main card */}
-      <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
 
         {/* Card header */}
-        <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/60 flex items-center justify-between">
+        <div className="px-5 py-3.5 border-b border-gray-100 bg-slate-50/70 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
               <i className="fas fa-users text-green-600 text-xs"></i>
             </div>
             <div>
               <h3 className="font-bold text-gray-900 text-sm">จัดการสมาชิก</h3>
-              <p className="text-[11px] text-gray-400">ค้นหา ตรวจสอบ และแก้ไขข้อมูลสมาชิกทั้งหมดในระบบ</p>
+              <p className="text-[11px] text-gray-500">ค้นหา ตรวจสอบ และแก้ไขข้อมูลสมาชิกทั้งหมดในระบบ</p>
             </div>
           </div>
           <span className="text-xs font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
@@ -164,18 +174,18 @@ export default function AdminUsers() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100">
-                  <th className="text-left px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wide w-16">ID</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wide">ชื่อผู้ใช้</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wide">สมัครเมื่อ</th>
-                  <th className="text-right px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wide">ยอดเงิน</th>
-                  <th className="text-center px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wide">Role</th>
-                  <th className="text-center px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wide">จัดการ</th>
+                  <th className="text-left px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wide w-16">ID</th>
+                  <th className="text-left px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wide">ชื่อผู้ใช้</th>
+                  <th className="text-left px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wide">สมัครเมื่อ</th>
+                  <th className="text-right px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wide">ยอดเงิน</th>
+                  <th className="text-center px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Role</th>
+                  <th className="text-center px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wide">จัดการ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {users.map(u => (
-                  <tr key={u.id} className="hover:bg-gray-50/60 transition-colors">
-                    <td className="px-5 py-3.5 text-xs text-gray-400 font-mono">#{u.id}</td>
+                  <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="px-5 py-3.5 text-xs text-gray-500 font-mono">#{u.id}</td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-2.5">
                         <img
@@ -194,7 +204,7 @@ export default function AdminUsers() {
                       <p className="text-xs text-gray-700 font-medium">
                         {new Date(u.created_at).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                       </p>
-                      <p className="text-[11px] text-gray-400">
+                      <p className="text-[11px] text-gray-500">
                         {new Date(u.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
                       </p>
                     </td>
@@ -202,7 +212,7 @@ export default function AdminUsers() {
                       <span className="font-bold text-gray-800">
                         {parseFloat(String(u.wallet_balance || 0)).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                       </span>
-                      <span className="text-xs text-gray-400 ml-1">฿</span>
+                      <span className="text-xs text-gray-500 ml-1">฿</span>
                     </td>
                     <td className="px-5 py-3.5 text-center">
                       <select
@@ -280,9 +290,9 @@ export default function AdminUsers() {
       </div>
 
       {/* Topup Modal */}
-      {topupModal && (
+      {topupModal && createPortal(
         <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[200] p-4"
           onMouseDown={() => { backdropDown.current = true; }}
           onMouseUp={e => { if (backdropDown.current && e.target === e.currentTarget) setTopupModal(null); backdropDown.current = false; }}
         >
@@ -291,13 +301,13 @@ export default function AdminUsers() {
             onMouseDown={e => e.stopPropagation()}
           >
             {/* Modal header */}
-            <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/60 flex items-center gap-3">
+            <div className="px-5 py-3.5 border-b border-gray-100 bg-slate-50/70 flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-wallet text-green-600 text-xs"></i>
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-bold text-gray-900 text-sm">เติมเงิน</h3>
-                <p className="text-[11px] text-gray-400 truncate">เพิ่มยอดเงินให้สมาชิก {topupModal.username}</p>
+                <p className="text-[11px] text-gray-500 truncate">เพิ่มยอดเงินให้สมาชิก {topupModal.username}</p>
               </div>
               <button
                 onClick={() => setTopupModal(null)}
@@ -321,7 +331,7 @@ export default function AdminUsers() {
                 />
                 <div>
                   <p className="font-bold text-sm text-gray-800">{topupModal.username}</p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-500">
                     ยอดปัจจุบัน: <span className="font-bold text-gray-700">{parseFloat(String(topupModal.wallet_balance || 0)).toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
                   </p>
                 </div>
@@ -365,7 +375,8 @@ export default function AdminUsers() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

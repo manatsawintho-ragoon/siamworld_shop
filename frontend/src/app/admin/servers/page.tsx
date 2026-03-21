@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { api, getToken } from '@/lib/api';
 
 interface Server {
@@ -116,7 +117,7 @@ export default function AdminServers() {
                   </div>
                   <div>
                     <h3 className="font-semibold">{s.name}</h3>
-                    <p className="text-xs text-gray-400">{s.host}:{s.port}</p>
+                    <p className="text-xs text-gray-500">{s.host}:{s.port}</p>
                   </div>
                 </div>
                 <span className={`badge ${s.is_enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
@@ -126,11 +127,11 @@ export default function AdminServers() {
 
               <div className="grid grid-cols-2 gap-2 text-sm mb-4">
                 <div className="bg-gray-50 rounded-md px-3 py-2">
-                  <span className="text-xs text-gray-400">RCON Port</span>
+                  <span className="text-xs text-gray-500">RCON Port</span>
                   <p className="font-mono">{s.rcon_port}</p>
                 </div>
                 <div className="bg-gray-50 rounded-md px-3 py-2">
-                  <span className="text-xs text-gray-400">Version</span>
+                  <span className="text-xs text-gray-500">Version</span>
                   <p>{s.minecraft_version}</p>
                 </div>
               </div>
@@ -162,18 +163,18 @@ export default function AdminServers() {
         </div>
       )}
 
-      {editing && (() => { const bd = { current: false }; return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/50"
+      {editing && createPortal((() => { const bd = { current: false }; return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm"
           onMouseDown={e => { bd.current = e.target === e.currentTarget; }}
           onMouseUp={e => { if (bd.current && e.target === e.currentTarget && !saving) setEditing(null); }}>
           <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-full max-w-lg overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
+            <div className="px-6 py-4 border-b border-gray-100 bg-slate-50/70 flex items-center">
               <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-server text-green-600 text-xs"></i>
               </div>
               <div className="flex-1 text-center">
                 <h3 className="font-bold text-gray-900 text-base">{editing.id ? 'แก้ไขเซิร์ฟเวอร์' : 'เพิ่มเซิร์ฟเวอร์ใหม่'}</h3>
-                <p className="text-[11px] text-gray-400">{editing.id ? 'แก้ไขข้อมูลเซิร์ฟเวอร์ที่เลือก' : 'กำหนดค่า RCON และข้อมูลเซิร์ฟเวอร์'}</p>
+                <p className="text-[11px] text-gray-500">{editing.id ? 'แก้ไขข้อมูลเซิร์ฟเวอร์ที่เลือก' : 'กำหนดค่า RCON และข้อมูลเซิร์ฟเวอร์'}</p>
               </div>
               <button onClick={() => setEditing(null)} className="w-8 h-8 rounded-lg bg-red-500 flex items-center justify-center text-white shadow-[0_4px_0_#b91c1c] flex-shrink-0">
                 <i className="fas fa-times text-xs"></i>
@@ -220,7 +221,7 @@ export default function AdminServers() {
                 <span className="text-sm text-gray-700">เปิดใช้งาน</span>
               </label>
             </div>
-            <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">
+            <div className="px-5 py-3.5 border-t border-gray-100 bg-slate-50/70 flex items-center justify-end gap-2">
               <button onClick={() => setEditing(null)} className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-800 shadow-[0_4px_0_#d1d5db]">
                 <i className="fas fa-times text-[12px]"></i> ยกเลิก
               </button>
@@ -230,7 +231,7 @@ export default function AdminServers() {
             </div>
           </div>
         </div>
-      ); })()}
+      ); })(), document.body)}
     </div>
   );
 }

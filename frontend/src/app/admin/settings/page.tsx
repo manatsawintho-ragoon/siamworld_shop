@@ -1,5 +1,6 @@
 ﻿'use client';
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { api, getToken } from '@/lib/api';
 import { useSettings } from '@/context/SettingsContext';
 
@@ -12,15 +13,15 @@ const EMPTY_DL: Omit<Download, 'id'> = { filename: '', description: '', file_siz
 
 /* ── Reusable components ── */
 const SectionCard = ({ icon, title, description, children, actions }: { icon: string; title: string; description: string; children: React.ReactNode; actions?: React.ReactNode }) => (
-  <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] overflow-hidden">
-    <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/60 flex items-center justify-between">
+  <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
+    <div className="px-5 py-3.5 border-b border-gray-100 bg-slate-50/70 flex items-center justify-between">
       <div className="flex items-center gap-2.5">
         <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
           <i className={`${icon.includes('fab') ? icon : `fas ${icon}`} text-green-600 text-xs`}></i>
         </div>
         <div>
           <h3 className="font-bold text-gray-900 text-sm">{title}</h3>
-          <p className="text-[11px] text-gray-400">{description}</p>
+          <p className="text-[11px] text-gray-500">{description}</p>
         </div>
       </div>
       {actions}
@@ -317,7 +318,7 @@ export default function AdminSettings() {
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-gray-800 truncate">{s.title || '(ไม่มีชื่อ)'}</p>
-                      <p className="text-[10px] text-gray-400 truncate mt-0.5">{s.image_url}</p>
+                      <p className="text-[10px] text-gray-500 truncate mt-0.5">{s.image_url}</p>
                     </div>
                     {/* Actions */}
                     <div className="flex items-center gap-1 flex-shrink-0">
@@ -365,7 +366,7 @@ export default function AdminSettings() {
                     <div className="flex-1 min-w-0">
                       <p className="text-[13px] font-bold text-gray-800 truncate">{dl.filename}</p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        {dl.file_size && <span className="text-[11px] text-gray-400 font-medium">{dl.file_size}</span>}
+                        {dl.file_size && <span className="text-[11px] text-gray-500 font-medium">{dl.file_size}</span>}
                         {dl.file_size && dl.category && <span className="text-gray-200">·</span>}
                         {dl.category && <span className="text-[11px] text-green-600/80 font-semibold">{dl.category}</span>}
                       </div>
@@ -464,19 +465,19 @@ export default function AdminSettings() {
       </div>
 
       {/* Slide Edit Modal */}
-      {editingSlide && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/50"
+      {editingSlide && createPortal(
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm"
           onMouseDown={e => { slideBackdropDown.current = e.target === e.currentTarget; }}
           onMouseUp={e => { if (slideBackdropDown.current && e.target === e.currentTarget && !slideSaving) setEditingSlide(null); }}>
           <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-full max-w-lg overflow-hidden">
             {/* Header */}
-            <div className="relative px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
+            <div className="relative px-6 py-4 border-b border-gray-100 bg-slate-50/70 flex items-center">
               <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-images text-green-600 text-xs"></i>
               </div>
               <div className="flex-1 text-center">
                 <h3 className="font-bold text-gray-900 text-base">{editingSlide.id ? 'แก้ไขสไลด์' : 'เพิ่มสไลด์ใหม่'}</h3>
-                <p className="text-[11px] text-gray-400">{editingSlide.id ? 'แก้ไขข้อมูลสไลด์ที่เลือก' : 'เพิ่มสไลด์แสดงผลใหม่'}</p>
+                <p className="text-[11px] text-gray-500">{editingSlide.id ? 'แก้ไขข้อมูลสไลด์ที่เลือก' : 'เพิ่มสไลด์แสดงผลใหม่'}</p>
               </div>
               <button onClick={() => setEditingSlide(null)} className="w-8 h-8 rounded-lg bg-red-500 border border-red-600 flex items-center justify-center text-white shadow-[0_4px_0_#b91c1c] flex-shrink-0">
                 <i className="fas fa-times text-xs"></i>
@@ -510,7 +511,7 @@ export default function AdminSettings() {
               </div>
             </div>
             {/* Footer */}
-            <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">
+            <div className="px-5 py-3.5 border-t border-gray-100 bg-slate-50/70 flex items-center justify-end gap-2">
               <button onClick={() => setEditingSlide(null)}
                 className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-800 shadow-[0_4px_0_#d1d5db]">
                 <i className="fas fa-times text-[12px]"></i> ยกเลิก
@@ -521,23 +522,24 @@ export default function AdminSettings() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Download Edit Modal */}
-      {editingDl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/50"
+      {editingDl && createPortal(
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm"
           onMouseDown={e => { dlBackdropDown.current = e.target === e.currentTarget; }}
           onMouseUp={e => { if (dlBackdropDown.current && e.target === e.currentTarget && !dlSaving) setEditingDl(null); }}>
           <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-full max-w-lg overflow-hidden">
             {/* Header */}
-            <div className="relative px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
+            <div className="relative px-6 py-4 border-b border-gray-100 bg-slate-50/70 flex items-center">
               <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-download text-green-600 text-xs"></i>
               </div>
               <div className="flex-1 text-center">
                 <h3 className="font-bold text-gray-900 text-base">{editingDl.id ? 'แก้ไขรายการดาวน์โหลด' : 'เพิ่มรายการดาวน์โหลด'}</h3>
-                <p className="text-[11px] text-gray-400">{editingDl.id ? 'แก้ไขข้อมูลรายการที่เลือก' : 'เพิ่มไฟล์ดาวน์โหลดใหม่'}</p>
+                <p className="text-[11px] text-gray-500">{editingDl.id ? 'แก้ไขข้อมูลรายการที่เลือก' : 'เพิ่มไฟล์ดาวน์โหลดใหม่'}</p>
               </div>
               <button type="button" onClick={() => setEditingDl(null)} className="w-8 h-8 rounded-lg bg-red-500 border border-red-600 flex items-center justify-center text-white shadow-[0_4px_0_#b91c1c] flex-shrink-0">
                 <i className="fas fa-times text-xs"></i>
@@ -583,7 +585,7 @@ export default function AdminSettings() {
               </label>
             </form>
             {/* Footer */}
-            <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">
+            <div className="px-5 py-3.5 border-t border-gray-100 bg-slate-50/70 flex items-center justify-end gap-2">
               <button type="button" onClick={() => setEditingDl(null)}
                 className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-800 shadow-[0_4px_0_#d1d5db]">
                 <i className="fas fa-times text-[12px]"></i> ยกเลิก
@@ -594,7 +596,8 @@ export default function AdminSettings() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -34,16 +34,16 @@ class AdminStatsService {
 
     // Top products
     const [topProducts] = await pool.execute<RowDataPacket[]>(
-      `SELECT pr.name, COUNT(*) as purchase_count, SUM(p.price) as total_revenue
+      `SELECT pr.name, pr.image, COUNT(*) as purchase_count, SUM(p.price) as total_revenue
        FROM purchases p JOIN products pr ON p.product_id = pr.id WHERE p.status='delivered'
-       GROUP BY pr.id, pr.name ORDER BY purchase_count DESC LIMIT 5`
+       GROUP BY pr.id, pr.name, pr.image ORDER BY purchase_count DESC LIMIT 5`
     );
 
     // Top loot boxes
     const [topLootBoxes] = await pool.execute<RowDataPacket[]>(
-      `SELECT lb.name, COUNT(*) as open_count, SUM(lb.price) as total_revenue
+      `SELECT lb.name, lb.image, COUNT(*) as open_count, SUM(lb.price) as total_revenue
        FROM web_inventory wi JOIN loot_boxes lb ON wi.loot_box_id = lb.id
-       GROUP BY wi.loot_box_id, lb.name ORDER BY open_count DESC LIMIT 5`
+       GROUP BY wi.loot_box_id, lb.name, lb.image ORDER BY open_count DESC LIMIT 5`
     );
 
     // Recent purchases (shop only)
@@ -120,6 +120,67 @@ class AdminStatsService {
        ORDER BY m.month_date ASC`
     );
 
+    // Daily chart data (last 30 days)
+    const [dailyChart] = await pool.execute<RowDataPacket[]>(
+      `SELECT
+         DATE_FORMAT(d.day_date, '%Y-%m-%d') as day_key,
+         DATE_FORMAT(d.day_date, '%d/%m') as day_label,
+         COALESCE(nu.cnt, 0) as new_users,
+         COALESCE(tp.total, 0) as topup_amount,
+         COALESCE(rv.total, 0) as revenue_amount
+       FROM (
+         SELECT DATE_SUB(CURDATE(), INTERVAL n DAY) as day_date
+         FROM (
+           SELECT 0 n UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4
+           UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9
+           UNION SELECT 10 UNION SELECT 11 UNION SELECT 12 UNION SELECT 13 UNION SELECT 14
+           UNION SELECT 15 UNION SELECT 16 UNION SELECT 17 UNION SELECT 18 UNION SELECT 19
+           UNION SELECT 20 UNION SELECT 21 UNION SELECT 22 UNION SELECT 23 UNION SELECT 24
+           UNION SELECT 25 UNION SELECT 26 UNION SELECT 27 UNION SELECT 28 UNION SELECT 29
+         ) nums
+       ) d
+       LEFT JOIN (
+         SELECT DATE(created_at) as dd, COUNT(*) as cnt FROM users GROUP BY dd
+       ) nu ON d.day_date = nu.dd
+       LEFT JOIN (
+         SELECT DATE(created_at) as dd, SUM(amount) as total FROM transactions
+         WHERE type='topup' AND status='success' GROUP BY dd
+       ) tp ON d.day_date = tp.dd
+       LEFT JOIN (
+         SELECT DATE(created_at) as dd, SUM(price) as total FROM purchases
+         WHERE status='delivered' GROUP BY dd
+       ) rv ON d.day_date = rv.dd
+       ORDER BY d.day_date ASC`
+    );
+
+    // Weekly chart data (last 8 weeks)
+    const [weeklyChart] = await pool.execute<RowDataPacket[]>(
+      `SELECT
+         DATE_FORMAT(w.week_start, '%Y-%m-%d') as week_key,
+         CONCAT(DATE_FORMAT(w.week_start, '%d/%m'), '-', DATE_FORMAT(DATE_ADD(w.week_start, INTERVAL 6 DAY), '%d/%m')) as week_label,
+         COALESCE(nu.cnt, 0) as new_users,
+         COALESCE(tp.total, 0) as topup_amount,
+         COALESCE(rv.total, 0) as revenue_amount
+       FROM (
+         SELECT DATE_SUB(DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY), INTERVAL n*7 DAY) as week_start
+         FROM (SELECT 0 n UNION SELECT 1 UNION SELECT 2 UNION SELECT 3
+               UNION SELECT 4 UNION SELECT 5 UNION SELECT 6 UNION SELECT 7) nums
+       ) w
+       LEFT JOIN (
+         SELECT DATE_SUB(DATE(created_at), INTERVAL WEEKDAY(created_at) DAY) as ws, COUNT(*) as cnt
+         FROM users GROUP BY ws
+       ) nu ON w.week_start = nu.ws
+       LEFT JOIN (
+         SELECT DATE_SUB(DATE(created_at), INTERVAL WEEKDAY(created_at) DAY) as ws, SUM(amount) as total
+         FROM transactions WHERE type='topup' AND status='success' GROUP BY ws
+       ) tp ON w.week_start = tp.ws
+       LEFT JOIN (
+         SELECT DATE_SUB(DATE(created_at), INTERVAL WEEKDAY(created_at) DAY) as ws, SUM(price) as total
+         FROM purchases WHERE status='delivered' GROUP BY ws
+       ) rv ON w.week_start = rv.ws
+       ORDER BY w.week_start ASC`
+    );
+
     // Activity feed (union of recent activities)
     const [activityFeed] = await pool.execute<RowDataPacket[]>(
       `(SELECT 'purchase' as activity_type, u.username, pr.name as detail, p.price as amount, p.created_at
@@ -168,10 +229,38 @@ class AdminStatsService {
       recentTopups,
       recentUsers,
       monthlyChart,
+      dailyChart,
+      weeklyChart,
       topupRankAlltime,
       topupRankMonth,
       topupRankToday,
       activityFeed,
+    };
+  }
+
+  async getFinancialSummary() {
+    const [[outstanding]] = await pool.execute<RowDataPacket[]>(
+      `SELECT COALESCE(SUM(w.balance), 0) AS total
+       FROM wallets w
+       JOIN users u ON u.id = w.user_id
+       WHERE u.role != 'admin'`
+    );
+    const [[itemSpend]] = await pool.execute<RowDataPacket[]>(
+      `SELECT COALESCE(SUM(p.price), 0) AS total
+       FROM purchases p
+       JOIN users u ON u.id = p.user_id
+       WHERE p.status = 'delivered' AND u.role != 'admin'`
+    );
+    const [[gachaSpend]] = await pool.execute<RowDataPacket[]>(
+      `SELECT COALESCE(SUM(ABS(t.amount)), 0) AS total
+       FROM transactions t
+       JOIN users u ON u.id = t.user_id
+       WHERE t.type = 'purchase' AND t.status = 'success'
+         AND t.description LIKE 'เปิดกล่อง%' AND u.role != 'admin'`
+    );
+    return {
+      totalOutstanding: Number(outstanding.total || 0),
+      totalSpent: Number(itemSpend.total || 0) + Number(gachaSpend.total || 0),
     };
   }
 }

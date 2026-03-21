@@ -29,68 +29,69 @@
 ## 🛠️ Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
-| **Backend** | Node.js, Express, TypeScript |
-| **Frontend** | Next.js 14, React, TailwindCSS |
-| **Database** | MySQL 8.0 |
-| **Cache / Session** | Redis 7 |
-| **Auth** | JWT + AuthMe bcrypt verification |
-| **Real-time** | Socket.IO |
-| **Deploy** | Docker + docker-compose |
-| **DB Admin** | phpMyAdmin |
 
----
+# SiamWorld Shop
 
-## 📁 โครงสร้างโปรเจกต์
+SiamWorld Shop เป็นแพลตฟอร์ม e-commerce สำหรับ Minecraft server แบบครบวงจร ผู้เล่นล็อกอินด้วยบัญชี AuthMe ในเกม เติมเงินเข้ากระเป๋า ซื้อไอเทมหรือ permission (ส่งผ่าน RCON) และเปิดกล่องสุ่ม (loot box) ฝั่งแอดมินมี dashboard สำหรับจัดการทุกอย่าง
 
-```
-siamworld_shop/
-├── backend/
-│   └── src/
-│       ├── config/          # โหลด & ตรวจสอบ Environment Variables
-│       ├── database/        # MySQL connection pool + Redis
-│       ├── middleware/       # Auth, Validation, Rate Limit, Error Handler
-│       ├── routes/          # API endpoints แยกตาม domain
-│       ├── services/        # Business logic (shop, wallet, auth, RCON ...)
-│       ├── utils/           # Logger, crypto helper
-│       ├── validators/      # Zod request schemas
-│       └── server.ts        # Express app entry point
-├── frontend/
-│   └── src/
-│       ├── app/             # Next.js 14 App Router pages
-│       ├── components/      # UI Components (Navbar, Card, Modal ...)
-│       ├── context/         # Auth, Settings, Theme Context
-│       ├── hooks/           # Custom React Hooks
-│       └── lib/             # API client
-├── migrations/              # SQL migration files
-├── docker-compose.yml
-├── init.sql                 # Database schema เริ่มต้น
-├── .env                     # Environment variables (ห้าม commit!)
-└── README.md
-```
+## Features
+- ล็อกอินด้วย AuthMe (ไม่ซ้ำรหัสผ่าน)
+- เติมเงิน/ดูประวัติธุรกรรม
+- ร้านค้า: ซื้อไอเทม, permission, loot box
+- ส่งไอเทมผ่าน RCON แบบ real-time
+- Dashboard แอดมิน: จัดการสินค้า, ผู้ใช้, server, ตั้งค่า
+- รองรับ PromptPay QR, TrueMoney
 
----
+## วิธีติดตั้ง (Dev/Local)
 
-## 🚀 วิธีติดตั้ง (Docker — แนะนำ)
-
-### ข้อกำหนดเบื้องต้น
-
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (รวม Docker Compose)
-- Git
-
-### ขั้นตอน
-
-**1. Clone โปรเจกต์**
-
+### 1. Clone โปรเจค
 ```bash
-git clone https://github.com/<your-username>/siamworld_shop.git
+git clone <your-repo-url>
 cd siamworld_shop
 ```
 
-**2. สร้างไฟล์ `.env`** (copy จาก template แล้วแก้ค่า)
-
+### 2. ตั้งค่า environment
 ```bash
-git clone <repo-url> siamworld_shop
+cp .env.example .env
+# เปิด .env แล้วกรอกค่าตามคอมเมนต์
+```
+
+### 3. รันทุก service ด้วย Docker Compose (แนะนำ)
+```bash
+docker-compose up -d
+```
+จะได้ MySQL, Redis, backend (Node.js), frontend (Next.js), phpMyAdmin ครบ
+
+### 4. เข้าใช้งาน
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:4000
+- phpMyAdmin: http://localhost:8080
+
+### 5. (ทางเลือก) รัน backend/frontend แยก
+- Backend: `cd backend && npm install && npm run dev`
+- Frontend: `cd frontend && npm install && npm run dev`
+
+## โครงสร้างโปรเจค
+- `backend/` — Node.js + Express + TypeScript API
+- `frontend/` — Next.js 14 + TailwindCSS web app
+- `migrations/` — SQL migration scripts
+- `init.sql` — สร้าง schema เริ่มต้น
+
+## Database
+- MySQL 8.0 (port 3306)
+- Redis 7 (port 6379)
+
+## Environment Variables
+- Copy `.env.example` ไป `.env` แล้วกรอกให้ครบ
+- สำคัญ: `JWT_SECRET`, `ENCRYPTION_KEY`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_WS_URL`
+
+## หมายเหตุ
+- **ห้าม** commit `.env` หรือ secrets ใดๆ
+- **ห้าม** commit `package-lock.json` (ใช้ `npm install` สร้างเอง)
+- ignore `.agents/` และ `CLAUDE.md`
+
+## License
+MIT
 cd siamworld_shop
 cp .env.example .env
 ```

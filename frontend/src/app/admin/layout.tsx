@@ -17,17 +17,16 @@ const MENU_CATEGORIES = [
     category: 'MANAGEMENT',
     items: [
       { href: '/admin/users', icon: 'fa-users', label: 'ระบบจัดการสมาชิก' },
-      // Sub-menu for Shop
-      { 
+      { href: '/admin/codes', icon: 'fa-ticket-alt', label: 'จัดการโค้ดไอเท็ม' },
+      {
         id: 'shop',
-        icon: 'fa-store', 
+        icon: 'fa-store',
         label: 'ระบบร้านค้า',
         subItems: [
-          { href: '/admin/products', label: 'สินค้าปกติ' },
-          { href: '/admin/lootboxes', label: 'กล่องสุ่ม' },
+          { href: '/admin/products', icon: 'fa-box-open', label: 'สินค้าปกติ', desc: 'ไอเท็ม / สิทธิ์' },
+          { href: '/admin/lootboxes', icon: 'fa-dice', label: 'กล่องสุ่ม', desc: 'Gacha / กล่องสุ่ม' },
         ]
       },
-      { href: '/admin/codes', icon: 'fa-ticket-alt', label: 'จัดการโค้ดไอเทม' },
     ]
   },
   {
@@ -106,7 +105,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   // Orange: #16a34a / #22c55e
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] flex text-gray-800 font-sans selection:bg-[#22c55e] selection:text-white">
+    <div className="min-h-screen bg-[#f4f5f7] flex text-gray-800 font-sans selection:bg-[#22c55e] selection:text-white">
       {/* Sidebar (Dark) */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-[260px] bg-[#18191c] transform transition-transform duration-300 lg:translate-x-0 lg:relative ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col shadow-2xl lg:shadow-none`}>
         {/* Logo Area */}
@@ -133,20 +132,26 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                   if (item.subItems) {
                     const isOpen = openSubMenus[item.id];
                     const hasActiveChild = item.subItems.some((sub: any) => pathname === sub.href);
-                    
+
                     return (
                       <li key={j}>
                         <button
                           onClick={() => toggleSubMenu(item.id)}
-                          className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 text-sm font-medium ${
-                            hasActiveChild ? 'text-[#22c55e]' : 'text-gray-400 hover:text-white hover:bg-white/5'
+                          className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg transition-all duration-200 text-sm font-medium ${
+                            hasActiveChild
+                              ? 'bg-[#16a34a]/15 text-[#22c55e]'
+                              : 'text-gray-400 hover:text-white hover:bg-white/5'
                           }`}
                         >
                           <div className="flex items-center gap-3">
-                            <i className={`fas ${item.icon} w-5 text-center`}></i>
-                            {item.label}
+                            <i className={`fas ${item.icon} w-5 text-center text-[13px]`}></i>
+                            <span>{item.label}</span>
                           </div>
-                          <i className={`fas fa-chevron-down text-[10px] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}></i>
+                          <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-all duration-200 ${
+                            isOpen ? 'bg-[#22c55e]/20 text-[#22c55e]' : 'bg-white/5 text-gray-500'
+                          }`}>
+                            <i className={`fas fa-chevron-down text-[9px] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}></i>
+                          </div>
                         </button>
                         <AnimatePresence>
                           {isOpen && (
@@ -154,9 +159,9 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                               initial={{ height: 0, opacity: 0 }}
                               animate={{ height: 'auto', opacity: 1 }}
                               exit={{ height: 0, opacity: 0 }}
-                              className="overflow-hidden bg-black/20 rounded-xl mt-1 space-y-0.5 relative"
+                              transition={{ duration: 0.18 }}
+                              className="overflow-hidden mt-1 px-2 space-y-1 pb-1.5"
                             >
-                              <div className="absolute left-[22px] top-0 bottom-0 w-[1px] bg-gray-800"></div>
                               {item.subItems.map((sub: any, k: number) => {
                                 const active = pathname === sub.href;
                                 return (
@@ -164,14 +169,22 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                                     <Link
                                       href={sub.href}
                                       onClick={() => setSidebarOpen(false)}
-                                      className={`block py-2.5 pl-12 pr-4 text-sm font-medium transition-colors relative ${
-                                        active ? 'text-[#22c55e]' : 'text-gray-400 hover:text-white'
+                                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group ${
+                                        active
+                                          ? 'bg-[#16a34a] shadow-[0_4px_0_#0d6b2e,0_2px_8px_rgba(22,163,74,0.35)]'
+                                          : 'hover:bg-white/5'
                                       }`}
                                     >
-                                      {active && (
-                                        <div className="absolute left-[21px] top-1/2 -translate-y-1/2 w-[3px] h-[3px] rounded-full bg-[#22c55e]"></div>
-                                      )}
-                                      {sub.label}
+                                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
+                                        active ? 'bg-white/20' : 'bg-white/5 group-hover:bg-white/10'
+                                      }`}>
+                                        <i className={`fas ${sub.icon} text-xs ${active ? 'text-white' : 'text-gray-400 group-hover:text-white'}`}></i>
+                                      </div>
+                                      <div className="min-w-0">
+                                        <p className={`text-[13px] font-bold leading-tight ${active ? 'text-white' : 'text-gray-300 group-hover:text-white'}`}>{sub.label}</p>
+                                        <p className={`text-[10px] leading-tight mt-0.5 ${active ? 'text-white/70' : 'text-gray-600 group-hover:text-gray-400'}`}>{sub.desc}</p>
+                                      </div>
+                                      {active && <i className="fas fa-check text-[10px] text-white/80 ml-auto flex-shrink-0"></i>}
                                     </Link>
                                   </li>
                                 );
