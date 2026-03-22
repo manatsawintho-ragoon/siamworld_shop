@@ -1,5 +1,4 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import rateLimit from 'express-rate-limit';
 import { authenticate } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { userService } from '../services/user.service';
@@ -8,15 +7,6 @@ import { walletService } from '../services/wallet.service';
 import { redeemInventorySchema, redeemCodeSchema } from '../validators/schemas';
 import { pool } from '../database/connection';
 import { RowDataPacket, PoolConnection } from 'mysql2/promise';
-
-// 5 redeem attempts per 10 minutes per IP — prevents brute-forcing codes
-const redeemCodeLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, error: 'Too many redeem attempts. Please wait 10 minutes.' },
-});
 
 const router = Router();
 
@@ -69,7 +59,7 @@ router.post('/inventory/redeem-all', authenticate, validate(redeemInventorySchem
 
 // ─── Redeem Code ─────────────────────────────────────────────
 
-router.post('/redeem-code', redeemCodeLimiter, authenticate, validate(redeemCodeSchema), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/redeem-code', authenticate, validate(redeemCodeSchema), async (req: Request, res: Response, next: NextFunction) => {
   const conn: PoolConnection = await (pool as any).getConnection();
   try {
     const { code, serverId } = req.body;

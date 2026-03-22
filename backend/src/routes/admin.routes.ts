@@ -11,6 +11,7 @@ import { walletService } from '../services/wallet.service';
 import { serverService } from '../services/server.service';
 import { settingsService } from '../services/settings.service';
 import { auditService } from '../services/audit.service';
+import { easySlipService } from '../services/easyslip.service';
 import {
   createProductSchema, updateProductSchema,
   createServerSchema, updateServerSchema,
@@ -293,6 +294,17 @@ router.post('/products', validate(createProductSchema), async (req: Request, res
   } catch (err) { next(err); }
 });
 
+router.put('/products/reorder', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { order } = req.body;
+    if (!Array.isArray(order)) { res.status(400).json({ success: false, message: 'Invalid order' }); return; }
+    for (let i = 0; i < order.length; i++) {
+      await pool.execute('UPDATE products SET sort_order = ? WHERE id = ?', [i, order[i]]).catch(() => {});
+    }
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
 router.put('/products/:id', validate(updateProductSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = parseInt(req.params.id);
@@ -349,6 +361,17 @@ router.post('/categories', async (req: Request, res: Response, next: NextFunctio
     );
     const [rows] = await pool.execute<RowDataPacket[]>('SELECT * FROM categories WHERE id = ?', [result.insertId]);
     res.json({ success: true, category: rows[0] });
+  } catch (err) { next(err); }
+});
+
+router.put('/categories/reorder', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { order } = req.body;
+    if (!Array.isArray(order)) { res.status(400).json({ success: false, message: 'Invalid order' }); return; }
+    for (let i = 0; i < order.length; i++) {
+      await pool.execute('UPDATE categories SET sort_order = ? WHERE id = ?', [i, order[i]]);
+    }
+    res.json({ success: true });
   } catch (err) { next(err); }
 });
 
@@ -504,6 +527,34 @@ router.put('/settings', validate(updateSettingsSchema), async (req: Request, res
     auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_settings', description: `แก้ไข Settings: ${keys}`, meta: { keys: req.body.settings } });
     res.json({ success: true, settings });
   } catch (err) { next(err); }
+});
+
+// ─── EasySlip status & test ──────
+// Returns whether a key is configured + masked preview (never the full key)
+router.get('/easyslip/status', async (_req: Request, res: Response) => {
+  const { easyslipApiKey } = (await import('../config')).config;
+  const configured = !!easyslipApiKey;
+  const keyPreview = configured
+    ? easyslipApiKey.slice(0, 8) + '-••••-••••-••••-••••••••••••'
+    : null;
+  res.json({ success: true, configured, keyPreview });
+});
+
+// Test live connection — key never leaves the server
+router.get('/easyslip/test', async (_req: Request, res: Response) => {
+  try {
+    const info = await easySlipService.getInfo() as any;
+    const q = info?.application?.quota;
+    res.json({
+      success: true,
+      plan:      info?.product?.name   ?? null,
+      quotaUsed: q?.used              ?? null,
+      quotaMax:  q?.max               ?? null,
+      remaining: q?.remaining         ?? null,
+    });
+  } catch (err: any) {
+    res.status(400).json({ success: false, error: err.code ?? 'CONNECTION_FAILED', message: err.message });
+  }
 });
 
 // ─── Slides ─────────────────────

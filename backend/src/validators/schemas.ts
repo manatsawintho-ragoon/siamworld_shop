@@ -33,6 +33,15 @@ export const trueMoneyRedeemSchema = z.object({
   giftLink: z.string().url().min(1),
 });
 
+// Accepts one of: base64 image, public URL, or QR payload string
+export const slipVerifySchema = z.object({
+  base64:  z.string().min(1).optional(),
+  url:     z.string().url().max(2048).optional(),
+  payload: z.string().min(1).max(128).optional(),
+}).refine(d => !!(d.base64 || d.url || d.payload), {
+  message: 'Provide one of: base64, url, or payload',
+});
+
 // ─── Shop ────────────────────────────────────────────────────
 
 export const buyProductSchema = z.object({

@@ -37,9 +37,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const data = await api('/user/profile', { token });
       setUser(data.user as User);
-    } catch {
-      removeToken();
-      setUser(null);
+    } catch (err: any) {
+      // Only clear token on 401 (token invalid/expired)
+      // For network errors, 429, 5xx — keep token and retry on next load
+      if (err?.status === 401) {
+        removeToken();
+        setUser(null);
+      }
+      // Any other error: server temporarily down, rate limited, etc.
+      // Don't remove the token — user is still logged in
     } finally {
       setLoading(false);
     }

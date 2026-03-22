@@ -3,7 +3,6 @@ import express from 'express';
 import http from 'http';
 import cors from 'cors';
 import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
 import { Server as SocketIO } from 'socket.io';
 import { config } from './config';
 import { logger } from './utils/logger';
@@ -25,6 +24,10 @@ import setupRoutes from './routes/setup.routes';
 const app = express();
 const server = http.createServer(app);
 
+// Trust the Next.js proxy so rate-limiters use the real client IP
+// (without this, all traffic appears to come from the Next.js container IP)
+app.set('trust proxy', 1);
+
 // Allowed origins — reads from CORS_ORIGIN env var (comma-separated)
 const allowedOrigins = config.corsOrigin === '*'
   ? '*'
@@ -37,35 +40,8 @@ const io = new SocketIO(server, {
   pingTimeout: 60000,
 });
 
-// ── Rate limiters ────────────────────────────────────────────────────────────
-
-/** General API — 300 req / 15 min per IP */
-const globalLimiter = rateLimit({
-  windowMs: config.rateLimit.windowMs,
-  max: config.rateLimit.max,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, error: 'Too many requests, please try again later.' },
-  skip: (req) => req.path === '/api/health',
-});
-
-/** Auth — 10 attempts / 15 min per IP (brute-force protection) */
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, error: 'Too many login attempts. Please wait 15 minutes.' },
-});
-
-/** Payment / redeem code — 20 attempts / 10 min per IP */
-const paymentLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, error: 'Too many payment requests. Please slow down.' },
-});
+// Rate limiting is handled at the Next.js middleware layer (real client IPs available there)
+// Backend only enforces per-user cooldowns via Redis (see middleware/cooldown.ts)
 
 // ── Middleware ───────────────────────────────────────────────────────────────
 
@@ -92,7 +68,6 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
-app.use(globalLimiter);
 
 // Request logging
 app.use((req, _res, next) => {
@@ -103,10 +78,10 @@ app.use((req, _res, next) => {
 });
 
 // Routes
-app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/wallet', walletRoutes);
-app.use('/api/payment', paymentLimiter, paymentRoutes);
+app.use('/api/payment', paymentRoutes);
 app.use('/api/shop', shopRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/public', publicRoutes);
