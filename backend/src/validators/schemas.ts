@@ -57,6 +57,7 @@ const lootBoxBaseFields = {
   image:       z.string().max(500).optional().nullable(),
   price:       z.number().positive(),
   sort_order:  z.number().int().optional(),
+  category_id: z.number().int().positive().optional().nullable(),
 };
 
 export const createLootBoxSchema = z.object(lootBoxBaseFields);
@@ -68,6 +69,19 @@ export const updateLootBoxSchema = z.object({
   price:       lootBoxBaseFields.price.optional(),
   sort_order:  lootBoxBaseFields.sort_order,
   active:      boolFlag.optional(),
+  category_id: lootBoxBaseFields.category_id,
+});
+
+export const createLootBoxCategorySchema = z.object({
+  name:       z.string().min(1).max(100),
+  color:      z.string().regex(/^#[0-9a-fA-F]{3,8}$/).default('#637469'),
+  sort_order: z.number().int().optional(),
+});
+
+export const updateLootBoxCategorySchema = z.object({
+  name:       z.string().min(1).max(100).optional(),
+  color:      z.string().regex(/^#[0-9a-fA-F]{3,8}$/).optional(),
+  sort_order: z.number().int().optional(),
 });
 
 const lootBoxItemBaseFields = {

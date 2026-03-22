@@ -1,37 +1,37 @@
-# Node modules and build outputs
+# ── Dependencies ─────────────────────────────────────────────
 node_modules/
-dist/
 
-# Dependency lock files
-package-lock.json
-
-# Environment files
-.env
-.env.*
-
-# Docker
-*.log
-docker-compose.override.yml
-
-# VSCode
-.vscode/
-
-# Claude/agent files
-CLAUDE.md
-.agents/
-
-# OS/Editor
-.DS_Store
-Thumbs.db
-
-# Misc
-*.sqlite
-*.sqlite3
-*.baknode_modules/
-.env
+# ── Build outputs ─────────────────────────────────────────────
 dist/
 .next/
-coverage/
+out/
+build/
+
+# ── Environment ── (NEVER commit .env — contains secrets) ────
+.env
+.env.local
+.env.*.local
+
+# ── Logs ─────────────────────────────────────────────────────
 *.log
+npm-debug.log*
+
+# ── OS / Editor ───────────────────────────────────────────────
 .DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ── Docker overrides (local-only) ─────────────────────────────
+docker-compose.override.yml
+
+# ── Database / Misc ───────────────────────────────────────────
+*.sqlite
+*.sqlite3
+*.bak
+coverage/
+
+# ── Internal tools (not needed by the team) ───────────────────
+CLAUDE.md
+.agents/
 skills-lock.json

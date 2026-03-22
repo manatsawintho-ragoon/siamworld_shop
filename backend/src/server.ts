@@ -3,6 +3,7 @@ import express from 'express';
 import http from 'http';
 import cors from 'cors';
 import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { Server as SocketIO } from 'socket.io';
 import { config } from './config';
 import { logger } from './utils/logger';
@@ -24,18 +25,74 @@ import setupRoutes from './routes/setup.routes';
 const app = express();
 const server = http.createServer(app);
 
+// Allowed origins — reads from CORS_ORIGIN env var (comma-separated)
+const allowedOrigins = config.corsOrigin === '*'
+  ? '*'
+  : config.corsOrigin.split(',').map(o => o.trim()).filter(Boolean);
+
 // Socket.IO
 const io = new SocketIO(server, {
-  cors: { origin: '*', methods: ['GET', 'POST'] },
+  cors: { origin: allowedOrigins, methods: ['GET', 'POST'] },
   pingInterval: 25000,
   pingTimeout: 60000,
 });
 
-// Middleware
-app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors({ origin: '*' }));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+// ── Rate limiters ────────────────────────────────────────────────────────────
+
+/** General API — 300 req / 15 min per IP */
+const globalLimiter = rateLimit({
+  windowMs: config.rateLimit.windowMs,
+  max: config.rateLimit.max,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many requests, please try again later.' },
+  skip: (req) => req.path === '/api/health',
+});
+
+/** Auth — 10 attempts / 15 min per IP (brute-force protection) */
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many login attempts. Please wait 15 minutes.' },
+});
+
+/** Payment / redeem code — 20 attempts / 10 min per IP */
+const paymentLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many payment requests. Please slow down.' },
+});
+
+// ── Middleware ───────────────────────────────────────────────────────────────
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],   // Next.js inline scripts
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'", ...(allowedOrigins === '*' ? ['*'] : allowedOrigins)],
+      fontSrc: ["'self'", 'https:', 'data:'],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(globalLimiter);
 
 // Request logging
 app.use((req, _res, next) => {
@@ -46,10 +103,10 @@ app.use((req, _res, next) => {
 });
 
 // Routes
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/wallet', walletRoutes);
-app.use('/api/payment', paymentRoutes);
+app.use('/api/payment', paymentLimiter, paymentRoutes);
 app.use('/api/shop', shopRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/public', publicRoutes);

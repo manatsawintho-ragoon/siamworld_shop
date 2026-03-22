@@ -45,9 +45,9 @@ export default function RedeemCodePage() {
     <MainLayout>
       <div className="max-w-lg mx-auto px-4 sm:px-6 py-10">
         <h1 className="text-2xl font-black text-foreground flex items-center gap-2 mb-2">
-          <i className="fas fa-ticket-alt text-primary" aria-hidden="true"></i>ใช้โค้ดไอเทม
+          <i className="fas fa-ticket-alt text-primary" aria-hidden="true"></i>ใช้โค้ดไอเท็ม
         </h1>
-        <p className="text-foreground-muted text-sm mb-6">กรอกโค้ดเพื่อรับไอเทมเข้าเกม ต้องออนไลน์ในเซิร์ฟเวอร์</p>
+        <p className="text-foreground-muted text-sm mb-6">กรอกโค้ดเพื่อรับไอเท็มเข้าเกม ต้องออนไลน์ในเซิร์ฟเวอร์</p>
 
         {/* Result */}
         <AnimatePresence>
@@ -65,10 +65,10 @@ export default function RedeemCodePage() {
         {/* Redeem Form */}
         <div className="card p-5 animate-fade-in">
           <h2 className="font-bold text-foreground mb-1">กรอกโค้ด</h2>
-          <p className="text-xs text-foreground-muted mb-4">ใส่โค้ดที่ได้รับมาเพื่อรับไอเทมไปยังตัวละครของคุณ</p>
+          <p className="text-xs text-foreground-muted mb-4">ใส่โค้ดที่ได้รับมาเพื่อรับไอเท็มไปยังตัวละครของคุณ</p>
           <form onSubmit={handleRedeem} className="space-y-3">
             <div>
-              <label className="block text-xs font-bold text-foreground-muted mb-1.5">โค้ดไอเทม</label>
+              <label className="block text-xs font-bold text-foreground-muted mb-1.5">โค้ดไอเท็ม</label>
               <input
                 type="text"
                 value={code}
@@ -76,12 +76,12 @@ export default function RedeemCodePage() {
                 placeholder="เช่น WELCOME2024"
                 className="input font-mono text-center tracking-widest text-lg"
                 required
-                aria-label="โค้ดไอเทม"
+                aria-label="โค้ดไอเท็ม"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-foreground-muted mb-1.5">เซิร์ฟเวอร์ที่จะรับไอเทม</label>
+              <label className="block text-xs font-bold text-foreground-muted mb-1.5">เซิร์ฟเวอร์ที่จะรับไอเท็ม</label>
               {servers.length === 0 ? (
                 <p className="text-xs text-foreground-muted">กำลังโหลดเซิร์ฟเวอร์...</p>
               ) : (
@@ -110,7 +110,7 @@ export default function RedeemCodePage() {
 
         {/* Info */}
         <div className="mt-6 bg-primary/5 border border-primary/10 rounded-xl p-4 text-xs text-foreground-muted space-y-1">
-          <p><i className="fas fa-info-circle text-primary mr-1" aria-hidden="true"></i>คุณต้องออนไลน์อยู่ในเซิร์ฟเวอร์ที่เลือกเพื่อรับไอเทม</p>
+          <p><i className="fas fa-info-circle text-primary mr-1" aria-hidden="true"></i>คุณต้องออนไลน์อยู่ในเซิร์ฟเวอร์ที่เลือกเพื่อรับไอเท็ม</p>
           <p><i className="fas fa-ticket-alt text-primary mr-1" aria-hidden="true"></i>โค้ดแต่ละตัวสามารถใช้ได้ 1 ครั้งต่อบัญชี</p>
           <p><i className="fas fa-headset text-primary mr-1" aria-hidden="true"></i>พบปัญหา? ติดต่อเราผ่าน Discord</p>
         </div>

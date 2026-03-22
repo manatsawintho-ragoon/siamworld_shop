@@ -78,7 +78,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                     </Link>
                   </div>
                   <Link href="/inventory" className="mt-2 w-full btn-ghost text-xs py-2 shadow-lg flex items-center justify-center gap-2 border border-green-200 hover:border-primary/60">
-                    <i className="fas fa-box text-primary"></i> คลังไอเทม
+                    <i className="fas fa-box text-primary"></i> คลังไอเท็ม
                   </Link>
                   {isAdmin && (
                     <Link href="/admin" className="mt-2 w-full flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-sm transition-all">

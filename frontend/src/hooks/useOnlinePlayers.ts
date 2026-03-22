@@ -26,12 +26,18 @@ export function useOnlinePlayers() {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    // Use the current page's hostname so external users connect to the correct server
+    // Determine WebSocket URL:
+    // 1. Use NEXT_PUBLIC_WS_URL if set and not pointing to localhost in a non-local browser context
+    // 2. Otherwise fall back to the page's own hostname (works for any IP/domain)
+    const configuredUrl = process.env.NEXT_PUBLIC_WS_URL;
+    const isLocalhost = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    const urlPointsToLocalhost = configuredUrl && (configuredUrl.includes('://localhost') || configuredUrl.includes('://127.0.0.1'));
     const wsUrl =
-      process.env.NEXT_PUBLIC_WS_URL ||
-      (typeof window !== 'undefined'
-        ? `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:4000`
-        : 'ws://localhost:4000');
+      (configuredUrl && !(urlPointsToLocalhost && isLocalhost))
+        ? configuredUrl
+        : (typeof window !== 'undefined'
+          ? `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:4000`
+          : 'ws://localhost:4000');
     const socket = io(wsUrl, { transports: ['websocket', 'polling'] });
     socketRef.current = socket;
 

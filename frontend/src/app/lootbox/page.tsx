@@ -31,11 +31,11 @@ export default function LootBoxListPage() {
           style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, rgb(var(--color-primary)) 0%, transparent 70%)' }} />
         <div className="relative max-w-3xl mx-auto text-center text-white">
           <div className="inline-flex items-center gap-2 bg-warning/20 text-yellow-300 text-xs font-semibold px-3.5 py-1.5 rounded-full mb-4 border border-warning/30">
-            <i className="fas fa-gift" aria-hidden="true"></i> กล่องสุ่มไอเทม
+            <i className="fas fa-gift" aria-hidden="true"></i> กล่องสุ่มไอเท็ม
           </div>
           <h1 className="text-4xl font-black mb-3 tracking-tight">LOOT BOXES</h1>
           <p className="text-gray-400 text-base max-w-md mx-auto">
-            เข้าเกมก่อน จากนั้นเปิดกล่องเพื่อรับไอเทมสุ่มเข้าเกมทันที
+            เข้าเกมก่อน จากนั้นเปิดกล่องเพื่อรับไอเท็มสุ่มเข้าเกมทันที
           </p>
         </div>
       </div>

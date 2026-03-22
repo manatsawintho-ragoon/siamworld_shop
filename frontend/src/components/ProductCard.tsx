@@ -48,7 +48,7 @@ export default function ProductCard({ product, servers }: { product: Product; se
         token: getToken()!,
         body: { productId: product.id, serverId: selectedServer, idempotencyKey: crypto.randomUUID() },
       });
-      setResult({ success: true, message: (data.message as string) || 'ซื้อสำเร็จ! ไอเทมถูกส่งเข้าเกมแล้ว' });
+      setResult({ success: true, message: (data.message as string) || 'ซื้อสำเร็จ! ไอเท็มถูกส่งเข้าเกมแล้ว' });
       await refresh();
       setTimeout(() => setShowBuy(false), 2000);
     } catch (err: unknown) {
@@ -218,7 +218,7 @@ export default function ProductCard({ product, servers }: { product: Product; se
                     )}
                     <div className="text-[10px] text-warning bg-warning/10 border border-warning/20 rounded px-2 py-1.5 mb-4 flex items-start gap-1.5">
                       <i className="fas fa-exclamation-triangle mt-0.5 flex-shrink-0"></i>
-                      <span>กรุณาออนไลน์ในเซิร์ฟเวอร์ก่อนกดซื้อ เพื่อรับไอเทมทันที</span>
+                      <span>กรุณาออนไลน์ในเซิร์ฟเวอร์ก่อนกดซื้อ เพื่อรับไอเท็มทันที</span>
                     </div>
                   </>
                 )}

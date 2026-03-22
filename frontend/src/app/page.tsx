@@ -142,7 +142,7 @@ export default function HomePage() {
                     <div className="bg-green-50 p-2.5 border-t border-green-100">
                       <p className="text-gray-900 font-bold text-xs truncate mb-1.5">{box.name}</p>
                       <div className="btn-primary text-[10px] py-1 w-full text-center rounded">
-                        <i className="fas fa-box-open mr-1"></i> สุ่มไอเทม
+                        <i className="fas fa-box-open mr-1"></i> สุ่มไอเท็ม
                       </div>
                     </div>
                   </Link>

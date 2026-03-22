@@ -381,7 +381,7 @@ export default function LootBoxOpenPage() {
           {/* ─── Items in this box ─── */}
           <div className="mt-12">
             <h2 className="text-foreground font-bold text-base mb-5 flex items-center gap-2">
-              <i className="fas fa-list text-primary" aria-hidden="true"></i>ไอเทมในกล่องนี้
+              <i className="fas fa-list text-primary" aria-hidden="true"></i>ไอเท็มในกล่องนี้
               <span className="text-foreground-muted font-normal text-sm tabular-nums">({box.items.length} ชิ้น)</span>
             </h2>
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">

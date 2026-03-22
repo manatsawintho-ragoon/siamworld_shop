@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { api, getToken } from '@/lib/api';
+import { useAdminAlert } from '@/components/AdminAlert';
 
 interface Product {
   id: number;
@@ -31,6 +32,7 @@ const emptyProduct = {
 const emptyCategory: Partial<Category> = { name: '', slug: '', icon: '', sort_order: 0 };
 
 export default function AdminProducts() {
+  const { confirm: adminConfirm, alert: adminAlert } = useAdminAlert();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [servers, setServers] = useState<Server[]>([]);
@@ -109,6 +111,7 @@ export default function AdminProducts() {
         await api('/admin/products', { method: 'POST', token: getToken()!, body });
       }
       setEditing(null);
+      adminAlert({ title: editing.id ? 'แก้ไขสินค้าแล้ว' : 'เพิ่มสินค้าแล้ว', type: 'success' });
       load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
@@ -126,9 +129,10 @@ export default function AdminProducts() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('ต้องการลบสินค้านี้?')) return;
+    if (!await adminConfirm({ title: 'ลบสินค้า', message: 'ต้องการลบสินค้านี้?', type: 'danger', confirmLabel: 'ลบ' })) return;
     try {
       await api(`/admin/products/${id}`, { method: 'DELETE', token: getToken()! });
+      adminAlert({ title: 'ลบสินค้าแล้ว', type: 'success' });
       load();
     } catch { }
   };
@@ -152,6 +156,7 @@ export default function AdminProducts() {
         await api('/admin/categories', { method: 'POST', token: getToken()!, body });
       }
       setCatEditing(null);
+      adminAlert({ title: catEditing.id ? 'แก้ไขหมวดหมู่แล้ว' : 'เพิ่มหมวดหมู่แล้ว', type: 'success' });
       loadCategories();
     } catch (err: unknown) {
       setCatError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
@@ -161,9 +166,10 @@ export default function AdminProducts() {
   };
 
   const handleDeleteCat = async (id: number) => {
-    if (!confirm('ลบหมวดหมู่นี้? สินค้าในหมวดหมู่จะยังอยู่แต่ไม่มีหมวดหมู่')) return;
+    if (!await adminConfirm({ title: 'ลบหมวดหมู่', message: 'สินค้าในหมวดหมู่จะยังอยู่แต่ไม่มีหมวดหมู่ ยืนยัน?', type: 'warning', confirmLabel: 'ลบ' })) return;
     try {
       await api(`/admin/categories/${id}`, { method: 'DELETE', token: getToken()! });
+      adminAlert({ title: 'ลบหมวดหมู่แล้ว', type: 'success' });
       loadCategories();
       load();
     } catch { }
@@ -178,7 +184,7 @@ export default function AdminProducts() {
           <h1 className="text-xl font-bold text-gray-800">
             <i className="fas fa-cube mr-2 text-[#f97316]"></i>จัดการสินค้า
           </h1>
-          <p className="text-xs text-gray-400 mt-0.5">เพิ่ม แก้ไข และจัดการสินค้าไอเทมทั้งหมดในร้าน</p>
+          <p className="text-xs text-gray-400 mt-0.5">เพิ่ม แก้ไข และจัดการสินค้าไอเท็มทั้งหมดในร้าน</p>
         </div>
         <div className="flex gap-2">
           <button

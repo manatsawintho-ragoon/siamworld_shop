@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { api, getToken } from '@/lib/api';
 import { useSettings } from '@/context/SettingsContext';
+import { useAdminAlert } from '@/components/AdminAlert';
 
 interface Setting { key: string; value: string; }
 interface Slide { id: number; title: string; image_url: string; link_url?: string; sort_order: number; active: boolean; }
@@ -68,6 +69,7 @@ const ActionButtons = ({ saving, saved, onSave, onClear }: { saving: boolean; sa
 
 export default function AdminSettings() {
   const { refreshSettings } = useSettings();
+  const { confirm: adminConfirm, alert: adminAlert } = useAdminAlert();
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [sectionSaving, setSectionSaving] = useState<Record<string, boolean>>({});
@@ -128,8 +130,9 @@ export default function AdminSettings() {
       await refreshSettings();
       setSectionSaved(prev => ({ ...prev, [section]: true }));
       setTimeout(() => setSectionSaved(prev => ({ ...prev, [section]: false })), 3000);
+      adminAlert({ title: 'บันทึกการตั้งค่าแล้ว', type: 'success' });
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'บันทึกไม่สำเร็จ');
+      await adminAlert({ title: 'บันทึกไม่สำเร็จ', message: err instanceof Error ? err.message : undefined, type: 'error' });
     }
     setSectionSaving(prev => ({ ...prev, [section]: false }));
   };
@@ -144,7 +147,7 @@ export default function AdminSettings() {
       await api('/admin/settings', { method: 'PUT', token: getToken()!, body: { settings: settingsArray } });
       await refreshSettings();
     } catch {
-      alert('เคลียร์ไม่สำเร็จ');
+      await adminAlert({ title: 'เคลียร์ไม่สำเร็จ', type: 'error' });
     }
   };
 
@@ -190,6 +193,7 @@ export default function AdminSettings() {
         await api('/admin/slides', { method: 'POST', token: getToken()!, body });
       }
       setEditingSlide(null);
+      adminAlert({ title: editingSlide.id ? 'แก้ไขสไลด์แล้ว' : 'เพิ่มสไลด์แล้ว', type: 'success' });
       loadSlides();
     } catch (err: unknown) {
       setSlideError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
@@ -197,8 +201,8 @@ export default function AdminSettings() {
   };
 
   const handleDeleteSlide = async (id: number) => {
-    if (!confirm('ต้องการลบสไลด์นี้?')) return;
-    try { await api(`/admin/slides/${id}`, { method: 'DELETE', token: getToken()! }); loadSlides(); } catch { }
+    if (!await adminConfirm({ title: 'ลบสไลด์', message: 'ต้องการลบสไลด์นี้?', type: 'danger', confirmLabel: 'ลบ' })) return;
+    try { await api(`/admin/slides/${id}`, { method: 'DELETE', token: getToken()! }); adminAlert({ title: 'ลบสไลด์แล้ว', type: 'success' }); loadSlides(); } catch { }
   };
 
   const handleSaveDl = async (e: React.FormEvent) => {
@@ -215,6 +219,7 @@ export default function AdminSettings() {
         await api('/admin/downloads', { method: 'POST', token: getToken()!, body });
       }
       setEditingDl(null);
+      adminAlert({ title: editingDl.id ? 'แก้ไขรายการดาวน์โหลดแล้ว' : 'เพิ่มรายการดาวน์โหลดแล้ว', type: 'success' });
       loadDownloads();
     } catch (err: unknown) {
       setDlError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
@@ -222,8 +227,8 @@ export default function AdminSettings() {
   };
 
   const handleDeleteDl = async (id: number) => {
-    if (!confirm('ต้องการลบรายการดาวน์โหลดนี้?')) return;
-    try { await api(`/admin/downloads/${id}`, { method: 'DELETE', token: getToken()! }); loadDownloads(); } catch { }
+    if (!await adminConfirm({ title: 'ลบรายการดาวน์โหลด', message: 'ต้องการลบรายการดาวน์โหลดนี้?', type: 'danger', confirmLabel: 'ลบ' })) return;
+    try { await api(`/admin/downloads/${id}`, { method: 'DELETE', token: getToken()! }); adminAlert({ title: 'ลบรายการดาวน์โหลดแล้ว', type: 'success' }); loadDownloads(); } catch { }
   };
 
   const handleToggleDl = async (dl: Download) => {
@@ -307,7 +312,7 @@ export default function AdminSettings() {
                     onDragEnter={() => handleDragEnter(idx)}
                     onDragEnd={handleDragEnd}
                     onDragOver={e => e.preventDefault()}
-                    className="flex items-center gap-3 px-3 py-2 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all group cursor-grab active:cursor-grabbing active:opacity-70"
+                    className="flex items-center gap-3 px-3 py-2 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all group"
                   >
                     {/* Drag handle */}
                     <i className="fas fa-grip-vertical text-gray-300 group-hover:text-gray-400 text-sm flex-shrink-0 transition-colors"></i>

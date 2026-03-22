@@ -10,6 +10,7 @@ import { userService } from '../services/user.service';
 import { walletService } from '../services/wallet.service';
 import { serverService } from '../services/server.service';
 import { settingsService } from '../services/settings.service';
+import { auditService } from '../services/audit.service';
 import {
   createProductSchema, updateProductSchema,
   createServerSchema, updateServerSchema,
@@ -18,6 +19,7 @@ import {
   createLootBoxItemSchema, updateLootBoxItemSchema,
   createDownloadSchema, updateDownloadSchema,
   createRedeemCodeSchema, updateRedeemCodeSchema,
+  createLootBoxCategorySchema, updateLootBoxCategorySchema,
 } from '../validators/schemas';
 
 const router = Router();
@@ -37,6 +39,153 @@ router.get('/financial-summary', async (_req: Request, res: Response, next: Next
   try {
     const summary = await adminStatsService.getFinancialSummary();
     res.json({ success: true, ...summary });
+  } catch (err) { next(err); }
+});
+
+// ─── Activity Logs ──────────────
+
+/** Audit log retention stats — row counts + size estimate per tier */
+router.get('/logs/stats', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const [rows] = await pool.execute<RowDataPacket[]>(`
+      SELECT
+        SUM(action_type = 'user_login')  AS login_count,
+        SUM(action_type != 'user_login') AS admin_count,
+        COUNT(*)                         AS total_count,
+        MIN(created_at)                  AS oldest,
+        MAX(created_at)                  AS newest,
+        ROUND(
+          (SELECT data_length + index_length
+           FROM   information_schema.TABLES
+           WHERE  table_schema = DATABASE() AND table_name = 'audit_logs') / 1024 / 1024
+        , 2) AS size_mb
+      FROM audit_logs
+    `);
+    res.json({ success: true, stats: rows[0] });
+  } catch (err) { next(err); }
+});
+
+/** Manual purge — immediately apply retention policy */
+router.delete('/logs/purge', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const [result] = await pool.execute<ResultSetHeader>(`
+      DELETE FROM audit_logs
+      WHERE
+        (action_type = 'user_login'  AND created_at < NOW() - INTERVAL 30  DAY)
+     OR (action_type != 'user_login' AND created_at < NOW() - INTERVAL 365 DAY)
+    `);
+    res.json({ success: true, deleted: result.affectedRows });
+  } catch (err) { next(err); }
+});
+
+router.get('/logs', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const page   = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit  = Math.min(100, parseInt(req.query.limit as string) || 20);
+    const offset = (page - 1) * limit;
+    const type   = (req.query.type as string) || 'all';
+    const role   = (req.query.role as string) || 'all';
+    const search = ((req.query.search as string) || '').trim();
+
+    // WHERE helpers for user-joined subqueries
+    const roleWhere   = role === 'admin' ? `AND u.role = 'admin'` : role === 'member' ? `AND u.role = 'user'` : '';
+    const searchWhere = search ? 'AND u.username LIKE ?' : '';
+    const sp          = search ? [`%${search}%`] : [];
+
+    // WHERE helpers for audit_logs (stores role/username directly)
+    const auditRoleWhere   = role === 'admin' ? `AND al.role = 'admin'` : role === 'member' ? `AND al.role = 'user'` : '';
+    const auditSearchWhere = search ? 'AND al.username LIKE ?' : '';
+
+    const parts: { sql: string; params: any[] }[] = [];
+
+    if (type === 'all' || type === 'register') {
+      parts.push({
+        sql: `SELECT u.id as user_id, u.username, u.role,
+              'register' as action_type, 'สมัครสมาชิก' as description,
+              NULL as amount, NULL as ref_id, NULL as status_extra, u.created_at as ts
+              FROM users u WHERE 1=1 ${roleWhere} ${searchWhere}`,
+        params: [...sp],
+      });
+    }
+    if (type === 'all' || type === 'topup') {
+      parts.push({
+        sql: `SELECT t.user_id, u.username, u.role,
+              'topup' as action_type, COALESCE(t.description, 'เติมเงิน') as description,
+              t.amount as amount, t.reference as ref_id, NULL as status_extra, t.created_at as ts
+              FROM transactions t JOIN users u ON t.user_id = u.id
+              WHERE t.type = 'topup' AND t.status = 'success' ${roleWhere} ${searchWhere}`,
+        params: [...sp],
+      });
+    }
+    if (type === 'all' || type === 'purchase') {
+      parts.push({
+        sql: `SELECT p.user_id, u.username, u.role,
+              'purchase' as action_type, CONCAT('ซื้อ: ', pr.name) as description,
+              p.price as amount, CAST(p.id AS CHAR) as ref_id, p.status as status_extra, p.created_at as ts
+              FROM purchases p JOIN users u ON p.user_id = u.id JOIN products pr ON p.product_id = pr.id
+              WHERE 1=1 ${roleWhere} ${searchWhere}`,
+        params: [...sp],
+      });
+    }
+    if (type === 'all' || type === 'lootbox') {
+      parts.push({
+        sql: `SELECT t.user_id, u.username, u.role,
+              'lootbox' as action_type, t.description,
+              ABS(t.amount) as amount, t.reference as ref_id, NULL as status_extra, t.created_at as ts
+              FROM transactions t JOIN users u ON t.user_id = u.id
+              WHERE t.type = 'purchase' AND t.status = 'success' AND t.description LIKE 'เปิดกล่อง%' ${roleWhere} ${searchWhere}`,
+        params: [...sp],
+      });
+    }
+    if (type === 'all' || type === 'redeem') {
+      parts.push({
+        sql: `SELECT rl.user_id, u.username, u.role,
+              'redeem' as action_type, CONCAT('ใช้โค้ด: ', rc.code) as description,
+              rc.point_amount as amount, rc.code as ref_id, rc.reward_type as status_extra, rl.redeemed_at as ts
+              FROM redeem_logs rl JOIN users u ON rl.user_id = u.id JOIN redeem_codes rc ON rl.code_id = rc.id
+              WHERE 1=1 ${roleWhere} ${searchWhere}`,
+        params: [...sp],
+      });
+    }
+    // Admin audit logs — includes all admin_* action types + user_login
+    if (type === 'all' || type === 'admin_action' || type === 'user_login') {
+      const auditTypeWhere = type === 'user_login'
+        ? `AND al.action_type = 'user_login'`
+        : type === 'admin_action'
+          ? `AND al.action_type != 'user_login'`
+          : '';
+      // Skip audit_logs if role filter = member AND type is specifically admin_action
+      const skipAudit = type === 'admin_action' && role === 'member';
+      if (!skipAudit) {
+        parts.push({
+          sql: `SELECT al.user_id, al.username, al.role,
+                al.action_type, al.description,
+                al.amount, al.ref_id, NULL as status_extra, al.created_at as ts
+                FROM audit_logs al
+                WHERE 1=1 ${auditTypeWhere} ${auditRoleWhere} ${auditSearchWhere}`,
+          params: [...sp],
+        });
+      }
+    }
+
+    if (parts.length === 0) {
+      return res.json({ success: true, logs: [], pagination: { page, totalPages: 0, total: 0 } });
+    }
+
+    const union     = parts.map(p => p.sql).join(' UNION ALL ');
+    const allParams = parts.flatMap(p => p.params);
+
+    const [countRows] = await pool.execute<RowDataPacket[]>(
+      `SELECT COUNT(*) as total FROM (${union}) as _combined`, allParams
+    );
+    const total = parseInt((countRows[0] as any).total) || 0;
+
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      `SELECT * FROM (${union}) as _combined ORDER BY ts DESC LIMIT ${limit} OFFSET ${offset}`,
+      allParams
+    );
+
+    res.json({ success: true, logs: rows, pagination: { page, totalPages: Math.ceil(total / limit), total } });
   } catch (err) { next(err); }
 });
 
@@ -75,17 +224,31 @@ router.put('/users/:id', async (req: Request, res: Response, next: NextFunction)
   try {
     const id = parseInt(req.params.id);
     const { email, password, balance, role } = req.body;
-    
-    // Convert balance to number if present
     const balanceNum = balance !== undefined ? Number(balance) : undefined;
-    
-    await userService.updateUserProfile(id, {
-      email,
-      password,
-      balance: balanceNum,
-      role
-    });
-    
+
+    // Snapshot balance before update for audit diff
+    const [walletSnap] = await pool.execute<RowDataPacket[]>('SELECT balance FROM wallets WHERE user_id = ?', [id]);
+    const [targetUser] = await pool.execute<RowDataPacket[]>('SELECT username FROM users WHERE id = ?', [id]);
+    const targetUsername = (targetUser[0] as any)?.username || `ID ${id}`;
+    const balanceBefore = walletSnap.length > 0 ? parseFloat((walletSnap[0] as any).balance) : 0;
+
+    await userService.updateUserProfile(id, { email, password, balance: balanceNum, role });
+
+    // Separate audit entries for each type of change
+    if (balanceNum !== undefined && balanceNum !== balanceBefore) {
+      const diff = balanceNum - balanceBefore;
+      auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_wallet_adjust', description: `แก้ไขยอดเงิน ${targetUsername}: ${balanceBefore.toFixed(2)} → ${balanceNum.toFixed(2)}`, amount: Math.abs(diff), refId: String(id), meta: { target: targetUsername, before: balanceBefore, after: balanceNum, diff } });
+    }
+    if (password) {
+      auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_user_edit', description: `รีเซ็ตรหัสผ่าน ${targetUsername}`, refId: String(id) });
+    }
+    if (role) {
+      auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_user_role', description: `เปลี่ยน Role ${targetUsername} → ${role}`, refId: String(id), meta: { target: targetUsername, newRole: role } });
+    }
+    if (email !== undefined && !password && !role && balanceNum === undefined) {
+      auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_user_edit', description: `แก้ไขอีเมล ${targetUsername}`, refId: String(id) });
+    }
+
     res.json({ success: true, message: 'บันทึกข้อมูลสำเร็จ' });
   } catch (err) { next(err); }
 });
@@ -100,7 +263,10 @@ router.put('/users/:id/role', async (req: Request, res: Response, next: NextFunc
     if (id === req.user!.userId && role !== 'admin') {
       return res.status(400).json({ success: false, message: 'ไม่สามารถลด Role ของตัวเองได้' });
     }
+    const [targetUser] = await pool.execute<RowDataPacket[]>('SELECT username FROM users WHERE id = ?', [id]);
+    const targetUsername = (targetUser[0] as any)?.username || `ID ${id}`;
     await userService.updateUserRole(id, role);
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_user_role', description: `เปลี่ยน Role ${targetUsername} → ${role}`, refId: String(id), meta: { target: targetUsername, newRole: role } });
     res.json({ success: true, message: 'Role updated' });
   } catch (err) { next(err); }
 });
@@ -125,6 +291,7 @@ router.get('/products', async (_req: Request, res: Response, next: NextFunction)
 router.post('/products', validate(createProductSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const product = await shopService.createProduct(req.body);
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_product_create', description: `เพิ่มสินค้า: ${product.name}`, refId: String(product.id), meta: { price: product.price } });
     res.json({ success: true, product });
   } catch (err) { next(err); }
 });
@@ -133,6 +300,7 @@ router.put('/products/:id', validate(updateProductSchema), async (req: Request, 
   try {
     const id = parseInt(req.params.id);
     const product = await shopService.updateProduct(id, req.body);
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_product_update', description: `แก้ไขสินค้า: ${product.name}`, refId: String(id), meta: { price: product.price } });
     res.json({ success: true, product });
   } catch (err) { next(err); }
 });
@@ -140,7 +308,10 @@ router.put('/products/:id', validate(updateProductSchema), async (req: Request, 
 router.delete('/products/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = parseInt(req.params.id);
+    const [rows] = await pool.execute<RowDataPacket[]>('SELECT name FROM products WHERE id = ?', [id]);
+    const name = (rows[0] as any)?.name || `ID ${id}`;
     await shopService.deleteProduct(id);
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_product_delete', description: `ลบสินค้า: ${name}`, refId: String(id) });
     res.json({ success: true, message: 'Product deleted' });
   } catch (err) { next(err); }
 });
@@ -241,6 +412,14 @@ router.get('/servers', async (_req: Request, res: Response, next: NextFunction) 
   } catch (err) { next(err); }
 });
 
+// Must be before /servers/:id to avoid 'health' being treated as an id
+router.get('/servers/health', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const health = await serverService.healthCheckAll();
+    res.json({ success: true, health });
+  } catch (err) { next(err); }
+});
+
 router.get('/servers/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = parseInt(req.params.id);
@@ -254,6 +433,7 @@ router.post('/servers', validate(createServerSchema), async (req: Request, res: 
     const server = await serverService.create(req.body);
     const rconManager = req.app.get('rconManager');
     await rconManager.reloadServers();
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_server_create', description: `เพิ่มเซิร์ฟเวอร์: ${(server as any).name} (${req.body.host}:${req.body.rcon_port})`, refId: String((server as any).id) });
     res.json({ success: true, server });
   } catch (err) { next(err); }
 });
@@ -264,6 +444,7 @@ router.put('/servers/:id', validate(updateServerSchema), async (req: Request, re
     const server = await serverService.update(id, req.body);
     const rconManager = req.app.get('rconManager');
     await rconManager.reloadServers();
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_server_update', description: `แก้ไขเซิร์ฟเวอร์: ${(server as any).name}`, refId: String(id) });
     res.json({ success: true, server });
   } catch (err) { next(err); }
 });
@@ -271,10 +452,28 @@ router.put('/servers/:id', validate(updateServerSchema), async (req: Request, re
 router.delete('/servers/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = parseInt(req.params.id);
+    const [srows] = await pool.execute<RowDataPacket[]>('SELECT name FROM servers WHERE id = ?', [id]);
+    const sname = (srows[0] as any)?.name || `ID ${id}`;
     await serverService.delete(id);
     const rconManager = req.app.get('rconManager');
     await rconManager.reloadServers();
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_server_delete', description: `ลบเซิร์ฟเวอร์: ${sname}`, refId: String(id) });
     res.json({ success: true, message: 'Server deleted' });
+  } catch (err) { next(err); }
+});
+
+router.patch('/servers/:id/toggle', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [rows] = await pool.execute<RowDataPacket[]>('SELECT name, enabled FROM servers WHERE id = ?', [id]);
+    if (rows.length === 0) return res.status(404).json({ success: false, message: 'Server not found' });
+    const newEnabled = !rows[0].enabled;
+    const sname = (rows[0] as any).name || `ID ${id}`;
+    await pool.execute('UPDATE servers SET enabled = ? WHERE id = ?', [newEnabled ? 1 : 0, id]);
+    const rconManager = req.app.get('rconManager');
+    await rconManager.reloadServers();
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_server_toggle', description: `${newEnabled ? 'เปิด' : 'ปิด'}เซิร์ฟเวอร์: ${sname}`, refId: String(id) });
+    res.json({ success: true, is_enabled: newEnabled });
   } catch (err) { next(err); }
 });
 
@@ -304,6 +503,8 @@ router.put('/settings', validate(updateSettingsSchema), async (req: Request, res
     }
     await settingsService.setMultiple(record);
     const settings = await settingsService.getAll();
+    const keys = req.body.settings.map((s: any) => s.key).join(', ');
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_settings', description: `แก้ไข Settings: ${keys}`, meta: { keys: req.body.settings } });
     res.json({ success: true, settings });
   } catch (err) { next(err); }
 });
@@ -357,6 +558,7 @@ router.post('/rcon/command', async (req: Request, res: Response, next: NextFunct
     }
     const rconManager = req.app.get('rconManager');
     const response = await rconManager.sendCommand(serverId, command);
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_rcon_cmd', description: `RCON command: ${command}`, refId: String(serverId), meta: { serverId, command, response: response?.slice(0, 200) } });
     res.json({ success: true, response });
   } catch (err) { next(err); }
 });
@@ -397,30 +599,90 @@ router.get('/rcon/queue-status', async (req: Request, res: Response, next: NextF
 
 // ─── Loot Boxes ──────────────────────────────────────────────
 
+// ─── Loot Box Categories ─────────────────────────────────────
+
+router.get('/lootboxes/categories', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const categories = await lootBoxService.getAllCategories();
+    res.json({ success: true, categories });
+  } catch (err) { next(err); }
+});
+
+router.put('/lootboxes/categories/reorder', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { order } = req.body;
+    if (!Array.isArray(order)) { res.status(400).json({ success: false, message: 'Invalid order' }); return; }
+    await lootBoxService.reorderCategories(order);
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+router.post('/lootboxes/categories', validate(createLootBoxCategorySchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const category = await lootBoxService.createCategory(req.body);
+    res.status(201).json({ success: true, category });
+  } catch (err) { next(err); }
+});
+
+router.put('/lootboxes/categories/:id', validate(updateLootBoxCategorySchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const category = await lootBoxService.updateCategory(parseInt(req.params.id), req.body);
+    res.json({ success: true, category });
+  } catch (err) { next(err); }
+});
+
+router.delete('/lootboxes/categories/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await lootBoxService.deleteCategory(parseInt(req.params.id));
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+// ─── Loot Boxes ──────────────────────────────────────────────
+
 router.get('/lootboxes', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const boxes = await lootBoxService.getAllLootBoxes();
-    res.json({ success: true, boxes });
+    const [boxes, categories] = await Promise.all([
+      lootBoxService.getAllLootBoxes(),
+      lootBoxService.getAllCategories(),
+    ]);
+    res.json({ success: true, boxes, categories });
+  } catch (err) { next(err); }
+});
+
+router.put('/lootboxes/reorder', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { order } = req.body;
+    if (!Array.isArray(order)) { res.status(400).json({ success: false, message: 'Invalid order' }); return; }
+    await lootBoxService.reorderLootBoxes(order);
+    res.json({ success: true });
   } catch (err) { next(err); }
 });
 
 router.post('/lootboxes', validate(createLootBoxSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const box = await lootBoxService.createLootBox(req.body);
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_lootbox_create', description: `เพิ่มกล่อง: ${box.name}`, refId: String(box.id), meta: { price: box.price } });
     res.status(201).json({ success: true, box });
   } catch (err) { next(err); }
 });
 
 router.put('/lootboxes/:id', validate(updateLootBoxSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const box = await lootBoxService.updateLootBox(parseInt(req.params.id), req.body);
+    const id = parseInt(req.params.id);
+    const box = await lootBoxService.updateLootBox(id, req.body);
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_lootbox_update', description: `แก้ไขกล่อง: ${box.name}`, refId: String(id), meta: { price: box.price } });
     res.json({ success: true, box });
   } catch (err) { next(err); }
 });
 
 router.delete('/lootboxes/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await lootBoxService.deleteLootBox(parseInt(req.params.id));
+    const id = parseInt(req.params.id);
+    const [lbrows] = await pool.execute<RowDataPacket[]>('SELECT name FROM loot_boxes WHERE id = ?', [id]);
+    const lbname = (lbrows[0] as any)?.name || `ID ${id}`;
+    await lootBoxService.deleteLootBox(id);
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_lootbox_delete', description: `ลบกล่อง: ${lbname}`, refId: String(id) });
     res.json({ success: true, message: 'Loot box deleted' });
   } catch (err) { next(err); }
 });
@@ -429,21 +691,31 @@ router.delete('/lootboxes/:id', async (req: Request, res: Response, next: NextFu
 
 router.post('/lootboxes/:id/items', validate(createLootBoxItemSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const item = await lootBoxService.createLootBoxItem(parseInt(req.params.id), req.body);
+    const boxId = parseInt(req.params.id);
+    const item = await lootBoxService.createLootBoxItem(boxId, req.body);
+    const [lbrows] = await pool.execute<RowDataPacket[]>('SELECT name FROM loot_boxes WHERE id = ?', [boxId]);
+    const lbname = (lbrows[0] as any)?.name || `กล่อง ${boxId}`;
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_lootbox_item_create', description: `เพิ่มไอเท็ม "${item.name}" ในกล่อง ${lbname}`, refId: String(item.id), meta: { boxId, boxName: lbname, rarity: item.rarity, weight: item.weight } });
     res.status(201).json({ success: true, item });
   } catch (err) { next(err); }
 });
 
 router.put('/lootboxes/items/:itemId', validate(updateLootBoxItemSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const item = await lootBoxService.updateLootBoxItem(parseInt(req.params.itemId), req.body);
+    const itemId = parseInt(req.params.itemId);
+    const item = await lootBoxService.updateLootBoxItem(itemId, req.body);
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_lootbox_item_update', description: `แก้ไขไอเท็ม "${item.name}"`, refId: String(itemId), meta: { rarity: item.rarity, weight: item.weight } });
     res.json({ success: true, item });
   } catch (err) { next(err); }
 });
 
 router.delete('/lootboxes/items/:itemId', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await lootBoxService.deleteLootBoxItem(parseInt(req.params.itemId));
+    const itemId = parseInt(req.params.itemId);
+    const [irows] = await pool.execute<RowDataPacket[]>('SELECT name, loot_box_id FROM loot_box_items WHERE id = ?', [itemId]);
+    const iname = (irows[0] as any)?.name || `ID ${itemId}`;
+    await lootBoxService.deleteLootBoxItem(itemId);
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_lootbox_item_delete', description: `ลบไอเท็ม "${iname}"`, refId: String(itemId) });
     res.json({ success: true, message: 'Item deleted' });
   } catch (err) { next(err); }
 });
@@ -533,6 +805,7 @@ router.post('/codes', validate(createRedeemCodeSchema), async (req: Request, res
     );
     const id = (result as any).insertId;
     const [rows] = await pool.execute('SELECT * FROM redeem_codes WHERE id = ?', [id]);
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_code_create', description: `สร้างโค้ด: ${code} (${reward_type === 'point' ? `+${point_amount} ฿` : 'RCON'})`, refId: String(id), meta: { code, reward_type, point_amount, max_uses } });
     res.json({ success: true, code: (rows as any[])[0] });
   } catch (err) { next(err); }
 });
@@ -565,7 +838,10 @@ router.put('/codes/:id', validate(updateRedeemCodeSchema), async (req: Request, 
 router.delete('/codes/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = parseInt(req.params.id);
+    const [crows] = await pool.execute<RowDataPacket[]>('SELECT code FROM redeem_codes WHERE id = ?', [id]);
+    const codeName = (crows[0] as any)?.code || `ID ${id}`;
     await pool.execute('DELETE FROM redeem_codes WHERE id = ?', [id]);
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_code_delete', description: `ลบโค้ด: ${codeName}`, refId: String(id) });
     res.json({ success: true, message: 'Code deleted' });
   } catch (err) { next(err); }
 });
