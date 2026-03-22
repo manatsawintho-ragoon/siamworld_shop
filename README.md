@@ -491,6 +491,5 @@ RCON Password ถูกเข้ารหัส AES ก่อนเก็บ DB 
 
 ### Audit Log Retention
 
-- `user_login` events → ลบอัตโนมัติหลัง **30 วัน** (MySQL Event ทุกคืน 02:00)
-- Admin actions → ลบอัตโนมัติหลัง **365 วัน**
-- Manual purge: Admin Panel → Audit Log → ปุ่ม "ล้าง Log เก่า"
+- Log ทุกประเภท (Login + Admin actions) → ลบอัตโนมัติหลัง **7 วัน** (MySQL Event ทุกคืน 02:00)
+- Manual purge: Admin Panel → Audit Log → ปุ่ม "ล้าง Log เก่า" (ลบทันทีสิ่งที่เก่ากว่า 7 วัน)

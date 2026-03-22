@@ -22,7 +22,8 @@
       "Bash(docker ps:*)",
       "Bash(docker-compose restart:*)",
       "Bash(npm run:*)",
-      "Bash(grep -E \"\\\\.env$|\\\\.env\\\\.\")"
+      "Bash(grep -E \"\\\\.env$|\\\\.env\\\\.\")",
+      "Bash(1:*)"
     ]
   }
 }

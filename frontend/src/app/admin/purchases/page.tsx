@@ -146,7 +146,7 @@ export default function AdminAuditLog() {
   const handlePurge = async () => {
     if (!await adminConfirm({
       title: 'ล้าง Log เก่า',
-      message: 'ลบ Login log เก่ากว่า 30 วัน และ Admin log เก่ากว่า 365 วัน — ยืนยัน?',
+      message: 'ลบ Log ทั้งหมด (ทุกประเภท) ที่เก่ากว่า 7 วัน — ยืนยัน?',
       type: 'warning', confirmLabel: 'ล้างเลย',
     })) return;
     setPurging(true);
@@ -277,20 +277,18 @@ export default function AdminAuditLog() {
           <div className="w-px h-4 bg-gray-200" />
           <div className="flex items-center gap-1.5 text-[11px]">
             <span className="w-2 h-2 rounded-full bg-sky-400" />
-            <span className="text-gray-500">Login log:</span>
+            <span className="text-gray-500">Login:</span>
             <span className="font-bold text-gray-700">{Number(retentionStats.login_count).toLocaleString()}</span>
-            <span className="text-[10px] text-gray-400 bg-sky-50 border border-sky-200 px-1.5 rounded-md">เก็บ 30 วัน</span>
           </div>
           <div className="flex items-center gap-1.5 text-[11px]">
             <span className="w-2 h-2 rounded-full bg-orange-400" />
-            <span className="text-gray-500">Admin action:</span>
+            <span className="text-gray-500">Admin:</span>
             <span className="font-bold text-gray-700">{Number(retentionStats.admin_count).toLocaleString()}</span>
-            <span className="text-[10px] text-gray-400 bg-orange-50 border border-orange-200 px-1.5 rounded-md">เก็บ 365 วัน</span>
           </div>
           <div className="w-px h-4 bg-gray-200" />
           <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
             <i className="fas fa-clock text-[9px]" />
-            ล้างอัตโนมัติทุกคืน 02:00
+            เก็บ 7 วัน · ล้างอัตโนมัติทุกคืน 02:00
           </div>
           <button
             onClick={handlePurge}

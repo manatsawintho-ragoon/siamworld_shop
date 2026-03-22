@@ -8,9 +8,6 @@ DROP EVENT IF EXISTS evt_audit_log_purge;
 CREATE EVENT evt_audit_log_purge
   ON SCHEDULE EVERY 1 DAY
   STARTS (DATE(NOW()) + INTERVAL 1 DAY + INTERVAL 2 HOUR)
-  COMMENT 'Purge old audit_logs by tiered retention policy'
+  COMMENT 'Purge audit_logs older than 7 days (all action types)'
   DO
-    DELETE FROM audit_logs
-    WHERE
-      (action_type = 'user_login'  AND created_at < NOW() - INTERVAL 30  DAY)
-   OR (action_type != 'user_login' AND created_at < NOW() - INTERVAL 365 DAY);
+    DELETE FROM audit_logs WHERE created_at < NOW() - INTERVAL 7 DAY;

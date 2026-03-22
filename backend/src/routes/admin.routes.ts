@@ -65,15 +65,12 @@ router.get('/logs/stats', async (_req: Request, res: Response, next: NextFunctio
   } catch (err) { next(err); }
 });
 
-/** Manual purge — immediately apply retention policy */
+/** Manual purge — delete all audit_logs older than 7 days */
 router.delete('/logs/purge', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const [result] = await pool.execute<ResultSetHeader>(`
-      DELETE FROM audit_logs
-      WHERE
-        (action_type = 'user_login'  AND created_at < NOW() - INTERVAL 30  DAY)
-     OR (action_type != 'user_login' AND created_at < NOW() - INTERVAL 365 DAY)
-    `);
+    const [result] = await pool.execute<ResultSetHeader>(
+      'DELETE FROM audit_logs WHERE created_at < NOW() - INTERVAL 7 DAY'
+    );
     res.json({ success: true, deleted: result.affectedRows });
   } catch (err) { next(err); }
 });
