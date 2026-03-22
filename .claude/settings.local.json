@@ -22,7 +22,15 @@
       "Bash(docker ps:*)",
       "Bash(docker-compose restart:*)",
       "Bash(npm run:*)",
-      "Bash(grep -E \"\\\\.env$|\\\\.env\\\\.\")"
+      "Bash(grep -E \"\\\\.env$|\\\\.env\\\\.\")",
+      "Bash(1:*)",
+      "Bash(docker-compose up:*)",
+      "WebFetch(domain:document.easyslip.com)",
+      "Bash(npm install:*)",
+      "Bash(python3:*)",
+      "Bash(node -e \"require\\(''qrcode''\\); console.log\\(''qrcode ok''\\)\")",
+      "Bash(node:*)",
+      "Bash(docker-compose exec:*)"
     ]
   }
 }

@@ -17,6 +17,7 @@ const envSchema = z.object({
   RATE_LIMIT_WINDOW_MS: z.string().default('900000'),
   RATE_LIMIT_MAX: z.string().default('100'),
   LOG_LEVEL: z.string().default('info'),
+  EASYSLIP_API_KEY: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -50,4 +51,5 @@ export const config = {
     windowMs: parseInt(env.RATE_LIMIT_WINDOW_MS, 10),
     max: parseInt(env.RATE_LIMIT_MAX, 10),
   },
+  easyslipApiKey: env.EASYSLIP_API_KEY || '',
 };

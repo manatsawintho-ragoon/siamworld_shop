@@ -96,8 +96,8 @@ function RarityStats({ items }: { items: LootBoxItem[] }) {
             <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
               <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: rc.color }} />
             </div>
-            <span className="text-[11px] font-black tabular-nums w-10 text-right flex-shrink-0" style={{ color: rc.color }}>
-              {pct.toFixed(1)}%
+            <span className="text-[11px] font-black tabular-nums w-14 text-right flex-shrink-0" style={{ color: rc.color }}>
+              {pct.toFixed(2)}%
             </span>
           </div>
         );
@@ -270,9 +270,10 @@ export default function AdminLootBoxes() {
   const [catModal,   setCatModal]   = useState(false);
 
   const [activeBox,  setActiveBox]  = useState<LootBox | null>(null);
-  const [itemModal,  setItemModal]  = useState<Partial<LootBoxItem> | null>(null);
-  const [itemSaving, setItemSaving] = useState(false);
-  const [itemError,  setItemError]  = useState('');
+  const [itemModal,         setItemModal]         = useState<Partial<LootBoxItem> | null>(null);
+  const [itemOriginalWeight, setItemOriginalWeight] = useState(0);
+  const [itemSaving,        setItemSaving]        = useState(false);
+  const [itemError,         setItemError]         = useState('');
 
   const [itemSearch,    setItemSearch]    = useState('');
   const [rarityFilter,  setRarityFilter]  = useState<string>('all');
@@ -673,7 +674,7 @@ export default function AdminLootBoxes() {
 
                   {/* Add item button */}
                   <button
-                    onClick={() => { setItemError(''); setItemModal(emptyItem(activeBox.id)); }}
+                    onClick={() => { setItemError(''); setItemOriginalWeight(0); setItemModal(emptyItem(activeBox.id)); }}
                     className="flex items-center gap-2 px-4 py-2.5 bg-[#16a34a] text-white text-xs font-bold rounded-xl shadow-[0_4px_0_#0d6b2e] hover:brightness-110 transition-all active:shadow-[0_1px_0_#0d6b2e] active:translate-y-[2px] flex-shrink-0"
                   >
                     <i className="fas fa-plus text-[10px]" /> เพิ่มไอเท็ม
@@ -810,8 +811,8 @@ export default function AdminLootBoxes() {
                             <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${rc.color}44, transparent)` }} />
                           </div>
                           {viewMode === 'grid'
-                            ? <ItemGrid items={group} totalWeight={totalWeight} onEdit={i => { setItemError(''); setItemModal({ ...i }); }} onDelete={handleDeleteItem} onViewCmd={setViewingCmd} />
-                            : <ItemList items={group} totalWeight={totalWeight} onEdit={i => { setItemError(''); setItemModal({ ...i }); }} onDelete={handleDeleteItem} onViewCmd={setViewingCmd} />
+                            ? <ItemGrid items={group} totalWeight={totalWeight} onEdit={i => { setItemError(''); setItemOriginalWeight(i.weight); setItemModal({ ...i }); }} onDelete={handleDeleteItem} onViewCmd={setViewingCmd} />
+                            : <ItemList items={group} totalWeight={totalWeight} onEdit={i => { setItemError(''); setItemOriginalWeight(i.weight); setItemModal({ ...i }); }} onDelete={handleDeleteItem} onViewCmd={setViewingCmd} />
                           }
                         </div>
                       );
@@ -819,10 +820,10 @@ export default function AdminLootBoxes() {
                   </div>
                 ) : viewMode === 'grid' ? (
                   <ItemGrid items={filteredItems} totalWeight={totalWeight}
-                    onEdit={i => { setItemError(''); setItemModal({ ...i }); }} onDelete={handleDeleteItem} onViewCmd={setViewingCmd} />
+                    onEdit={i => { setItemError(''); setItemOriginalWeight(i.weight); setItemModal({ ...i }); }} onDelete={handleDeleteItem} onViewCmd={setViewingCmd} />
                 ) : (
                   <ItemList items={filteredItems} totalWeight={totalWeight}
-                    onEdit={i => { setItemError(''); setItemModal({ ...i }); }} onDelete={handleDeleteItem} onViewCmd={setViewingCmd} />
+                    onEdit={i => { setItemError(''); setItemOriginalWeight(i.weight); setItemModal({ ...i }); }} onDelete={handleDeleteItem} onViewCmd={setViewingCmd} />
                 )}
               </div>
             </>
@@ -840,7 +841,7 @@ export default function AdminLootBoxes() {
         document.body
       )}
       {itemModal && activeBox && typeof window !== 'undefined' && createPortal(
-        <ItemModal item={itemModal} saving={itemSaving} error={itemError} onChange={setItemModal} onSave={handleSaveItem} onClose={() => { if (!itemSaving) setItemModal(null); }} />,
+        <ItemModal item={itemModal} saving={itemSaving} error={itemError} totalWeight={totalWeight} originalWeight={itemOriginalWeight} onChange={setItemModal} onSave={handleSaveItem} onClose={() => { if (!itemSaving) setItemModal(null); }} />,
         document.body
       )}
       {viewingCmd && typeof window !== 'undefined' && createPortal(
@@ -1024,7 +1025,16 @@ function CategoryModal({ categories, onClose, onRefresh }: {
   const [editName, setEditName] = useState('');
   const [editColor, setEditColor] = useState('');
   const [saving,  setSaving]  = useState(false);
-  const bdRef = useRef(false);
+  const bdRef    = useRef(false);
+  const dragIdx  = useRef<number | null>(null);
+
+  const handleReorder = async (reordered: LootBoxCategory[]) => {
+    setList(reordered);
+    try {
+      await api('/admin/lootboxes/categories/reorder', { method: 'PUT', token: getToken()!, body: { order: reordered.map(c => c.id) } });
+      onRefresh();
+    } catch { /* revert will happen on next load */ }
+  };
 
   const handleAdd = async () => {
     if (!newName.trim()) return;
@@ -1089,8 +1099,20 @@ function CategoryModal({ categories, onClose, onRefresh }: {
             <div className="py-6 text-center text-gray-400 text-xs">ยังไม่มีหมวดหมู่</div>
           )}
 
-          {list.map(cat => (
-            <div key={cat.id}>
+          {list.map((cat, idx) => (
+            <div key={cat.id}
+              draggable={editId !== cat.id}
+              onDragStart={() => { dragIdx.current = idx; }}
+              onDragOver={e => e.preventDefault()}
+              onDrop={() => {
+                const from = dragIdx.current;
+                if (from === null || from === idx) return;
+                const next = [...list];
+                next.splice(idx, 0, next.splice(from, 1)[0]);
+                dragIdx.current = null;
+                handleReorder(next);
+              }}
+            >
               {editId === cat.id ? (
                 /* Edit mode */
                 <div className="flex flex-col gap-2 p-3 rounded-xl border-2 border-dashed" style={{ borderColor: editColor + '88' }}>
@@ -1116,7 +1138,8 @@ function CategoryModal({ categories, onClose, onRefresh }: {
                 </div>
               ) : (
                 /* View mode */
-                <div className="flex items-center gap-2.5 px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-100 group">
+                <div className="flex items-center gap-2.5 px-3 py-2.5 bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all group active:opacity-70">
+                  <i className="fas fa-grip-vertical text-gray-300 group-hover:text-gray-400 text-sm flex-shrink-0 transition-colors" />
                   <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
                   <span className="flex-1 text-sm font-bold text-gray-800">{cat.name}</span>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1181,14 +1204,21 @@ function CategoryModal({ categories, onClose, onRefresh }: {
 
 // ─── Item Modal ──────────────────────────────────────────────────────────────
 
-function ItemModal({ item, saving, error, onChange, onSave, onClose }: {
+function ItemModal({ item, saving, error, totalWeight, originalWeight, onChange, onSave, onClose }: {
   item: Partial<LootBoxItem>; saving: boolean; error: string;
+  totalWeight: number; originalWeight: number;
   onChange: (i: Partial<LootBoxItem>) => void; onSave: () => void; onClose: () => void;
 }) {
   const r  = item.rarity || 'common';
   const rc = RARITY_CONFIG[r];
   const rw = RARITY_WEIGHTS[r];
   const bdRef = useRef(false);
+
+  // Live probability: weight of all OTHER items + this item's new weight
+  const newWeight    = Number(item.weight) || 0;
+  const otherWeight  = totalWeight - originalWeight;
+  const livePct      = newWeight > 0 ? (newWeight / (otherWeight + newWeight)) * 100 : 0;
+  const pctColor     = livePct >= 40 ? '#16a34a' : livePct >= 15 ? '#f97316' : livePct >= 5 ? '#3b82f6' : livePct >= 1 ? '#8b5cf6' : '#ef4444';
 
   const handleRarityClick = (rarity: string) => {
     onChange({ ...item, rarity: rarity as LootBoxItem['rarity'], weight: RARITY_WEIGHTS[rarity].default });
@@ -1289,10 +1319,34 @@ function ItemModal({ item, saving, error, onChange, onSave, onClose }: {
                     onBlur={e   => (e.target.style.boxShadow = 'none')}
                     placeholder={String(rw.default)} min={1} />
                 </div>
-                <p className="text-[10px] mt-1 flex items-center gap-1" style={{ color: rc.color }}>
-                  <i className="fas fa-info-circle" />
-                  แนะนำ {rc.label}: W:{rw.default} — {rw.hint}
-                </p>
+                {/* Live probability indicator */}
+                <div className="mt-2 space-y-1.5">
+                  {newWeight > 0 ? (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                          <i className="fas fa-chart-pie" style={{ color: pctColor }} />
+                          โอกาสในกล่องนี้
+                        </span>
+                        <span className="text-[12px] font-bold tabular-nums" style={{ color: pctColor }}>
+                          {livePct.toFixed(2)}%
+                        </span>
+                      </div>
+                      <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min(livePct, 100)}%`, backgroundColor: pctColor }} />
+                      </div>
+                      <p className="text-[10px] text-gray-400">
+                        แนะนำ {rc.label}: W:{rw.default} — {rw.hint}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-[10px] flex items-center gap-1" style={{ color: rc.color }}>
+                      <i className="fas fa-info-circle" />
+                      แนะนำ {rc.label}: W:{rw.default} — {rw.hint}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Image */}

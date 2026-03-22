@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { api, getToken } from '@/lib/api';
 import { useAdminAlert } from '@/components/AdminAlert';
@@ -48,6 +48,7 @@ export default function AdminProducts() {
   const [catEditing, setCatEditing] = useState<Partial<Category> | null>(null);
   const [catSaving, setCatSaving] = useState(false);
   const [catError, setCatError] = useState('');
+  const dragCatIdx = useRef<number | null>(null);
 
   // RCON viewer modal
   const [viewingCmd, setViewingCmd] = useState<{ name: string; command: string } | null>(null);
@@ -77,6 +78,13 @@ export default function AdminProducts() {
 
   const loadCategories = () => {
     api('/admin/categories', { token: getToken()! }).then(d => setCategories((d.categories as Category[]) || []));
+  };
+
+  const handleReorderCats = async (reordered: Category[]) => {
+    setCategories(reordered);
+    try {
+      await api('/admin/categories/reorder', { method: 'PUT', token: getToken()!, body: { order: reordered.map(c => c.id) } });
+    } catch { loadCategories(); }
   };
 
   useEffect(load, []);
@@ -175,159 +183,317 @@ export default function AdminProducts() {
     } catch { }
   };
 
-  return (
-    <div className="space-y-6">
+  // ── New state for redesign ────────────────────────────────
+  const [selectedCat,    setSelectedCat]    = useState<number | null>(null);
+  const [search,         setSearch]         = useState('');
+  const [featFilter,     setFeatFilter]     = useState<'all' | 'featured' | 'normal'>('all');
+  const [page,           setPage]           = useState(1);
+  const dragProdIdx = useRef<number | null>(null);
+  const PAGE_SIZE = 25;
 
-      {/* Page header */}
+  const handleToggleFeatured = async (p: Product) => {
+    const next = !p.featured;
+    setProducts(prev => prev.map(x => x.id === p.id ? { ...x, featured: next } : x));
+    try { await api(`/admin/products/${p.id}`, { method: 'PUT', token: getToken()!, body: { featured: next } }); }
+    catch { load(); }
+  };
+
+  const handleReorderProducts = async (reordered: Product[]) => {
+    setProducts(reordered);
+    try { await api('/admin/products/reorder', { method: 'PUT', token: getToken()!, body: { order: reordered.map(p => p.id) } }); }
+    catch { /* silent — sort_order col may not exist yet */ }
+  };
+
+  const filtered = products
+    .filter(p => selectedCat === null || p.category_id === selectedCat)
+    .filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase()) || (p.description || '').toLowerCase().includes(search.toLowerCase()))
+    .filter(p => featFilter === 'all' || (featFilter === 'featured' ? p.featured : !p.featured));
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paged      = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const catCount = (catId: number | null) =>
+    catId === null ? products.length : products.filter(p => p.category_id === catId).length;
+
+  return (
+    <div className="space-y-4">
+
+      {/* ── Page header ──────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-800">
-            <i className="fas fa-cube mr-2 text-[#f97316]"></i>จัดการสินค้า
+          <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <i className="fas fa-cube text-[#f97316]"></i> จัดการสินค้า
           </h1>
           <p className="text-xs text-gray-400 mt-0.5">เพิ่ม แก้ไข และจัดการสินค้าไอเท็มทั้งหมดในร้าน</p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => { setCatError(''); setCatEditing(null); setCatModalOpen(true); }}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-[13px] font-bold rounded-lg shadow-[0_4px_0_#d1d5db] hover:brightness-95 transition-all"
-          >
+          <button onClick={() => { setCatError(''); setCatEditing(null); setCatModalOpen(true); }}
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-[13px] font-bold rounded-lg shadow-[0_4px_0_#d1d5db] hover:brightness-95 transition-all">
             <i className="fas fa-tags text-[12px] text-[#f97316]"></i> จัดการหมวดหมู่
           </button>
-          <button
-            onClick={() => setEditing({ ...emptyProduct })}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-[#16a34a] text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#0d6b2e] hover:brightness-110 transition-all active:shadow-[0_2px_0_#0d6b2e] active:translate-y-[2px]"
-          >
+          <button onClick={() => setEditing({ ...emptyProduct })}
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-[#16a34a] text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#0d6b2e] hover:brightness-110 transition-all active:shadow-[0_2px_0_#0d6b2e] active:translate-y-[2px]">
             <i className="fas fa-plus text-[12px]"></i> เพิ่มสินค้า
           </button>
         </div>
       </div>
 
-      {/* Main card */}
-      <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
+      {/* ── Split layout ─────────────────────────────────────────────── */}
+      <div className="flex gap-4 items-start">
 
-        {/* Card header */}
-        <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/60 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
-              <i className="fas fa-store text-[#f97316] text-xs"></i>
-            </div>
-            <div>
-              <h3 className="font-bold text-gray-900 text-sm">รายการสินค้า</h3>
-              <p className="text-[11px] text-gray-500">สินค้าทั้งหมด {products.length} รายการ</p>
-            </div>
+        {/* ─ Left sidebar: category filter ─ */}
+        <div className="w-52 flex-shrink-0 bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/60">
+            <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+              <i className="fas fa-layer-group text-[#f97316]"></i> หมวดหมู่
+            </p>
+          </div>
+          <div className="p-2 space-y-0.5">
+            {/* All */}
+            <button onClick={() => { setSelectedCat(null); setPage(1); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-bold transition-all ${
+                selectedCat === null
+                  ? 'bg-[#16a34a] text-white shadow-[0_3px_0_#0d6b2e]'
+                  : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+              }`}>
+              <i className="fas fa-border-all text-[10px] flex-shrink-0" />
+              <span className="flex-1 truncate">ทั้งหมด</span>
+              <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full flex-shrink-0 ${selectedCat === null ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                {products.length}
+              </span>
+            </button>
+
+            {categories.map(c => {
+              const cnt = catCount(c.id);
+              const isOn = selectedCat === c.id;
+              return (
+                <button key={c.id} onClick={() => { setSelectedCat(c.id); setPage(1); }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-bold transition-all ${
+                    isOn ? 'bg-[#16a34a] text-white shadow-[0_3px_0_#0d6b2e]'
+                         : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+                  }`}>
+                  <i className={`fas ${c.icon || 'fa-tag'} text-[10px] flex-shrink-0`} />
+                  <span className="flex-1 truncate">{c.name}</span>
+                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full flex-shrink-0 ${isOn ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                    {cnt}
+                  </span>
+                </button>
+              );
+            })}
+
+            {/* No category */}
+            {(() => {
+              const cnt = products.filter(p => !p.category_id).length;
+              const isOn = selectedCat === -1;
+              return cnt > 0 ? (
+                <button onClick={() => { setSelectedCat(-1); setPage(1); }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-bold transition-all ${
+                    isOn ? 'bg-[#16a34a] text-white shadow-[0_3px_0_#0d6b2e]' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+                  }`}>
+                  <i className="fas fa-tag text-[10px] flex-shrink-0" />
+                  <span className="flex-1 truncate">ไม่มีหมวดหมู่</span>
+                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full flex-shrink-0 ${isOn ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>{cnt}</span>
+                </button>
+              ) : null;
+            })()}
           </div>
         </div>
 
-        {loading ? (
-          <div className="py-20 text-center">
-            <i className="fas fa-spinner fa-spin text-2xl text-gray-300"></i>
-            <p className="text-sm text-gray-400 mt-2">กำลังโหลด...</p>
+        {/* ─ Right: main product table ─ */}
+        <div className="flex-1 min-w-0 bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden flex flex-col">
+
+          {/* Card header */}
+          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/60 flex items-center gap-3">
+            <div className="w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
+              <i className="fas fa-store text-[#f97316] text-[10px]"></i>
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-gray-900">
+                {selectedCat === null ? 'ทั้งหมด' : selectedCat === -1 ? 'ไม่มีหมวดหมู่' : categories.find(c => c.id === selectedCat)?.name || ''}
+              </p>
+              <p className="text-[10px] text-gray-400">{filtered.length} รายการ</p>
+            </div>
+            {/* Search */}
+            <div className="relative">
+              <i className="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-300 text-[10px]"></i>
+              <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
+                placeholder="ค้นหาสินค้า..."
+                className="pl-7 pr-3 py-1.5 rounded-lg border border-gray-200 text-[11px] focus:outline-none focus:border-[#637469] focus:ring-1 focus:ring-[#637469]/20 w-44" />
+            </div>
+            {/* Featured filter pills */}
+            <div className="flex gap-1">
+              {(['all', 'featured', 'normal'] as const).map(f => (
+                <button key={f} onClick={() => { setFeatFilter(f); setPage(1); }}
+                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+                    featFilter === f
+                      ? 'bg-[#1e2735] text-white shadow-[0_2px_0_#38404d]'
+                      : 'bg-white border border-gray-200 text-gray-500 hover:border-gray-300'
+                  }`}>
+                  {f === 'all' ? 'ทั้งหมด' : f === 'featured' ? '⭐ แนะนำ' : 'ปกติ'}
+                </button>
+              ))}
+            </div>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 bg-slate-50/40">
-                  <th className="text-left px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wide">สินค้า</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wide">หมวด</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wide">ราคา</th>
-                  <th className="text-center px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wide">คำสั่ง RCON</th>
-                  <th className="text-center px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wide">แนะนำ</th>
-                  <th className="text-center px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wide">จัดการ</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {products.map(p => (
-                  <tr key={p.id} className="hover:bg-gray-50/60 transition-colors">
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          {p.image ? <img src={p.image} alt="" className="w-full h-full object-cover rounded-lg" /> : <i className="fas fa-cube text-gray-300"></i>}
-                        </div>
-                        <div>
-                          <div className="font-semibold text-gray-800">{p.name}</div>
-                          <div className="text-xs text-gray-500 truncate max-w-[200px]">{p.description}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span className="px-2.5 py-0.5 rounded-sm text-xs font-bold uppercase tracking-wider bg-gray-100 text-gray-600">
-                        {p.category_name || '-'}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span className="font-bold text-gray-800">{p.price?.toLocaleString()} ฿</span>
-                      {p.original_price && p.original_price > p.price && (
-                        <span className="text-xs text-gray-400 line-through ml-1">{p.original_price?.toLocaleString()}</span>
-                      )}
-                    </td>
-                    {/* RCON command column */}
-                    <td className="px-5 py-3.5 text-center">
-                      <button
-                        onClick={() => setViewingCmd({ name: p.name, command: p.command || '' })}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-500 border border-blue-600 text-white shadow-[0_3px_0_#1d4ed8] hover:brightness-110 active:translate-y-[2px] active:shadow-none transition-all mx-auto"
-                        title="ดูคำสั่ง RCON"
-                      >
-                        <i className="fas fa-terminal text-[11px]"></i>
-                      </button>
-                    </td>
-                    <td className="px-5 py-3.5 text-center">
-                      {p.featured && <i className="fas fa-star text-yellow-500"></i>}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex gap-1.5 justify-center">
-                        {/* View buyers */}
-                        <button
-                          onClick={() => openBuyers(p)}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg bg-purple-500 border border-purple-600 text-white shadow-[0_3px_0_#6d28d9] hover:brightness-110 active:translate-y-[2px] active:shadow-none transition-all"
-                          title="ดูผู้ซื้อล่าสุด"
+
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <i className="fas fa-spinner fa-spin text-2xl text-[#f97316]"></i>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto flex-1 pb-3">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-100 bg-slate-50/40">
+                      <th className="w-7 px-2 py-2"></th>
+                      <th className="text-left px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wide">สินค้า</th>
+                      {selectedCat === null && <th className="text-left px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wide">หมวด</th>}
+                      <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wide">ราคา</th>
+                      <th className="text-center px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wide">แนะนำ</th>
+                      <th className="text-center px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wide">แสดง</th>
+                      <th className="text-center px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wide">จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {paged.map((p, idx) => {
+                      const globalIdx = (page - 1) * PAGE_SIZE + idx;
+                      return (
+                        <tr key={p.id}
+                          draggable
+                          onDragStart={() => { dragProdIdx.current = globalIdx; }}
+                          onDragOver={e => e.preventDefault()}
+                          onDrop={() => {
+                            const from = dragProdIdx.current;
+                            if (from === null || from === globalIdx) return;
+                            const next = [...products];
+                            const fromItem = filtered[from];
+                            const toItem   = filtered[globalIdx];
+                            const fi = next.findIndex(x => x.id === fromItem.id);
+                            const ti = next.findIndex(x => x.id === toItem.id);
+                            next.splice(ti, 0, next.splice(fi, 1)[0]);
+                            dragProdIdx.current = null;
+                            handleReorderProducts(next);
+                          }}
+                          className="hover:bg-gray-50/60 transition-colors group active:opacity-70"
                         >
-                          <i className="fas fa-users text-[11px]"></i>
+                          {/* Grip */}
+                          <td className="px-2 py-1.5 w-7">
+                            <i className="fas fa-grip-vertical text-gray-200 group-hover:text-gray-400 text-sm transition-colors"></i>
+                          </td>
+                          {/* Product */}
+                          <td className="px-3 py-1.5">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                {p.image ? <img src={p.image} alt="" className="w-full h-full object-cover" /> : <i className="fas fa-cube text-gray-300 text-xs"></i>}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="text-[12px] font-bold text-gray-800 truncate max-w-[180px]">{p.name}</div>
+                                {p.description && <div className="text-[10px] text-gray-400 truncate max-w-[180px]">{p.description}</div>}
+                              </div>
+                            </div>
+                          </td>
+                          {/* Category (only when showing all) */}
+                          {selectedCat === null && (
+                            <td className="px-3 py-1.5">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-600 uppercase tracking-wide">
+                                {p.category_name || '—'}
+                              </span>
+                            </td>
+                          )}
+                          {/* Price */}
+                          <td className="px-3 py-1.5 text-right whitespace-nowrap">
+                            <span className="text-[12px] font-black text-gray-800">{p.price?.toLocaleString()} ฿</span>
+                            {p.original_price && p.original_price > p.price && (
+                              <span className="text-[10px] text-gray-400 line-through ml-1">{p.original_price?.toLocaleString()}</span>
+                            )}
+                          </td>
+                          {/* Featured — toggle switch */}
+                          <td className="px-2 py-1.5 text-center">
+                            <label className="flex items-center justify-center cursor-pointer" title={p.featured ? 'ยกเลิกแนะนำ' : 'ตั้งเป็นแนะนำ'} onClick={e => { e.stopPropagation(); handleToggleFeatured(p); }}>
+                              <div className="relative">
+                                <div className={`w-8 h-4 rounded-full transition-colors duration-200 ${p.featured ? 'bg-yellow-400' : 'bg-gray-200'}`} />
+                                <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform duration-200 ${p.featured ? 'translate-x-4' : ''}`} />
+                              </div>
+                            </label>
+                          </td>
+                          {/* Active toggle */}
+                          <td className="px-2 py-1.5 text-center">
+                            <button onClick={() => handleToggleActive(p)}
+                              title={p.active ? 'ปิดสินค้า' : 'เปิดสินค้า'}
+                              className={`w-7 h-7 flex items-center justify-center rounded-lg border text-white shadow-[0_2px_0] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all mx-auto ${
+                                p.active ? 'bg-green-500 border-green-600 shadow-[0_2px_0_#15803d]' : 'bg-gray-400 border-gray-500 shadow-[0_2px_0_#6b7280]'
+                              }`}>
+                              <i className={`fas text-[10px] ${p.active ? 'fa-eye' : 'fa-eye-slash'}`}></i>
+                            </button>
+                          </td>
+                          {/* Actions */}
+                          <td className="px-3 py-1.5">
+                            <div className="flex gap-1 justify-center">
+                              <button onClick={() => openBuyers(p)} title="ผู้ซื้อ"
+                                className="w-7 h-7 flex items-center justify-center rounded-lg bg-purple-500 border border-purple-600 text-white shadow-[0_2px_0_#6d28d9] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all">
+                                <i className="fas fa-users text-[10px]"></i>
+                              </button>
+                              <button onClick={() => setViewingCmd({ name: p.name, command: p.command || '' })} title="RCON"
+                                className="w-7 h-7 flex items-center justify-center rounded-lg bg-blue-500 border border-blue-600 text-white shadow-[0_2px_0_#1d4ed8] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all">
+                                <i className="fas fa-terminal text-[10px]"></i>
+                              </button>
+                              <button onClick={() => openEdit(p)} title="แก้ไข"
+                                className="w-7 h-7 flex items-center justify-center rounded-lg bg-amber-500 border border-amber-600 text-white shadow-[0_2px_0_#b45309] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all">
+                                <i className="fas fa-pen text-[10px]"></i>
+                              </button>
+                              <button onClick={() => handleDelete(p.id)} title="ลบ"
+                                className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-500 border border-red-600 text-white shadow-[0_2px_0_#b91c1c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all">
+                                <i className="fas fa-trash text-[10px]"></i>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {paged.length === 0 && (
+                      <tr>
+                        <td colSpan={8} className="py-16 text-center">
+                          <i className="fas fa-box-open text-3xl text-gray-200 mb-3 block"></i>
+                          <p className="text-sm text-gray-400">ไม่พบสินค้า</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-between">
+                  <p className="text-[10px] text-gray-400">
+                    แสดง {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} จาก {filtered.length} รายการ
+                  </p>
+                  <div className="flex gap-1">
+                    <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:border-gray-300 disabled:opacity-40 transition-all text-xs">
+                      <i className="fas fa-chevron-left text-[9px]"></i>
+                    </button>
+                    {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                      const p = totalPages <= 7 ? i + 1 : page <= 4 ? i + 1 : page >= totalPages - 3 ? totalPages - 6 + i : page - 3 + i;
+                      return (
+                        <button key={p} onClick={() => setPage(p)}
+                          className={`w-7 h-7 flex items-center justify-center rounded-lg text-[11px] font-bold transition-all ${
+                            page === p ? 'bg-[#1e2735] text-white shadow-[0_2px_0_#38404d]' : 'border border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                          }`}>
+                          {p}
                         </button>
-                        {/* Toggle active */}
-                        <button
-                          onClick={() => handleToggleActive(p)}
-                          className={`w-8 h-8 flex items-center justify-center rounded-lg border text-white shadow-[0_3px_0] hover:brightness-110 active:translate-y-[2px] active:shadow-none transition-all ${
-                            p.active
-                              ? 'bg-green-500 border-green-600 shadow-[0_3px_0_#15803d]'
-                              : 'bg-gray-400 border-gray-500 shadow-[0_3px_0_#6b7280]'
-                          }`}
-                          title={p.active ? 'ปิดสินค้า' : 'เปิดสินค้า'}
-                        >
-                          <i className={`fas text-[11px] ${p.active ? 'fa-eye' : 'fa-eye-slash'}`}></i>
-                        </button>
-                        {/* Edit */}
-                        <button
-                          onClick={() => openEdit(p)}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg bg-amber-500 border border-amber-600 text-white shadow-[0_3px_0_#b45309] hover:brightness-110 active:translate-y-[2px] active:shadow-none transition-all"
-                          title="แก้ไข"
-                        >
-                          <i className="fas fa-pen text-[11px]"></i>
-                        </button>
-                        {/* Delete */}
-                        <button
-                          onClick={() => handleDelete(p.id)}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-500 border border-red-600 text-white shadow-[0_3px_0_#b91c1c] hover:brightness-110 active:translate-y-[2px] active:shadow-none transition-all"
-                          title="ลบ"
-                        >
-                          <i className="fas fa-trash text-[11px]"></i>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {products.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="py-20 text-center">
-                      <i className="fas fa-box-open text-3xl text-gray-200 mb-3 block"></i>
-                      <p className="text-sm text-gray-400">ยังไม่มีสินค้า</p>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+                      );
+                    })}
+                    <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:border-gray-300 disabled:opacity-40 transition-all text-xs">
+                      <i className="fas fa-chevron-right text-[9px]"></i>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* ─── Product Edit Modal ──────────────────────────────── */}
@@ -570,8 +736,22 @@ export default function AdminProducts() {
                     <p className="text-sm">ยังไม่มีหมวดหมู่</p>
                   </div>
                 )}
-                {categories.map(c => (
-                  <div key={c.id} className="flex items-center gap-3 px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200">
+                {categories.map((c, idx) => (
+                  <div key={c.id}
+                    draggable
+                    onDragStart={() => { dragCatIdx.current = idx; }}
+                    onDragOver={e => e.preventDefault()}
+                    onDrop={() => {
+                      const from = dragCatIdx.current;
+                      if (from === null || from === idx) return;
+                      const next = [...categories];
+                      next.splice(idx, 0, next.splice(from, 1)[0]);
+                      dragCatIdx.current = null;
+                      handleReorderCats(next);
+                    }}
+                    className="flex items-center gap-3 px-3 py-2.5 bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all group active:opacity-70"
+                  >
+                    <i className="fas fa-grip-vertical text-gray-300 group-hover:text-gray-400 text-sm flex-shrink-0 transition-colors"></i>
                     <div className="w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
                       <i className={`fas ${c.icon || 'fa-tag'} text-[#f97316] text-[10px]`}></i>
                     </div>
