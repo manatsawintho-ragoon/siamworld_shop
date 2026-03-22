@@ -21,7 +21,7 @@ class PaymentService {
       await conn.beginTransaction();
 
       const [rows] = await conn.execute<RowDataPacket[]>(
-        'SELECT * FROM transactions WHERE user_id = ? AND reference = ? AND status = ?',
+        'SELECT * FROM transactions WHERE user_id = ? AND reference = ? AND status = ? FOR UPDATE',
         [userId, reference, 'pending']
       );
       if (rows.length === 0) throw new NotFoundError('Transaction not found or already confirmed');
@@ -61,16 +61,35 @@ class PaymentService {
   async redeemTrueMoney(userId: number, giftLink: string) {
     if (!giftLink.includes('truemoney.com/campaign')) throw new ValidationError('Invalid TrueMoney gift link');
 
-    const [used] = await pool.execute<RowDataPacket[]>('SELECT id FROM truemoney_used WHERE gift_link = ?', [giftLink]);
-    if (used.length > 0) throw new ConflictError('This gift code has already been redeemed');
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
 
-    // Simulate: generate random amount 10-500
-    const amount = Math.floor(Math.random() * 491) + 10;
+      // Lock the row if it exists, preventing concurrent redemption of the same link
+      const [used] = await conn.execute<RowDataPacket[]>(
+        'SELECT id FROM truemoney_used WHERE gift_link = ? FOR UPDATE',
+        [giftLink]
+      );
+      if (used.length > 0) throw new ConflictError('This gift code has already been redeemed');
 
-    await pool.execute('INSERT INTO truemoney_used (gift_link, user_id, amount) VALUES (?,?,?)', [giftLink, userId, amount]);
-    const wallet = await walletService.topup(userId, amount, 'truemoney', giftLink, `TrueMoney ฿${amount}`);
-    logger.info('TrueMoney redeemed', { userId, amount });
-    return { message: `Redeemed ฿${amount}`, amount, wallet };
+      // Simulate: generate random amount 10-500
+      const amount = Math.floor(Math.random() * 491) + 10;
+
+      await conn.execute(
+        'INSERT INTO truemoney_used (gift_link, user_id, amount) VALUES (?,?,?)',
+        [giftLink, userId, amount]
+      );
+      await conn.commit();
+
+      const wallet = await walletService.topup(userId, amount, 'truemoney', giftLink, `TrueMoney ฿${amount}`);
+      logger.info('TrueMoney redeemed', { userId, amount });
+      return { message: `Redeemed ฿${amount}`, amount, wallet };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
   }
 }
 

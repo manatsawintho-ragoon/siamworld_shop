@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { AdminAlertProvider } from '@/components/AdminAlert';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Menu Categorization (Verity Style)
@@ -38,8 +39,8 @@ const MENU_CATEGORIES = [
   {
     category: 'SYSTEM',
     items: [
-      { href: '/admin/purchases', icon: 'fa-wallet', label: 'ระบบเติมเงิน / ธุรกรรม' },
       { href: '/admin/servers', icon: 'fa-server', label: 'จัดการเซิร์ฟเวอร์' },
+      { href: '/admin/purchases', icon: 'fa-wallet', label: 'Audit log' },
       { href: '/admin/setup', icon: 'fa-wand-magic-sparkles', label: 'Setup Wizard' },
     ]
   }
@@ -371,7 +372,9 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <AdminLayoutInner>{children}</AdminLayoutInner>
+      <AdminAlertProvider>
+        <AdminLayoutInner>{children}</AdminLayoutInner>
+      </AdminAlertProvider>
     </AuthProvider>
   );
 }

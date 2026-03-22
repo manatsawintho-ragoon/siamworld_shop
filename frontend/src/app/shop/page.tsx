@@ -58,7 +58,7 @@ export default function ShopPage() {
           <div className="card-header-mc flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <i className="fas fa-store text-primary text-xl" aria-hidden="true"></i>
-              <span className="text-lg">Itemshop <span className="text-xs text-foreground-subtle ml-1 font-normal">ร้านค้าไอเทมและยศ</span></span>
+              <span className="text-lg">Itemshop <span className="text-xs text-foreground-subtle ml-1 font-normal">ร้านค้าไอเท็มและยศ</span></span>
             </div>
             
             <div className="relative w-full md:w-64 flex-shrink-0">

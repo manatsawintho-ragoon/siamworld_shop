@@ -64,7 +64,7 @@ export default function TopupPage() {
         <h1 className="text-2xl font-black text-foreground flex items-center gap-2 mb-2">
           <i className="fas fa-coins text-primary" aria-hidden="true"></i>เติมเงิน
         </h1>
-        <p className="text-foreground-muted text-sm mb-1">เติมเงินเข้ากระเป๋าเพื่อซื้อไอเทมในร้านค้า</p>
+        <p className="text-foreground-muted text-sm mb-1">เติมเงินเข้ากระเป๋าเพื่อซื้อไอเท็มในร้านค้า</p>
         {user && (
           <p className="text-sm font-bold text-primary mb-6">
             ยอดเงินปัจจุบัน: ฿{user.wallet_balance?.toLocaleString() || '0'}

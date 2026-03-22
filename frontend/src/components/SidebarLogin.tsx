@@ -76,7 +76,7 @@ export default function SidebarLogin() {
         {mode === 'login' ? 'Member Login' : 'Register'}
       </h3>
       <p className="text-[11px] text-foreground-subtle mb-4">
-        {mode === 'login' ? 'เข้าสู่ระบบเพื่อจัดการบัญชีและไอเทมชอป' : 'สมัครสมาชิกใหม่ด้วย Authme'}
+        {mode === 'login' ? 'เข้าสู่ระบบเพื่อจัดการบัญชีและไอเท็มชอป' : 'สมัครสมาชิกใหม่ด้วย Authme'}
       </p>
 
       {mode === 'login' ? (

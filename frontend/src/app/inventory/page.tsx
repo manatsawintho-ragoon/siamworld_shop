@@ -81,7 +81,7 @@ export default function InventoryPage() {
       const result = await api('/user/inventory/redeem-all', { method: 'POST', token: getToken()!, body: { serverId: redeemAllServer } }) as any;
       setRedeemAllModal(false); load();
       if (result.successCount > 0) showToast(`ส่งเข้าเกมสำเร็จ ${result.successCount} ชิ้น${result.failCount > 0 ? ` (ล้มเหลว ${result.failCount} ชิ้น)` : '!'}`);
-      else showToast('ไม่มีไอเทมที่ส่งสำเร็จ');
+      else showToast('ไม่มีไอเท็มที่ส่งสำเร็จ');
     } catch (err: any) { setRedeemAllError(err?.message || 'เกิดข้อผิดพลาด'); }
     setRedeemAllLoading(false);
   };
@@ -100,7 +100,7 @@ export default function InventoryPage() {
               <i className="fas fa-box text-primary" aria-hidden="true"></i>คลังของรางวัล
               {pendingCount > 0 && <span className="bg-warning text-black text-xs font-black px-2.5 py-0.5 rounded-full tabular-nums">{pendingCount} รอรับ</span>}
             </h1>
-            <p className="text-foreground-muted text-sm mt-1">ไอเทมที่คุณสุ่มได้ กดรับเพื่อส่งเข้าเกม Minecraft ของคุณ</p>
+            <p className="text-foreground-muted text-sm mt-1">ไอเท็มที่คุณสุ่มได้ กดรับเพื่อส่งเข้าเกม Minecraft ของคุณ</p>
           </div>
           {pendingCount > 0 && (
             <button onClick={() => { setRedeemAllError(''); setRedeemAllModal(true); }}
@@ -138,7 +138,7 @@ export default function InventoryPage() {
             <div className="w-16 h-16 mx-auto mb-4 bg-surface-hover rounded-2xl flex items-center justify-center">
               <i className="fas fa-box-open text-2xl text-foreground-subtle" aria-hidden="true"></i>
             </div>
-            <p className="text-lg font-medium text-foreground-muted">{filter === 'PENDING' ? 'ไม่มีไอเทมรอรับ' : 'คลังว่างเปล่า'}</p>
+            <p className="text-lg font-medium text-foreground-muted">{filter === 'PENDING' ? 'ไม่มีไอเท็มรอรับ' : 'คลังว่างเปล่า'}</p>
             <p className="text-sm mt-1 text-foreground-subtle">{filter !== 'REDEEMED' && <a href="/lootbox" className="text-primary hover:underline">ลองเปิดกล่องสุ่มไหม?</a>}</p>
           </div>
         ) : (
@@ -248,11 +248,11 @@ export default function InventoryPage() {
               transition={{ duration: 0.2 }} className="modal-content max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
               <div className="bg-green-700 px-6 py-4 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center"><i className="fas fa-gamepad text-white text-lg" aria-hidden="true"></i></div>
-                <div><h3 className="text-white font-bold">รับทั้งหมด</h3><p className="text-white/70 text-xs tabular-nums">{pendingCount} ไอเทมรอการรับ</p></div>
+                <div><h3 className="text-white font-bold">รับทั้งหมด</h3><p className="text-white/70 text-xs tabular-nums">{pendingCount} ไอเท็มรอการรับ</p></div>
               </div>
               <div className="p-5">
                 <p className="text-sm text-foreground font-medium mb-1">เลือกเซิร์ฟเวอร์ที่คุณออนไลน์อยู่</p>
-                <p className="text-xs text-foreground-subtle mb-3"><i className="fas fa-exclamation-triangle text-warning mr-1" aria-hidden="true"></i>คุณต้องออนไลน์อยู่ในเกมก่อนรับของ ระบบจะส่งทุกไอเทมเข้าเกมทีเดียว</p>
+                <p className="text-xs text-foreground-subtle mb-3"><i className="fas fa-exclamation-triangle text-warning mr-1" aria-hidden="true"></i>คุณต้องออนไลน์อยู่ในเกมก่อนรับของ ระบบจะส่งทุกไอเท็มเข้าเกมทีเดียว</p>
                 <select value={redeemAllServer} onChange={e => setRedeemAllServer(Number(e.target.value))} className="input mb-3" aria-label="เลือกเซิร์ฟเวอร์">
                   <option value={0} disabled>— เลือกเซิร์ฟเวอร์ —</option>
                   {servers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}

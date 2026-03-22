@@ -26,7 +26,7 @@ class SetupService {
    * Translate localhost/127.0.0.1 to host.docker.internal when running in Docker.
    */
   private resolveHost(host: string): string {
-    if (process.env.DOCKER === 'true' || process.env.NODE_ENV === 'production') {
+    if (process.env.DOCKER === 'true') {
       if (host === '127.0.0.1' || host === 'localhost' || host === '0.0.0.0') {
         return 'host.docker.internal';
       }

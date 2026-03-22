@@ -287,10 +287,11 @@ class LootBoxService {
     image?: string;
     price: number;
     sort_order?: number;
+    category_id?: number | null;
   }) {
     const [result] = await pool.execute(
-      'INSERT INTO loot_boxes (name, description, image, price, sort_order) VALUES (?,?,?,?,?)',
-      [data.name, data.description ?? null, data.image ?? null, data.price, data.sort_order ?? 0]
+      'INSERT INTO loot_boxes (name, description, image, price, sort_order, category_id) VALUES (?,?,?,?,?,?)',
+      [data.name, data.description ?? null, data.image ?? null, data.price, data.sort_order ?? 0, data.category_id ?? null]
     );
     const id = (result as any).insertId;
     const [rows] = await pool.execute<RowDataPacket[]>(
@@ -313,6 +314,10 @@ class LootBoxService {
       fields.push('active = ?');
       values.push(data.active ? 1 : 0);
     }
+    if ('category_id' in data) {
+      fields.push('category_id = ?');
+      values.push(data.category_id ?? null);
+    }
     if (fields.length > 0) {
       values.push(id);
       await pool.execute(`UPDATE loot_boxes SET ${fields.join(', ')} WHERE id = ?`, values);
@@ -323,6 +328,56 @@ class LootBoxService {
     );
     if (rows.length === 0) throw new NotFoundError('Loot box not found');
     return rows[0];
+  }
+
+  // ─── Categories ──────────────────────────────────────────
+
+  async getAllCategories() {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      'SELECT * FROM loot_box_categories ORDER BY sort_order ASC, id ASC'
+    );
+    return rows;
+  }
+
+  async createCategory(data: { name: string; color: string; sort_order?: number }) {
+    const [result] = await pool.execute(
+      'INSERT INTO loot_box_categories (name, color, sort_order) VALUES (?,?,?)',
+      [data.name, data.color, data.sort_order ?? 0]
+    );
+    const id = (result as any).insertId;
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      'SELECT * FROM loot_box_categories WHERE id = ?', [id]
+    );
+    return rows[0];
+  }
+
+  async updateCategory(id: number, data: { name?: string; color?: string; sort_order?: number }) {
+    const fields: string[] = [];
+    const values: any[] = [];
+    if (data.name  !== undefined) { fields.push('name = ?');       values.push(data.name); }
+    if (data.color !== undefined) { fields.push('color = ?');      values.push(data.color); }
+    if (data.sort_order !== undefined) { fields.push('sort_order = ?'); values.push(data.sort_order); }
+    if (fields.length > 0) {
+      values.push(id);
+      await pool.execute(`UPDATE loot_box_categories SET ${fields.join(', ')} WHERE id = ?`, values);
+    }
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      'SELECT * FROM loot_box_categories WHERE id = ?', [id]
+    );
+    if (rows.length === 0) throw new NotFoundError('Category not found');
+    return rows[0];
+  }
+
+  async deleteCategory(id: number) {
+    // Unlink boxes before deleting category
+    await pool.execute('UPDATE loot_boxes SET category_id = NULL WHERE category_id = ?', [id]);
+    await pool.execute('DELETE FROM loot_box_categories WHERE id = ?', [id]);
+  }
+
+  async reorderCategories(order: { id: number; sort_order: number }[]) {
+    for (const item of order) {
+      await pool.execute('UPDATE loot_box_categories SET sort_order = ? WHERE id = ?', [item.sort_order, item.id]);
+    }
   }
 
   async deleteLootBox(id: number) {
@@ -394,6 +449,12 @@ class LootBoxService {
 
   async deleteLootBoxItem(itemId: number) {
     await pool.execute('DELETE FROM loot_box_items WHERE id = ?', [itemId]);
+  }
+
+  async reorderLootBoxes(order: { id: number; sort_order: number }[]) {
+    for (const item of order) {
+      await pool.execute('UPDATE loot_boxes SET sort_order = ? WHERE id = ?', [item.sort_order, item.id]);
+    }
   }
 }
 

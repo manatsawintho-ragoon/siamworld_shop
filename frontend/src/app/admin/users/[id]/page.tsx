@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api, getToken } from '@/lib/api';
-import RconModal from '@/components/RconModal';
 import { fmtDate, fmtMoney } from '@/lib/dateFormat';
+import { useAdminAlert } from '@/components/AdminAlert';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -16,112 +16,20 @@ interface UserDetail {
   wallet_balance: number;
   created_at: string;
   total_topup: number;
+  daily_topup: number;
+  weekly_topup: number;
   monthly_topup: number;
+  topup_count: number;
+  last_topup_at: string | null;
+  avg_topup: number;
   used_codes_count: number;
   total_spent: number;
-}
-
-interface HistoryLog {
-  id: number;
-  amount?: number;
-  point_amount?: number;
-  balance_after?: number;
-  created_at: string;
-  description?: string;
-  reference_id?: string;
-  reward_type?: string;
-  command?: string;
-}
-
-interface TabState {
-  logs: HistoryLog[];
-  total: number;
-  page: number;
-  loading: boolean;
-}
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const PREVIEW_LIMIT = 5;
-const initTab = (): TabState => ({ logs: [], total: 0, page: 1, loading: false });
-
-// ─── History Mini Card ────────────────────────────────────────────────────────
-
-function HistoryMiniCard({
-  title, icon, iconBg, iconColor, tab, totalLink, onPageChange, children,
-}: {
-  title: string; icon: string; iconBg: string; iconColor: string;
-  tab: TabState; totalLink: string;
-  onPageChange: (p: number) => void;
-  children: (log: HistoryLog) => React.ReactNode;
-}) {
-  const totalPages = Math.ceil(tab.total / PREVIEW_LIMIT);
-  return (
-    <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden flex flex-col h-full min-h-0">
-
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/60 flex items-center gap-2.5 flex-shrink-0">
-        <div className={`w-7 h-7 rounded-lg ${iconBg} flex items-center justify-center flex-shrink-0`}>
-          <i className={`fas ${icon} ${iconColor} text-[10px]`} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-gray-900 text-xs">{title}</h3>
-          <p className="text-[10px] text-gray-400">
-            {tab.loading ? '...' : `${tab.total.toLocaleString()} รายการ`}
-          </p>
-        </div>
-        <Link
-          href={totalLink}
-          className="flex items-center gap-1 text-[10px] font-semibold text-gray-400 hover:text-[#1e2735] transition-colors flex-shrink-0 px-1.5 py-1 rounded-md hover:bg-gray-100"
-        >
-          ดูทั้งหมด <i className="fas fa-arrow-right text-[8px]" />
-        </Link>
-      </div>
-
-      {/* Body */}
-      <div className="flex-1 overflow-y-auto min-h-0">
-        {tab.loading ? (
-          <div className="flex items-center justify-center py-8">
-            <i className="fas fa-spinner fa-spin text-lg text-gray-200" />
-          </div>
-        ) : tab.logs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-gray-300 gap-1.5">
-            <i className="fas fa-inbox text-xl" />
-            <p className="text-xs text-gray-400">ไม่มีข้อมูล</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-50/80">
-            {tab.logs.map(log => children(log))}
-          </div>
-        )}
-      </div>
-
-      {/* Mini Pagination */}
-      {totalPages > 1 && (
-        <div className="px-3 py-2 border-t border-gray-100 bg-gray-50/60 flex items-center justify-between flex-shrink-0">
-          <p className="text-[10px] text-gray-400">
-            หน้า <span className="font-bold text-gray-600">{tab.page}</span> / {totalPages}
-          </p>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => { if (tab.page > 1) onPageChange(tab.page - 1); }}
-              disabled={tab.page === 1 || tab.loading}
-              className="w-5 h-5 flex items-center justify-center rounded border border-gray-200 text-gray-500 disabled:opacity-30 hover:bg-gray-100 disabled:cursor-not-allowed transition-colors text-[9px]"
-            >
-              <i className="fas fa-chevron-left" />
-            </button>
-            <button
-              onClick={() => { if (tab.page < totalPages) onPageChange(tab.page + 1); }}
-              disabled={tab.page === totalPages || tab.loading}
-              className="w-5 h-5 flex items-center justify-center rounded border border-gray-200 text-gray-500 disabled:opacity-30 hover:bg-gray-100 disabled:cursor-not-allowed transition-colors text-[9px]"
-            >
-              <i className="fas fa-chevron-right" />
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  daily_spent: number;
+  daily_purchase_count: number;
+  monthly_spent: number;
+  purchase_count: number;
+  daily_redeem_count: number;
+  net_balance_rate: number;
 }
 
 // ─── Page ────────────────────────────────────────────────────────────────────
@@ -130,22 +38,15 @@ export default function AdminUserDetail() {
   const { id } = useParams() as { id: string };
   const router = useRouter();
 
+  const { alert: adminAlert } = useAdminAlert();
   const [user, setUser]       = useState<UserDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState('');
-
-  const [topup,    setTopup]    = useState<TabState>(initTab());
-  const [purchase, setPurchase] = useState<TabState>(initTab());
-  const [redeem,   setRedeem]   = useState<TabState>(initTab());
-
-  const [viewingRcon, setViewingRcon] = useState<string | null>(null);
 
   // Edit states
   const [editRole,        setEditRole]        = useState('');
   const [editEmail,       setEditEmail]       = useState('');
   const [editBalance,     setEditBalance]     = useState('');
   const [savingSettings,  setSavingSettings]  = useState(false);
-  const [saveSuccess,     setSaveSuccess]     = useState('');
 
   const loadUser = () => {
     setLoading(true);
@@ -156,43 +57,24 @@ export default function AdminUserDetail() {
         setEditEmail(d.user.email || '');
         setEditBalance(String(d.user.wallet_balance || 0));
       })
-      .catch((err: any) => setError(err.message || 'ไม่สามารถโหลดข้อมูลผู้ใช้ได้'))
+      .catch((err: any) => adminAlert({ title: 'โหลดข้อมูลไม่สำเร็จ', message: err.message, type: 'error' }))
       .finally(() => setLoading(false));
   };
 
-  const loadHistory = (
-    type: 'topup' | 'purchase' | 'redeem',
-    page: number,
-    setter: React.Dispatch<React.SetStateAction<TabState>>,
-  ) => {
-    setter(prev => ({ ...prev, loading: true }));
-    api(`/admin/users/${id}/history?type=${type}&page=${page}&limit=${PREVIEW_LIMIT}`, { token: getToken()! })
-      .then((d: any) => {
-        setter({ logs: d.logs || [], total: d.pagination?.total || 0, page, loading: false });
-      })
-      .catch(() => setter(prev => ({ ...prev, loading: false })));
-  };
-
-  useEffect(() => {
-    loadUser();
-    loadHistory('topup',    1, setTopup);
-    loadHistory('purchase', 1, setPurchase);
-    loadHistory('redeem',   1, setRedeem);
-  }, [id]);
+  useEffect(() => { loadUser(); }, [id]);
 
   const handleSaveSettings = async () => {
     if (!user) return;
-    setSavingSettings(true); setSaveSuccess(''); setError('');
+    setSavingSettings(true);
     try {
       const payload: any = { role: editRole };
       if (editEmail !== (user.email || '')) payload.email = editEmail;
       if (Number(editBalance) !== user.wallet_balance) payload.balance = Number(editBalance);
       await api(`/admin/users/${id}`, { method: 'PUT', token: getToken()!, body: payload });
-      setSaveSuccess('บันทึกข้อมูลสำเร็จ');
+      adminAlert({ title: 'บันทึกข้อมูลสำเร็จ', message: 'ข้อมูลบัญชีถูกอัปเดตแล้ว', type: 'success' });
       loadUser();
-      setTimeout(() => setSaveSuccess(''), 3000);
     } catch (err: any) {
-      setError(err?.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      adminAlert({ title: 'บันทึกไม่สำเร็จ', message: err?.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', type: 'error' });
     } finally {
       setSavingSettings(false);
     }
@@ -234,22 +116,6 @@ export default function AdminUserDetail() {
         </Link>
       </div>
 
-      {/* ── Banners ── */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2.5 rounded-xl flex items-center gap-2 flex-shrink-0">
-          <i className="fas fa-exclamation-circle flex-shrink-0 text-sm" />
-          <span className="flex-1 text-xs">{error}</span>
-          <button onClick={() => setError('')} className="text-red-400 hover:text-red-600 transition-colors"><i className="fas fa-times text-xs" /></button>
-        </div>
-      )}
-      {saveSuccess && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-2.5 rounded-xl flex items-center gap-2 flex-shrink-0">
-          <i className="fas fa-check-circle flex-shrink-0 text-sm" />
-          <span className="flex-1 text-xs">{saveSuccess}</span>
-          <button onClick={() => setSaveSuccess('')} className="text-green-400 hover:text-green-600 transition-colors"><i className="fas fa-times text-xs" /></button>
-        </div>
-      )}
-
       {/* ── Top: User Card + Edit ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-shrink-0">
 
@@ -287,15 +153,15 @@ export default function AdminUserDetail() {
             {/* Stats 2×2 */}
             <div className="grid grid-cols-2 gap-2 mb-2">
               {[
-                { label: 'ยอดเงินคงเหลือ', value: fmtMoney(user.wallet_balance), unit: '฿', valClass: 'text-[#f97316]', bg: 'bg-orange-50', icon: 'fa-wallet', ic: 'text-orange-400' },
-                { label: 'เติมเงินสุทธิ',   value: fmtMoney(user.total_topup),    unit: '฿', valClass: 'text-blue-600',    bg: 'bg-blue-50',   icon: 'fa-arrow-up-right-dots', ic: 'text-blue-400' },
-                { label: 'ยอดใช้จ่าย',      value: fmtMoney(user.total_spent),    unit: '฿', valClass: 'text-red-500',     bg: 'bg-red-50',    icon: 'fa-shopping-bag', ic: 'text-red-400' },
-                { label: 'ใช้โค้ดแล้ว',     value: String(user.used_codes_count || 0), unit: 'ครั้ง', valClass: 'text-green-600', bg: 'bg-green-50', icon: 'fa-gift', ic: 'text-green-500' },
+                { label: 'ยอดเงินคงเหลือ', value: fmtMoney(user.wallet_balance), unit: '฿', valClass: 'text-[#f97316]', bg: 'bg-orange-50', border: 'border-orange-200', icon: 'fa-wallet', ic: 'text-orange-500' },
+                { label: 'เติมเงินสุทธิ',   value: fmtMoney(user.total_topup),    unit: '฿', valClass: 'text-blue-600',  bg: 'bg-blue-50',   border: 'border-blue-200',   icon: 'fa-arrow-up-right-dots', ic: 'text-blue-500' },
+                { label: 'ยอดใช้จ่าย',      value: fmtMoney(user.total_spent),    unit: '฿', valClass: 'text-red-500',   bg: 'bg-red-50',    border: 'border-red-200',    icon: 'fa-shopping-bag', ic: 'text-red-500' },
+                { label: 'ใช้โค้ดแล้ว',     value: String(user.used_codes_count || 0), unit: 'ครั้ง', valClass: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200', icon: 'fa-gift', ic: 'text-green-600' },
               ].map(s => (
-                <div key={s.label} className={`${s.bg} rounded-xl p-2.5`}>
+                <div key={s.label} className={`${s.bg} ${s.border} border rounded-xl p-2.5`}>
                   <div className="flex items-center gap-1 mb-1">
-                    <i className={`fas ${s.icon} ${s.ic} text-[9px]`} />
-                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wide truncate">{s.label}</p>
+                    <i className={`fas ${s.icon} ${s.ic} text-[10px]`} />
+                    <p className="text-[10px] font-extrabold text-gray-700 truncate">{s.label}</p>
                   </div>
                   <p className={`text-[15px] font-black tabular-nums leading-tight ${s.valClass}`}>
                     {s.value} <span className="text-[10px] font-medium">{s.unit}</span>
@@ -305,14 +171,14 @@ export default function AdminUserDetail() {
             </div>
 
             {/* Footer: monthly + ID */}
-            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
-              <div className="bg-gray-50 rounded-xl p-2.5 text-center">
-                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Monthly Topup</p>
-                <p className="text-sm font-black text-gray-700 tabular-nums">{fmtMoney(user.monthly_topup)} ฿</p>
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-200">
+              <div className="bg-gray-100 border border-gray-300 rounded-xl p-2.5 text-center">
+                <p className="text-[10px] font-extrabold text-gray-700 uppercase tracking-wide">Monthly Topup</p>
+                <p className="text-sm font-black text-gray-800 tabular-nums">{fmtMoney(user.monthly_topup)} ฿</p>
               </div>
-              <div className="bg-gray-50 rounded-xl p-2.5 text-center">
-                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">User ID</p>
-                <p className="text-sm font-black text-gray-700 font-mono">#{user.id}</p>
+              <div className="bg-gray-100 border border-gray-300 rounded-xl p-2.5 text-center">
+                <p className="text-[10px] font-extrabold text-gray-700 uppercase tracking-wide">User ID</p>
+                <p className="text-sm font-black text-gray-800 font-mono">#{user.id}</p>
               </div>
             </div>
           </div>
@@ -396,114 +262,90 @@ export default function AdminUserDetail() {
         </div>
       </div>
 
-      {/* ── Bottom: History cards (3 columns) ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 min-h-0">
+      {/* ── Today Summary ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-shrink-0">
 
-        {/* ── ประวัติเติมเงิน ── */}
-        <HistoryMiniCard
-          title="ประวัติเติมเงิน"
-          icon="fa-wallet"
-          iconBg="bg-blue-50"
-          iconColor="text-blue-500"
-          tab={topup}
-          totalLink={`/admin/users/${id}/history?tab=topup`}
-          onPageChange={p => loadHistory('topup', p, setTopup)}
-        >
-          {log => {
-            const { date, time } = fmtDate(log.created_at);
-            return (
-              <div key={log.id} className="flex items-center gap-2.5 px-3.5 py-2 hover:bg-blue-50/40 transition-colors">
-                <div className="w-6 h-6 rounded-md bg-blue-100 flex items-center justify-center flex-shrink-0">
-                  <i className="fas fa-plus text-blue-500 text-[8px]" />
+        {/* เติมเงินวันนี้ */}
+        <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
+          <div className="h-1 w-full bg-blue-500" />
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <i className="fas fa-arrow-down text-blue-500 text-xs" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-semibold text-gray-700 truncate">{log.description || 'เติมเงิน'}</p>
-                  <p className="text-[9px] text-gray-400">{date} · {time} น.</p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-[12px] font-black text-blue-600 tabular-nums">+{fmtMoney(log.amount)}</p>
-                  {log.balance_after !== undefined && (
-                    <p className="text-[9px] text-gray-400">คงเหลือ {fmtMoney(log.balance_after)}</p>
-                  )}
+                <div>
+                  <p className="text-xs font-black text-gray-800">เติมเงินวันนี้</p>
+                  <p className="text-[10px] text-gray-400">{user.topup_count} ครั้งรวมทั้งหมด</p>
                 </div>
               </div>
-            );
-          }}
-        </HistoryMiniCard>
+              <Link
+                href={`/admin/users/${id}/history?tab=topup`}
+                className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold rounded-lg bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition-colors"
+              >
+                ดูประวัติ <i className="fas fa-arrow-right text-[8px]" />
+              </Link>
+            </div>
+            <p className="text-3xl font-black tabular-nums text-blue-600 leading-none">{fmtMoney(user.daily_topup)}</p>
+            <p className="text-[10px] text-gray-400 mt-1">฿ · รวมทั้งหมด {fmtMoney(user.total_topup)} ฿</p>
+          </div>
+        </div>
 
-        {/* ── ประวัติทำรายการ ── */}
-        <HistoryMiniCard
-          title="ประวัติทำรายการ"
-          icon="fa-shopping-cart"
-          iconBg="bg-orange-50"
-          iconColor="text-orange-500"
-          tab={purchase}
-          totalLink={`/admin/users/${id}/history?tab=purchase`}
-          onPageChange={p => loadHistory('purchase', p, setPurchase)}
-        >
-          {log => {
-            const { date, time } = fmtDate(log.created_at);
-            return (
-              <div key={log.id} className="flex items-center gap-2.5 px-3.5 py-2 hover:bg-orange-50/40 transition-colors">
-                <div className="w-6 h-6 rounded-md bg-orange-100 flex items-center justify-center flex-shrink-0">
-                  <i className="fas fa-receipt text-orange-500 text-[8px]" />
+        {/* ซื้อของวันนี้ */}
+        <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
+          <div className="h-1 w-full bg-orange-500" />
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
+                  <i className="fas fa-shopping-cart text-orange-500 text-xs" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-semibold text-gray-700 truncate">{log.description || 'ซื้อสินค้า'}</p>
-                  <p className="text-[9px] text-gray-400">{date} · {time} น.</p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-[12px] font-black text-orange-600 tabular-nums">-{fmtMoney(log.amount)}</p>
+                <div>
+                  <p className="text-xs font-black text-gray-800">ซื้อของวันนี้</p>
+                  <p className="text-[10px] text-gray-400">{user.daily_purchase_count} รายการวันนี้</p>
                 </div>
               </div>
-            );
-          }}
-        </HistoryMiniCard>
+              <Link
+                href={`/admin/users/${id}/history?tab=purchase`}
+                className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold rounded-lg bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 transition-colors"
+              >
+                ดูประวัติ <i className="fas fa-arrow-right text-[8px]" />
+              </Link>
+            </div>
+            <p className="text-3xl font-black tabular-nums text-orange-600 leading-none">{fmtMoney(user.daily_spent)}</p>
+            <p className="text-[10px] text-gray-400 mt-1">฿ · รวมทั้งหมด {fmtMoney(user.total_spent)} ฿</p>
+          </div>
+        </div>
 
-        {/* ── ประวัติใช้โค้ด ── */}
-        <HistoryMiniCard
-          title="ประวัติใช้โค้ด"
-          icon="fa-gift"
-          iconBg="bg-green-50"
-          iconColor="text-green-600"
-          tab={redeem}
-          totalLink={`/admin/users/${id}/history?tab=redeem`}
-          onPageChange={p => loadHistory('redeem', p, setRedeem)}
-        >
-          {log => {
-            const { date, time } = fmtDate(log.created_at);
-            return (
-              <div key={log.id} className="flex items-center gap-2.5 px-3.5 py-2 hover:bg-green-50/40 transition-colors">
-                <div className="w-6 h-6 rounded-md bg-green-100 flex items-center justify-center flex-shrink-0">
-                  <i className="fas fa-ticket text-green-600 text-[8px]" />
+        {/* ใช้โค้ดวันนี้ */}
+        <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
+          <div className="h-1 w-full bg-green-500" />
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
+                  <i className="fas fa-gift text-green-500 text-xs" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-bold text-gray-700 truncate font-mono">{log.reference_id || log.description || 'โค้ด'}</p>
-                  <p className="text-[9px] text-gray-400">{date} · {time} น.</p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  {log.reward_type === 'point' && log.point_amount !== undefined ? (
-                    <p className="text-[12px] font-black text-green-600 tabular-nums">+{fmtMoney(log.point_amount)}</p>
-                  ) : (
-                    <button
-                      onClick={() => setViewingRcon(log.command || '')}
-                      className="text-[9px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-600 font-bold hover:bg-purple-200 active:scale-95 transition-all cursor-pointer"
-                    >
-                      RCON
-                    </button>
-                  )}
+                <div>
+                  <p className="text-xs font-black text-gray-800">ใช้โค้ดวันนี้</p>
+                  <p className="text-[10px] text-gray-400">{user.used_codes_count} ครั้งรวมทั้งหมด</p>
                 </div>
               </div>
-            );
-          }}
-        </HistoryMiniCard>
+              <Link
+                href={`/admin/users/${id}/history?tab=redeem`}
+                className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold rounded-lg bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 transition-colors"
+              >
+                ดูประวัติ <i className="fas fa-arrow-right text-[8px]" />
+              </Link>
+            </div>
+            <p className="text-3xl font-black tabular-nums text-green-600 leading-none">{user.daily_redeem_count}</p>
+            <p className="text-[10px] text-gray-400 mt-1">ครั้ง · รวมทั้งหมด {user.used_codes_count} ครั้ง</p>
+          </div>
+        </div>
 
       </div>
 
-      {/* ── RCON Command Modal ── */}
-      {viewingRcon !== null && (
-        <RconModal command={viewingRcon} onClose={() => setViewingRcon(null)} />
-      )}
+
     </div>
   );
 }

@@ -103,7 +103,7 @@ export default function Navbar() {
             {/* Desktop Nav Links */}
             <nav className="hidden md:flex items-center w-full justify-center">
               <NavLink href="/" icon="fa-home" label="Home" subLabel="หน้าแรก" pathname={pathname} />
-              <NavLink href="/shop" icon="fa-shopping-cart" label="Itemshop" subLabel="ร้านค้าไอเทม" pathname={pathname} />
+              <NavLink href="/shop" icon="fa-shopping-cart" label="Itemshop" subLabel="ร้านค้าไอเท็ม" pathname={pathname} />
               <NavLink href="/lootbox" icon="fa-box-open" label="Gacha" subLabel="กล่องสุ่ม" pathname={pathname} />
               <NavLink href="/topup" icon="fa-coins" label="Topup" subLabel="เติมเงิน" pathname={pathname} />
               <NavLink href="/download" icon="fa-download" label="Download" subLabel="ดาวน์โหลด" pathname={pathname} />
@@ -130,7 +130,7 @@ export default function Navbar() {
               <MobileLink href="/lootbox" icon="fa-box-open" pathname={pathname}>กล่องสุ่ม</MobileLink>
               <MobileLink href="/topup" icon="fa-coins" pathname={pathname}>เติมเงิน</MobileLink>
               <MobileLink href="/download" icon="fa-download" pathname={pathname}>ดาวน์โหลด</MobileLink>
-              {user && <MobileLink href="/inventory" icon="fa-box" pathname={pathname}>คลังไอเทม</MobileLink>}
+              {user && <MobileLink href="/inventory" icon="fa-box" pathname={pathname}>คลังไอเท็ม</MobileLink>}
               {user && <MobileLink href="/profile" icon="fa-user" pathname={pathname}>โปรไฟล์</MobileLink>}
             </div>
           )}

@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { api, getToken } from '@/lib/api';
+import { useAdminAlert } from '@/components/AdminAlert';
 import Link from 'next/link';
 
 interface User {
@@ -12,6 +13,7 @@ interface User {
 }
 
 export default function AdminUsers() {
+  const { confirm: adminConfirm } = useAdminAlert();
   const [users, setUsers]       = useState<User[]>([]);
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState('');
@@ -41,7 +43,7 @@ export default function AdminUsers() {
   };
 
   const handleRoleChange = async (userId: number, role: string) => {
-    if (!confirm(`เปลี่ยน role เป็น ${role}?`)) return;
+    if (!await adminConfirm({ title: 'เปลี่ยน Role', message: `ต้องการเปลี่ยน role เป็น ${role}?`, type: 'warning', confirmLabel: 'ยืนยัน' })) return;
     try {
       setError('');
       await api(`/admin/users/${userId}/role`, { method: 'PUT', token: getToken()!, body: { role } });

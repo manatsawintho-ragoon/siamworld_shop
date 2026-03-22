@@ -11,7 +11,18 @@
       "Bash(curl:*)",
       "Bash(tldr dead:*)",
       "Bash(npx --yes ts-prune --project backend/tsconfig.json)",
-      "Bash(node_modules/.bin/tsc --noEmit)"
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(for f:*)",
+      "Bash(do)",
+      "Bash(sed -i 's/ไอเทม/ไอเท็ม/g' \"$f\")",
+      "Bash(echo \"done: $f\")",
+      "Bash(done)",
+      "Bash(head:*)",
+      "Bash(docker-compose logs:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker-compose restart:*)",
+      "Bash(npm run:*)",
+      "Bash(grep -E \"\\\\.env$|\\\\.env\\\\.\")"
     ]
   }
 }

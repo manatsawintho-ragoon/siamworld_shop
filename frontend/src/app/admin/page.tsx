@@ -454,7 +454,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[12px] font-bold text-gray-800 truncate">{p.name}</p>
-                  <p className="text-[10px] text-gray-500">หมวดหมู่: ไอเทม</p>
+                  <p className="text-[10px] text-gray-500">หมวดหมู่: ไอเท็ม</p>
                 </div>
                 <div className="text-right flex-shrink-0">
                   <p className="text-[11px] font-black text-gray-800">{p.purchase_count} <span className="text-[10px] font-normal text-gray-500">ชิ้น</span></p>
@@ -491,7 +491,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[12px] font-bold text-gray-800 truncate">{lb.name}</p>
-                  <p className="text-[10px] text-gray-500">หมวดหมู่: ไอเทม</p>
+                  <p className="text-[10px] text-gray-500">หมวดหมู่: ไอเท็ม</p>
                 </div>
                 <div className="text-right flex-shrink-0">
                   <p className="text-[11px] font-black text-gray-800">{lb.open_count} <span className="text-[10px] font-normal text-gray-500">ครั้ง</span></p>
