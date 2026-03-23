@@ -132,9 +132,6 @@ export default function SidebarLogin() {
           <button type="submit" disabled={isLoading} className="btn-primary w-full justify-center py-3 text-xs tracking-wider uppercase shadow-lg">
             {isLoading ? <i className="fas fa-spinner fa-spin"></i> : <><i className="fas fa-user-plus mr-1"></i> สมัครสมาชิก</>}
           </button>
-          <p className="text-[10px] text-foreground-subtle">
-            การสมัครจะสร้าง Authme account ในเซิร์ฟเวอร์ Minecraft ด้วย
-          </p>
         </form>
       )}
     </div>

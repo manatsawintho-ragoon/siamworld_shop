@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { api, getToken } from '@/lib/api';
@@ -61,52 +61,69 @@ export default function ProductCard({ product, servers }: { product: Product; se
   return (
     <>
       {/* Card */}
-      <article className="group relative flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-primary/40 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_0_20px_rgba(34,197,94,0.15)]">
+      <article className="group relative flex flex-col bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-amber-300 transition-all duration-200 hover:shadow-md">
+
         {/* Image area */}
-        <div className="relative aspect-square bg-gray-50 flex items-center justify-center p-4 overflow-hidden">
+        <div className="relative aspect-[3/4] bg-gray-100 overflow-hidden">
+
+          {/* Category badge — top left (on image) */}
+          {product.category_name && (
+            <span className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-white/90 backdrop-blur-sm text-gray-700 text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm border border-gray-200/80">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
+              {product.category_name}
+            </span>
+          )}
+
+          {/* Discount badge — top right (on image) */}
+          {discount > 0 && (
+            <span className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-red-500 text-white text-[11px] font-black px-2 py-0.5 rounded-md shadow-lg">
+              <i className="fas fa-tag text-[9px]" />
+              -{discount}%
+            </span>
+          )}
+
+          {/* Image */}
           {imgSrc ? (
             <img
               src={imgSrc}
               alt={product.name}
-              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
           ) : (
-            <i className="fas fa-cube text-4xl text-primary/20 group-hover:text-primary/40 transition-colors" aria-hidden="true"></i>
+            <div className="w-full h-full flex items-center justify-center bg-amber-50">
+              <i className="fas fa-cube text-5xl text-amber-200 group-hover:text-amber-300 transition-colors" aria-hidden="true" />
+            </div>
           )}
-          {discount > 0 && (
-            <span className="absolute top-2 left-2 bg-error text-white text-[10px] font-black px-2 py-0.5 rounded shadow-lg">
-              -{discount}%
-            </span>
-          )}
-        </div>
 
-        {/* Info */}
-        <div className="p-3 flex flex-col gap-1.5 flex-1">
-          <p className="text-gray-900 font-bold text-sm leading-tight line-clamp-2">{product.name}</p>
-          <div className="flex items-center gap-2 flex-wrap">
-            {discount > 0 && product.original_price && (
-              <span className="text-foreground-subtle text-[10px] line-through">
+          {/* Bottom price overlay */}
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent px-3 py-5 flex items-end justify-between gap-2">
+            {discount > 0 && product.original_price ? (
+              <span className="text-white/75 text-xs font-medium line-through tabular-nums leading-none drop-shadow">
                 {product.original_price.toLocaleString()} ฿
               </span>
-            )}
-            <span className="text-warning font-black text-sm">
+            ) : <span />}
+            <span className="bg-amber-500 text-white text-sm font-black px-3 py-1.5 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.3)] tabular-nums leading-none flex-shrink-0">
               {product.price.toLocaleString()} ฿
             </span>
           </div>
-          <div className="flex gap-1.5 mt-auto pt-1">
-            <button
-              onClick={() => setShowDetail(true)}
-              className="flex-1 py-2.5 px-2 text-xs font-bold rounded-lg border border-gray-200 bg-gray-50 hover:bg-green-50 text-gray-600 hover:text-primary transition-colors min-h-[44px]"
-            >
-              <i className="fas fa-info-circle mr-1"></i>รายละเอียด
-            </button>
-            <button
-              onClick={() => setShowBuy(true)}
-              className="flex-[2] py-2.5 px-2 text-xs font-bold rounded-lg bg-primary hover:bg-primary/80 text-white transition-colors shadow-[0_0_10px_rgba(34,197,94,0.3)] min-h-[44px]"
-            >
-              <i className="fas fa-shopping-cart mr-1"></i>ซื้อเลย
-            </button>
-          </div>
+        </div>
+
+        {/* Info below image — flex-1 so button always pins to bottom */}
+        <div className="p-3 flex flex-col flex-1">
+          <p className="text-gray-900 font-bold text-sm leading-tight line-clamp-1">{product.name}</p>
+
+          {product.description && (
+            <p className="text-gray-400 text-[10px] leading-snug line-clamp-1 mt-1.5 mb-1">
+              {product.description}
+            </p>
+          )}
+
+          <button
+            onClick={() => setShowBuy(true)}
+            className="w-full mt-auto pt-3 pb-2.5 text-xs font-bold rounded-lg bg-amber-500 hover:bg-amber-400 text-white transition-all flex items-center justify-center gap-1.5 min-h-[40px] shadow-[0_3px_0_#b45309] hover:shadow-[0_1px_0_#b45309] hover:translate-y-[2px] active:shadow-none active:translate-y-[3px]"
+          >
+            <i className="fas fa-shopping-cart text-[11px]" /> ซื้อเลย!
+          </button>
         </div>
       </article>
 
@@ -122,41 +139,66 @@ export default function ProductCard({ product, servers }: { product: Product; se
               className="modal-content max-w-sm"
               onClick={e => e.stopPropagation()}
             >
-              <div className="p-5">
-                <div className="flex items-start justify-between mb-4">
-                  <h3 className="font-black text-gray-900 text-base leading-tight flex-1 pr-3">{product.name}</h3>
-                  <button onClick={() => setShowDetail(false)} className="w-7 h-7 rounded-md bg-gray-100 hover:bg-red-50 text-gray-500 hover:text-red-500 flex items-center justify-center transition-colors text-xs">
-                    <i className="fas fa-times"></i>
-                  </button>
+              {/* Image header */}
+              {imgSrc && (
+                <div className="relative h-48 bg-gray-100 overflow-hidden rounded-t-xl">
+                  <img src={imgSrc} alt={product.name} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  {discount > 0 && (
+                    <span className="absolute top-3 left-3 bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-lg">
+                      -{discount}%
+                    </span>
+                  )}
+                  <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
+                    <h3 className="font-black text-white text-base leading-tight flex-1 pr-3 drop-shadow">{product.name}</h3>
+                    <button onClick={() => setShowDetail(false)} className="w-7 h-7 rounded-full bg-white/20 hover:bg-red-500/80 text-white flex items-center justify-center transition-colors text-xs flex-shrink-0">
+                      <i className="fas fa-times" />
+                    </button>
+                  </div>
                 </div>
-                {imgSrc && (
-                  <div className="w-24 h-24 mx-auto mb-4 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-200">
-                    <img src={imgSrc} alt={product.name} className="w-20 h-20 object-contain" />
+              )}
+
+              <div className="p-4">
+                {!imgSrc && (
+                  <div className="flex items-start justify-between mb-4">
+                    <h3 className="font-black text-gray-900 text-base leading-tight flex-1 pr-3">{product.name}</h3>
+                    <button onClick={() => setShowDetail(false)} className="w-7 h-7 rounded-md bg-gray-100 hover:bg-red-50 text-gray-500 hover:text-red-500 flex items-center justify-center transition-colors text-xs">
+                      <i className="fas fa-times" />
+                    </button>
                   </div>
                 )}
-                {product.description && (
-                  <p className="text-foreground-muted text-xs leading-relaxed mb-4">{product.description}</p>
-                )}
+
                 {product.category_name && (
-                  <div className="text-[10px] text-foreground-subtle mb-3">
-                    <i className="fas fa-tag mr-1"></i>หมวดหมู่: <span className="text-foreground-muted">{product.category_name}</span>
+                  <div className="flex items-center gap-1.5 text-gray-500 text-[11px] mb-3">
+                    <i className="fas fa-tag text-green-500 text-[10px]" />
+                    <span>{product.category_name}</span>
                   </div>
                 )}
-                <div className="bg-black/30 rounded-lg p-3 border border-white/5 mb-4">
+
+                {product.description && (
+                  <p className="text-gray-500 text-xs leading-relaxed mb-4">{product.description}</p>
+                )}
+
+                {/* Price block */}
+                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 mb-4">
                   {discount > 0 && product.original_price ? (
                     <div className="flex items-center gap-3">
-                      <span className="text-error text-sm font-black">-{discount}%</span>
+                      <span className="bg-red-500 text-white text-xs font-black px-2 py-0.5 rounded-md">-{discount}%</span>
                       <div>
-                        <div className="text-foreground-subtle text-xs line-through">{product.original_price.toLocaleString()} ฿</div>
-                        <div className="text-warning font-black text-lg">{product.price.toLocaleString()} ฿</div>
+                        <div className="text-gray-400 text-xs line-through tabular-nums">{product.original_price.toLocaleString()} ฿</div>
+                        <div className="text-green-600 font-black text-xl tabular-nums">{product.price.toLocaleString()} ฿</div>
                       </div>
                     </div>
                   ) : (
-                    <div className="text-warning font-black text-lg">{product.price.toLocaleString()} ฿</div>
+                    <div className="text-green-600 font-black text-xl tabular-nums">{product.price.toLocaleString()} ฿</div>
                   )}
                 </div>
-                <button onClick={() => { setShowDetail(false); setShowBuy(true); }} className="btn-primary w-full justify-center py-2.5">
-                  <i className="fas fa-shopping-cart mr-2"></i>ซื้อสินค้า
+
+                <button
+                  onClick={() => { setShowDetail(false); setShowBuy(true); }}
+                  className="w-full py-3 rounded-xl bg-green-500 hover:bg-green-600 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-[0_3px_0_#15803d] hover:shadow-[0_1px_0_#15803d] hover:translate-y-[2px] transition-all min-h-[48px]"
+                >
+                  <i className="fas fa-shopping-cart" /> ซื้อสินค้า
                 </button>
               </div>
             </motion.div>
@@ -167,77 +209,133 @@ export default function ProductCard({ product, servers }: { product: Product; se
       {/* Buy Modal */}
       <AnimatePresence>
         {showBuy && (
-          <div className="modal-overlay" onClick={() => !buying && setShowBuy(false)}>
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={() => !buying && setShowBuy(false)}
+          >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              initial={{ opacity: 0, y: -6, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -6, scale: 0.97 }}
               transition={{ duration: 0.15 }}
-              className="modal-content max-w-sm"
+              className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.18)] w-full max-w-sm overflow-hidden"
               onClick={e => e.stopPropagation()}
             >
-              <div className="p-5">
-                <div className="flex items-start justify-between mb-4">
-                  <h3 className="font-black text-white text-sm">ยืนยันการซื้อสินค้า</h3>
-                  <button onClick={() => !buying && setShowBuy(false)} className="w-7 h-7 rounded-md bg-white/5 hover:bg-error/20 text-foreground-muted hover:text-error-foreground flex items-center justify-center transition-colors text-xs">
-                    <i className="fas fa-times"></i>
-                  </button>
+              {/* Header */}
+              <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
+                  <i className="fas fa-shopping-cart text-amber-500 text-xs" />
                 </div>
-                <div className="flex items-center gap-3 bg-black/30 rounded-lg p-3 border border-white/5 mb-4">
+                <div className="flex-1">
+                  <h3 className="font-bold text-gray-900 text-sm leading-none">ยืนยันการซื้อสินค้า</h3>
+                  <p className="text-[11px] text-gray-400 mt-0.5">ตรวจสอบรายละเอียดก่อนยืนยัน</p>
+                </div>
+                <button
+                  onClick={() => !buying && setShowBuy(false)}
+                  className="w-8 h-8 rounded-lg bg-red-500 border border-red-600 flex items-center justify-center text-white shadow-[0_3px_0_#b91c1c] hover:brightness-110 transition-all active:shadow-[0_1px_0_#b91c1c] active:translate-y-[1px] flex-shrink-0"
+                >
+                  <i className="fas fa-times text-xs" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-5 space-y-4">
+
+                {/* Product block */}
+                <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
                   {imgSrc ? (
-                    <img src={imgSrc} alt={product.name} className="w-12 h-12 object-contain flex-shrink-0" />
+                    <div className="w-14 h-14 rounded-lg bg-white border border-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
+                      <img src={imgSrc} alt={product.name} className="w-12 h-12 object-contain" />
+                    </div>
                   ) : (
-                    <div className="w-12 h-12 flex-shrink-0 bg-primary/10 rounded-md flex items-center justify-center">
-                      <i className="fas fa-cube text-primary text-xl"></i>
+                    <div className="w-14 h-14 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center flex-shrink-0">
+                      <i className="fas fa-cube text-amber-300 text-xl" />
                     </div>
                   )}
-                  <div>
-                    <p className="text-white font-bold text-sm">{product.name}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-gray-900 text-sm leading-tight truncate">{product.name}</p>
+                    {product.category_name && (
+                      <p className="text-[10px] text-gray-400 mt-0.5">{product.category_name}</p>
+                    )}
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                       {discount > 0 && product.original_price && (
-                        <span className="text-foreground-subtle text-xs line-through">{product.original_price.toLocaleString()} ฿</span>
+                        <span className="text-gray-400 text-xs line-through tabular-nums">{product.original_price.toLocaleString()} ฿</span>
                       )}
-                      <span className="text-warning font-black">{product.price.toLocaleString()} ฿</span>
-                      {discount > 0 && <span className="bg-error text-white text-[9px] font-black px-1 rounded">-{discount}%</span>}
+                      <span className="text-amber-500 font-black text-base tabular-nums leading-none">{product.price.toLocaleString()} ฿</span>
+                      {discount > 0 && (
+                        <span className="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-md">-{discount}%</span>
+                      )}
                     </div>
                   </div>
                 </div>
-                {!user ? (
-                  <div className="text-xs text-error-foreground font-bold bg-error/10 border border-error/20 rounded-lg px-3 py-2 mb-4 text-center">
-                    กรุณาเข้าสู่ระบบก่อนทำรายการ
+
+                {/* Not logged in */}
+                {!user && (
+                  <div className="flex items-center gap-2 bg-red-50 border border-red-100 rounded-xl px-3 py-2.5">
+                    <i className="fas fa-lock text-red-400 text-sm flex-shrink-0" />
+                    <span className="text-xs font-bold text-red-500">กรุณาเข้าสู่ระบบก่อนทำรายการ</span>
                   </div>
-                ) : (
+                )}
+
+                {/* Server select + warning */}
+                {user && (
                   <>
                     {servers.length > 0 && (
-                      <div className="mb-3">
-                        <label className="block text-[11px] font-bold text-foreground-muted mb-1.5">เลือกเซิร์ฟเวอร์ปลายทาง</label>
-                        <select value={selectedServer} onChange={e => setSelectedServer(Number(e.target.value))} className="input text-xs py-2" disabled={buying}>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 mb-1.5">
+                          <i className="fas fa-server text-[10px] mr-1 text-gray-400" />
+                          เลือกเซิร์ฟเวอร์ปลายทาง
+                        </label>
+                        <select
+                          value={selectedServer}
+                          onChange={e => setSelectedServer(Number(e.target.value))}
+                          disabled={buying}
+                          className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 bg-white text-gray-800"
+                        >
                           {servers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                       </div>
                     )}
-                    <div className="text-[10px] text-warning bg-warning/10 border border-warning/20 rounded px-2 py-1.5 mb-4 flex items-start gap-1.5">
-                      <i className="fas fa-exclamation-triangle mt-0.5 flex-shrink-0"></i>
-                      <span>กรุณาออนไลน์ในเซิร์ฟเวอร์ก่อนกดซื้อ เพื่อรับไอเท็มทันที</span>
+                    <div className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
+                      <i className="fas fa-exclamation-triangle text-amber-400 text-sm mt-0.5 flex-shrink-0" />
+                      <span className="text-[11px] text-amber-700 font-medium">กรุณาออนไลน์ในเซิร์ฟเวอร์ก่อนกดซื้อ เพื่อรับไอเท็มทันที</span>
                     </div>
                   </>
                 )}
+
+                {/* Result message */}
                 {result && (
-                  <div className={`text-xs font-bold p-2.5 rounded-lg mb-3 border flex items-start gap-2 ${result.success ? 'bg-primary/10 text-primary border-primary/30' : 'bg-error/10 text-error-foreground border-error/30'}`}>
-                    <i className={`fas ${result.success ? 'fa-check-circle' : 'fa-exclamation-circle'} flex-shrink-0 mt-0.5`}></i>
+                  <div className={`flex items-start gap-2 rounded-xl px-3 py-2.5 border text-xs font-bold ${
+                    result.success
+                      ? 'bg-green-50 border-green-100 text-green-700'
+                      : 'bg-red-50 border-red-100 text-red-600'
+                  }`}>
+                    <i className={`fas ${result.success ? 'fa-check-circle' : 'fa-exclamation-circle'} mt-0.5 flex-shrink-0`} />
                     {result.message}
                   </div>
                 )}
-                <div className="flex gap-2">
-                  {user && !result?.success && (
-                    <button onClick={handleBuy} disabled={buying} className="btn-primary flex-1 justify-center py-2.5 text-xs">
-                      {buying ? <i className="fas fa-spinner fa-spin"></i> : <><i className="fas fa-shopping-cart mr-1"></i>ยืนยันซื้อ</>}
-                    </button>
-                  )}
-                  <button onClick={() => setShowBuy(false)} disabled={buying} className="btn-ghost flex-1 justify-center py-2.5 text-xs">
-                    ยกเลิก
+              </div>
+
+              {/* Footer */}
+              <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center gap-2">
+                <button
+                  onClick={() => !buying && setShowBuy(false)}
+                  disabled={buying}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-700 shadow-[0_3px_0_#d1d5db] hover:brightness-95 transition-all active:shadow-[0_1px_0_#d1d5db] active:translate-y-[1px] disabled:opacity-50"
+                >
+                  <i className="fas fa-times text-[11px]" /> ยกเลิก
+                </button>
+                {user && !result?.success && (
+                  <button
+                    onClick={handleBuy}
+                    disabled={buying}
+                    className="flex-[2] flex items-center justify-center gap-2 px-5 py-2.5 bg-[#16a34a] text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#0d6b2e] hover:brightness-110 transition-all active:shadow-[0_2px_0_#0d6b2e] active:translate-y-[2px] disabled:opacity-50"
+                  >
+                    {buying
+                      ? <><i className="fas fa-spinner fa-spin text-[12px]" /> กำลังซื้อ...</>
+                      : <><i className="fas fa-shopping-cart text-[12px]" /> ยืนยันซื้อ</>}
                   </button>
-                </div>
+                )}
               </div>
             </motion.div>
           </div>

@@ -21,6 +21,7 @@ import {
   createDownloadSchema, updateDownloadSchema,
   createRedeemCodeSchema, updateRedeemCodeSchema,
   createLootBoxCategorySchema, updateLootBoxCategorySchema,
+  releaseSchema,
 } from '../validators/schemas';
 
 const router = Router();
@@ -310,6 +311,25 @@ router.put('/products/:id', validate(updateProductSchema), async (req: Request, 
     const id = parseInt(req.params.id);
     const product = await shopService.updateProduct(id, req.body);
     auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_product_update', description: `แก้ไขสินค้า: ${product.name}`, refId: String(id), meta: { price: product.price } });
+    res.json({ success: true, product });
+  } catch (err) { next(err); }
+});
+
+router.post('/products/:id/release', validate(releaseSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { duration_minutes, stock_limit } = req.body;
+    const product = await shopService.releaseProduct(id, duration_minutes, stock_limit);
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_product_release', description: `ปล่อยขายสินค้า: ${product.name} (${duration_minutes} นาที)`, refId: String(id) });
+    res.json({ success: true, product });
+  } catch (err) { next(err); }
+});
+
+router.post('/products/:id/stop', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const product = await shopService.stopProduct(id);
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_product_stop', description: `หยุดขายสินค้า: ${product.name}`, refId: String(id) });
     res.json({ success: true, product });
   } catch (err) { next(err); }
 });
@@ -720,6 +740,43 @@ router.put('/lootboxes/:id', validate(updateLootBoxSchema), async (req: Request,
     const id = parseInt(req.params.id);
     const box = await lootBoxService.updateLootBox(id, req.body);
     auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_lootbox_update', description: `แก้ไขกล่อง: ${box.name}`, refId: String(id), meta: { price: box.price } });
+    res.json({ success: true, box });
+  } catch (err) { next(err); }
+});
+
+router.post('/lootboxes/:id/release', validate(releaseSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { duration_minutes, stock_limit } = req.body;
+    const box = await lootBoxService.releaseLootBox(id, duration_minutes, stock_limit);
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_lootbox_release', description: `ปล่อยขายกล่อง: ${box.name} (${duration_minutes} นาที)`, refId: String(id) });
+    res.json({ success: true, box });
+  } catch (err) { next(err); }
+});
+
+router.post('/lootboxes/:id/stop', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const box = await lootBoxService.stopLootBox(id);
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_lootbox_stop', description: `หยุดขายกล่อง: ${box.name}`, refId: String(id) });
+    res.json({ success: true, box });
+  } catch (err) { next(err); }
+});
+
+router.post('/lootboxes/:id/pause', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const box = await lootBoxService.pauseLootBox(id);
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_lootbox_pause', description: `หยุดจำหน่ายชั่วคราว: ${box.name}`, refId: String(id) });
+    res.json({ success: true, box });
+  } catch (err) { next(err); }
+});
+
+router.post('/lootboxes/:id/resume', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const box = await lootBoxService.resumeLootBox(id);
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_lootbox_resume', description: `เริ่มจำหน่ายต่อ: ${box.name}`, refId: String(id) });
     res.json({ success: true, box });
   } catch (err) { next(err); }
 });

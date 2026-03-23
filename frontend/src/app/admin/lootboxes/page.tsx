@@ -24,10 +24,17 @@ interface LootBox {
   description?: string;
   image?: string;
   price: number;
+  original_price?: number | null;
   active: boolean;
   sort_order: number;
   category_id?: number | null;
   items: LootBoxItem[];
+  stock_limit?: number | null;
+  sale_start?: string | null;
+  sale_end?: string | null;
+  sold_count?: number;
+  is_paused?: boolean;
+  sale_remaining_seconds?: number | null;
 }
 
 interface LootBoxCategory {
@@ -61,7 +68,7 @@ const RARITY_WEIGHTS: Record<string, { default: number; hint: string }> = {
 };
 
 const TOKEN     = () => getToken()!;
-const emptyBox  = (): Partial<LootBox>     => ({ name: '', description: '', image: '', price: 0, active: true, category_id: null });
+const emptyBox  = (): Partial<LootBox>     => ({ name: '', description: '', image: '', price: 0, active: true, category_id: null, stock_limit: null, sale_start: null, sale_end: null });
 const emptyItem = (id: number): Partial<LootBoxItem> => ({
   loot_box_id: id, name: '', description: '', image: '', command: '',
   weight: RARITY_WEIGHTS.common.default, rarity: 'common', color: '',
@@ -255,6 +262,40 @@ function ItemList({ items, totalWeight, onEdit, onDelete, onViewCmd }: {
   );
 }
 
+// ─── Countdown Badge ─────────────────────────────────────────────────────────
+
+function CountdownBadge({ endTime }: { endTime: string }) {
+  const [display, setDisplay] = useState('');
+
+  useEffect(() => {
+    const calc = () => {
+      const diff = new Date(endTime).getTime() - Date.now();
+      if (diff <= 0) { setDisplay('หมดเวลา'); return; }
+      const totalSec = Math.floor(diff / 1000);
+      const days  = Math.floor(totalSec / 86400);
+      const hours = Math.floor((totalSec % 86400) / 3600);
+      const mins  = Math.floor((totalSec % 3600) / 60);
+      const secs  = totalSec % 60;
+      if (days > 0) {
+        setDisplay(`${days}d ${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`);
+      } else {
+        setDisplay(`${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`);
+      }
+    };
+    calc();
+    const t = setInterval(calc, 1000);
+    return () => clearInterval(t);
+  }, [endTime]);
+
+  const isExpired = new Date(endTime).getTime() < Date.now();
+  return (
+    <span className={`inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-md ${isExpired ? 'bg-red-500 text-white' : 'bg-amber-500 text-white'}`}>
+      <i className={`fas ${isExpired ? 'fa-clock' : 'fa-hourglass-half'} text-[7px]`} />
+      {display}
+    </span>
+  );
+}
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function AdminLootBoxes() {
@@ -298,6 +339,10 @@ export default function AdminLootBoxes() {
           const updated = all.find(b => b.id === activeBox.id);
           if (updated) setActiveBox(updated);
         }
+        if (boxModal?.id) {
+          const updated = all.find(b => b.id === boxModal.id);
+          if (updated) setBoxModal(updated);
+        }
       })
       .finally(() => setLoading(false));
   };
@@ -307,13 +352,16 @@ export default function AdminLootBoxes() {
     if (!boxModal) return;
     setBoxSaving(true); setBoxError('');
     try {
+      const origPrice = boxModal.original_price ? Number(boxModal.original_price) : null;
       const body = {
         name: boxModal.name,
         description: boxModal.description || null,
         image: boxModal.image || null,
         price: Number(boxModal.price),
+        original_price: origPrice && origPrice > Number(boxModal.price) ? origPrice : null,
         active: boxModal.active !== false,
         category_id: boxModal.category_id ?? null,
+        stock_limit: boxModal.stock_limit ?? null,
       };
       if (boxModal.id) await api(`/admin/lootboxes/${boxModal.id}`, { method: 'PUT', token: TOKEN(), body });
       else             await api('/admin/lootboxes', { method: 'POST', token: TOKEN(), body });
@@ -373,8 +421,12 @@ export default function AdminLootBoxes() {
     if (itemSearch.trim()) { const q = itemSearch.toLowerCase(); items = items.filter(i => i.name.toLowerCase().includes(q) || i.description?.toLowerCase().includes(q)); }
     if (rarityFilter !== 'all') items = items.filter(i => i.rarity === rarityFilter);
     if (sortKey === 'name')        items.sort((a, b) => a.name.localeCompare(b.name, 'th'));
-    else if (sortKey === 'weight') items.sort((a, b) => b.weight - a.weight);
-    else items.sort((a, b) => RARITY_ORDER.indexOf(a.rarity as any) - RARITY_ORDER.indexOf(b.rarity as any));
+    else if (sortKey === 'weight') items.sort((a, b) => a.weight - b.weight);
+    else items.sort((a, b) => {
+      const rd = RARITY_ORDER.indexOf(a.rarity as any) - RARITY_ORDER.indexOf(b.rarity as any);
+      if (rd !== 0) return rd;
+      return a.weight - b.weight; // within same tier: lower weight (rarer chance) appears first
+    });
     return items;
   }, [activeBox, itemSearch, rarityFilter, sortKey]);
 
@@ -458,7 +510,7 @@ export default function AdminLootBoxes() {
           <div className="px-4 py-3.5 border-b border-gray-100 bg-gray-50/60 flex-shrink-0">
             <div className="flex items-center gap-2 mb-3">
               <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
-                <i className="fas fa-boxes-stacked text-orange-500 text-xs" />
+                <i className="fas fa-layer-group text-orange-500 text-xs" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-gray-900 text-sm">กล่องสุ่ม</p>
@@ -549,13 +601,65 @@ export default function AdminLootBoxes() {
                             <span className="text-[8px] px-1.5 py-0.5 rounded-md bg-gray-300 text-gray-500 font-bold flex-shrink-0 uppercase tracking-wide">ปิด</span>
                           )}
                         </div>
-                        <div className="flex items-center gap-1.5 mt-0.5 flex-nowrap">
-                          <span className={`text-[12px] font-bold whitespace-nowrap flex-shrink-0 ${isOpen ? 'text-gray-700' : 'text-gray-400'}`}>
-                            ฿{parseFloat(String(box.price)).toLocaleString()}
-                          </span>
+                        {/* Row 2: ราคาเดิม + -% + ราคา + · + items */}
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          {box.original_price && box.original_price > box.price ? (
+                            <>
+                              <span className={`text-[11px] line-through whitespace-nowrap flex-shrink-0 ${isOpen ? 'text-gray-400' : 'text-gray-300'}`}>
+                                ฿{parseFloat(String(box.original_price)).toLocaleString()}
+                              </span>
+                              <span className="text-[10px] font-black bg-red-500 text-white px-1 py-px rounded flex-shrink-0">
+                                -{Math.round((1 - box.price / box.original_price) * 100)}%
+                              </span>
+                              <span className={`text-[12px] font-black whitespace-nowrap flex-shrink-0 ${isOpen ? 'text-amber-600' : 'text-gray-400'}`}>
+                                ฿{parseFloat(String(box.price)).toLocaleString()}
+                              </span>
+                            </>
+                          ) : (
+                            <span className={`text-[12px] font-bold whitespace-nowrap flex-shrink-0 ${isOpen ? 'text-gray-700' : 'text-gray-400'}`}>
+                              ฿{parseFloat(String(box.price)).toLocaleString()}
+                            </span>
+                          )}
                           <span className="text-[10px] text-gray-300 flex-shrink-0">·</span>
                           <span className="text-[11px] whitespace-nowrap flex-shrink-0 text-gray-400">{box.items.length} ไอเท็ม</span>
                         </div>
+                        {/* Row 3: description */}
+                        {box.description && (
+                          <p className={`text-[10px] leading-snug mt-0.5 line-clamp-1 ${isOpen ? 'text-gray-400' : 'text-gray-300'}`}>
+                            {box.description}
+                          </p>
+                        )}
+                        {/* Row 4: badge เวลา + badge สต็อก */}
+                        {(box.sale_end || box.sale_start || (box.stock_limit != null && box.sold_count != null)) && (
+                          <div className="flex items-center gap-1 mt-0.5">
+                            {/* Time badge */}
+                            {box.is_paused ? (
+                              <span className="inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 rounded-md bg-orange-500 text-white flex-shrink-0">
+                                <i className="fas fa-pause text-[7px]" /> หยุดชั่วคราว
+                              </span>
+                            ) : box.sale_end ? (() => {
+                              const expired = new Date(box.sale_end).getTime() < Date.now();
+                              const future  = new Date(box.sale_end).getTime() > Date.now();
+                              if (expired) return (
+                                <span className="inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 rounded-md bg-red-500 text-white flex-shrink-0">
+                                  <i className="fas fa-clock text-[7px]" /> หมดเวลา
+                                </span>
+                              );
+                              if (future) return <CountdownBadge key="cd" endTime={box.sale_end} />;
+                              return null;
+                            })() : box.sale_start && isOpen ? (
+                              <span className="inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 rounded-md bg-green-600 text-white flex-shrink-0">
+                                <i className="fas fa-infinity text-[7px]" /> ไม่จำกัดเวลา
+                              </span>
+                            ) : null}
+                            {/* Stock badge */}
+                            {box.stock_limit != null && box.sold_count != null && (
+                              <span className={`inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 rounded-md flex-shrink-0 ${box.sold_count >= box.stock_limit ? 'bg-red-500 text-white' : 'bg-blue-500 text-white'}`}>
+                                <i className="fas fa-box text-[7px]" /> {box.sold_count}/{box.stock_limit}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <div className="flex gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                         <button onClick={() => { setBoxError(''); setBoxModal({ ...box }); }}
@@ -837,7 +941,7 @@ export default function AdminLootBoxes() {
         document.body
       )}
       {boxModal && typeof window !== 'undefined' && createPortal(
-        <BoxModal box={boxModal} categories={categories} saving={boxSaving} error={boxError} onChange={setBoxModal} onSave={handleSaveBox} onClose={() => { if (!boxSaving) setBoxModal(null); }} />,
+        <BoxModal box={boxModal} categories={categories} saving={boxSaving} error={boxError} onChange={setBoxModal} onSave={handleSaveBox} onClose={() => { if (!boxSaving) setBoxModal(null); }} onReleased={load} />,
         document.body
       )}
       {itemModal && activeBox && typeof window !== 'undefined' && createPortal(
@@ -875,17 +979,87 @@ export default function AdminLootBoxes() {
 
 // ─── Box Modal ───────────────────────────────────────────────────────────────
 
-function BoxModal({ box, categories, saving, error, onChange, onSave, onClose }: {
+function BoxModal({ box, categories, saving, error, onChange, onSave, onClose, onReleased }: {
   box: Partial<LootBox>; categories: LootBoxCategory[]; saving: boolean; error: string;
   onChange: (b: Partial<LootBox>) => void; onSave: () => void; onClose: () => void;
+  onReleased?: () => void;
 }) {
   const bdRef = useRef(false);
+
+  // Sale settings local state
+  const [limitStock,    setLimitStock]    = useState(box.stock_limit != null);
+  const [limitTime,     setLimitTime]     = useState(box.sale_end != null);
+  const [durValue,      setDurValue]      = useState(60);
+  const [durUnit,       setDurUnit]       = useState<'minutes' | 'hours' | 'days'>('minutes');
+  const [releasing,     setReleasing]     = useState(false);
+  const [releaseError,  setReleaseError]  = useState('');
+
+  const getDurationMinutes = () => {
+    if (durUnit === 'hours') return durValue * 60;
+    if (durUnit === 'days')  return durValue * 60 * 24;
+    return durValue;
+  };
+
+  const [stopping, setStopping] = useState(false);
+
+  const handlePause = async () => {
+    if (!box.id) return;
+    setStopping(true); setReleaseError('');
+    try {
+      const { api: apiCall, getToken: tok } = await import('@/lib/api');
+      await apiCall(`/admin/lootboxes/${box.id}/pause`, { method: 'POST', token: tok()! });
+      onChange({ ...box, is_paused: true, sale_end: null });
+      onReleased?.();
+    } catch (err: any) {
+      setReleaseError(err?.message || 'เกิดข้อผิดพลาด');
+    } finally {
+      setStopping(false);
+    }
+  };
+
+  const handleResume = async () => {
+    if (!box.id) return;
+    setStopping(true); setReleaseError('');
+    try {
+      const { api: apiCall, getToken: tok } = await import('@/lib/api');
+      await apiCall(`/admin/lootboxes/${box.id}/resume`, { method: 'POST', token: tok()! });
+      onChange({ ...box, is_paused: false });
+      onReleased?.();
+    } catch (err: any) {
+      setReleaseError(err?.message || 'เกิดข้อผิดพลาด');
+    } finally {
+      setStopping(false);
+    }
+  };
+
+  const handleRelease = async () => {
+    if (!box.id) return;
+    setReleasing(true); setReleaseError('');
+    try {
+      const { api: apiCall, getToken: tok } = await import('@/lib/api');
+      await apiCall(`/admin/lootboxes/${box.id}/release`, {
+        method: 'POST',
+        token: tok()!,
+        body: {
+          duration_minutes: limitTime ? getDurationMinutes() : 0,
+          stock_limit: limitStock ? (box.stock_limit ?? null) : null,
+        },
+      });
+      onReleased?.();
+      onClose();
+    } catch (err: any) {
+      setReleaseError(err?.message || 'เกิดข้อผิดพลาด');
+    } finally {
+      setReleasing(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
       onMouseDown={e => { bdRef.current = e.target === e.currentTarget; }}
       onMouseUp={e => { if (bdRef.current && e.target === e.currentTarget && !saving) onClose(); }}
     >
-      <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_8px_40px_rgba(0,0,0,0.2)] w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_8px_40px_rgba(0,0,0,0.2)] w-full max-w-3xl overflow-hidden" onClick={e => e.stopPropagation()}>
 
         {/* Header */}
         <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
@@ -901,91 +1075,252 @@ function BoxModal({ box, categories, saving, error, onChange, onSave, onClose }:
           </button>
         </div>
 
-        {/* Body */}
-        <div className="p-5 space-y-4">
+        {/* Body — 2-column: form left, sale settings right */}
+        <div className="p-5">
           {error && (
-            <div className="text-red-600 text-xs bg-red-50 px-3 py-2.5 rounded-lg border border-red-100 flex items-center gap-1.5">
+            <div className="text-red-600 text-xs bg-red-50 px-3 py-2.5 rounded-lg border border-red-100 flex items-center gap-1.5 mb-4">
               <i className="fas fa-exclamation-circle" /> {error}
             </div>
           )}
 
-          {/* Name */}
-          <div>
-            <label className="block text-xs font-bold text-gray-500 mb-1.5">ชื่อกล่อง <span className="text-red-400">*</span></label>
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300"><i className="fas fa-box text-sm" /></div>
-              <input value={box.name || ''} onChange={e => onChange({ ...box, name: e.target.value })}
-                className="w-full pl-9 pr-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 transition-colors"
-                placeholder="ชื่อกล่อง..." />
-            </div>
-          </div>
+          <div className="grid grid-cols-2 gap-5">
+            {/* ── Left: form fields ── */}
+            <div className="space-y-4">
 
-          {/* Price */}
-          <div>
-            <label className="block text-xs font-bold text-gray-500 mb-1.5">ราคา (฿) <span className="text-red-400">*</span></label>
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300"><i className="fas fa-coins text-sm" /></div>
-              <input type="number" value={box.price ?? ''} onChange={e => onChange({ ...box, price: Number(e.target.value) })}
-                className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 transition-colors" placeholder="0" />
-            </div>
-          </div>
-
-          {/* Image URL */}
-          <div>
-            <label className="block text-xs font-bold text-gray-500 mb-1.5">URL รูปภาพ</label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300"><i className="fas fa-image text-sm" /></div>
-                <input value={box.image || ''} onChange={e => onChange({ ...box, image: e.target.value })}
-                  className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 transition-colors" placeholder="https://..." />
-              </div>
-              {box.image && (
-                <div className="w-10 h-10 rounded-lg border border-gray-200 flex-shrink-0 bg-gray-50 overflow-hidden">
-                  <img src={box.image} alt="" className="w-full h-full object-cover" onError={e => (e.currentTarget.style.display = 'none')} />
+              {/* Name */}
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">ชื่อกล่อง <span className="text-red-400">*</span></label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300"><i className="fas fa-box text-sm" /></div>
+                  <input value={box.name || ''} onChange={e => onChange({ ...box, name: e.target.value })}
+                    className="w-full pl-9 pr-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 transition-colors"
+                    placeholder="ชื่อกล่อง..." />
                 </div>
-              )}
+              </div>
+
+              {/* Price row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">ราคา (฿) <span className="text-red-400">*</span></label>
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300"><i className="fas fa-coins text-sm" /></div>
+                    <input type="number" value={box.price ?? ''} onChange={e => onChange({ ...box, price: Number(e.target.value) })}
+                      className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 transition-colors" placeholder="0" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">ราคาเดิม (฿) <span className="text-[10px] font-normal text-gray-400">(ไม่บังคับ)</span></label>
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300"><i className="fas fa-tag text-sm" /></div>
+                    <input type="number" value={box.original_price ?? ''}
+                      onChange={e => onChange({ ...box, original_price: e.target.value ? Number(e.target.value) : null })}
+                      className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-orange-200 bg-orange-50/40 text-sm focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20 transition-colors"
+                      placeholder="ราคาก่อนลด" />
+                  </div>
+                  {box.original_price && Number(box.original_price) > Number(box.price) && (
+                    <p className="text-[10px] text-green-600 font-bold mt-1 flex items-center gap-1">
+                      <i className="fas fa-check-circle" /> ลด {Math.round((1 - Number(box.price) / Number(box.original_price)) * 100)}%
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Image URL */}
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">URL รูปภาพ</label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300"><i className="fas fa-image text-sm" /></div>
+                    <input value={box.image || ''} onChange={e => onChange({ ...box, image: e.target.value })}
+                      className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 transition-colors" placeholder="https://..." />
+                  </div>
+                  {box.image && (
+                    <div className="w-10 h-10 rounded-lg border border-gray-200 flex-shrink-0 bg-gray-50 overflow-hidden">
+                      <img src={box.image} alt="" className="w-full h-full object-contain p-1" onError={e => (e.currentTarget.style.display = 'none')} />
+                    </div>
+                  )}
+                </div>
+                <p className="text-[10px] text-blue-500 mt-1 flex items-start gap-1">
+                  <i className="fas fa-circle-info mt-0.5 flex-shrink-0" />
+                  <span>แนะนำ <strong>512×512 px</strong> (1:1) — PNG โปร่งใสได้</span>
+                </p>
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">หมวดหมู่</label>
+                <div className="flex flex-wrap gap-1.5">
+                  <button type="button" onClick={() => onChange({ ...box, category_id: null })}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-2 text-[11px] font-bold transition-all ${!box.category_id ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}>
+                    <i className="fas fa-inbox text-[9px]" /> ไม่มีหมวดหมู่
+                  </button>
+                  {categories.map(cat => (
+                    <button key={cat.id} type="button" onClick={() => onChange({ ...box, category_id: cat.id })}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-2 text-[11px] font-bold transition-all text-white"
+                      style={box.category_id === cat.id
+                        ? { backgroundColor: cat.color, borderColor: cat.color, boxShadow: `0 2px 0 ${cat.color}88` }
+                        : { backgroundColor: cat.color + '22', borderColor: cat.color + '66', color: cat.color }}>
+                      <i className="fas fa-layer-group text-[9px]" /> {cat.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">คำอธิบาย</label>
+                <textarea value={box.description || ''} onChange={e => onChange({ ...box, description: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 resize-none transition-colors"
+                  rows={3} placeholder="คำอธิบายสั้นๆ..." />
+              </div>
+
+            </div>
+
+            {/* ── Right: ตั้งค่าการขาย ── */}
+            <div className="flex flex-col">
+              <div className="bg-white rounded-xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden flex flex-col flex-1">
+                <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/60 flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
+                    <i className="fas fa-bolt text-amber-500 text-xs" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900 text-sm">ตั้งค่าการขาย</p>
+                    <p className="text-[10px] text-gray-400">จำกัดสต็อค · กำหนดเวลาขาย</p>
+                  </div>
+                </div>
+                <div className="p-4 space-y-3 flex-1">
+                  {releaseError && (
+                    <div className="text-red-600 text-xs bg-red-50 px-3 py-2 rounded-lg border border-red-100 flex items-center gap-1.5">
+                      <i className="fas fa-exclamation-circle" /> {releaseError}
+                    </div>
+                  )}
+
+                  {/* Current sale status block */}
+                  {box.id && (box.sale_end || box.sale_start || box.is_paused) && (() => {
+                    const isPaused   = !!box.is_paused;
+                    const isActive   = !isPaused && !!box.sale_end && new Date(box.sale_end).getTime() > Date.now();
+                    const isUnlimited = !isPaused && !!box.sale_start && !box.sale_end;
+                    const isExpired  = !isPaused && !!box.sale_end && new Date(box.sale_end).getTime() <= Date.now();
+                    const statusColor = isPaused ? 'bg-orange-50 border-orange-200' : isActive || isUnlimited ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200';
+                    return (
+                      <div className={`rounded-lg border px-3 py-2.5 ${statusColor}`}>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isPaused ? 'bg-orange-400' : isActive || isUnlimited ? 'bg-amber-400 animate-pulse' : 'bg-gray-400'}`} />
+                            <span className={`text-[11px] font-black ${isPaused ? 'text-orange-700' : isActive || isUnlimited ? 'text-amber-700' : 'text-gray-500'}`}>
+                              {isPaused ? 'หยุดจำหน่ายชั่วคราว' : isActive ? 'กำลังขายอยู่' : isUnlimited ? 'ขายปกติ ไม่จำกัดเวลา' : 'หมดเวลาแล้ว'}
+                            </span>
+                          </div>
+                          {/* Pause button (when active/unlimited) */}
+                          {(isActive || isUnlimited) && (
+                            <button type="button" onClick={handlePause} disabled={stopping}
+                              className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-orange-500 text-white shadow-[0_2px_0_#c2410c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50 flex-shrink-0">
+                              {stopping ? <i className="fas fa-spinner fa-spin text-[9px]" /> : <i className="fas fa-pause text-[9px]" />}
+                              หยุดชั่วคราว
+                            </button>
+                          )}
+                          {/* Resume button (when paused) */}
+                          {isPaused && (
+                            <button type="button" onClick={handleResume} disabled={stopping}
+                              className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-green-600 text-white shadow-[0_2px_0_#15803d] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50 flex-shrink-0">
+                              {stopping ? <i className="fas fa-spinner fa-spin text-[9px]" /> : <i className="fas fa-play text-[9px]" />}
+                              เริ่มจำหน่ายต่อ
+                            </button>
+                          )}
+                        </div>
+                        {/* End time / remaining info */}
+                        {box.sale_end && !isPaused && (
+                          <p className="text-[10px] text-gray-500 mt-1">
+                            สิ้นสุด {new Date(box.sale_end).toLocaleString('th-TH', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        )}
+                        {isPaused && box.sale_remaining_seconds != null && (
+                          <p className="text-[10px] text-orange-500 mt-1">
+                            <i className="fas fa-clock text-[9px] mr-1" />
+                            เวลาที่เหลืออยู่: {Math.floor(box.sale_remaining_seconds / 3600) > 0
+                              ? `${Math.floor(box.sale_remaining_seconds / 3600)}ช ${Math.floor((box.sale_remaining_seconds % 3600) / 60)}น`
+                              : `${Math.floor(box.sale_remaining_seconds / 60)}น ${box.sale_remaining_seconds % 60}ว`}
+                          </p>
+                        )}
+                        {isPaused && box.sale_remaining_seconds == null && (
+                          <p className="text-[10px] text-orange-400 mt-1"><i className="fas fa-infinity text-[9px] mr-1" />ไม่จำกัดเวลา (หยุดชั่วคราว)</p>
+                        )}
+                        {/* Stock bar */}
+                        {box.stock_limit != null && (
+                          <div className="mt-1.5">
+                            <div className="flex justify-between text-[10px] mb-0.5">
+                              <span className="text-gray-500">ขายแล้ว</span>
+                              <span className="font-bold text-gray-700">{box.sold_count ?? 0} / {box.stock_limit}</span>
+                            </div>
+                            <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full transition-all ${isPaused ? 'bg-orange-400' : 'bg-amber-400'}`}
+                                style={{ width: `${Math.min(100, Math.round(((box.sold_count ?? 0) / box.stock_limit) * 100))}%` }} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Stock toggle */}
+                  <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3 space-y-2">
+                    <div className="flex items-center gap-3">
+                      <span className="flex-1 text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                        <i className="fas fa-box text-gray-400 text-[10px]" /> จำกัดสต็อค
+                      </span>
+                      <button type="button" onClick={() => setLimitStock(v => !v)}
+                        className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors duration-200 ${limitStock ? 'bg-[#16a34a]' : 'bg-gray-300'}`}>
+                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${limitStock ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </button>
+                    </div>
+                    {limitStock && (
+                      <input type="number" min={1}
+                        value={box.stock_limit ?? ''}
+                        onChange={e => onChange({ ...box, stock_limit: e.target.value ? Number(e.target.value) : null })}
+                        placeholder="จำนวนสต็อค (ชิ้น)"
+                        className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                      />
+                    )}
+                  </div>
+
+                  {/* Time limit toggle */}
+                  <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3 space-y-2">
+                    <div className="flex items-center gap-3">
+                      <span className="flex-1 text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                        <i className="fas fa-clock text-gray-400 text-[10px]" /> จำกัดเวลาขาย
+                      </span>
+                      <button type="button" onClick={() => setLimitTime(v => !v)}
+                        className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors duration-200 ${limitTime ? 'bg-[#16a34a]' : 'bg-gray-300'}`}>
+                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${limitTime ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </button>
+                    </div>
+                    {limitTime && (
+                      <div className="flex gap-2">
+                        <input type="number" min={1} value={durValue}
+                          onChange={e => setDurValue(Math.max(1, Number(e.target.value)))}
+                          className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                        />
+                        <select value={durUnit} onChange={e => setDurUnit(e.target.value as 'minutes' | 'hours' | 'days')}
+                          className="flex-shrink-0 px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20">
+                          <option value="minutes">นาที</option>
+                          <option value="hours">ชั่วโมง</option>
+                          <option value="days">วัน</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Release button */}
+                  <button type="button" disabled={!box.id || releasing} onClick={handleRelease}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#16a34a] text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#0d6b2e] hover:brightness-110 transition-all active:shadow-[0_1px_0_#0d6b2e] active:translate-y-[2px] disabled:opacity-40 disabled:cursor-not-allowed">
+                    {releasing ? <><i className="fas fa-spinner fa-spin text-xs" /> กำลังปล่อยขาย...</> : <><i className="fas fa-rocket text-xs" /> เริ่มจับเวลา</>}
+                  </button>
+                  {!box.id && <p className="text-[10px] text-gray-400 text-center">บันทึกกล่องก่อนจึงจะปล่อยขายได้</p>}
+                  {!limitTime && box.id && <p className="text-[10px] text-amber-500 text-center"><i className="fas fa-infinity text-[9px] mr-1" />ไม่จำกัดเวลา — ขายจนกว่าจะหยุดเอง</p>}
+                </div>
+              </div>
             </div>
           </div>
-
-          {/* Category */}
-          <div>
-            <label className="block text-xs font-bold text-gray-500 mb-1.5">หมวดหมู่</label>
-            <div className="flex flex-wrap gap-1.5">
-              <button
-                type="button"
-                onClick={() => onChange({ ...box, category_id: null })}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-2 text-[11px] font-bold transition-all ${
-                  !box.category_id ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <i className="fas fa-inbox text-[9px]" /> ไม่มีหมวดหมู่
-              </button>
-              {categories.map(cat => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => onChange({ ...box, category_id: cat.id })}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-2 text-[11px] font-bold transition-all text-white`}
-                  style={
-                    box.category_id === cat.id
-                      ? { backgroundColor: cat.color, borderColor: cat.color, boxShadow: `0 2px 0 ${cat.color}88` }
-                      : { backgroundColor: cat.color + '22', borderColor: cat.color + '66', color: cat.color }
-                  }
-                >
-                  <i className="fas fa-layer-group text-[9px]" /> {cat.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="block text-xs font-bold text-gray-500 mb-1.5">คำอธิบาย</label>
-            <textarea value={box.description || ''} onChange={e => onChange({ ...box, description: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 resize-none transition-colors"
-              rows={2} placeholder="คำอธิบายสั้นๆ..." />
-          </div>
-
         </div>
 
         {/* Footer */}
@@ -1362,6 +1697,10 @@ function ItemModal({ item, saving, error, totalWeight, originalWeight, onChange,
                     </div>
                   )}
                 </div>
+                <p className="text-[10px] text-blue-500 mt-1.5 flex items-start gap-1">
+                  <i className="fas fa-circle-info mt-0.5 flex-shrink-0" />
+                  <span>แนะนำขนาด <strong>128×128 px</strong> หรือ <strong>256×256 px</strong> (สัดส่วน 1:1) — แสดงในวงล้อขนาด 64×64 px และ popup ผล PNG โปร่งใสดีที่สุด</span>
+                </p>
               </div>
 
               {/* Description */}

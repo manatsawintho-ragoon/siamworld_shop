@@ -44,6 +44,23 @@ class ShopService {
     if (productRows.length === 0) throw new NotFoundError('Product not found or not available on this server');
     const product = productRows[0];
 
+    // Check sale period
+    if (product.sale_end && new Date(product.sale_end) < new Date()) {
+      throw new AppError('การขายสิ้นสุดแล้ว', 400);
+    }
+
+    // Check stock limit
+    if (product.stock_limit != null) {
+      const [countRows] = await pool.execute<RowDataPacket[]>(
+        `SELECT COUNT(*) AS sold FROM purchases WHERE product_id = ? AND status = 'delivered'`,
+        [productId]
+      );
+      const sold = Number((countRows[0] as any).sold);
+      if (sold >= Number(product.stock_limit)) {
+        throw new AppError('สินค้าหมดแล้ว', 400);
+      }
+    }
+
     // 4. DB Transaction: deduct wallet + create purchase
     const conn = await pool.getConnection();
     let purchaseId: number;
@@ -158,7 +175,9 @@ class ShopService {
   // ── Product queries ──
 
   async getProducts(serverId?: number) {
-    let query = `SELECT p.*, c.name as category_name, c.slug as category_slug, c.icon as category_icon
+    let query = `SELECT p.*,
+                   c.name as category_name, c.slug as category_slug, c.icon as category_icon,
+                   (SELECT COUNT(*) FROM purchases pu WHERE pu.product_id = p.id AND pu.status = 'delivered') AS sold_count
                  FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.active = 1`;
     const params: (string | number)[] = [];
 
@@ -183,7 +202,9 @@ class ShopService {
 
   async getProduct(productId: number) {
     const [rows] = await pool.execute<RowDataPacket[]>(
-      `SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.id = ?`,
+      `SELECT p.*, c.name as category_name,
+         (SELECT COUNT(*) FROM purchases pu WHERE pu.product_id = p.id AND pu.status = 'delivered') AS sold_count
+       FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.id = ?`,
       [productId]
     );
     if (rows.length === 0) throw new NotFoundError('Product not found');
@@ -215,7 +236,9 @@ class ShopService {
 
   async getAllProducts() {
     const [rows] = await pool.execute<RowDataPacket[]>(
-      `SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.active = 1 ORDER BY p.id DESC`
+      `SELECT p.*, c.name as category_name,
+         (SELECT COUNT(*) FROM purchases pu WHERE pu.product_id = p.id AND pu.status = 'delivered') AS sold_count
+       FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.active = 1 ORDER BY p.id DESC`
     );
     for (const p of rows) {
       const [servers] = await pool.execute<RowDataPacket[]>(
@@ -230,13 +253,20 @@ class ShopService {
     name: string; description?: string; price: number; original_price?: number;
     image?: string; command: string; category_id?: number; featured?: boolean;
     server_ids?: number[];
+    stock_limit?: number | null;
+    sale_start?: string | null;
+    sale_end?: string | null;
   }) {
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
       const [result] = await conn.execute(
-        'INSERT INTO products (name, description, price, original_price, image, command, category_id, featured) VALUES (?,?,?,?,?,?,?,?)',
-        [data.name, data.description || null, data.price, data.original_price || null, data.image || null, data.command, data.category_id || null, data.featured ? 1 : 0]
+        'INSERT INTO products (name, description, price, original_price, image, command, category_id, featured, stock_limit, sale_start, sale_end) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+        [
+          data.name, data.description || null, data.price, data.original_price || null,
+          data.image || null, data.command, data.category_id || null, data.featured ? 1 : 0,
+          data.stock_limit ?? null, data.sale_start ?? null, data.sale_end ?? null,
+        ]
       );
       const productId = (result as any).insertId;
 
@@ -255,15 +285,30 @@ class ShopService {
     }
   }
 
+  async releaseProduct(id: number, durationMinutes: number, stockLimit?: number | null) {
+    await pool.execute(
+      'UPDATE products SET sale_start = NOW(), sale_end = DATE_ADD(NOW(), INTERVAL ? MINUTE), stock_limit = ?, active = 1 WHERE id = ?',
+      [durationMinutes, stockLimit ?? null, id]
+    );
+    return this.getProduct(id);
+  }
+
+  async stopProduct(id: number) {
+    await pool.execute('UPDATE products SET sale_end = NOW() WHERE id = ?', [id]);
+    return this.getProduct(id);
+  }
+
   async updateProduct(id: number, data: Record<string, any>) {
     const fields: string[] = [];
-    const values: (string | number)[] = [];
+    const values: any[] = [];
 
-    for (const key of ['name', 'description', 'price', 'original_price', 'image', 'command', 'category_id', 'sort_order']) {
+    for (const key of ['name', 'description', 'price', 'original_price', 'image', 'command', 'category_id', 'sort_order', 'stock_limit']) {
       if (data[key] !== undefined) { fields.push(`${key} = ?`); values.push(data[key]); }
     }
     if (data.featured !== undefined) { fields.push('featured = ?'); values.push(data.featured ? 1 : 0); }
     if (data.active !== undefined) { fields.push('active = ?'); values.push(data.active ? 1 : 0); }
+    if ('sale_start' in data) { fields.push('sale_start = ?'); values.push(data.sale_start ? new Date(data.sale_start).toISOString().slice(0,19).replace('T',' ') : null); }
+    if ('sale_end' in data) { fields.push('sale_end = ?'); values.push(data.sale_end ? new Date(data.sale_end).toISOString().slice(0,19).replace('T',' ') : null); }
 
     if (fields.length > 0) {
       values.push(id);

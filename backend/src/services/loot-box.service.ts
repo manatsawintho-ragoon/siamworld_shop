@@ -15,15 +15,32 @@ class LootBoxService {
   // ─── Public / Shop ──────────────────────────────────────
 
   async getLootBoxes() {
-    const [rows] = await pool.execute<RowDataPacket[]>(
-      'SELECT * FROM loot_boxes WHERE active = 1 ORDER BY sort_order ASC, id DESC'
-    );
+    const [rows] = await pool.execute<RowDataPacket[]>(`
+      SELECT lb.*,
+             COUNT(wi.id) AS total_opens,
+             (SELECT COUNT(*) FROM web_inventory wi2
+              WHERE wi2.loot_box_id = lb.id
+                AND (lb.sale_start IS NULL OR wi2.won_at >= lb.sale_start)) AS sold_count,
+             lbc.name AS category_name, lbc.color AS category_color
+      FROM loot_boxes lb
+      LEFT JOIN web_inventory wi ON wi.loot_box_id = lb.id
+      LEFT JOIN loot_box_categories lbc ON lbc.id = lb.category_id
+      WHERE lb.active = 1
+        AND (lb.sale_end IS NULL OR lb.sale_end > DATE_SUB(NOW(), INTERVAL 5 MINUTE))
+      GROUP BY lb.id
+      ORDER BY lb.sort_order ASC, lb.id DESC
+    `);
     return rows;
   }
 
   async getLootBox(id: number) {
     const [boxes] = await pool.execute<RowDataPacket[]>(
-      'SELECT * FROM loot_boxes WHERE id = ? AND active = 1',
+      `SELECT lb.*,
+         (SELECT COUNT(*) FROM web_inventory wi
+          WHERE wi.loot_box_id = lb.id
+            AND (lb.sale_start IS NULL OR wi.won_at >= lb.sale_start)) AS sold_count
+       FROM loot_boxes lb WHERE lb.id = ? AND lb.active = 1
+         AND (lb.sale_end IS NULL OR lb.sale_end > DATE_SUB(NOW(), INTERVAL 5 MINUTE))`,
       [id]
     );
     if (boxes.length === 0) throw new NotFoundError('Loot box not found');
@@ -69,6 +86,28 @@ class LootBoxService {
     );
     if (boxRows.length === 0) throw new NotFoundError('Loot box not found');
     const box = boxRows[0];
+
+    // Check if sale period has ended
+    if (box.sale_end && new Date(box.sale_end) < new Date()) {
+      throw new Error('การขายสิ้นสุดแล้ว');
+    }
+
+    // Check if sale is paused
+    if (box.is_paused) {
+      throw new Error('กล่องสุ่มนี้หยุดจำหน่ายชั่วคราว');
+    }
+
+    // Check stock limit (count only opens since current sale_start)
+    if (box.stock_limit != null) {
+      const [countRows] = await pool.execute<RowDataPacket[]>(
+        'SELECT COUNT(*) AS sold FROM web_inventory WHERE loot_box_id = ? AND (? IS NULL OR won_at >= ?)',
+        [boxId, box.sale_start ?? null, box.sale_start ?? null]
+      );
+      const sold = Number((countRows[0] as any).sold);
+      if (sold >= Number(box.stock_limit)) {
+        throw new Error('กล่องสุ่มนี้หมดแล้ว');
+      }
+    }
 
     // Get items (include command for storing in inventory)
     const [itemRows] = await pool.execute<RowDataPacket[]>(
@@ -268,9 +307,14 @@ class LootBoxService {
   // ─── Admin CRUD ──────────────────────────────────────────
 
   async getAllLootBoxes() {
-    const [rows] = await pool.execute<RowDataPacket[]>(
-      'SELECT * FROM loot_boxes ORDER BY sort_order ASC, id DESC'
-    );
+    const [rows] = await pool.execute<RowDataPacket[]>(`
+      SELECT lb.*,
+        (SELECT COUNT(*) FROM web_inventory wi
+         WHERE wi.loot_box_id = lb.id
+           AND (lb.sale_start IS NULL OR wi.won_at >= lb.sale_start)) AS sold_count
+      FROM loot_boxes lb
+      ORDER BY lb.sort_order ASC, lb.id DESC
+    `);
     for (const box of rows) {
       const [items] = await pool.execute<RowDataPacket[]>(
         'SELECT * FROM loot_box_items WHERE loot_box_id = ? ORDER BY weight DESC',
@@ -286,12 +330,20 @@ class LootBoxService {
     description?: string;
     image?: string;
     price: number;
+    original_price?: number | null;
     sort_order?: number;
     category_id?: number | null;
+    stock_limit?: number | null;
+    sale_start?: string | null;
+    sale_end?: string | null;
   }) {
     const [result] = await pool.execute(
-      'INSERT INTO loot_boxes (name, description, image, price, sort_order, category_id) VALUES (?,?,?,?,?,?)',
-      [data.name, data.description ?? null, data.image ?? null, data.price, data.sort_order ?? 0, data.category_id ?? null]
+      'INSERT INTO loot_boxes (name, description, image, price, original_price, sort_order, category_id, stock_limit, sale_start, sale_end) VALUES (?,?,?,?,?,?,?,?,?,?)',
+      [
+        data.name, data.description ?? null, data.image ?? null, data.price,
+        data.original_price ?? null, data.sort_order ?? 0, data.category_id ?? null,
+        data.stock_limit ?? null, data.sale_start ?? null, data.sale_end ?? null,
+      ]
     );
     const id = (result as any).insertId;
     const [rows] = await pool.execute<RowDataPacket[]>(
@@ -301,10 +353,15 @@ class LootBoxService {
     return rows[0];
   }
 
+  private toMysqlDatetime(v: any): string | null {
+    if (!v) return null;
+    return new Date(v).toISOString().slice(0, 19).replace('T', ' ');
+  }
+
   async updateLootBox(id: number, data: Record<string, any>) {
     const fields: string[] = [];
     const values: any[] = [];
-    for (const key of ['name', 'description', 'image', 'price', 'sort_order']) {
+    for (const key of ['name', 'description', 'image', 'price', 'original_price', 'sort_order', 'stock_limit']) {
       if (data[key] !== undefined) {
         fields.push(`${key} = ?`);
         values.push(data[key]);
@@ -318,6 +375,14 @@ class LootBoxService {
       fields.push('category_id = ?');
       values.push(data.category_id ?? null);
     }
+    if ('sale_start' in data) {
+      fields.push('sale_start = ?');
+      values.push(this.toMysqlDatetime(data.sale_start));
+    }
+    if ('sale_end' in data) {
+      fields.push('sale_end = ?');
+      values.push(this.toMysqlDatetime(data.sale_end));
+    }
     if (fields.length > 0) {
       values.push(id);
       await pool.execute(`UPDATE loot_boxes SET ${fields.join(', ')} WHERE id = ?`, values);
@@ -326,6 +391,70 @@ class LootBoxService {
       'SELECT * FROM loot_boxes WHERE id = ?',
       [id]
     );
+    if (rows.length === 0) throw new NotFoundError('Loot box not found');
+    return rows[0];
+  }
+
+  async releaseLootBox(id: number, durationMinutes: number | null, stockLimit?: number | null) {
+    if (durationMinutes && durationMinutes > 0) {
+      await pool.execute(
+        'UPDATE loot_boxes SET sale_start = NOW(), sale_end = DATE_ADD(NOW(), INTERVAL ? MINUTE), stock_limit = ?, active = 1 WHERE id = ?',
+        [durationMinutes, stockLimit ?? null, id]
+      );
+    } else {
+      // No time limit — clear sale_end so box stays active indefinitely
+      await pool.execute(
+        'UPDATE loot_boxes SET sale_start = NOW(), sale_end = NULL, stock_limit = ?, active = 1 WHERE id = ?',
+        [stockLimit ?? null, id]
+      );
+    }
+    const [rows] = await pool.execute<RowDataPacket[]>('SELECT * FROM loot_boxes WHERE id = ?', [id]);
+    if (rows.length === 0) throw new NotFoundError('Loot box not found');
+    return rows[0];
+  }
+
+  async stopLootBox(id: number) {
+    await pool.execute(
+      'UPDATE loot_boxes SET sale_end = NOW() WHERE id = ?',
+      [id]
+    );
+    const [rows] = await pool.execute<RowDataPacket[]>('SELECT * FROM loot_boxes WHERE id = ?', [id]);
+    if (rows.length === 0) throw new NotFoundError('Loot box not found');
+    return rows[0];
+  }
+
+  async pauseLootBox(id: number) {
+    // Save remaining seconds (if timed sale), then clear sale_end so auto-deactivate ignores it
+    await pool.execute(`
+      UPDATE loot_boxes SET
+        is_paused = 1,
+        sale_remaining_seconds = CASE
+          WHEN sale_end IS NOT NULL AND sale_end > NOW()
+          THEN TIMESTAMPDIFF(SECOND, NOW(), sale_end)
+          ELSE NULL
+        END,
+        sale_end = NULL
+      WHERE id = ?
+    `, [id]);
+    const [rows] = await pool.execute<RowDataPacket[]>('SELECT * FROM loot_boxes WHERE id = ?', [id]);
+    if (rows.length === 0) throw new NotFoundError('Loot box not found');
+    return rows[0];
+  }
+
+  async resumeLootBox(id: number) {
+    // Restore sale_end from remaining seconds (if any), clear pause state
+    await pool.execute(`
+      UPDATE loot_boxes SET
+        is_paused = 0,
+        sale_end = CASE
+          WHEN sale_remaining_seconds IS NOT NULL AND sale_remaining_seconds > 0
+          THEN DATE_ADD(NOW(), INTERVAL sale_remaining_seconds SECOND)
+          ELSE NULL
+        END,
+        sale_remaining_seconds = NULL
+      WHERE id = ?
+    `, [id]);
+    const [rows] = await pool.execute<RowDataPacket[]>('SELECT * FROM loot_boxes WHERE id = ?', [id]);
     if (rows.length === 0) throw new NotFoundError('Loot box not found');
     return rows[0];
   }
@@ -381,6 +510,8 @@ class LootBoxService {
   }
 
   async deleteLootBox(id: number) {
+    // Remove inventory records tied to this box before deleting items/box
+    await pool.execute('DELETE FROM web_inventory WHERE loot_box_id = ?', [id]);
     await pool.execute('DELETE FROM loot_boxes WHERE id = ?', [id]);
   }
 
@@ -448,6 +579,7 @@ class LootBoxService {
   }
 
   async deleteLootBoxItem(itemId: number) {
+    await pool.execute('DELETE FROM web_inventory WHERE loot_box_item_id = ?', [itemId]);
     await pool.execute('DELETE FROM loot_box_items WHERE id = ?', [itemId]);
   }
 

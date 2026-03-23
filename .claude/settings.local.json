@@ -30,7 +30,16 @@
       "Bash(python3:*)",
       "Bash(node -e \"require\\(''qrcode''\\); console.log\\(''qrcode ok''\\)\")",
       "Bash(node:*)",
-      "Bash(docker-compose exec:*)"
+      "Bash(docker-compose exec:*)",
+      "Bash(find C:/Users/gamec/Desktop/siamworld_shop -name THEME.md -o -name *.md -path */.agents/context/*)",
+      "Bash(ls -la /c/Users/gamec/Desktop/siamworld_shop/*.yml /c/Users/gamec/Desktop/siamworld_shop/*.yaml /c/Users/gamec/Desktop/siamworld_shop/.*config* /c/Users/gamec/Desktop/siamworld_shop/.env*)",
+      "Bash(grep -n \"stock\\\\|sale_end\\\\|expires\\\\|quantity\\\\|release\\\\|limit\" /c/Users/gamec/Desktop/siamworld_shop/migrations/*.sql /c/Users/gamec/Desktop/siamworld_shop/init.sql)",
+      "Bash(docker-compose -f /c/Users/gamec/Desktop/siamworld_shop/docker-compose.yml build backend)",
+      "Bash(docker-compose -f /c/Users/gamec/Desktop/siamworld_shop/docker-compose.yml up -d backend)",
+      "Bash(docker-compose -f /c/Users/gamec/Desktop/siamworld_shop/docker-compose.yml build frontend)",
+      "Bash(docker-compose -f /c/Users/gamec/Desktop/siamworld_shop/docker-compose.yml up -d frontend)",
+      "Bash(docker-compose -f /c/Users/gamec/Desktop/siamworld_shop/docker-compose.yml build backend frontend)",
+      "Bash(docker-compose -f /c/Users/gamec/Desktop/siamworld_shop/docker-compose.yml up -d backend frontend)"
     ]
   }
 }

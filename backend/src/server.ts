@@ -138,6 +138,35 @@ async function start() {
     // Start player tracking (polls every 10s)
     playerTracker.start(10000);
 
+    // Cleanup REDEEMED inventory items older than 7 days (runs every 6 hours)
+    const cleanupInventory = async () => {
+      try {
+        const [result] = await pool.execute(
+          "DELETE FROM web_inventory WHERE status = 'REDEEMED' AND redeemed_at < DATE_SUB(NOW(), INTERVAL 7 DAY)"
+        );
+        const deleted = (result as any).affectedRows;
+        if (deleted > 0) logger.info(`Inventory cleanup: removed ${deleted} redeemed items older than 7 days`);
+      } catch (err) { logger.error('Inventory cleanup error', { error: err }); }
+    };
+    cleanupInventory();
+    setInterval(cleanupInventory, 6 * 60 * 60 * 1000);
+
+    // Auto-deactivate loot boxes & products where sale_end + 5 min grace has passed (runs every minute)
+    const deactivateExpiredSales = async () => {
+      try {
+        const [r1] = await pool.execute(
+          "UPDATE loot_boxes SET active = 0 WHERE active = 1 AND is_paused = 0 AND sale_end IS NOT NULL AND sale_end < DATE_SUB(NOW(), INTERVAL 5 MINUTE)"
+        );
+        const [r2] = await pool.execute(
+          "UPDATE products SET active = 0 WHERE active = 1 AND is_paused = 0 AND sale_end IS NOT NULL AND sale_end < DATE_SUB(NOW(), INTERVAL 5 MINUTE)"
+        );
+        const rows = (r1 as any).affectedRows + (r2 as any).affectedRows;
+        if (rows > 0) logger.info(`Auto-deactivated ${rows} expired sale item(s)`);
+      } catch (err) { logger.error('Deactivate expired sales error', { error: err }); }
+    };
+    deactivateExpiredSales();
+    setInterval(deactivateExpiredSales, 60 * 1000);
+
     server.listen(config.port, () => {
       logger.info('Server started', {
         port: config.port,

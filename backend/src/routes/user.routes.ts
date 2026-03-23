@@ -7,6 +7,7 @@ import { walletService } from '../services/wallet.service';
 import { redeemInventorySchema, redeemCodeSchema } from '../validators/schemas';
 import { pool } from '../database/connection';
 import { RowDataPacket, PoolConnection } from 'mysql2/promise';
+import bcrypt from 'bcrypt';
 
 const router = Router();
 
@@ -14,6 +15,27 @@ router.get('/profile', authenticate, async (req: Request, res: Response, next: N
   try {
     const profile = await userService.getProfile(req.user!.userId);
     res.json({ success: true, user: profile });
+  } catch (err) { next(err); }
+});
+
+router.post('/change-password', authenticate, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) return res.status(400).json({ success: false, message: 'กรุณากรอกข้อมูลให้ครบ' });
+    if (newPassword.length < 8) return res.status(400).json({ success: false, message: 'รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร' });
+
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      'SELECT a.password FROM users u JOIN authme a ON LOWER(a.username) = LOWER(u.username) WHERE u.id = ?',
+      [req.user!.userId]
+    );
+    if (rows.length === 0) return res.status(404).json({ success: false, message: 'ไม่พบข้อมูลผู้ใช้' });
+
+    const valid = await bcrypt.compare(currentPassword, rows[0].password);
+    if (!valid) return res.status(400).json({ success: false, message: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await pool.execute('UPDATE authme SET password = ? WHERE LOWER(username) = LOWER(?)', [hashed, req.user!.username]);
+    res.json({ success: true, message: 'เปลี่ยนรหัสผ่านสำเร็จ' });
   } catch (err) { next(err); }
 });
 

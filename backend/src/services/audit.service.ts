@@ -3,9 +3,9 @@ import { pool } from '../database/connection';
 export type AuditActionType =
   | 'user_login'
   // Products
-  | 'admin_product_create' | 'admin_product_update' | 'admin_product_delete'
+  | 'admin_product_create' | 'admin_product_update' | 'admin_product_delete' | 'admin_product_release' | 'admin_product_stop'
   // Loot boxes
-  | 'admin_lootbox_create' | 'admin_lootbox_update' | 'admin_lootbox_delete'
+  | 'admin_lootbox_create' | 'admin_lootbox_update' | 'admin_lootbox_delete' | 'admin_lootbox_release' | 'admin_lootbox_stop' | 'admin_lootbox_pause' | 'admin_lootbox_resume'
   // Loot box items
   | 'admin_lootbox_item_create' | 'admin_lootbox_item_update' | 'admin_lootbox_item_delete'
   // Redeem codes
