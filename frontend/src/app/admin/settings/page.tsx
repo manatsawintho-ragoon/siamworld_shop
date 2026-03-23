@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { api, getToken } from '@/lib/api';
 import { useSettings } from '@/context/SettingsContext';
+import { useAdminAlert } from '@/components/AdminAlert';
 
 interface Setting { key: string; value: string; }
 interface Slide { id: number; title: string; image_url: string; link_url?: string; sort_order: number; active: boolean; }
@@ -68,6 +69,7 @@ const ActionButtons = ({ saving, saved, onSave, onClear }: { saving: boolean; sa
 
 export default function AdminSettings() {
   const { refreshSettings } = useSettings();
+  const { confirm: adminConfirm, alert: adminAlert } = useAdminAlert();
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [sectionSaving, setSectionSaving] = useState<Record<string, boolean>>({});
@@ -128,8 +130,9 @@ export default function AdminSettings() {
       await refreshSettings();
       setSectionSaved(prev => ({ ...prev, [section]: true }));
       setTimeout(() => setSectionSaved(prev => ({ ...prev, [section]: false })), 3000);
+      adminAlert({ title: 'บันทึกการตั้งค่าแล้ว', type: 'success' });
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'บันทึกไม่สำเร็จ');
+      await adminAlert({ title: 'บันทึกไม่สำเร็จ', message: err instanceof Error ? err.message : undefined, type: 'error' });
     }
     setSectionSaving(prev => ({ ...prev, [section]: false }));
   };
@@ -144,7 +147,7 @@ export default function AdminSettings() {
       await api('/admin/settings', { method: 'PUT', token: getToken()!, body: { settings: settingsArray } });
       await refreshSettings();
     } catch {
-      alert('เคลียร์ไม่สำเร็จ');
+      await adminAlert({ title: 'เคลียร์ไม่สำเร็จ', type: 'error' });
     }
   };
 
@@ -190,6 +193,7 @@ export default function AdminSettings() {
         await api('/admin/slides', { method: 'POST', token: getToken()!, body });
       }
       setEditingSlide(null);
+      adminAlert({ title: editingSlide.id ? 'แก้ไขสไลด์แล้ว' : 'เพิ่มสไลด์แล้ว', type: 'success' });
       loadSlides();
     } catch (err: unknown) {
       setSlideError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
@@ -197,8 +201,8 @@ export default function AdminSettings() {
   };
 
   const handleDeleteSlide = async (id: number) => {
-    if (!confirm('ต้องการลบสไลด์นี้?')) return;
-    try { await api(`/admin/slides/${id}`, { method: 'DELETE', token: getToken()! }); loadSlides(); } catch { }
+    if (!await adminConfirm({ title: 'ลบสไลด์', message: 'ต้องการลบสไลด์นี้?', type: 'danger', confirmLabel: 'ลบ' })) return;
+    try { await api(`/admin/slides/${id}`, { method: 'DELETE', token: getToken()! }); adminAlert({ title: 'ลบสไลด์แล้ว', type: 'success' }); loadSlides(); } catch { }
   };
 
   const handleSaveDl = async (e: React.FormEvent) => {
@@ -215,6 +219,7 @@ export default function AdminSettings() {
         await api('/admin/downloads', { method: 'POST', token: getToken()!, body });
       }
       setEditingDl(null);
+      adminAlert({ title: editingDl.id ? 'แก้ไขรายการดาวน์โหลดแล้ว' : 'เพิ่มรายการดาวน์โหลดแล้ว', type: 'success' });
       loadDownloads();
     } catch (err: unknown) {
       setDlError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
@@ -222,8 +227,8 @@ export default function AdminSettings() {
   };
 
   const handleDeleteDl = async (id: number) => {
-    if (!confirm('ต้องการลบรายการดาวน์โหลดนี้?')) return;
-    try { await api(`/admin/downloads/${id}`, { method: 'DELETE', token: getToken()! }); loadDownloads(); } catch { }
+    if (!await adminConfirm({ title: 'ลบรายการดาวน์โหลด', message: 'ต้องการลบรายการดาวน์โหลดนี้?', type: 'danger', confirmLabel: 'ลบ' })) return;
+    try { await api(`/admin/downloads/${id}`, { method: 'DELETE', token: getToken()! }); adminAlert({ title: 'ลบรายการดาวน์โหลดแล้ว', type: 'success' }); loadDownloads(); } catch { }
   };
 
   const handleToggleDl = async (dl: Download) => {
@@ -253,13 +258,14 @@ export default function AdminSettings() {
         {/* LEFT COLUMN */}
         <div className="space-y-6">
           {/* ข้อมูลพื้นฐาน */}
-          <SectionCard icon="fa-info-circle" title="ข้อมูลพื้นฐาน" description="ตั้งค่าชื่อเว็บไซต์ หัวข้อ และคำอธิบาย"
-            actions={<ActionButtons saving={!!sectionSaving.basic} saved={!!sectionSaved.basic} onSave={() => handleSaveKeys('basic', ['shop_name', 'shop_subtitle', 'shop_description'])} />}
+          <SectionCard icon="fa-info-circle" title="ข้อมูลพื้นฐาน" description="ตั้งค่าชื่อเว็บไซต์ หัวข้อ และ IP เซิร์ฟเวอร์"
+            actions={<ActionButtons saving={!!sectionSaving.basic} saved={!!sectionSaved.basic} onSave={() => handleSaveKeys('basic', ['shop_name', 'shop_subtitle', 'shop_description', 'server_ip'])} />}
           >
             <div className="space-y-4">
               <FieldInput label="หัวข้อเว็บไซต์" value={settings.shop_name || ''} onChange={v => set('shop_name', v)} placeholder="เช่น SiamWorld" icon="fa-globe" hint="จะแสดงบน Title Bar ของเบราว์เซอร์" />
               <FieldInput label="คำบรรยายเว็บไซต์" value={settings.shop_subtitle || ''} onChange={v => set('shop_subtitle', v)} placeholder="เช่น Minecraft Survival Server" icon="fa-heading" hint="หัวข้อที่แสดงบน Banner หน้าแรก" />
               <FieldInput label="คำอธิบายเว็บไซต์ (SEO)" value={settings.shop_description || ''} onChange={v => set('shop_description', v)} placeholder="เช่น เซิร์ฟ Minecraft ที่ดีที่สุด..." icon="fa-align-left" hint="ใช้สำหรับ SEO (Meta Description) ในการค้นหาของ Google" />
+              <FieldInput label="IP เซิร์ฟเวอร์ Minecraft" value={settings.server_ip || ''} onChange={v => set('server_ip', v)} placeholder="เช่น play.yourserver.net" icon="fa-server" hint="แสดงบน Navbar และผู้เล่นสามารถคัดลอกได้" />
             </div>
           </SectionCard>
 
@@ -283,7 +289,7 @@ export default function AdminSettings() {
           <SectionCard
             icon="fa-images"
             title="สไลด์ Carousel"
-            description="ลากเพื่อจัดลำดับ (แนะนำขนาด 1920×500 px)"
+            description="ลากเพื่อจัดลำดับ แนะนำขนาด 1200×400 px หรือ 1920×640 px"
             actions={
               <button onClick={() => setEditingSlide({ ...emptySlide })} className="flex items-center gap-1.5 px-4 py-2.5 bg-[#16a34a] text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#0d6b2e]">
                 <i className="fas fa-plus text-[12px]"></i> เพิ่ม
@@ -307,7 +313,7 @@ export default function AdminSettings() {
                     onDragEnter={() => handleDragEnter(idx)}
                     onDragEnd={handleDragEnd}
                     onDragOver={e => e.preventDefault()}
-                    className="flex items-center gap-3 px-3 py-2 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all group cursor-grab active:cursor-grabbing active:opacity-70"
+                    className="flex items-center gap-3 px-3 py-2 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all group"
                   >
                     {/* Drag handle */}
                     <i className="fas fa-grip-vertical text-gray-300 group-hover:text-gray-400 text-sm flex-shrink-0 transition-colors"></i>
@@ -497,6 +503,10 @@ export default function AdminSettings() {
                 <input value={editingSlide.image_url || ''} onChange={e => setEditingSlide({ ...editingSlide, image_url: e.target.value })}
                   className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300"
                   placeholder="https://example.com/banner.jpg" />
+                <p className="text-[10px] text-blue-500 mt-1.5 flex items-start gap-1">
+                  <i className="fas fa-circle-info mt-0.5 flex-shrink-0" />
+                  <span>แนะนำขนาด <strong>1200×400 px</strong> หรือ <strong>1920×640 px</strong> (สัดส่วน 3:1) — แสดงใน Hero Carousel แบบ object-cover รองรับ JPG, PNG, WebP</span>
+                </p>
               </div>
               {editingSlide.image_url && (
                 <div className="rounded-lg overflow-hidden h-24 bg-gray-100 border border-gray-200">

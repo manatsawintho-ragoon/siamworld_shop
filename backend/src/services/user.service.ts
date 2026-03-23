@@ -12,28 +12,57 @@ class UserService {
     if (rows.length === 0) throw new NotFoundError('User not found');
 
     const [stats] = await pool.execute<RowDataPacket[]>(
-      `SELECT 
+      `SELECT
         COALESCE(SUM(amount), 0) as total_topup,
-        COALESCE(SUM(CASE WHEN MONTH(created_at) = MONTH(CURRENT_DATE()) AND YEAR(created_at) = YEAR(CURRENT_DATE()) THEN amount ELSE 0 END), 0) as monthly_topup
-       FROM transactions 
+        COALESCE(SUM(CASE WHEN DATE(created_at) = CURRENT_DATE() THEN amount ELSE 0 END), 0) as daily_topup,
+        COALESCE(SUM(CASE WHEN YEARWEEK(created_at, 1) = YEARWEEK(CURRENT_DATE(), 1) THEN amount ELSE 0 END), 0) as weekly_topup,
+        COALESCE(SUM(CASE WHEN MONTH(created_at) = MONTH(CURRENT_DATE()) AND YEAR(created_at) = YEAR(CURRENT_DATE()) THEN amount ELSE 0 END), 0) as monthly_topup,
+        COUNT(*) as topup_count,
+        MAX(created_at) as last_topup_at
+       FROM transactions
        WHERE user_id = ? AND type = 'topup' AND status = 'success'`,
       [userId]
     );
 
     const [codes] = await pool.execute<RowDataPacket[]>(
-      'SELECT COUNT(id) as used_codes_count FROM redeem_logs WHERE user_id = ?', [userId]
+      `SELECT
+        COUNT(id) as used_codes_count,
+        COALESCE(SUM(CASE WHEN DATE(redeemed_at) = CURRENT_DATE() THEN 1 ELSE 0 END), 0) as daily_redeem_count
+       FROM redeem_logs WHERE user_id = ?`, [userId]
     );
 
     const [spentStats] = await pool.execute<RowDataPacket[]>(
-      "SELECT COALESCE(SUM(ABS(amount)), 0) as total_spent FROM transactions WHERE user_id = ? AND type = 'purchase' AND status = 'success'", [userId]
+      `SELECT
+        COALESCE(SUM(ABS(amount)), 0) as total_spent,
+        COALESCE(SUM(CASE WHEN DATE(created_at) = CURRENT_DATE() THEN ABS(amount) ELSE 0 END), 0) as daily_spent,
+        COALESCE(SUM(CASE WHEN DATE(created_at) = CURRENT_DATE() THEN 1 ELSE 0 END), 0) as daily_purchase_count,
+        COALESCE(SUM(CASE WHEN MONTH(created_at) = MONTH(CURRENT_DATE()) AND YEAR(created_at) = YEAR(CURRENT_DATE()) THEN ABS(amount) ELSE 0 END), 0) as monthly_spent,
+        COUNT(*) as purchase_count
+       FROM transactions WHERE user_id = ? AND type = 'purchase' AND status = 'success'`,
+      [userId]
     );
+
+    const totalTopup = parseFloat(stats[0].total_topup || '0');
+    const totalSpent = parseFloat(spentStats[0].total_spent || '0');
+    const topupCount = parseInt(stats[0].topup_count || '0');
 
     return {
       ...rows[0],
-      total_topup: parseFloat(stats[0].total_topup || '0'),
+      total_topup: totalTopup,
+      daily_topup: parseFloat(stats[0].daily_topup || '0'),
+      weekly_topup: parseFloat(stats[0].weekly_topup || '0'),
       monthly_topup: parseFloat(stats[0].monthly_topup || '0'),
+      topup_count: topupCount,
+      last_topup_at: stats[0].last_topup_at || null,
+      avg_topup: topupCount > 0 ? Math.round((totalTopup / topupCount) * 100) / 100 : 0,
       used_codes_count: codes[0].used_codes_count,
-      total_spent: parseFloat(spentStats[0].total_spent || '0')
+      daily_redeem_count: parseInt(codes[0].daily_redeem_count || '0'),
+      total_spent: totalSpent,
+      daily_spent: parseFloat(spentStats[0].daily_spent || '0'),
+      daily_purchase_count: parseInt(spentStats[0].daily_purchase_count || '0'),
+      monthly_spent: parseFloat(spentStats[0].monthly_spent || '0'),
+      purchase_count: parseInt(spentStats[0].purchase_count || '0'),
+      net_balance_rate: totalTopup > 0 ? Math.round(((totalTopup - totalSpent) / totalTopup) * 100) : 100,
     };
   }
 

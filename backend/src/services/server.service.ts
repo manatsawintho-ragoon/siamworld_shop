@@ -1,10 +1,13 @@
 import { pool } from '../database/connection';
 import { NotFoundError, ValidationError } from '../utils/errors';
 import { RowDataPacket } from 'mysql2';
-import { encrypt, isEncrypted } from '../utils/crypto';
+import { encrypt, decrypt, isEncrypted } from '../utils/crypto';
+import { Rcon } from 'rcon-client';
+
+const HEALTH_TIMEOUT_MS = 5000;
 
 function resolveHost(host: string): string {
-  if (process.env.DOCKER === 'true' || process.env.NODE_ENV === 'production') {
+  if (process.env.DOCKER === 'true') {
     if (host === '127.0.0.1' || host === 'localhost' || host === '0.0.0.0') {
       return 'host.docker.internal';
     }
@@ -64,6 +67,40 @@ class ServerService {
 
   async delete(id: number) {
     await pool.execute('DELETE FROM servers WHERE id = ?', [id]);
+  }
+
+  /** Check real RCON connectivity for ALL servers in parallel (enabled or not). */
+  async healthCheckAll(): Promise<{ id: number; healthy: boolean; latency_ms: number }[]> {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      'SELECT id, host, rcon_port, rcon_password FROM servers'
+    );
+
+    const results = await Promise.allSettled(
+      (rows as any[]).map(async (row) => {
+        const password = isEncrypted(row.rcon_password) ? decrypt(row.rcon_password) : row.rcon_password;
+        const start = Date.now();
+        let rcon: Rcon | null = null;
+        try {
+          rcon = new Rcon({ host: row.host, port: row.rcon_port, password });
+          await Promise.race([
+            rcon.connect(),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error('timeout')), HEALTH_TIMEOUT_MS)
+            ),
+          ]);
+          await rcon.send('list');
+          return { id: row.id as number, healthy: true, latency_ms: Date.now() - start };
+        } catch {
+          return { id: row.id as number, healthy: false, latency_ms: Date.now() - start };
+        } finally {
+          if (rcon) rcon.end().catch(() => {});
+        }
+      })
+    );
+
+    return results.map((r) =>
+      r.status === 'fulfilled' ? r.value : { id: 0, healthy: false, latency_ms: 0 }
+    );
   }
 }
 

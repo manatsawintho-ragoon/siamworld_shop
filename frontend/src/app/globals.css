@@ -325,6 +325,7 @@ table.data-table tbody tr:hover {
 }
 .animate-fade-in-up { animation: fade-in-up 0.6s ease both; }
 
+
 /* ── Broadcast Marquee ── */
 @keyframes marquee-scroll {
   0%   { transform: translateX(100%); }

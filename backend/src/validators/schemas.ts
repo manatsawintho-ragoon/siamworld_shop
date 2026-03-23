@@ -18,7 +18,7 @@ export const registerSchema = z.object({
     .min(3, 'Username must be at least 3 characters')
     .max(32, 'Username too long')
     .regex(/^[a-zA-Z0-9_]+$/, 'Username may only contain letters, numbers and underscores'),
-  password: z.string().min(6, 'Password must be at least 6 characters').max(255),
+  password: z.string().min(8, 'Password must be at least 8 characters').max(255),
   email: z.string().email('Invalid email format').max(255),
 });
 
@@ -31,6 +31,15 @@ export const topupSchema = z.object({
 
 export const trueMoneyRedeemSchema = z.object({
   giftLink: z.string().url().min(1),
+});
+
+// Accepts one of: base64 image, public URL, or QR payload string
+export const slipVerifySchema = z.object({
+  base64:  z.string().min(1).optional(),
+  url:     z.string().url().max(2048).optional(),
+  payload: z.string().min(1).max(128).optional(),
+}).refine(d => !!(d.base64 || d.url || d.payload), {
+  message: 'Provide one of: base64, url, or payload',
 });
 
 // ─── Shop ────────────────────────────────────────────────────
@@ -52,22 +61,44 @@ export const redeemInventorySchema = z.object({
 });
 
 const lootBoxBaseFields = {
-  name:        z.string().min(1).max(255),
-  description: z.string().max(2000).optional().nullable(),
-  image:       z.string().max(500).optional().nullable(),
-  price:       z.number().positive(),
-  sort_order:  z.number().int().optional(),
+  name:           z.string().min(1).max(255),
+  description:    z.string().max(2000).optional().nullable(),
+  image:          z.string().max(500).optional().nullable(),
+  price:          z.number().positive(),
+  original_price: z.number().positive().optional().nullable(),
+  sort_order:     z.number().int().optional(),
+  category_id:    z.number().int().positive().optional().nullable(),
+  stock_limit:    z.number().int().min(0).optional().nullable(),
+  sale_start:     z.string().optional().nullable(),
+  sale_end:       z.string().optional().nullable(),
 };
 
 export const createLootBoxSchema = z.object(lootBoxBaseFields);
 
 export const updateLootBoxSchema = z.object({
-  name:        lootBoxBaseFields.name.optional(),
-  description: lootBoxBaseFields.description,
-  image:       lootBoxBaseFields.image,
-  price:       lootBoxBaseFields.price.optional(),
-  sort_order:  lootBoxBaseFields.sort_order,
-  active:      boolFlag.optional(),
+  name:           lootBoxBaseFields.name.optional(),
+  description:    lootBoxBaseFields.description,
+  image:          lootBoxBaseFields.image,
+  price:          lootBoxBaseFields.price.optional(),
+  original_price: lootBoxBaseFields.original_price,
+  sort_order:     lootBoxBaseFields.sort_order,
+  active:         boolFlag.optional(),
+  category_id:    lootBoxBaseFields.category_id,
+  stock_limit:    lootBoxBaseFields.stock_limit,
+  sale_start:     lootBoxBaseFields.sale_start,
+  sale_end:       lootBoxBaseFields.sale_end,
+});
+
+export const createLootBoxCategorySchema = z.object({
+  name:       z.string().min(1).max(100),
+  color:      z.string().regex(/^#[0-9a-fA-F]{3,8}$/).default('#637469'),
+  sort_order: z.number().int().optional(),
+});
+
+export const updateLootBoxCategorySchema = z.object({
+  name:       z.string().min(1).max(100).optional(),
+  color:      z.string().regex(/^#[0-9a-fA-F]{3,8}$/).optional(),
+  sort_order: z.number().int().optional(),
 });
 
 const lootBoxItemBaseFields = {
@@ -105,6 +136,9 @@ const productBaseFields = {
   featured:      boolFlag.optional(),
   active:        boolFlag.optional(),
   server_ids:    z.array(z.number().int().positive()).optional(),
+  stock_limit:   z.number().int().min(0).optional().nullable(),
+  sale_start:    z.string().optional().nullable(),
+  sale_end:      z.string().optional().nullable(),
 };
 
 export const createProductSchema = z.object(productBaseFields);
@@ -121,6 +155,16 @@ export const updateProductSchema = z.object({
   active:         boolFlag.optional(),
   sort_order:     z.number().int().optional(),
   server_ids:     productBaseFields.server_ids,
+  stock_limit:    z.number().int().min(0).nullable().optional(),
+  sale_start:     z.string().nullable().optional(),
+  sale_end:       z.string().nullable().optional(),
+});
+
+// ─── Release Schema ───────────────────────────────────────────
+
+export const releaseSchema = z.object({
+  duration_minutes: z.number().int().min(0),
+  stock_limit:      z.number().int().min(1).optional().nullable(),
 });
 
 // ─── Servers ─────────────────────────────────────────────────

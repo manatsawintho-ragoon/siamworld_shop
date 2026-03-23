@@ -1,7 +1,39 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { api, getToken } from '@/lib/api';
+import { useAdminAlert } from '@/components/AdminAlert';
+
+// ─── Countdown Badge ─────────────────────────────────────────────────────────
+function CountdownBadge({ endTime }: { endTime: string }) {
+  const [display, setDisplay] = useState('');
+  useEffect(() => {
+    const calc = () => {
+      const diff = new Date(endTime).getTime() - Date.now();
+      if (diff <= 0) { setDisplay('หมดเวลา'); return; }
+      const totalSec = Math.floor(diff / 1000);
+      const days  = Math.floor(totalSec / 86400);
+      const hours = Math.floor((totalSec % 86400) / 3600);
+      const mins  = Math.floor((totalSec % 3600) / 60);
+      const secs  = totalSec % 60;
+      if (days > 0) {
+        setDisplay(`${days}d ${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`);
+      } else {
+        setDisplay(`${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`);
+      }
+    };
+    calc();
+    const t = setInterval(calc, 1000);
+    return () => clearInterval(t);
+  }, [endTime]);
+  const isExpired = new Date(endTime).getTime() < Date.now();
+  return (
+    <span className={`inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-md ${isExpired ? 'bg-red-500 text-white' : 'bg-amber-500 text-white'}`}>
+      <i className={`fas ${isExpired ? 'fa-clock' : 'fa-hourglass-half'} text-[7px]`} />
+      {display}
+    </span>
+  );
+}
 
 interface Product {
   id: number;
@@ -17,6 +49,10 @@ interface Product {
   active: boolean;
   server_ids?: number[];
   servers?: { id: number; name: string }[];
+  stock_limit?: number | null;
+  sale_start?: string | null;
+  sale_end?: string | null;
+  sold_count?: number;
 }
 
 interface Category { id: number; name: string; slug: string; icon?: string; sort_order: number; }
@@ -26,11 +62,13 @@ const emptyProduct = {
   name: '', description: '', price: 0, original_price: 0,
   image: '', command: '', category_id: 0, featured: false,
   active: true, server_ids: [] as number[],
+  stock_limit: null as number | null, sale_start: null as string | null, sale_end: null as string | null,
 };
 
 const emptyCategory: Partial<Category> = { name: '', slug: '', icon: '', sort_order: 0 };
 
 export default function AdminProducts() {
+  const { confirm: adminConfirm, alert: adminAlert } = useAdminAlert();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [servers, setServers] = useState<Server[]>([]);
@@ -46,6 +84,7 @@ export default function AdminProducts() {
   const [catEditing, setCatEditing] = useState<Partial<Category> | null>(null);
   const [catSaving, setCatSaving] = useState(false);
   const [catError, setCatError] = useState('');
+  const dragCatIdx = useRef<number | null>(null);
 
   // RCON viewer modal
   const [viewingCmd, setViewingCmd] = useState<{ name: string; command: string } | null>(null);
@@ -77,6 +116,13 @@ export default function AdminProducts() {
     api('/admin/categories', { token: getToken()! }).then(d => setCategories((d.categories as Category[]) || []));
   };
 
+  const handleReorderCats = async (reordered: Category[]) => {
+    setCategories(reordered);
+    try {
+      await api('/admin/categories/reorder', { method: 'PUT', token: getToken()!, body: { order: reordered.map(c => c.id) } });
+    } catch { loadCategories(); }
+  };
+
   useEffect(load, []);
 
   const openEdit = (p: Product) => {
@@ -84,6 +130,11 @@ export default function AdminProducts() {
       ...p,
       server_ids: p.servers?.map((s: { id: number }) => s.id) || p.server_ids || [],
     });
+    setSaleLimitStock(p.stock_limit != null);
+    setSaleStockVal(p.stock_limit ?? null);
+    setSaleDurValue(60);
+    setSaleDurUnit('minutes');
+    setReleaseError('');
   };
 
   const handleSave = async () => {
@@ -102,6 +153,7 @@ export default function AdminProducts() {
         featured: Boolean(editing.featured),
         active: editing.active !== false,
         server_ids: editing.server_ids || [],
+        stock_limit: editing.stock_limit ?? null,
       };
       if (editing.id) {
         await api(`/admin/products/${editing.id}`, { method: 'PUT', token: getToken()!, body });
@@ -109,6 +161,7 @@ export default function AdminProducts() {
         await api('/admin/products', { method: 'POST', token: getToken()!, body });
       }
       setEditing(null);
+      adminAlert({ title: editing.id ? 'แก้ไขสินค้าแล้ว' : 'เพิ่มสินค้าแล้ว', type: 'success' });
       load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
@@ -126,9 +179,10 @@ export default function AdminProducts() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('ต้องการลบสินค้านี้?')) return;
+    if (!await adminConfirm({ title: 'ลบสินค้า', message: 'ต้องการลบสินค้านี้?', type: 'danger', confirmLabel: 'ลบ' })) return;
     try {
       await api(`/admin/products/${id}`, { method: 'DELETE', token: getToken()! });
+      adminAlert({ title: 'ลบสินค้าแล้ว', type: 'success' });
       load();
     } catch { }
   };
@@ -152,6 +206,7 @@ export default function AdminProducts() {
         await api('/admin/categories', { method: 'POST', token: getToken()!, body });
       }
       setCatEditing(null);
+      adminAlert({ title: catEditing.id ? 'แก้ไขหมวดหมู่แล้ว' : 'เพิ่มหมวดหมู่แล้ว', type: 'success' });
       loadCategories();
     } catch (err: unknown) {
       setCatError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
@@ -161,167 +216,409 @@ export default function AdminProducts() {
   };
 
   const handleDeleteCat = async (id: number) => {
-    if (!confirm('ลบหมวดหมู่นี้? สินค้าในหมวดหมู่จะยังอยู่แต่ไม่มีหมวดหมู่')) return;
+    if (!await adminConfirm({ title: 'ลบหมวดหมู่', message: 'สินค้าในหมวดหมู่จะยังอยู่แต่ไม่มีหมวดหมู่ ยืนยัน?', type: 'warning', confirmLabel: 'ลบ' })) return;
     try {
       await api(`/admin/categories/${id}`, { method: 'DELETE', token: getToken()! });
+      adminAlert({ title: 'ลบหมวดหมู่แล้ว', type: 'success' });
       loadCategories();
       load();
     } catch { }
   };
 
-  return (
-    <div className="space-y-6">
+  // ── Sale / Release state ─────────────────────────────────
+  const [saleModal,      setSaleModal]      = useState<Product | null>(null);
+  const [saleLimitStock, setSaleLimitStock] = useState(false);
+  const [saleDurValue,   setSaleDurValue]   = useState(60);
+  const [saleDurUnit,    setSaleDurUnit]    = useState<'minutes' | 'hours' | 'days'>('minutes');
+  const [saleStockVal,   setSaleStockVal]   = useState<number | null>(null);
+  const [releasing,      setReleasing]      = useState(false);
+  const [stopping,       setStopping]       = useState(false);
+  const [releaseError,   setReleaseError]   = useState('');
 
-      {/* Page header */}
+  const getSaleDurationMinutes = () => {
+    if (saleDurUnit === 'hours') return saleDurValue * 60;
+    if (saleDurUnit === 'days')  return saleDurValue * 60 * 24;
+    return saleDurValue;
+  };
+
+  const handleRelease = async (fromEditing = false) => {
+    const targetId = fromEditing ? editing?.id : saleModal?.id;
+    if (!targetId) return;
+    setReleasing(true); setReleaseError('');
+    try {
+      await api(`/admin/products/${targetId}/release`, {
+        method: 'POST',
+        token: getToken()!,
+        body: {
+          duration_minutes: getSaleDurationMinutes(),
+          stock_limit: saleLimitStock ? (saleStockVal ?? null) : null,
+        },
+      });
+      if (!fromEditing) setSaleModal(null);
+      load();
+    } catch (err: any) {
+      setReleaseError(err?.message || 'เกิดข้อผิดพลาด');
+    } finally {
+      setReleasing(false);
+    }
+  };
+
+  const handleStop = async (fromEditing = false) => {
+    const targetId = fromEditing ? editing?.id : saleModal?.id;
+    if (!targetId) return;
+    setStopping(true); setReleaseError('');
+    try {
+      await api(`/admin/products/${targetId}/stop`, { method: 'POST', token: getToken()! });
+      if (!fromEditing) setSaleModal(null);
+      load();
+    } catch (err: any) {
+      setReleaseError(err?.message || 'เกิดข้อผิดพลาด');
+    } finally {
+      setStopping(false);
+    }
+  };
+
+  // ── New state for redesign ────────────────────────────────
+  const [selectedCat,    setSelectedCat]    = useState<number | null>(null);
+  const [search,         setSearch]         = useState('');
+  const [featFilter,     setFeatFilter]     = useState<'all' | 'featured' | 'normal'>('all');
+  const [page,           setPage]           = useState(1);
+  const dragProdIdx = useRef<number | null>(null);
+  const PAGE_SIZE = 25;
+
+  const handleToggleFeatured = async (p: Product) => {
+    const next = !p.featured;
+    setProducts(prev => prev.map(x => x.id === p.id ? { ...x, featured: next } : x));
+    try { await api(`/admin/products/${p.id}`, { method: 'PUT', token: getToken()!, body: { featured: next } }); }
+    catch { load(); }
+  };
+
+  const handleReorderProducts = async (reordered: Product[]) => {
+    setProducts(reordered);
+    try { await api('/admin/products/reorder', { method: 'PUT', token: getToken()!, body: { order: reordered.map(p => p.id) } }); }
+    catch { /* silent — sort_order col may not exist yet */ }
+  };
+
+  const filtered = products
+    .filter(p => selectedCat === null || p.category_id === selectedCat)
+    .filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase()) || (p.description || '').toLowerCase().includes(search.toLowerCase()))
+    .filter(p => featFilter === 'all' || (featFilter === 'featured' ? p.featured : !p.featured));
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paged      = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const catCount = (catId: number | null) =>
+    catId === null ? products.length : products.filter(p => p.category_id === catId).length;
+
+  return (
+    <div className="space-y-4">
+
+      {/* ── Page header ──────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-800">
-            <i className="fas fa-cube mr-2 text-[#f97316]"></i>จัดการสินค้า
+          <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <i className="fas fa-cube text-[#f97316]"></i> จัดการสินค้า
           </h1>
-          <p className="text-xs text-gray-400 mt-0.5">เพิ่ม แก้ไข และจัดการสินค้าไอเทมทั้งหมดในร้าน</p>
+          <p className="text-xs text-gray-400 mt-0.5">เพิ่ม แก้ไข และจัดการสินค้าไอเท็มทั้งหมดในร้าน</p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => { setCatError(''); setCatEditing(null); setCatModalOpen(true); }}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-[13px] font-bold rounded-lg shadow-[0_4px_0_#d1d5db] hover:brightness-95 transition-all"
-          >
+          <button onClick={() => { setCatError(''); setCatEditing(null); setCatModalOpen(true); }}
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-[13px] font-bold rounded-lg shadow-[0_4px_0_#d1d5db] hover:brightness-95 transition-all">
             <i className="fas fa-tags text-[12px] text-[#f97316]"></i> จัดการหมวดหมู่
           </button>
-          <button
-            onClick={() => setEditing({ ...emptyProduct })}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-[#16a34a] text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#0d6b2e] hover:brightness-110 transition-all active:shadow-[0_2px_0_#0d6b2e] active:translate-y-[2px]"
-          >
+          <button onClick={() => setEditing({ ...emptyProduct })}
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-[#16a34a] text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#0d6b2e] hover:brightness-110 transition-all active:shadow-[0_2px_0_#0d6b2e] active:translate-y-[2px]">
             <i className="fas fa-plus text-[12px]"></i> เพิ่มสินค้า
           </button>
         </div>
       </div>
 
-      {/* Main card */}
-      <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
+      {/* ── Split layout ─────────────────────────────────────────────── */}
+      <div className="flex gap-4 items-start">
 
-        {/* Card header */}
-        <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/60 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
-              <i className="fas fa-store text-[#f97316] text-xs"></i>
-            </div>
-            <div>
-              <h3 className="font-bold text-gray-900 text-sm">รายการสินค้า</h3>
-              <p className="text-[11px] text-gray-500">สินค้าทั้งหมด {products.length} รายการ</p>
-            </div>
+        {/* ─ Left sidebar: category filter ─ */}
+        <div className="w-52 flex-shrink-0 bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/60">
+            <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+              <i className="fas fa-layer-group text-[#f97316]"></i> หมวดหมู่
+            </p>
+          </div>
+          <div className="p-2 space-y-0.5">
+            {/* All */}
+            <button onClick={() => { setSelectedCat(null); setPage(1); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-bold transition-all ${
+                selectedCat === null
+                  ? 'bg-[#16a34a] text-white shadow-[0_3px_0_#0d6b2e]'
+                  : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+              }`}>
+              <i className="fas fa-border-all text-[10px] flex-shrink-0" />
+              <span className="flex-1 truncate">ทั้งหมด</span>
+              <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full flex-shrink-0 ${selectedCat === null ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                {products.length}
+              </span>
+            </button>
+
+            {categories.map(c => {
+              const cnt = catCount(c.id);
+              const isOn = selectedCat === c.id;
+              return (
+                <button key={c.id} onClick={() => { setSelectedCat(c.id); setPage(1); }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-bold transition-all ${
+                    isOn ? 'bg-[#16a34a] text-white shadow-[0_3px_0_#0d6b2e]'
+                         : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+                  }`}>
+                  <i className={`fas ${c.icon || 'fa-tag'} text-[10px] flex-shrink-0`} />
+                  <span className="flex-1 truncate">{c.name}</span>
+                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full flex-shrink-0 ${isOn ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                    {cnt}
+                  </span>
+                </button>
+              );
+            })}
+
+            {/* No category */}
+            {(() => {
+              const cnt = products.filter(p => !p.category_id).length;
+              const isOn = selectedCat === -1;
+              return cnt > 0 ? (
+                <button onClick={() => { setSelectedCat(-1); setPage(1); }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-bold transition-all ${
+                    isOn ? 'bg-[#16a34a] text-white shadow-[0_3px_0_#0d6b2e]' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+                  }`}>
+                  <i className="fas fa-tag text-[10px] flex-shrink-0" />
+                  <span className="flex-1 truncate">ไม่มีหมวดหมู่</span>
+                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full flex-shrink-0 ${isOn ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>{cnt}</span>
+                </button>
+              ) : null;
+            })()}
           </div>
         </div>
 
-        {loading ? (
-          <div className="py-20 text-center">
-            <i className="fas fa-spinner fa-spin text-2xl text-gray-300"></i>
-            <p className="text-sm text-gray-400 mt-2">กำลังโหลด...</p>
+        {/* ─ Right: main product table ─ */}
+        <div className="flex-1 min-w-0 bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden flex flex-col">
+
+          {/* Card header */}
+          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/60 flex items-center gap-3">
+            <div className="w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
+              <i className="fas fa-store text-[#f97316] text-[10px]"></i>
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-gray-900">
+                {selectedCat === null ? 'ทั้งหมด' : selectedCat === -1 ? 'ไม่มีหมวดหมู่' : categories.find(c => c.id === selectedCat)?.name || ''}
+              </p>
+              <p className="text-[10px] text-gray-400">{filtered.length} รายการ</p>
+            </div>
+            {/* Search */}
+            <div className="relative">
+              <i className="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-300 text-[10px]"></i>
+              <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
+                placeholder="ค้นหาสินค้า..."
+                className="pl-7 pr-3 py-1.5 rounded-lg border border-gray-200 text-[11px] focus:outline-none focus:border-[#637469] focus:ring-1 focus:ring-[#637469]/20 w-44" />
+            </div>
+            {/* Featured filter pills */}
+            <div className="flex gap-1">
+              {(['all', 'featured', 'normal'] as const).map(f => (
+                <button key={f} onClick={() => { setFeatFilter(f); setPage(1); }}
+                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+                    featFilter === f
+                      ? 'bg-[#1e2735] text-white shadow-[0_2px_0_#38404d]'
+                      : 'bg-white border border-gray-200 text-gray-500 hover:border-gray-300'
+                  }`}>
+                  {f === 'all' ? 'ทั้งหมด' : f === 'featured' ? '⭐ แนะนำ' : 'ปกติ'}
+                </button>
+              ))}
+            </div>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 bg-slate-50/40">
-                  <th className="text-left px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wide">สินค้า</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wide">หมวด</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wide">ราคา</th>
-                  <th className="text-center px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wide">คำสั่ง RCON</th>
-                  <th className="text-center px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wide">แนะนำ</th>
-                  <th className="text-center px-5 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wide">จัดการ</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {products.map(p => (
-                  <tr key={p.id} className="hover:bg-gray-50/60 transition-colors">
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          {p.image ? <img src={p.image} alt="" className="w-full h-full object-cover rounded-lg" /> : <i className="fas fa-cube text-gray-300"></i>}
-                        </div>
-                        <div>
-                          <div className="font-semibold text-gray-800">{p.name}</div>
-                          <div className="text-xs text-gray-500 truncate max-w-[200px]">{p.description}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span className="px-2.5 py-0.5 rounded-sm text-xs font-bold uppercase tracking-wider bg-gray-100 text-gray-600">
-                        {p.category_name || '-'}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span className="font-bold text-gray-800">{p.price?.toLocaleString()} ฿</span>
-                      {p.original_price && p.original_price > p.price && (
-                        <span className="text-xs text-gray-400 line-through ml-1">{p.original_price?.toLocaleString()}</span>
-                      )}
-                    </td>
-                    {/* RCON command column */}
-                    <td className="px-5 py-3.5 text-center">
-                      <button
-                        onClick={() => setViewingCmd({ name: p.name, command: p.command || '' })}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-500 border border-blue-600 text-white shadow-[0_3px_0_#1d4ed8] hover:brightness-110 active:translate-y-[2px] active:shadow-none transition-all mx-auto"
-                        title="ดูคำสั่ง RCON"
-                      >
-                        <i className="fas fa-terminal text-[11px]"></i>
-                      </button>
-                    </td>
-                    <td className="px-5 py-3.5 text-center">
-                      {p.featured && <i className="fas fa-star text-yellow-500"></i>}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex gap-1.5 justify-center">
-                        {/* View buyers */}
-                        <button
-                          onClick={() => openBuyers(p)}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg bg-purple-500 border border-purple-600 text-white shadow-[0_3px_0_#6d28d9] hover:brightness-110 active:translate-y-[2px] active:shadow-none transition-all"
-                          title="ดูผู้ซื้อล่าสุด"
+
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <i className="fas fa-spinner fa-spin text-2xl text-[#f97316]"></i>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto flex-1 pb-3">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-100 bg-slate-50/40">
+                      <th className="w-7 px-2 py-2"></th>
+                      <th className="text-left px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wide">สินค้า</th>
+                      {selectedCat === null && <th className="text-left px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wide">หมวด</th>}
+                      <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wide">ราคา</th>
+                      <th className="text-center px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wide hidden lg:table-cell">สถานะ</th>
+                      <th className="text-center px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wide">แนะนำ</th>
+                      <th className="text-center px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wide">แสดง</th>
+                      <th className="text-center px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wide">จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {paged.map((p, idx) => {
+                      const globalIdx = (page - 1) * PAGE_SIZE + idx;
+                      return (
+                        <tr key={p.id}
+                          draggable
+                          onDragStart={() => { dragProdIdx.current = globalIdx; }}
+                          onDragOver={e => e.preventDefault()}
+                          onDrop={() => {
+                            const from = dragProdIdx.current;
+                            if (from === null || from === globalIdx) return;
+                            const next = [...products];
+                            const fromItem = filtered[from];
+                            const toItem   = filtered[globalIdx];
+                            const fi = next.findIndex(x => x.id === fromItem.id);
+                            const ti = next.findIndex(x => x.id === toItem.id);
+                            next.splice(ti, 0, next.splice(fi, 1)[0]);
+                            dragProdIdx.current = null;
+                            handleReorderProducts(next);
+                          }}
+                          className="hover:bg-gray-50/60 transition-colors group active:opacity-70"
                         >
-                          <i className="fas fa-users text-[11px]"></i>
+                          {/* Grip */}
+                          <td className="px-2 py-1.5 w-7">
+                            <i className="fas fa-grip-vertical text-gray-200 group-hover:text-gray-400 text-sm transition-colors"></i>
+                          </td>
+                          {/* Product */}
+                          <td className="px-3 py-1.5">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                {p.image ? <img src={p.image} alt="" className="w-full h-full object-cover" /> : <i className="fas fa-cube text-gray-300 text-xs"></i>}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="text-[12px] font-bold text-gray-800 truncate max-w-[180px]">{p.name}</div>
+                                {p.description && <div className="text-[10px] text-gray-400 truncate max-w-[180px]">{p.description}</div>}
+                              </div>
+                            </div>
+                          </td>
+                          {/* Category (only when showing all) */}
+                          {selectedCat === null && (
+                            <td className="px-3 py-1.5">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-600 uppercase tracking-wide">
+                                {p.category_name || '—'}
+                              </span>
+                            </td>
+                          )}
+                          {/* Price */}
+                          <td className="px-3 py-1.5 text-right whitespace-nowrap">
+                            <span className="text-[12px] font-black text-gray-800">{p.price?.toLocaleString()} ฿</span>
+                            {p.original_price && p.original_price > p.price && (
+                              <span className="text-[10px] text-gray-400 line-through ml-1">{p.original_price?.toLocaleString()}</span>
+                            )}
+                          </td>
+                          {/* Sale status */}
+                          <td className="px-2 py-1.5 text-center hidden lg:table-cell">
+                            <div className="flex flex-col items-center gap-0.5">
+                              {p.sale_end && (() => {
+                                const expired = new Date(p.sale_end).getTime() < Date.now();
+                                const future  = new Date(p.sale_end).getTime() > Date.now();
+                                if (expired) return (
+                                  <span className="inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 rounded-md bg-red-500 text-white">
+                                    <i className="fas fa-clock text-[7px]" /> หมดเวลา
+                                  </span>
+                                );
+                                if (future) return <CountdownBadge endTime={p.sale_end} />;
+                                return null;
+                              })()}
+                              {p.stock_limit != null && p.sold_count != null && (
+                                <span className={`inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 rounded-md ${p.sold_count >= p.stock_limit ? 'bg-red-500 text-white' : 'bg-blue-500 text-white'}`}>
+                                  <i className="fas fa-box text-[7px]" /> {p.sold_count}/{p.stock_limit}
+                                </span>
+                              )}
+                              {!p.sale_end && p.stock_limit == null && (
+                                <span className="text-[9px] text-gray-300">—</span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Featured — toggle switch */}
+                          <td className="px-2 py-1.5 text-center">
+                            <label className="flex items-center justify-center cursor-pointer" title={p.featured ? 'ยกเลิกแนะนำ' : 'ตั้งเป็นแนะนำ'} onClick={e => { e.stopPropagation(); handleToggleFeatured(p); }}>
+                              <div className="relative">
+                                <div className={`w-8 h-4 rounded-full transition-colors duration-200 ${p.featured ? 'bg-yellow-400' : 'bg-gray-200'}`} />
+                                <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform duration-200 ${p.featured ? 'translate-x-4' : ''}`} />
+                              </div>
+                            </label>
+                          </td>
+                          {/* Active toggle */}
+                          <td className="px-2 py-1.5 text-center">
+                            <button onClick={() => handleToggleActive(p)}
+                              title={p.active ? 'ปิดสินค้า' : 'เปิดสินค้า'}
+                              className={`w-7 h-7 flex items-center justify-center rounded-lg border text-white shadow-[0_2px_0] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all mx-auto ${
+                                p.active ? 'bg-green-500 border-green-600 shadow-[0_2px_0_#15803d]' : 'bg-gray-400 border-gray-500 shadow-[0_2px_0_#6b7280]'
+                              }`}>
+                              <i className={`fas text-[10px] ${p.active ? 'fa-eye' : 'fa-eye-slash'}`}></i>
+                            </button>
+                          </td>
+                          {/* Actions */}
+                          <td className="px-3 py-1.5">
+                            <div className="flex gap-1 justify-center">
+                              <button onClick={() => { setSaleModal(p); setSaleLimitStock(p.stock_limit != null); setSaleStockVal(p.stock_limit ?? null); setReleaseError(''); }} title="ปล่อยขาย"
+                                className="w-7 h-7 flex items-center justify-center rounded-lg bg-[#16a34a] border border-green-700 text-white shadow-[0_2px_0_#0d6b2e] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all">
+                                <i className="fas fa-rocket text-[10px]"></i>
+                              </button>
+                              <button onClick={() => openBuyers(p)} title="ผู้ซื้อ"
+                                className="w-7 h-7 flex items-center justify-center rounded-lg bg-purple-500 border border-purple-600 text-white shadow-[0_2px_0_#6d28d9] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all">
+                                <i className="fas fa-users text-[10px]"></i>
+                              </button>
+                              <button onClick={() => setViewingCmd({ name: p.name, command: p.command || '' })} title="RCON"
+                                className="w-7 h-7 flex items-center justify-center rounded-lg bg-blue-500 border border-blue-600 text-white shadow-[0_2px_0_#1d4ed8] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all">
+                                <i className="fas fa-terminal text-[10px]"></i>
+                              </button>
+                              <button onClick={() => openEdit(p)} title="แก้ไข"
+                                className="w-7 h-7 flex items-center justify-center rounded-lg bg-amber-500 border border-amber-600 text-white shadow-[0_2px_0_#b45309] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all">
+                                <i className="fas fa-pen text-[10px]"></i>
+                              </button>
+                              <button onClick={() => handleDelete(p.id)} title="ลบ"
+                                className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-500 border border-red-600 text-white shadow-[0_2px_0_#b91c1c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all">
+                                <i className="fas fa-trash text-[10px]"></i>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {paged.length === 0 && (
+                      <tr>
+                        <td colSpan={8} className="py-16 text-center">
+                          <i className="fas fa-box-open text-3xl text-gray-200 mb-3 block"></i>
+                          <p className="text-sm text-gray-400">ไม่พบสินค้า</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-between">
+                  <p className="text-[10px] text-gray-400">
+                    แสดง {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} จาก {filtered.length} รายการ
+                  </p>
+                  <div className="flex gap-1">
+                    <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:border-gray-300 disabled:opacity-40 transition-all text-xs">
+                      <i className="fas fa-chevron-left text-[9px]"></i>
+                    </button>
+                    {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                      const p = totalPages <= 7 ? i + 1 : page <= 4 ? i + 1 : page >= totalPages - 3 ? totalPages - 6 + i : page - 3 + i;
+                      return (
+                        <button key={p} onClick={() => setPage(p)}
+                          className={`w-7 h-7 flex items-center justify-center rounded-lg text-[11px] font-bold transition-all ${
+                            page === p ? 'bg-[#1e2735] text-white shadow-[0_2px_0_#38404d]' : 'border border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                          }`}>
+                          {p}
                         </button>
-                        {/* Toggle active */}
-                        <button
-                          onClick={() => handleToggleActive(p)}
-                          className={`w-8 h-8 flex items-center justify-center rounded-lg border text-white shadow-[0_3px_0] hover:brightness-110 active:translate-y-[2px] active:shadow-none transition-all ${
-                            p.active
-                              ? 'bg-green-500 border-green-600 shadow-[0_3px_0_#15803d]'
-                              : 'bg-gray-400 border-gray-500 shadow-[0_3px_0_#6b7280]'
-                          }`}
-                          title={p.active ? 'ปิดสินค้า' : 'เปิดสินค้า'}
-                        >
-                          <i className={`fas text-[11px] ${p.active ? 'fa-eye' : 'fa-eye-slash'}`}></i>
-                        </button>
-                        {/* Edit */}
-                        <button
-                          onClick={() => openEdit(p)}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg bg-amber-500 border border-amber-600 text-white shadow-[0_3px_0_#b45309] hover:brightness-110 active:translate-y-[2px] active:shadow-none transition-all"
-                          title="แก้ไข"
-                        >
-                          <i className="fas fa-pen text-[11px]"></i>
-                        </button>
-                        {/* Delete */}
-                        <button
-                          onClick={() => handleDelete(p.id)}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-500 border border-red-600 text-white shadow-[0_3px_0_#b91c1c] hover:brightness-110 active:translate-y-[2px] active:shadow-none transition-all"
-                          title="ลบ"
-                        >
-                          <i className="fas fa-trash text-[11px]"></i>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {products.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="py-20 text-center">
-                      <i className="fas fa-box-open text-3xl text-gray-200 mb-3 block"></i>
-                      <p className="text-sm text-gray-400">ยังไม่มีสินค้า</p>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+                      );
+                    })}
+                    <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:border-gray-300 disabled:opacity-40 transition-all text-xs">
+                      <i className="fas fa-chevron-right text-[9px]"></i>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* ─── Product Edit Modal ──────────────────────────────── */}
@@ -329,8 +626,9 @@ export default function AdminProducts() {
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto"
           onMouseDown={e => { bd.current = e.target === e.currentTarget; }}
           onMouseUp={e => { if (bd.current && e.target === e.currentTarget && !saving) setEditing(null); }}>
-          <div className="bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-full max-w-2xl my-4 overflow-hidden"
+          <div className="bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-full max-w-4xl my-4 overflow-hidden"
             onMouseDown={e => e.stopPropagation()}>
+            {/* Header */}
             <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
               <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-cube text-[#f97316] text-xs"></i>
@@ -343,80 +641,185 @@ export default function AdminProducts() {
                 <i className="fas fa-times text-xs"></i>
               </button>
             </div>
+
+            {/* Body — 2-column: form left, sale settings right */}
             <div className="p-5">
               {error && <div className="text-red-500 text-xs bg-red-50 px-3 py-2 rounded-lg border border-red-100 flex items-center gap-1.5 mb-4"><i className="fas fa-exclamation-circle"></i> {error}</div>}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5">ชื่อสินค้า *</label>
-                  <input value={editing.name || ''} onChange={e => setEditing({ ...editing, name: e.target.value })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" placeholder="เช่น VIP Rank" />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5">รายละเอียด</label>
-                  <textarea value={editing.description || ''} onChange={e => setEditing({ ...editing, description: e.target.value })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 h-20 resize-none" placeholder="รายละเอียดสินค้า..." />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5">ราคา (฿) *</label>
-                  <input type="number" value={editing.price || ''} onChange={e => setEditing({ ...editing, price: Number(e.target.value) })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" min={0} />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5">ราคาเดิม (฿)</label>
-                  <input type="number" value={editing.original_price || ''} onChange={e => setEditing({ ...editing, original_price: Number(e.target.value) })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" min={0} placeholder="ไม่บังคับ (แสดงส่วนลด)" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5">หมวดหมู่</label>
-                  <select value={editing.category_id || ''} onChange={e => setEditing({ ...editing, category_id: Number(e.target.value) })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20">
-                    <option value="">-- เลือก --</option>
-                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5">Image URL</label>
-                  <input value={editing.image || ''} onChange={e => setEditing({ ...editing, image: e.target.value })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" placeholder="https://..." />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5">RCON Commands *</label>
-                  <textarea
-                    value={editing.command || ''}
-                    onChange={e => setEditing({ ...editing, command: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 h-20 resize-none font-mono"
-                    placeholder={"give {player} diamond 1\nsay {player} bought an item!"}
-                  />
-                  <p className="text-xs text-gray-400 mt-1">ใช้ <code className="bg-gray-100 px-1 rounded">{'{player}'}</code> แทนชื่อผู้เล่น (หนึ่งคำสั่งต่อบรรทัด)</p>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5">เซิร์ฟเวอร์ที่ใช้ได้</label>
-                  <div className="flex flex-wrap gap-2">
-                    {servers.map(s => {
-                      const checked = editing.server_ids?.includes(s.id) || false;
-                      return (
-                        <label key={s.id} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer border text-sm transition-all ${checked ? 'bg-[#1e2735] text-white border-[#1e2735]' : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'}`}>
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => {
-                              const ids = editing.server_ids || [];
-                              setEditing({ ...editing, server_ids: checked ? ids.filter(id => id !== s.id) : [...ids, s.id] });
-                            }}
-                            className="accent-white"
-                          />
-                          {s.name}
-                        </label>
-                      );
-                    })}
+              <div className="grid grid-cols-3 gap-5">
+                {/* ── Left: form fields (2/3 width) ── */}
+                <div className="col-span-2 space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1.5">ชื่อสินค้า *</label>
+                    <input value={editing.name || ''} onChange={e => setEditing({ ...editing, name: e.target.value })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" placeholder="เช่น VIP Rank" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1.5">ราคา (฿) *</label>
+                      <input type="number" value={editing.price || ''} onChange={e => setEditing({ ...editing, price: Number(e.target.value) })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" min={0} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1.5">ราคาเดิม (฿)</label>
+                      <input type="number" value={editing.original_price || ''} onChange={e => setEditing({ ...editing, original_price: Number(e.target.value) })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" min={0} placeholder="ไม่บังคับ" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1.5">หมวดหมู่</label>
+                      <select value={editing.category_id || ''} onChange={e => setEditing({ ...editing, category_id: Number(e.target.value) })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20">
+                        <option value="">-- เลือก --</option>
+                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1.5">Image URL</label>
+                      <div className="flex gap-2">
+                        <input value={editing.image || ''} onChange={e => setEditing({ ...editing, image: e.target.value })} className="flex-1 px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" placeholder="https://..." />
+                        {editing.image && (
+                          <div className="w-10 h-10 rounded-lg border border-gray-200 flex-shrink-0 bg-gray-50 overflow-hidden">
+                            <img src={editing.image} alt="" className="w-full h-full object-cover" onError={e => (e.currentTarget.style.display = 'none')} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1.5">รายละเอียด</label>
+                    <textarea value={editing.description || ''} onChange={e => setEditing({ ...editing, description: e.target.value })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 h-16 resize-none" placeholder="รายละเอียดสินค้า..." />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1.5">RCON Commands *</label>
+                    <textarea value={editing.command || ''} onChange={e => setEditing({ ...editing, command: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 h-20 resize-none font-mono"
+                      placeholder={"give {player} diamond 1\nsay {player} bought an item!"} />
+                    <p className="text-xs text-gray-400 mt-1">ใช้ <code className="bg-gray-100 px-1 rounded">{'{player}'}</code> แทนชื่อผู้เล่น</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1.5">เซิร์ฟเวอร์ที่ใช้ได้</label>
+                    <div className="flex flex-wrap gap-2">
+                      {servers.map(s => {
+                        const checked = editing.server_ids?.includes(s.id) || false;
+                        return (
+                          <label key={s.id} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer border text-sm transition-all ${checked ? 'bg-[#1e2735] text-white border-[#1e2735]' : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'}`}>
+                            <input type="checkbox" checked={checked} onChange={() => { const ids = editing.server_ids || []; setEditing({ ...editing, server_ids: checked ? ids.filter(id => id !== s.id) : [...ids, s.id] }); }} className="accent-white" />
+                            {s.name}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-2 cursor-pointer w-fit">
+                      <input type="checkbox" checked={editing.featured || false} onChange={e => setEditing({ ...editing, featured: e.target.checked })} className="accent-[#1e2735] w-4 h-4" />
+                      <span className="text-sm"><i className="fas fa-star text-yellow-500 mr-1"></i>สินค้าแนะนำ</span>
+                    </label>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-6">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={editing.featured || false} onChange={e => setEditing({ ...editing, featured: e.target.checked })} className="accent-[#1e2735] w-4 h-4" />
-                    <span className="text-sm"><i className="fas fa-star text-yellow-500 mr-1"></i>สินค้าแนะนำ</span>
-                  </label>
+                {/* ── Right: ตั้งค่าการขาย (1/3 width) ── */}
+                <div className="flex flex-col">
+                  <div className="bg-white rounded-xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden flex flex-col flex-1">
+                    <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/60 flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
+                        <i className="fas fa-bolt text-amber-500 text-xs"></i>
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900 text-sm">กำหนดการขาย</p>
+                        <p className="text-[10px] text-gray-400">จำกัดสต็อค · กำหนดเวลา</p>
+                      </div>
+                    </div>
+                    <div className="p-4 space-y-3 flex-1">
+                      {releaseError && (
+                        <div className="text-red-600 text-xs bg-red-50 px-3 py-2 rounded-lg border border-red-100 flex items-center gap-1.5">
+                          <i className="fas fa-exclamation-circle"></i> {releaseError}
+                        </div>
+                      )}
+
+                      {/* Current sale status */}
+                      {editing.id && editing.sale_end && (() => {
+                        const isActive = new Date(editing.sale_end).getTime() > Date.now();
+                        return (
+                          <div className={`rounded-lg border px-3 py-2.5 ${isActive ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200'}`}>
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isActive ? 'bg-amber-400 animate-pulse' : 'bg-gray-400'}`} />
+                                <span className={`text-[11px] font-black ${isActive ? 'text-amber-700' : 'text-gray-500'}`}>
+                                  {isActive ? 'กำลังขายอยู่' : 'หมดเวลาแล้ว'}
+                                </span>
+                              </div>
+                              {isActive && (
+                                <button type="button" onClick={() => handleStop(true)} disabled={stopping}
+                                  className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-red-500 text-white shadow-[0_2px_0_#b91c1c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50 flex-shrink-0">
+                                  {stopping ? <i className="fas fa-spinner fa-spin text-[9px]"></i> : <i className="fas fa-stop text-[9px]"></i>}
+                                  หยุดทันที
+                                </button>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-gray-500 mt-1">
+                              สิ้นสุด {new Date(editing.sale_end).toLocaleString('th-TH', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                            {editing.stock_limit != null && (
+                              <div className="mt-1.5">
+                                <div className="flex justify-between text-[10px] mb-0.5">
+                                  <span className="text-gray-500">ขายแล้ว</span>
+                                  <span className="font-bold text-gray-700">{editing.sold_count ?? 0} / {editing.stock_limit}</span>
+                                </div>
+                                <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                  <div className="h-full bg-amber-400 rounded-full transition-all"
+                                    style={{ width: `${Math.min(100, Math.round(((editing.sold_count ?? 0) / editing.stock_limit) * 100))}%` }} />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
+                      {/* Stock toggle */}
+                      <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3 space-y-2">
+                        <div className="flex items-center gap-3">
+                          <span className="flex-1 text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                            <i className="fas fa-box text-gray-400 text-[10px]"></i> จำกัดสต็อค
+                          </span>
+                          <button type="button" onClick={() => setSaleLimitStock(v => !v)}
+                            className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors duration-200 ${saleLimitStock ? 'bg-[#16a34a]' : 'bg-gray-300'}`}>
+                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${saleLimitStock ? 'translate-x-5' : 'translate-x-0'}`} />
+                          </button>
+                        </div>
+                        {saleLimitStock && (
+                          <input type="number" min={1} value={saleStockVal ?? ''} onChange={e => setSaleStockVal(e.target.value ? Number(e.target.value) : null)}
+                            placeholder="จำนวนสต็อค (ชิ้น)"
+                            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                          />
+                        )}
+                      </div>
+
+                      {/* Duration */}
+                      <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3 space-y-2">
+                        <span className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                          <i className="fas fa-clock text-gray-400 text-[10px]"></i> ระยะเวลาขาย
+                        </span>
+                        <div className="flex gap-2">
+                          <input type="number" min={1} value={saleDurValue} onChange={e => setSaleDurValue(Math.max(1, Number(e.target.value)))}
+                            className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" />
+                          <select value={saleDurUnit} onChange={e => setSaleDurUnit(e.target.value as 'minutes' | 'hours' | 'days')}
+                            className="flex-shrink-0 px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20">
+                            <option value="minutes">นาที</option>
+                            <option value="hours">ชั่วโมง</option>
+                            <option value="days">วัน</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Release button */}
+                      <button type="button" disabled={!editing.id || releasing} onClick={() => handleRelease(true)}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#16a34a] text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#0d6b2e] hover:brightness-110 transition-all active:shadow-[0_1px_0_#0d6b2e] active:translate-y-[2px] disabled:opacity-40 disabled:cursor-not-allowed">
+                        {releasing ? <><i className="fas fa-spinner fa-spin text-xs"></i> กำลังปล่อยขาย...</> : <><i className="fas fa-rocket text-xs"></i> ปล่อยขายทันที</>}
+                      </button>
+                      {!editing.id && <p className="text-[10px] text-gray-400 text-center">บันทึกสินค้าก่อนจึงจะปล่อยขายได้</p>}
+                    </div>
+                  </div>
                 </div>
               </div>
-
             </div>
+
             <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">
               <button onClick={() => setEditing(null)} className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-800 shadow-[0_4px_0_#d1d5db] hover:brightness-95 transition-all">
                 <i className="fas fa-times text-[12px]"></i> ยกเลิก
@@ -564,8 +967,22 @@ export default function AdminProducts() {
                     <p className="text-sm">ยังไม่มีหมวดหมู่</p>
                   </div>
                 )}
-                {categories.map(c => (
-                  <div key={c.id} className="flex items-center gap-3 px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200">
+                {categories.map((c, idx) => (
+                  <div key={c.id}
+                    draggable
+                    onDragStart={() => { dragCatIdx.current = idx; }}
+                    onDragOver={e => e.preventDefault()}
+                    onDrop={() => {
+                      const from = dragCatIdx.current;
+                      if (from === null || from === idx) return;
+                      const next = [...categories];
+                      next.splice(idx, 0, next.splice(from, 1)[0]);
+                      dragCatIdx.current = null;
+                      handleReorderCats(next);
+                    }}
+                    className="flex items-center gap-3 px-3 py-2.5 bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all group active:opacity-70"
+                  >
+                    <i className="fas fa-grip-vertical text-gray-300 group-hover:text-gray-400 text-sm flex-shrink-0 transition-colors"></i>
                     <div className="w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
                       <i className={`fas ${c.icon || 'fa-tag'} text-[#f97316] text-[10px]`}></i>
                     </div>
@@ -651,6 +1068,119 @@ export default function AdminProducts() {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      ); })(), document.body)}
+
+      {/* ─── Sale / Release Modal ────────────────────────────── */}
+      {saleModal && createPortal((() => { const bd = { current: false }; return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm"
+          onMouseDown={e => { bd.current = e.target === e.currentTarget; }}
+          onMouseUp={e => { if (bd.current && e.target === e.currentTarget && !releasing) setSaleModal(null); }}>
+          <div className="bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-full max-w-md overflow-hidden">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
+              <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
+                <i className="fas fa-rocket text-green-500 text-xs"></i>
+              </div>
+              <div className="flex-1 text-center">
+                <h3 className="font-bold text-gray-900 text-base">ปล่อยขายสินค้า</h3>
+                <p className="text-[11px] text-gray-500">{saleModal.name}</p>
+              </div>
+              <button onClick={() => setSaleModal(null)} disabled={releasing} className="w-8 h-8 rounded-lg bg-red-500 border border-red-600 flex items-center justify-center text-white shadow-[0_4px_0_#b91c1c] flex-shrink-0">
+                <i className="fas fa-times text-xs"></i>
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3">
+              {releaseError && (
+                <div className="flex items-center gap-2 px-3 py-2.5 bg-red-50 border border-red-100 rounded-lg text-red-600 text-xs font-medium">
+                  <i className="fas fa-exclamation-circle"></i> {releaseError}
+                </div>
+              )}
+
+              {/* Current sale status */}
+              {saleModal.sale_end && (() => {
+                const isActive = new Date(saleModal.sale_end).getTime() > Date.now();
+                return (
+                  <div className={`rounded-lg border px-3 py-2.5 ${isActive ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200'}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isActive ? 'bg-amber-400 animate-pulse' : 'bg-gray-400'}`} />
+                        <span className={`text-[11px] font-black ${isActive ? 'text-amber-700' : 'text-gray-500'}`}>
+                          {isActive ? 'กำลังขายอยู่' : 'หมดเวลาแล้ว'}
+                        </span>
+                      </div>
+                      {isActive && (
+                        <button type="button" onClick={() => handleStop(false)} disabled={stopping}
+                          className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-red-500 text-white shadow-[0_2px_0_#b91c1c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50 flex-shrink-0">
+                          {stopping ? <i className="fas fa-spinner fa-spin text-[9px]"></i> : <i className="fas fa-stop text-[9px]"></i>}
+                          หยุดทันที
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-gray-500 mt-1">
+                      สิ้นสุด {new Date(saleModal.sale_end).toLocaleString('th-TH', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                    {saleModal.stock_limit != null && (
+                      <div className="mt-1.5">
+                        <div className="flex justify-between text-[10px] mb-0.5">
+                          <span className="text-gray-500">ขายแล้ว</span>
+                          <span className="font-bold text-gray-700">{saleModal.sold_count ?? 0} / {saleModal.stock_limit}</span>
+                        </div>
+                        <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                          <div className="h-full bg-amber-400 rounded-full"
+                            style={{ width: `${Math.min(100, Math.round(((saleModal.sold_count ?? 0) / saleModal.stock_limit) * 100))}%` }} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Stock limit toggle */}
+              <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3 space-y-2">
+                <div className="flex items-center gap-3">
+                  <span className="flex-1 text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                    <i className="fas fa-box text-gray-400 text-[10px]"></i> จำกัดสต็อค
+                  </span>
+                  <button type="button" onClick={() => setSaleLimitStock(v => !v)}
+                    className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors duration-200 ${saleLimitStock ? 'bg-[#16a34a]' : 'bg-gray-300'}`}>
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${saleLimitStock ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+                {saleLimitStock && (
+                  <input type="number" min={1} value={saleStockVal ?? ''} onChange={e => setSaleStockVal(e.target.value ? Number(e.target.value) : null)}
+                    placeholder="จำนวนสต็อค (ชิ้น)"
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                  />
+                )}
+              </div>
+
+              {/* Duration */}
+              <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3 space-y-2">
+                <span className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                  <i className="fas fa-clock text-gray-400 text-[10px]"></i> ระยะเวลาขาย
+                </span>
+                <div className="flex gap-2">
+                  <input type="number" min={1} value={saleDurValue} onChange={e => setSaleDurValue(Math.max(1, Number(e.target.value)))}
+                    className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                  />
+                  <select value={saleDurUnit} onChange={e => setSaleDurUnit(e.target.value as 'minutes' | 'hours' | 'days')}
+                    className="flex-shrink-0 px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20">
+                    <option value="minutes">นาที</option>
+                    <option value="hours">ชั่วโมง</option>
+                    <option value="days">วัน</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Release button */}
+              <button type="button" disabled={releasing} onClick={() => handleRelease(false)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#16a34a] text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#0d6b2e] hover:brightness-110 transition-all active:shadow-[0_1px_0_#0d6b2e] active:translate-y-[2px] disabled:opacity-40 disabled:cursor-not-allowed">
+                {releasing ? <><i className="fas fa-spinner fa-spin text-xs"></i> กำลังปล่อยขาย...</> : <><i className="fas fa-rocket text-xs"></i> ปล่อยขายทันที</>}
+              </button>
             </div>
           </div>
         </div>

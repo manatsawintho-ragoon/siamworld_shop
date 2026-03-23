@@ -4,7 +4,7 @@ import Providers from './providers';
 
 export const metadata: Metadata = {
   title: 'SiamWorld Shop — Minecraft Item Store',
-  description: 'ร้านค้าไอเทม Minecraft ออนไลน์ ส่งอัตโนมัติทันที | SiamWorld MC Shop',
+  description: 'ร้านค้าไอเท็ม Minecraft ออนไลน์ ส่งอัตโนมัติทันที | SiamWorld MC Shop',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

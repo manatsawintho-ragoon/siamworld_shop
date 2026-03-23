@@ -9,36 +9,53 @@ import { JwtPayload } from '../middleware/auth';
 
 class AuthService {
   async register(username: string, password: string, email: string): Promise<{ token: string; user: JwtPayload }> {
-    // Check if username already taken in authme
-    const [existing] = await pool.execute<RowDataPacket[]>(
-      'SELECT id FROM authme WHERE LOWER(username) = LOWER(?)', [username]
-    );
-    if (existing.length > 0) throw new Error('ชื่อผู้ใช้นี้ถูกใช้ไปแล้ว');
-
-    // Check if email already taken
-    const [existingEmail] = await pool.execute<RowDataPacket[]>(
-      'SELECT id FROM users WHERE email = ?', [email]
-    );
-    if (existingEmail.length > 0) throw new Error('อีเมลล์นี้ถูกใช้ไปแล้ว');
-
-    // Hash password (same bcrypt format AuthMe uses)
+    // Hash password before opening transaction (bcrypt is slow — don't hold DB connection)
     const hashedPassword = await bcrypt.hash(password, 10);
     const now = Date.now();
 
-    // Insert into authme
-    await pool.execute(
-      'INSERT INTO authme (username, realname, password, regdate) VALUES (?, ?, ?, ?)',
-      [username, username, hashedPassword, now]
-    );
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
 
-    // Create app user + wallet (with email)
-    const appUser = await this.createUser(username, email) as { id: number; username: string; role: string };
+      // Check username (lock row if exists to prevent concurrent duplicate registration)
+      const [existing] = await conn.execute<RowDataPacket[]>(
+        'SELECT id FROM authme WHERE LOWER(username) = LOWER(?)', [username]
+      );
+      if (existing.length > 0) throw new Error('ชื่อผู้ใช้นี้ถูกใช้ไปแล้ว');
 
-    const payload: JwtPayload = { userId: appUser.id, username: appUser.username, role: appUser.role };
-    const token = jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn as jwt.SignOptions['expiresIn'] });
+      // Check email
+      const [existingEmail] = await conn.execute<RowDataPacket[]>(
+        'SELECT id FROM users WHERE email = ?', [email]
+      );
+      if (existingEmail.length > 0) throw new Error('อีเมลล์นี้ถูกใช้ไปแล้ว');
 
-    logger.info('User registered', { userId: appUser.id, username: appUser.username });
-    return { token, user: payload };
+      // Insert into authme — include email so AuthMe plugin also shows correct email
+      await conn.execute(
+        'INSERT INTO authme (username, realname, password, regdate, email) VALUES (?, ?, ?, ?, ?)',
+        [username, username, hashedPassword, now, email]
+      );
+
+      // Insert app user + wallet in same transaction
+      const [userResult] = await conn.execute(
+        'INSERT INTO users (username, email, role) VALUES (?, ?, ?)',
+        [username, email, 'user']
+      );
+      const userId = (userResult as any).insertId;
+      await conn.execute('INSERT INTO wallets (user_id, balance) VALUES (?, 0.00)', [userId]);
+
+      await conn.commit();
+
+      const payload: JwtPayload = { userId, username, role: 'user' };
+      const token = jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn as jwt.SignOptions['expiresIn'] });
+
+      logger.info('User registered', { userId, username });
+      return { token, user: payload };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
   }
 
   async login(username: string, password: string): Promise<{ token: string; user: JwtPayload }> {

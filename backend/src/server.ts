@@ -24,18 +24,50 @@ import setupRoutes from './routes/setup.routes';
 const app = express();
 const server = http.createServer(app);
 
+// Trust the Next.js proxy so rate-limiters use the real client IP
+// (without this, all traffic appears to come from the Next.js container IP)
+app.set('trust proxy', 1);
+
+// Allowed origins — reads from CORS_ORIGIN env var (comma-separated)
+const allowedOrigins = config.corsOrigin === '*'
+  ? '*'
+  : config.corsOrigin.split(',').map(o => o.trim()).filter(Boolean);
+
 // Socket.IO
 const io = new SocketIO(server, {
-  cors: { origin: '*', methods: ['GET', 'POST'] },
+  cors: { origin: allowedOrigins, methods: ['GET', 'POST'] },
   pingInterval: 25000,
   pingTimeout: 60000,
 });
 
-// Middleware
-app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors({ origin: '*' }));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+// Rate limiting is handled at the Next.js middleware layer (real client IPs available there)
+// Backend only enforces per-user cooldowns via Redis (see middleware/cooldown.ts)
+
+// ── Middleware ───────────────────────────────────────────────────────────────
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],   // Next.js inline scripts
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'", ...(allowedOrigins === '*' ? ['*'] : allowedOrigins)],
+      fontSrc: ["'self'", 'https:', 'data:'],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Request logging
 app.use((req, _res, next) => {
@@ -105,6 +137,35 @@ async function start() {
 
     // Start player tracking (polls every 10s)
     playerTracker.start(10000);
+
+    // Cleanup REDEEMED inventory items older than 7 days (runs every 6 hours)
+    const cleanupInventory = async () => {
+      try {
+        const [result] = await pool.execute(
+          "DELETE FROM web_inventory WHERE status = 'REDEEMED' AND redeemed_at < DATE_SUB(NOW(), INTERVAL 7 DAY)"
+        );
+        const deleted = (result as any).affectedRows;
+        if (deleted > 0) logger.info(`Inventory cleanup: removed ${deleted} redeemed items older than 7 days`);
+      } catch (err) { logger.error('Inventory cleanup error', { error: err }); }
+    };
+    cleanupInventory();
+    setInterval(cleanupInventory, 6 * 60 * 60 * 1000);
+
+    // Auto-deactivate loot boxes & products where sale_end + 5 min grace has passed (runs every minute)
+    const deactivateExpiredSales = async () => {
+      try {
+        const [r1] = await pool.execute(
+          "UPDATE loot_boxes SET active = 0 WHERE active = 1 AND is_paused = 0 AND sale_end IS NOT NULL AND sale_end < DATE_SUB(NOW(), INTERVAL 5 MINUTE)"
+        );
+        const [r2] = await pool.execute(
+          "UPDATE products SET active = 0 WHERE active = 1 AND is_paused = 0 AND sale_end IS NOT NULL AND sale_end < DATE_SUB(NOW(), INTERVAL 5 MINUTE)"
+        );
+        const rows = (r1 as any).affectedRows + (r2 as any).affectedRows;
+        if (rows > 0) logger.info(`Auto-deactivated ${rows} expired sale item(s)`);
+      } catch (err) { logger.error('Deactivate expired sales error', { error: err }); }
+    };
+    deactivateExpiredSales();
+    setInterval(deactivateExpiredSales, 60 * 1000);
 
     server.listen(config.port, () => {
       logger.info('Server started', {

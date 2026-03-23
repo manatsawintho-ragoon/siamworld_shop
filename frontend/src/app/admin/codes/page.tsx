@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { api, getToken } from '@/lib/api';
+import { useAdminAlert } from '@/components/AdminAlert';
 
 interface RedeemCode {
   id: number;
@@ -67,9 +68,15 @@ function timeUntil(dateStr: string): string {
   return past ? `หมดแล้ว ${text}` : `อีก ${text}`;
 }
 
+type StatusFilter = 'all' | 'active' | 'expired' | 'used_up';
+type TypeFilter   = 'all' | 'promo' | 'rcon';
+
 export default function AdminCodeManager() {
+  const { confirm: adminConfirm, alert: adminAlert } = useAdminAlert();
   const [codes, setCodes] = useState<RedeemCode[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [typeFilter,   setTypeFilter]   = useState<TypeFilter>('all');
   const [editing, setEditing] = useState<Partial<RedeemCode> | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -111,6 +118,7 @@ export default function AdminCodeManager() {
         await api('/admin/codes', { method: 'POST', token: getToken()!, body });
       }
       setEditing(null);
+      adminAlert({ title: editing.id ? 'แก้ไขโค้ดแล้ว' : 'สร้างโค้ดแล้ว', type: 'success' });
       load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
@@ -118,9 +126,10 @@ export default function AdminCodeManager() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('ต้องการลบโค้ดนี้?')) return;
+    if (!await adminConfirm({ title: 'ลบโค้ด', message: 'ต้องการลบโค้ดนี้?', type: 'danger', confirmLabel: 'ลบ' })) return;
     try {
       await api(`/admin/codes/${id}`, { method: 'DELETE', token: getToken()! });
+      adminAlert({ title: 'ลบโค้ดแล้ว', type: 'success' });
       load();
     } catch { }
   };
@@ -146,14 +155,25 @@ export default function AdminCodeManager() {
   const isExpired = (code: RedeemCode) => code.expires_at && new Date(code.expires_at) < new Date();
   const isUsedUp = (code: RedeemCode) => code.max_uses > 0 && code.used_count >= code.max_uses;
 
+  const filteredCodes = codes.filter(c => {
+    const statusOk =
+      statusFilter === 'active'   ? (c.active && !isExpired(c) && !isUsedUp(c)) :
+      statusFilter === 'expired'  ? !!isExpired(c) :
+      statusFilter === 'used_up'  ? !!isUsedUp(c) : true;
+    const typeOk =
+      typeFilter === 'promo' ? c.reward_type === 'point' :
+      typeFilter === 'rcon'  ? c.reward_type === 'rcon'  : true;
+    return statusOk && typeOk;
+  });
+
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <i className="fas fa-ticket-alt text-[#f97316]"></i> จัดการโค้ดไอเทม
+            <i className="fas fa-ticket-alt text-[#f97316]"></i> จัดการโค้ดไอเท็ม
           </h1>
-          <p className="text-xs text-gray-400 mt-0.5">สร้างและจัดการโค้ดสำหรับแจกไอเทมให้ผู้เล่น</p>
+          <p className="text-xs text-gray-400 mt-0.5">สร้างและจัดการโค้ดสำหรับแจกไอเท็มให้ผู้เล่น</p>
         </div>
         <button
           onClick={() => setEditing({ ...EMPTY_CODE, code: generateCode() })}
@@ -185,14 +205,62 @@ export default function AdminCodeManager() {
 
       {/* Table */}
       <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
+        {/* Card header */}
         <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/60 flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
             <i className="fas fa-ticket-alt text-orange-500 text-xs"></i>
           </div>
           <div>
             <h3 className="font-bold text-gray-900 text-sm">รายการโค้ด</h3>
-            <p className="text-[11px] text-gray-500">{codes.length} โค้ด</p>
+            <p className="text-[11px] text-gray-500">
+              {(statusFilter === 'all' && typeFilter === 'all') ? `${codes.length} โค้ด` : `${filteredCodes.length} / ${codes.length} โค้ด`}
+            </p>
           </div>
+        </div>
+
+        {/* Filter bar */}
+        <div className="px-5 py-3 border-b border-gray-100 bg-white flex items-center gap-3 flex-wrap">
+          {/* Status filter */}
+          <div className="flex items-center gap-2">
+            <i className="fas fa-filter text-gray-300 text-[11px]" />
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value as StatusFilter)}
+              className="text-xs font-semibold border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:border-orange-400 transition-colors"
+            >
+              <option value="all">สถานะทั้งหมด ({codes.length})</option>
+              <option value="active">ใช้งานได้ ({codes.filter(c => c.active && !isExpired(c) && !isUsedUp(c)).length})</option>
+              <option value="expired">หมดอายุ ({codes.filter(c => !!isExpired(c)).length})</option>
+              <option value="used_up">ใช้ครบแล้ว ({codes.filter(c => !!isUsedUp(c)).length})</option>
+            </select>
+          </div>
+
+          <div className="w-px h-5 bg-gray-200" />
+
+          {/* Type filter */}
+          <select
+            value={typeFilter}
+            onChange={e => setTypeFilter(e.target.value as TypeFilter)}
+            className="text-xs font-semibold border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:border-orange-400 transition-colors"
+          >
+            <option value="all">ประเภททั้งหมด</option>
+            <option value="promo">Promo Code ({codes.filter(c => c.reward_type === 'point').length})</option>
+            <option value="rcon">RCON ({codes.filter(c => c.reward_type === 'rcon').length})</option>
+          </select>
+
+          {/* Reset */}
+          {(statusFilter !== 'all' || typeFilter !== 'all') && (
+            <button
+              onClick={() => { setStatusFilter('all'); setTypeFilter('all'); }}
+              className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors px-2 py-1.5 rounded-lg hover:bg-gray-100"
+            >
+              <i className="fas fa-times text-[10px]" /> ล้าง
+            </button>
+          )}
+
+          <span className="ml-auto text-[11px] text-gray-400 font-medium tabular-nums">
+            {filteredCodes.length !== codes.length ? `${filteredCodes.length} / ${codes.length} โค้ด` : `${codes.length} โค้ด`}
+          </span>
         </div>
 
         {loading ? (
@@ -204,6 +272,12 @@ export default function AdminCodeManager() {
             <i className="fas fa-ticket-alt text-3xl mb-3 text-gray-300"></i>
             <p className="text-sm font-medium">ยังไม่มีโค้ด</p>
             <p className="text-xs mt-1">กดปุ่ม &quot;สร้างโค้ดใหม่&quot; เพื่อเริ่มต้น</p>
+          </div>
+        ) : filteredCodes.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+            <i className="fas fa-filter text-3xl mb-3 text-gray-300"></i>
+            <p className="text-sm font-medium">ไม่พบโค้ดในหมวดนี้</p>
+            <p className="text-xs mt-1">ลองเปลี่ยน filter</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -221,7 +295,7 @@ export default function AdminCodeManager() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {codes.map(code => (
+                {filteredCodes.map(code => (
                   <tr key={code.id} className="hover:bg-gray-50/60 transition-colors">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
@@ -324,7 +398,7 @@ export default function AdminCodeManager() {
               </div>
               <div className="flex-1">
                 <h3 className="font-black text-gray-900 text-base leading-tight">{editing.id ? 'แก้ไขโค้ด' : 'สร้างโค้ดใหม่'}</h3>
-                <p className="text-xs text-gray-400 mt-0.5">{editing.id ? 'แก้ไขข้อมูลโค้ดที่เลือก' : 'กรอกข้อมูลเพื่อสร้างโค้ดไอเทม'}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{editing.id ? 'แก้ไขข้อมูลโค้ดที่เลือก' : 'กรอกข้อมูลเพื่อสร้างโค้ดไอเท็ม'}</p>
               </div>
               <button onClick={() => setEditing(null)} className="w-8 h-8 rounded-lg bg-red-500 border border-red-600 flex items-center justify-center text-white shadow-[0_4px_0_#b91c1c] hover:brightness-110 active:translate-y-[1px] transition-all flex-shrink-0">
                 <i className="fas fa-times text-xs"></i>

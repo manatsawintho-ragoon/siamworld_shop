@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { AdminAlertProvider } from '@/components/AdminAlert';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Menu Categorization (Verity Style)
@@ -38,8 +39,17 @@ const MENU_CATEGORIES = [
   {
     category: 'SYSTEM',
     items: [
-      { href: '/admin/purchases', icon: 'fa-wallet', label: 'ระบบเติมเงิน / ธุรกรรม' },
       { href: '/admin/servers', icon: 'fa-server', label: 'จัดการเซิร์ฟเวอร์' },
+      {
+        id: 'payment',
+        icon: 'fa-money-bill-wave',
+        label: 'ระบบเติมเงิน',
+        subItems: [
+          { href: '/admin/payment-settings', icon: 'fa-qrcode', label: 'PromptPay', desc: 'พร้อมเพย์ / QR Code' },
+          { href: '#', icon: 'fa-gift', label: 'TrueMoney Wallet', desc: 'เร็วๆ นี้', disabled: true },
+        ]
+      },
+      { href: '/admin/purchases', icon: 'fa-wallet', label: 'Audit log' },
       { href: '/admin/setup', icon: 'fa-wand-magic-sparkles', label: 'Setup Wizard' },
     ]
   }
@@ -50,7 +60,8 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({
-    'shop': pathname.includes('/admin/products') || pathname.includes('/admin/lootboxes')
+    'shop': pathname.includes('/admin/products') || pathname.includes('/admin/lootboxes'),
+    'payment': pathname.includes('/admin/payment-settings'),
   });
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [time, setTime] = useState<string>('');
@@ -163,7 +174,20 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                               className="overflow-hidden mt-1 px-2 space-y-1 pb-1.5"
                             >
                               {item.subItems.map((sub: any, k: number) => {
-                                const active = pathname === sub.href;
+                                const active = pathname === sub.href && !sub.disabled;
+                                if (sub.disabled) return (
+                                  <li key={k}>
+                                    <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg opacity-40 cursor-not-allowed">
+                                      <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                                        <i className={`fas ${sub.icon} text-xs text-gray-500`}></i>
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <p className="text-[13px] font-bold leading-tight text-gray-500">{sub.label}</p>
+                                        <p className="text-[10px] leading-tight mt-0.5 text-gray-600">{sub.desc}</p>
+                                      </div>
+                                    </div>
+                                  </li>
+                                );
                                 return (
                                   <li key={k}>
                                     <Link
@@ -251,9 +275,9 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             <div className="relative">
               <button
                 onClick={() => setUserMenuOpen(v => !v)}
-                className="flex items-center gap-3 px-2 py-1.5 rounded-xl border border-gray-100 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer group"
+                className="flex items-center gap-2.5 pl-1.5 pr-3 py-1.5 rounded-xl bg-[#18191c] hover:bg-[#232528] transition-colors cursor-pointer shadow-[0_3px_0_#09090b] active:shadow-none active:translate-y-[2px]"
               >
-                <div className="w-8 h-8 rounded-lg overflow-hidden bg-[#18191c] flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center shrink-0">
                   <img
                     src={`https://mc-heads.net/avatar/${user.username}/32`}
                     alt={user.username}
@@ -268,10 +292,11 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                   />
                   <i className="fas fa-user-shield text-xs text-white hidden" style={{ display: 'none' }}></i>
                 </div>
-                <div className="pr-1 flex items-center gap-2">
-                  <span className="text-sm font-bold text-gray-800">{user.username}</span>
-                  <i className={`fas fa-chevron-down text-[10px] text-gray-400 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`}></i>
+                <div className="flex flex-col items-start leading-none">
+                  <span className="text-[11px] font-bold text-[#22c55e] uppercase tracking-wider">Admin</span>
+                  <span className="text-sm font-bold text-white mt-0.5">{user.username}</span>
                 </div>
+                <i className={`fas fa-chevron-down text-[10px] text-gray-400 transition-transform duration-200 ml-1 ${userMenuOpen ? 'rotate-180' : ''}`}></i>
               </button>
 
               {/* Dropdown */}
@@ -371,7 +396,9 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <AdminLayoutInner>{children}</AdminLayoutInner>
+      <AdminAlertProvider>
+        <AdminLayoutInner>{children}</AdminLayoutInner>
+      </AdminAlertProvider>
     </AuthProvider>
   );
 }

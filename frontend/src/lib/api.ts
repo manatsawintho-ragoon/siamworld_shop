@@ -27,7 +27,9 @@ export async function api<T = unknown>(endpoint: string, options: ApiOptions = {
 
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error || data.message || 'Something went wrong');
+    const err = new Error(data.error || data.message || 'Something went wrong') as Error & { status: number };
+    err.status = res.status;
+    throw err;
   }
   return data;
 }
