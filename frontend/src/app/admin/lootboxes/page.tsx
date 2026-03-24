@@ -629,34 +629,54 @@ export default function AdminLootBoxes() {
                             {box.description}
                           </p>
                         )}
-                        {/* Row 4: badge เวลา + badge สต็อก */}
-                        {(box.sale_end || box.sale_start || (box.stock_limit != null && box.sold_count != null)) && (
-                          <div className="flex items-center gap-1 mt-0.5">
-                            {/* Time badge */}
-                            {box.is_paused ? (
-                              <span className="inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 rounded-md bg-orange-500 text-white flex-shrink-0">
-                                <i className="fas fa-pause text-[7px]" /> หยุดชั่วคราว
-                              </span>
-                            ) : box.sale_end ? (() => {
-                              const expired = new Date(box.sale_end).getTime() < Date.now();
-                              const future  = new Date(box.sale_end).getTime() > Date.now();
-                              if (expired) return (
-                                <span className="inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 rounded-md bg-red-500 text-white flex-shrink-0">
-                                  <i className="fas fa-clock text-[7px]" /> หมดเวลา
+                        {/* Row 4: sale status badges */}
+                        {(box.sale_end || box.sale_start || box.is_paused || box.stock_limit != null) && (
+                          <div className="mt-0.5 space-y-1">
+                            <div className="flex items-center gap-1">
+                              {/* Time/status badge */}
+                              {box.is_paused ? (
+                                <span className="inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 rounded-md bg-orange-500 text-white flex-shrink-0">
+                                  <i className="fas fa-pause text-[7px]" /> หยุดชั่วคราว
                                 </span>
-                              );
-                              if (future) return <CountdownBadge key="cd" endTime={box.sale_end} />;
-                              return null;
-                            })() : box.sale_start && isOpen ? (
-                              <span className="inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 rounded-md bg-green-600 text-white flex-shrink-0">
-                                <i className="fas fa-infinity text-[7px]" /> ไม่จำกัดเวลา
-                              </span>
-                            ) : null}
-                            {/* Stock badge */}
-                            {box.stock_limit != null && box.sold_count != null && (
-                              <span className={`inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 rounded-md flex-shrink-0 ${box.sold_count >= box.stock_limit ? 'bg-red-500 text-white' : 'bg-blue-500 text-white'}`}>
-                                <i className="fas fa-box text-[7px]" /> {box.sold_count}/{box.stock_limit}
-                              </span>
+                              ) : box.sale_end ? (() => {
+                                const expired = new Date(box.sale_end).getTime() < Date.now();
+                                if (expired) return (
+                                  <span className="inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 rounded-md bg-red-500 text-white flex-shrink-0">
+                                    <i className="fas fa-clock text-[7px]" /> หมดเวลา
+                                  </span>
+                                );
+                                return <CountdownBadge key="cd" endTime={box.sale_end} />;
+                              })() : box.sale_start && isOpen ? (
+                                <span className="inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 rounded-md bg-green-600 text-white flex-shrink-0">
+                                  <i className="fas fa-infinity text-[7px]" /> ไม่จำกัดเวลา
+                                </span>
+                              ) : null}
+                              {/* Stock badge */}
+                              {box.stock_limit != null && (
+                                <span className={`inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 rounded-md flex-shrink-0 ${
+                                  (box.sold_count ?? 0) >= box.stock_limit ? 'bg-red-500 text-white'
+                                  : (box.sold_count ?? 0) / box.stock_limit >= 0.8 ? 'bg-orange-500 text-white'
+                                  : 'bg-blue-500 text-white'
+                                }`}>
+                                  <i className="fas fa-cubes text-[7px]" />
+                                  {(box.sold_count ?? 0) >= box.stock_limit
+                                    ? 'หมด'
+                                    : `${Math.max(0, box.stock_limit - (box.sold_count ?? 0))}/${box.stock_limit}`}
+                                </span>
+                              )}
+                            </div>
+                            {/* Stock progress bar */}
+                            {box.stock_limit != null && box.stock_limit > 0 && (
+                              <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all ${
+                                    (box.sold_count ?? 0) >= box.stock_limit ? 'bg-red-400'
+                                    : (box.sold_count ?? 0) / box.stock_limit >= 0.8 ? 'bg-orange-400'
+                                    : 'bg-blue-400'
+                                  }`}
+                                  style={{ width: `${Math.min(100, Math.round(((box.sold_count ?? 0) / box.stock_limit) * 100))}%` }}
+                                />
+                              </div>
                             )}
                           </div>
                         )}
@@ -989,18 +1009,36 @@ function BoxModal({ box, categories, saving, error, onChange, onSave, onClose, o
   // Sale settings local state
   const [limitStock,    setLimitStock]    = useState(box.stock_limit != null);
   const [limitTime,     setLimitTime]     = useState(box.sale_end != null);
-  const [durValue,      setDurValue]      = useState(60);
-  const [durUnit,       setDurUnit]       = useState<'minutes' | 'hours' | 'days'>('minutes');
+  const [durValue,      setDurValue]      = useState(24);
+  const [durUnit,       setDurUnit]       = useState<'minutes' | 'hours' | 'days'>('hours');
+  const [timeMode,      setTimeMode]      = useState<'duration' | 'datetime'>('duration');
+  const [endDatetime,   setEndDatetime]   = useState<string>(() => {
+    const d = new Date(); d.setDate(d.getDate() + 7);
+    return d.toISOString().slice(0, 16);
+  });
   const [releasing,     setReleasing]     = useState(false);
+  const [stopping,      setStopping]      = useState(false);
+  const [stoppingNow,   setStoppingNow]   = useState(false);
   const [releaseError,  setReleaseError]  = useState('');
 
   const getDurationMinutes = () => {
+    if (timeMode === 'datetime') {
+      const endMs = new Date(endDatetime).getTime();
+      return Math.max(1, Math.round((endMs - Date.now()) / 60000));
+    }
     if (durUnit === 'hours') return durValue * 60;
     if (durUnit === 'days')  return durValue * 60 * 24;
     return durValue;
   };
 
-  const [stopping, setStopping] = useState(false);
+  const previewEndTime = () => {
+    try {
+      const endMs = timeMode === 'datetime'
+        ? new Date(endDatetime).getTime()
+        : Date.now() + getDurationMinutes() * 60000;
+      return new Date(endMs).toLocaleString('th-TH', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch { return '—'; }
+  };
 
   const handlePause = async () => {
     if (!box.id) return;
@@ -1029,6 +1067,21 @@ function BoxModal({ box, categories, saving, error, onChange, onSave, onClose, o
       setReleaseError(err?.message || 'เกิดข้อผิดพลาด');
     } finally {
       setStopping(false);
+    }
+  };
+
+  const handleStop = async () => {
+    if (!box.id) return;
+    setStoppingNow(true); setReleaseError('');
+    try {
+      const { api: apiCall, getToken: tok } = await import('@/lib/api');
+      await apiCall(`/admin/lootboxes/${box.id}/stop`, { method: 'POST', token: tok()! });
+      onChange({ ...box, sale_start: null, sale_end: null, is_paused: false, sale_remaining_seconds: null });
+      onReleased?.();
+    } catch (err: any) {
+      setReleaseError(err?.message || 'เกิดข้อผิดพลาด');
+    } finally {
+      setStoppingNow(false);
     }
   };
 
@@ -1211,22 +1264,41 @@ function BoxModal({ box, categories, saving, error, onChange, onSave, onClose, o
                               {isPaused ? 'หยุดจำหน่ายชั่วคราว' : isActive ? 'กำลังขายอยู่' : isUnlimited ? 'ขายปกติ ไม่จำกัดเวลา' : 'หมดเวลาแล้ว'}
                             </span>
                           </div>
-                          {/* Pause button (when active/unlimited) */}
-                          {(isActive || isUnlimited) && (
-                            <button type="button" onClick={handlePause} disabled={stopping}
-                              className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-orange-500 text-white shadow-[0_2px_0_#c2410c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50 flex-shrink-0">
-                              {stopping ? <i className="fas fa-spinner fa-spin text-[9px]" /> : <i className="fas fa-pause text-[9px]" />}
-                              หยุดชั่วคราว
-                            </button>
-                          )}
-                          {/* Resume button (when paused) */}
-                          {isPaused && (
-                            <button type="button" onClick={handleResume} disabled={stopping}
-                              className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-green-600 text-white shadow-[0_2px_0_#15803d] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50 flex-shrink-0">
-                              {stopping ? <i className="fas fa-spinner fa-spin text-[9px]" /> : <i className="fas fa-play text-[9px]" />}
-                              เริ่มจำหน่ายต่อ
-                            </button>
-                          )}
+                          {/* Action buttons */}
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {/* Pause button (when active/unlimited) */}
+                            {(isActive || isUnlimited) && (
+                              <button type="button" onClick={handlePause} disabled={stopping || stoppingNow}
+                                className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-orange-500 text-white shadow-[0_2px_0_#c2410c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50">
+                                {stopping ? <i className="fas fa-spinner fa-spin text-[9px]" /> : <i className="fas fa-pause text-[9px]" />}
+                                หยุดชั่วคราว
+                              </button>
+                            )}
+                            {/* Stop sale now (when active/unlimited) */}
+                            {(isActive || isUnlimited) && (
+                              <button type="button" onClick={handleStop} disabled={stopping || stoppingNow}
+                                className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-red-500 text-white shadow-[0_2px_0_#b91c1c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50">
+                                {stoppingNow ? <i className="fas fa-spinner fa-spin text-[9px]" /> : <i className="fas fa-stop text-[9px]" />}
+                                หยุดขาย
+                              </button>
+                            )}
+                            {/* Resume button (when paused) */}
+                            {isPaused && (
+                              <button type="button" onClick={handleResume} disabled={stopping || stoppingNow}
+                                className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-green-600 text-white shadow-[0_2px_0_#15803d] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50">
+                                {stopping ? <i className="fas fa-spinner fa-spin text-[9px]" /> : <i className="fas fa-play text-[9px]" />}
+                                จำหน่ายต่อ
+                              </button>
+                            )}
+                            {/* Stop sale (when paused) */}
+                            {isPaused && (
+                              <button type="button" onClick={handleStop} disabled={stopping || stoppingNow}
+                                className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-red-500 text-white shadow-[0_2px_0_#b91c1c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50">
+                                {stoppingNow ? <i className="fas fa-spinner fa-spin text-[9px]" /> : <i className="fas fa-stop text-[9px]" />}
+                                หยุดขาย
+                              </button>
+                            )}
+                          </div>
                         </div>
                         {/* End time / remaining info */}
                         {box.sale_end && !isPaused && (
@@ -1263,60 +1335,127 @@ function BoxModal({ box, categories, saving, error, onChange, onSave, onClose, o
                   })()}
 
                   {/* Stock toggle */}
-                  <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3 space-y-2">
-                    <div className="flex items-center gap-3">
-                      <span className="flex-1 text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                        <i className="fas fa-box text-gray-400 text-[10px]" /> จำกัดสต็อค
-                      </span>
+                  <div className="rounded-xl border border-gray-200 overflow-hidden">
+                    <div className="flex items-center gap-3 px-3 py-2.5 bg-gray-50/40">
+                      <div className="w-6 h-6 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                        <i className="fas fa-cubes text-blue-500 text-[10px]" />
+                      </div>
+                      <span className="flex-1 text-xs font-bold text-gray-700">จำกัดสต็อค</span>
                       <button type="button" onClick={() => setLimitStock(v => !v)}
                         className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors duration-200 ${limitStock ? 'bg-[#16a34a]' : 'bg-gray-300'}`}>
                         <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${limitStock ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
                     </div>
                     {limitStock && (
-                      <input type="number" min={1}
-                        value={box.stock_limit ?? ''}
-                        onChange={e => onChange({ ...box, stock_limit: e.target.value ? Number(e.target.value) : null })}
-                        placeholder="จำนวนสต็อค (ชิ้น)"
-                        className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
-                      />
+                      <div className="px-3 pb-3 pt-2 bg-white border-t border-gray-100 space-y-2">
+                        <div className="relative">
+                          <i className="fas fa-hashtag absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-300 text-[10px]" />
+                          <input type="number" min={1}
+                            value={box.stock_limit ?? ''}
+                            onChange={e => onChange({ ...box, stock_limit: e.target.value ? Number(e.target.value) : null })}
+                            placeholder="จำนวนสต็อค (ชิ้น)"
+                            className="w-full pl-7 pr-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                          />
+                        </div>
+                        {box.id && box.stock_limit != null && (box.sold_count ?? 0) >= 0 && (
+                          <div>
+                            <div className="flex justify-between text-[10px] mb-1">
+                              <span className="text-gray-500">ขายแล้ว {box.sold_count ?? 0} ชิ้น</span>
+                              <span className="font-bold text-gray-700">เหลือ {Math.max(0, box.stock_limit - (box.sold_count ?? 0))} / {box.stock_limit}</span>
+                            </div>
+                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <div className="h-full rounded-full bg-blue-400 transition-all"
+                                style={{ width: `${Math.min(100, Math.round(((box.sold_count ?? 0) / box.stock_limit) * 100))}%` }} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
 
                   {/* Time limit toggle */}
-                  <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3 space-y-2">
-                    <div className="flex items-center gap-3">
-                      <span className="flex-1 text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                        <i className="fas fa-clock text-gray-400 text-[10px]" /> จำกัดเวลาขาย
-                      </span>
+                  <div className="rounded-xl border border-gray-200 overflow-hidden">
+                    <div className="flex items-center gap-3 px-3 py-2.5 bg-gray-50/40">
+                      <div className="w-6 h-6 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
+                        <i className="fas fa-clock text-amber-500 text-[10px]" />
+                      </div>
+                      <span className="flex-1 text-xs font-bold text-gray-700">จำกัดเวลาขาย</span>
                       <button type="button" onClick={() => setLimitTime(v => !v)}
                         className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors duration-200 ${limitTime ? 'bg-[#16a34a]' : 'bg-gray-300'}`}>
                         <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${limitTime ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
                     </div>
-                    {limitTime && (
-                      <div className="flex gap-2">
-                        <input type="number" min={1} value={durValue}
-                          onChange={e => setDurValue(Math.max(1, Number(e.target.value)))}
-                          className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
-                        />
-                        <select value={durUnit} onChange={e => setDurUnit(e.target.value as 'minutes' | 'hours' | 'days')}
-                          className="flex-shrink-0 px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20">
-                          <option value="minutes">นาที</option>
-                          <option value="hours">ชั่วโมง</option>
-                          <option value="days">วัน</option>
-                        </select>
+                    {limitTime ? (
+                      <div className="px-3 pb-3 pt-2 bg-white border-t border-gray-100 space-y-2">
+                        {/* Mode tabs: duration vs specific datetime */}
+                        <div className="flex p-0.5 bg-gray-100 rounded-lg gap-0.5">
+                          <button type="button" onClick={() => setTimeMode('duration')}
+                            className={`flex-1 py-1 text-[11px] font-bold rounded-md transition-all ${timeMode === 'duration' ? 'bg-white shadow text-gray-800' : 'text-gray-400 hover:text-gray-600'}`}>
+                            <i className="fas fa-hourglass-half text-[9px] mr-1" />ระยะเวลา
+                          </button>
+                          <button type="button" onClick={() => setTimeMode('datetime')}
+                            className={`flex-1 py-1 text-[11px] font-bold rounded-md transition-all ${timeMode === 'datetime' ? 'bg-white shadow text-gray-800' : 'text-gray-400 hover:text-gray-600'}`}>
+                            <i className="fas fa-calendar-alt text-[9px] mr-1" />วันสิ้นสุด
+                          </button>
+                        </div>
+                        {timeMode === 'duration' ? (
+                          <div className="flex gap-2">
+                            <input type="number" min={1} value={durValue}
+                              onChange={e => setDurValue(Math.max(1, Number(e.target.value)))}
+                              className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                            />
+                            <select value={durUnit} onChange={e => setDurUnit(e.target.value as 'minutes' | 'hours' | 'days')}
+                              className="flex-shrink-0 px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20">
+                              <option value="minutes">นาที</option>
+                              <option value="hours">ชั่วโมง</option>
+                              <option value="days">วัน</option>
+                            </select>
+                          </div>
+                        ) : (
+                          <input type="datetime-local"
+                            value={endDatetime}
+                            min={new Date().toISOString().slice(0, 16)}
+                            onChange={e => setEndDatetime(e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                          />
+                        )}
+                        <p className="text-[10px] text-amber-600 flex items-center gap-1.5">
+                          <i className="fas fa-calendar-check text-[9px]" />
+                          สิ้นสุด: {previewEndTime()}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="px-3 pb-2.5 pt-1.5 bg-white border-t border-gray-100">
+                        <p className="text-[10px] text-gray-400 flex items-center gap-1">
+                          <i className="fas fa-infinity text-[9px]" /> ขายไม่จำกัดเวลา — จนกว่าจะกด "หยุดขาย"
+                        </p>
                       </div>
                     )}
                   </div>
 
-                  {/* Release button */}
+                  {/* LIMITED badge preview */}
+                  {(limitStock || limitTime) && (
+                    <div className="flex items-center gap-2 py-0.5">
+                      <span className="text-[10px] text-gray-500 font-bold">กล่องนี้จะแสดงเป็น:</span>
+                      <span className="inline-flex items-center gap-0.5 bg-violet-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-sm">
+                        <i className="fas fa-gem text-[7px]" /> LIMITED
+                      </span>
+                    </div>
+                  )}
+                  {/* Release / re-release button */}
                   <button type="button" disabled={!box.id || releasing} onClick={handleRelease}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#16a34a] text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#0d6b2e] hover:brightness-110 transition-all active:shadow-[0_1px_0_#0d6b2e] active:translate-y-[2px] disabled:opacity-40 disabled:cursor-not-allowed">
-                    {releasing ? <><i className="fas fa-spinner fa-spin text-xs" /> กำลังปล่อยขาย...</> : <><i className="fas fa-rocket text-xs" /> เริ่มจับเวลา</>}
+                    className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 text-white text-[13px] font-bold rounded-lg transition-all active:translate-y-[2px] disabled:opacity-40 disabled:cursor-not-allowed ${
+                      box.sale_start
+                        ? 'bg-amber-500 shadow-[0_4px_0_#b45309] hover:brightness-110 active:shadow-[0_1px_0_#b45309]'
+                        : 'bg-[#16a34a] shadow-[0_4px_0_#0d6b2e] hover:brightness-110 active:shadow-[0_1px_0_#0d6b2e]'
+                    }`}>
+                    {releasing
+                      ? <><i className="fas fa-spinner fa-spin text-xs" /> กำลังดำเนินการ...</>
+                      : box.sale_start
+                      ? <><i className="fas fa-rotate-right text-xs" /> รีเซ็ตและปล่อยขายใหม่</>
+                      : <><i className="fas fa-rocket text-xs" /> ปล่อยขาย</>}
                   </button>
                   {!box.id && <p className="text-[10px] text-gray-400 text-center">บันทึกกล่องก่อนจึงจะปล่อยขายได้</p>}
-                  {!limitTime && box.id && <p className="text-[10px] text-amber-500 text-center"><i className="fas fa-infinity text-[9px] mr-1" />ไม่จำกัดเวลา — ขายจนกว่าจะหยุดเอง</p>}
                 </div>
               </div>
             </div>

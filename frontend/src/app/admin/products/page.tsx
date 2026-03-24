@@ -53,6 +53,8 @@ interface Product {
   sale_start?: string | null;
   sale_end?: string | null;
   sold_count?: number;
+  is_paused?: boolean;
+  sale_remaining_seconds?: number | null;
 }
 
 interface Category { id: number; name: string; slug: string; icon?: string; sort_order: number; }
@@ -134,6 +136,9 @@ export default function AdminProducts() {
     setSaleStockVal(p.stock_limit ?? null);
     setSaleDurValue(60);
     setSaleDurUnit('minutes');
+    setSaleTimeMode('duration');
+    const d = new Date(); d.setDate(d.getDate() + 7);
+    setSaleEndDatetime(d.toISOString().slice(0, 16));
     setReleaseError('');
   };
 
@@ -184,7 +189,9 @@ export default function AdminProducts() {
       await api(`/admin/products/${id}`, { method: 'DELETE', token: getToken()! });
       adminAlert({ title: 'ลบสินค้าแล้ว', type: 'success' });
       load();
-    } catch { }
+    } catch (err: any) {
+      await adminAlert({ title: 'ลบไม่สำเร็จ', message: err?.message || 'เกิดข้อผิดพลาด', type: 'error' });
+    }
   };
 
   // ── Category CRUD ──────────────────────────────────────────
@@ -230,15 +237,35 @@ export default function AdminProducts() {
   const [saleLimitStock, setSaleLimitStock] = useState(false);
   const [saleDurValue,   setSaleDurValue]   = useState(60);
   const [saleDurUnit,    setSaleDurUnit]    = useState<'minutes' | 'hours' | 'days'>('minutes');
+  const [saleTimeMode,   setSaleTimeMode]   = useState<'duration' | 'datetime'>('duration');
+  const [saleEndDatetime, setSaleEndDatetime] = useState<string>(() => {
+    const d = new Date(); d.setDate(d.getDate() + 7);
+    return d.toISOString().slice(0, 16);
+  });
   const [saleStockVal,   setSaleStockVal]   = useState<number | null>(null);
   const [releasing,      setReleasing]      = useState(false);
   const [stopping,       setStopping]       = useState(false);
+  const [pausing,        setPausing]        = useState(false);
+  const [resuming,       setResuming]       = useState(false);
   const [releaseError,   setReleaseError]   = useState('');
 
   const getSaleDurationMinutes = () => {
+    if (saleTimeMode === 'datetime') {
+      const endMs = new Date(saleEndDatetime).getTime();
+      return Math.max(1, Math.round((endMs - Date.now()) / 60000));
+    }
     if (saleDurUnit === 'hours') return saleDurValue * 60;
     if (saleDurUnit === 'days')  return saleDurValue * 60 * 24;
     return saleDurValue;
+  };
+
+  const previewEndTime = () => {
+    try {
+      const endMs = saleTimeMode === 'datetime'
+        ? new Date(saleEndDatetime).getTime()
+        : Date.now() + getSaleDurationMinutes() * 60000;
+      return new Date(endMs).toLocaleString('th-TH', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch { return '—'; }
   };
 
   const handleRelease = async (fromEditing = false) => {
@@ -275,6 +302,34 @@ export default function AdminProducts() {
       setReleaseError(err?.message || 'เกิดข้อผิดพลาด');
     } finally {
       setStopping(false);
+    }
+  };
+
+  const handlePause = async (fromEditing = false) => {
+    const targetId = fromEditing ? editing?.id : saleModal?.id;
+    if (!targetId) return;
+    setPausing(true); setReleaseError('');
+    try {
+      await api(`/admin/products/${targetId}/pause`, { method: 'POST', token: getToken()! });
+      load();
+    } catch (err: any) {
+      setReleaseError(err?.message || 'เกิดข้อผิดพลาด');
+    } finally {
+      setPausing(false);
+    }
+  };
+
+  const handleResume = async (fromEditing = false) => {
+    const targetId = fromEditing ? editing?.id : saleModal?.id;
+    if (!targetId) return;
+    setResuming(true); setReleaseError('');
+    try {
+      await api(`/admin/products/${targetId}/resume`, { method: 'POST', token: getToken()! });
+      load();
+    } catch (err: any) {
+      setReleaseError(err?.message || 'เกิดข้อผิดพลาด');
+    } finally {
+      setResuming(false);
     }
   };
 
@@ -506,7 +561,12 @@ export default function AdminProducts() {
                           {/* Sale status */}
                           <td className="px-2 py-1.5 text-center hidden lg:table-cell">
                             <div className="flex flex-col items-center gap-0.5">
-                              {p.sale_end && (() => {
+                              {p.is_paused && p.sale_end && new Date(p.sale_end).getTime() > Date.now() && (
+                                <span className="inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 rounded-md bg-orange-400 text-white">
+                                  <i className="fas fa-pause text-[7px]" /> หยุดชั่วคราว
+                                </span>
+                              )}
+                              {!p.is_paused && p.sale_end && (() => {
                                 const expired = new Date(p.sale_end).getTime() < Date.now();
                                 const future  = new Date(p.sale_end).getTime() > Date.now();
                                 if (expired) return (
@@ -550,7 +610,7 @@ export default function AdminProducts() {
                           {/* Actions */}
                           <td className="px-3 py-1.5">
                             <div className="flex gap-1 justify-center">
-                              <button onClick={() => { setSaleModal(p); setSaleLimitStock(p.stock_limit != null); setSaleStockVal(p.stock_limit ?? null); setReleaseError(''); }} title="ปล่อยขาย"
+                              <button onClick={() => { setSaleModal(p); setSaleLimitStock(p.stock_limit != null); setSaleStockVal(p.stock_limit ?? null); setSaleTimeMode('duration'); setSaleDurValue(60); setSaleDurUnit('minutes'); const d2 = new Date(); d2.setDate(d2.getDate() + 7); setSaleEndDatetime(d2.toISOString().slice(0, 16)); setReleaseError(''); }} title="ตั้งค่าการขาย"
                                 className="w-7 h-7 flex items-center justify-center rounded-lg bg-[#16a34a] border border-green-700 text-white shadow-[0_2px_0_#0d6b2e] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all">
                                 <i className="fas fa-rocket text-[10px]"></i>
                               </button>
@@ -721,12 +781,16 @@ export default function AdminProducts() {
                       <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
                         <i className="fas fa-bolt text-amber-500 text-xs"></i>
                       </div>
-                      <div>
+                      <div className="flex-1 min-w-0">
                         <p className="font-bold text-gray-900 text-sm">กำหนดการขาย</p>
-                        <p className="text-[10px] text-gray-400">จำกัดสต็อค · กำหนดเวลา</p>
+                        <p className="text-[10px] text-gray-400">สต็อค · เวลา · LIMITED</p>
                       </div>
+                      {/* LIMITED badge preview */}
+                      {(saleLimitStock || (editing.id && editing.sale_end && new Date(editing.sale_end).getTime() > Date.now())) && (
+                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-gradient-to-r from-amber-400 to-orange-500 text-white uppercase tracking-wider flex-shrink-0">LIMITED</span>
+                      )}
                     </div>
-                    <div className="p-4 space-y-3 flex-1">
+                    <div className="p-4 space-y-3 flex-1 overflow-y-auto" style={{ maxHeight: '420px' }}>
                       {releaseError && (
                         <div className="text-red-600 text-xs bg-red-50 px-3 py-2 rounded-lg border border-red-100 flex items-center gap-1.5">
                           <i className="fas fa-exclamation-circle"></i> {releaseError}
@@ -735,23 +799,46 @@ export default function AdminProducts() {
 
                       {/* Current sale status */}
                       {editing.id && editing.sale_end && (() => {
-                        const isActive = new Date(editing.sale_end).getTime() > Date.now();
+                        const endMs = new Date(editing.sale_end).getTime();
+                        const isExpired = endMs < Date.now();
+                        const isPaused = !!(editing as any).is_paused;
+                        const isActive = !isExpired && !isPaused;
+                        const statusColor = isPaused
+                          ? 'bg-orange-50 border-orange-200'
+                          : isActive ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200';
+                        const dotColor = isPaused ? 'bg-orange-400 animate-pulse' : isActive ? 'bg-green-400 animate-pulse' : 'bg-gray-400';
+                        const label = isPaused ? 'หยุดชั่วคราว' : isActive ? 'กำลังขายอยู่' : 'หมดเวลาแล้ว';
+                        const labelColor = isPaused ? 'text-orange-700' : isActive ? 'text-green-700' : 'text-gray-500';
                         return (
-                          <div className={`rounded-lg border px-3 py-2.5 ${isActive ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200'}`}>
+                          <div className={`rounded-lg border px-3 py-2.5 ${statusColor}`}>
                             <div className="flex items-center justify-between gap-2">
                               <div className="flex items-center gap-1.5 min-w-0">
-                                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isActive ? 'bg-amber-400 animate-pulse' : 'bg-gray-400'}`} />
-                                <span className={`text-[11px] font-black ${isActive ? 'text-amber-700' : 'text-gray-500'}`}>
-                                  {isActive ? 'กำลังขายอยู่' : 'หมดเวลาแล้ว'}
-                                </span>
+                                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dotColor}`} />
+                                <span className={`text-[11px] font-black ${labelColor}`}>{label}</span>
                               </div>
-                              {isActive && (
-                                <button type="button" onClick={() => handleStop(true)} disabled={stopping}
-                                  className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-red-500 text-white shadow-[0_2px_0_#b91c1c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50 flex-shrink-0">
-                                  {stopping ? <i className="fas fa-spinner fa-spin text-[9px]"></i> : <i className="fas fa-stop text-[9px]"></i>}
-                                  หยุดทันที
-                                </button>
-                              )}
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                {isActive && (
+                                  <button type="button" onClick={() => handlePause(true)} disabled={pausing}
+                                    className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-orange-400 text-white shadow-[0_2px_0_#c2410c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50">
+                                    {pausing ? <i className="fas fa-spinner fa-spin text-[9px]"></i> : <i className="fas fa-pause text-[9px]"></i>}
+                                    หยุด
+                                  </button>
+                                )}
+                                {isPaused && (
+                                  <button type="button" onClick={() => handleResume(true)} disabled={resuming}
+                                    className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-green-500 text-white shadow-[0_2px_0_#15803d] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50">
+                                    {resuming ? <i className="fas fa-spinner fa-spin text-[9px]"></i> : <i className="fas fa-play text-[9px]"></i>}
+                                    ขายต่อ
+                                  </button>
+                                )}
+                                {(isActive || isPaused) && (
+                                  <button type="button" onClick={() => handleStop(true)} disabled={stopping}
+                                    className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-red-500 text-white shadow-[0_2px_0_#b91c1c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50">
+                                    {stopping ? <i className="fas fa-spinner fa-spin text-[9px]"></i> : <i className="fas fa-stop text-[9px]"></i>}
+                                    หยุดขาย
+                                  </button>
+                                )}
+                              </div>
                             </div>
                             <p className="text-[10px] text-gray-500 mt-1">
                               สิ้นสุด {new Date(editing.sale_end).toLocaleString('th-TH', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
@@ -764,7 +851,7 @@ export default function AdminProducts() {
                                 </div>
                                 <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
                                   <div className="h-full bg-amber-400 rounded-full transition-all"
-                                    style={{ width: `${Math.min(100, Math.round(((editing.sold_count ?? 0) / editing.stock_limit) * 100))}%` }} />
+                                    style={{ width: `${Math.min(100, Math.round(((editing.sold_count ?? 0) / (editing.stock_limit as number)) * 100))}%` }} />
                                 </div>
                               </div>
                             )}
@@ -791,27 +878,54 @@ export default function AdminProducts() {
                         )}
                       </div>
 
-                      {/* Duration */}
+                      {/* Time limit */}
                       <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3 space-y-2">
-                        <span className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                          <i className="fas fa-clock text-gray-400 text-[10px]"></i> ระยะเวลาขาย
-                        </span>
-                        <div className="flex gap-2">
-                          <input type="number" min={1} value={saleDurValue} onChange={e => setSaleDurValue(Math.max(1, Number(e.target.value)))}
-                            className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" />
-                          <select value={saleDurUnit} onChange={e => setSaleDurUnit(e.target.value as 'minutes' | 'hours' | 'days')}
-                            className="flex-shrink-0 px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20">
-                            <option value="minutes">นาที</option>
-                            <option value="hours">ชั่วโมง</option>
-                            <option value="days">วัน</option>
-                          </select>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                            <i className="fas fa-clock text-gray-400 text-[10px]"></i> กำหนดเวลาขาย
+                          </span>
+                          <div className="flex gap-1">
+                            {(['duration', 'datetime'] as const).map(m => (
+                              <button key={m} type="button" onClick={() => setSaleTimeMode(m)}
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${saleTimeMode === m ? 'bg-[#1e2735] text-white' : 'bg-white border border-gray-200 text-gray-500'}`}>
+                                {m === 'duration' ? 'ระยะเวลา' : 'วันสิ้นสุด'}
+                              </button>
+                            ))}
+                          </div>
                         </div>
+                        {saleTimeMode === 'duration' ? (
+                          <div className="flex gap-2">
+                            <input type="number" min={1} value={saleDurValue} onChange={e => setSaleDurValue(Math.max(1, Number(e.target.value)))}
+                              className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" />
+                            <select value={saleDurUnit} onChange={e => setSaleDurUnit(e.target.value as 'minutes' | 'hours' | 'days')}
+                              className="flex-shrink-0 px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20">
+                              <option value="minutes">นาที</option>
+                              <option value="hours">ชั่วโมง</option>
+                              <option value="days">วัน</option>
+                            </select>
+                          </div>
+                        ) : (
+                          <input type="datetime-local" value={saleEndDatetime}
+                            min={new Date().toISOString().slice(0, 16)}
+                            onChange={e => setSaleEndDatetime(e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                          />
+                        )}
+                        <p className="text-[10px] text-gray-400 flex items-center gap-1">
+                          <i className="fas fa-calendar-check text-[9px]"></i>
+                          สิ้นสุด: {previewEndTime()}
+                        </p>
                       </div>
 
                       {/* Release button */}
                       <button type="button" disabled={!editing.id || releasing} onClick={() => handleRelease(true)}
                         className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#16a34a] text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#0d6b2e] hover:brightness-110 transition-all active:shadow-[0_1px_0_#0d6b2e] active:translate-y-[2px] disabled:opacity-40 disabled:cursor-not-allowed">
-                        {releasing ? <><i className="fas fa-spinner fa-spin text-xs"></i> กำลังปล่อยขาย...</> : <><i className="fas fa-rocket text-xs"></i> ปล่อยขายทันที</>}
+                        {releasing
+                          ? <><i className="fas fa-spinner fa-spin text-xs"></i> กำลังปล่อยขาย...</>
+                          : editing.id && editing.sale_start
+                            ? <><i className="fas fa-redo text-xs"></i> รีเซ็ตและปล่อยขายใหม่</>
+                            : <><i className="fas fa-rocket text-xs"></i> ปล่อยขาย</>
+                        }
                       </button>
                       {!editing.id && <p className="text-[10px] text-gray-400 text-center">บันทึกสินค้าก่อนจึงจะปล่อยขายได้</p>}
                     </div>
@@ -1085,7 +1199,7 @@ export default function AdminProducts() {
                 <i className="fas fa-rocket text-green-500 text-xs"></i>
               </div>
               <div className="flex-1 text-center">
-                <h3 className="font-bold text-gray-900 text-base">ปล่อยขายสินค้า</h3>
+                <h3 className="font-bold text-gray-900 text-base">ตั้งค่าการขาย</h3>
                 <p className="text-[11px] text-gray-500">{saleModal.name}</p>
               </div>
               <button onClick={() => setSaleModal(null)} disabled={releasing} className="w-8 h-8 rounded-lg bg-red-500 border border-red-600 flex items-center justify-center text-white shadow-[0_4px_0_#b91c1c] flex-shrink-0">
@@ -1102,23 +1216,44 @@ export default function AdminProducts() {
 
               {/* Current sale status */}
               {saleModal.sale_end && (() => {
-                const isActive = new Date(saleModal.sale_end).getTime() > Date.now();
+                const endMs = new Date(saleModal.sale_end).getTime();
+                const isExpired = endMs < Date.now();
+                const isPaused = !!(saleModal as any).is_paused;
+                const isActive = !isExpired && !isPaused;
+                const statusColor = isPaused ? 'bg-orange-50 border-orange-200' : isActive ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200';
+                const dotColor = isPaused ? 'bg-orange-400 animate-pulse' : isActive ? 'bg-green-400 animate-pulse' : 'bg-gray-400';
+                const label = isPaused ? 'หยุดชั่วคราว' : isActive ? 'กำลังขายอยู่' : 'หมดเวลาแล้ว';
+                const labelColor = isPaused ? 'text-orange-700' : isActive ? 'text-green-700' : 'text-gray-500';
                 return (
-                  <div className={`rounded-lg border px-3 py-2.5 ${isActive ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200'}`}>
+                  <div className={`rounded-lg border px-3 py-2.5 ${statusColor}`}>
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5">
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isActive ? 'bg-amber-400 animate-pulse' : 'bg-gray-400'}`} />
-                        <span className={`text-[11px] font-black ${isActive ? 'text-amber-700' : 'text-gray-500'}`}>
-                          {isActive ? 'กำลังขายอยู่' : 'หมดเวลาแล้ว'}
-                        </span>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dotColor}`} />
+                        <span className={`text-[11px] font-black ${labelColor}`}>{label}</span>
                       </div>
-                      {isActive && (
-                        <button type="button" onClick={() => handleStop(false)} disabled={stopping}
-                          className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-red-500 text-white shadow-[0_2px_0_#b91c1c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50 flex-shrink-0">
-                          {stopping ? <i className="fas fa-spinner fa-spin text-[9px]"></i> : <i className="fas fa-stop text-[9px]"></i>}
-                          หยุดทันที
-                        </button>
-                      )}
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {isActive && (
+                          <button type="button" onClick={() => handlePause(false)} disabled={pausing}
+                            className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-orange-400 text-white shadow-[0_2px_0_#c2410c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50">
+                            {pausing ? <i className="fas fa-spinner fa-spin text-[9px]"></i> : <i className="fas fa-pause text-[9px]"></i>}
+                            หยุด
+                          </button>
+                        )}
+                        {isPaused && (
+                          <button type="button" onClick={() => handleResume(false)} disabled={resuming}
+                            className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-green-500 text-white shadow-[0_2px_0_#15803d] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50">
+                            {resuming ? <i className="fas fa-spinner fa-spin text-[9px]"></i> : <i className="fas fa-play text-[9px]"></i>}
+                            ขายต่อ
+                          </button>
+                        )}
+                        {(isActive || isPaused) && (
+                          <button type="button" onClick={() => handleStop(false)} disabled={stopping}
+                            className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-red-500 text-white shadow-[0_2px_0_#b91c1c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50">
+                            {stopping ? <i className="fas fa-spinner fa-spin text-[9px]"></i> : <i className="fas fa-stop text-[9px]"></i>}
+                            หยุดขาย
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <p className="text-[10px] text-gray-500 mt-1">
                       สิ้นสุด {new Date(saleModal.sale_end).toLocaleString('th-TH', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
@@ -1131,7 +1266,7 @@ export default function AdminProducts() {
                         </div>
                         <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
                           <div className="h-full bg-amber-400 rounded-full"
-                            style={{ width: `${Math.min(100, Math.round(((saleModal.sold_count ?? 0) / saleModal.stock_limit) * 100))}%` }} />
+                            style={{ width: `${Math.min(100, Math.round(((saleModal.sold_count ?? 0) / (saleModal.stock_limit as number)) * 100))}%` }} />
                         </div>
                       </div>
                     )}
@@ -1158,28 +1293,55 @@ export default function AdminProducts() {
                 )}
               </div>
 
-              {/* Duration */}
+              {/* Time limit */}
               <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3 space-y-2">
-                <span className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                  <i className="fas fa-clock text-gray-400 text-[10px]"></i> ระยะเวลาขาย
-                </span>
-                <div className="flex gap-2">
-                  <input type="number" min={1} value={saleDurValue} onChange={e => setSaleDurValue(Math.max(1, Number(e.target.value)))}
-                    className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
-                  />
-                  <select value={saleDurUnit} onChange={e => setSaleDurUnit(e.target.value as 'minutes' | 'hours' | 'days')}
-                    className="flex-shrink-0 px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20">
-                    <option value="minutes">นาที</option>
-                    <option value="hours">ชั่วโมง</option>
-                    <option value="days">วัน</option>
-                  </select>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                    <i className="fas fa-clock text-gray-400 text-[10px]"></i> กำหนดเวลาขาย
+                  </span>
+                  <div className="flex gap-1">
+                    {(['duration', 'datetime'] as const).map(m => (
+                      <button key={m} type="button" onClick={() => setSaleTimeMode(m)}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${saleTimeMode === m ? 'bg-[#1e2735] text-white' : 'bg-white border border-gray-200 text-gray-500'}`}>
+                        {m === 'duration' ? 'ระยะเวลา' : 'วันสิ้นสุด'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+                {saleTimeMode === 'duration' ? (
+                  <div className="flex gap-2">
+                    <input type="number" min={1} value={saleDurValue} onChange={e => setSaleDurValue(Math.max(1, Number(e.target.value)))}
+                      className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                    />
+                    <select value={saleDurUnit} onChange={e => setSaleDurUnit(e.target.value as 'minutes' | 'hours' | 'days')}
+                      className="flex-shrink-0 px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20">
+                      <option value="minutes">นาที</option>
+                      <option value="hours">ชั่วโมง</option>
+                      <option value="days">วัน</option>
+                    </select>
+                  </div>
+                ) : (
+                  <input type="datetime-local" value={saleEndDatetime}
+                    min={new Date().toISOString().slice(0, 16)}
+                    onChange={e => setSaleEndDatetime(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                  />
+                )}
+                <p className="text-[10px] text-gray-400 flex items-center gap-1">
+                  <i className="fas fa-calendar-check text-[9px]"></i>
+                  สิ้นสุด: {previewEndTime()}
+                </p>
               </div>
 
               {/* Release button */}
               <button type="button" disabled={releasing} onClick={() => handleRelease(false)}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#16a34a] text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#0d6b2e] hover:brightness-110 transition-all active:shadow-[0_1px_0_#0d6b2e] active:translate-y-[2px] disabled:opacity-40 disabled:cursor-not-allowed">
-                {releasing ? <><i className="fas fa-spinner fa-spin text-xs"></i> กำลังปล่อยขาย...</> : <><i className="fas fa-rocket text-xs"></i> ปล่อยขายทันที</>}
+                {releasing
+                  ? <><i className="fas fa-spinner fa-spin text-xs"></i> กำลังปล่อยขาย...</>
+                  : saleModal.sale_start
+                    ? <><i className="fas fa-redo text-xs"></i> รีเซ็ตและปล่อยขายใหม่</>
+                    : <><i className="fas fa-rocket text-xs"></i> ปล่อยขาย</>
+                }
               </button>
             </div>
           </div>

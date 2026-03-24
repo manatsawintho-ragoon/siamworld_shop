@@ -35,7 +35,7 @@ class AdminStatsService {
     // Top products
     const [topProducts] = await pool.execute<RowDataPacket[]>(
       `SELECT pr.name, pr.image, COUNT(*) as purchase_count, SUM(p.price) as total_revenue
-       FROM purchases p JOIN products pr ON p.product_id = pr.id WHERE p.status='delivered'
+       FROM purchases p LEFT JOIN products pr ON p.product_id = pr.id WHERE p.status='delivered' AND pr.id IS NOT NULL
        GROUP BY pr.id, pr.name, pr.image ORDER BY purchase_count DESC LIMIT 5`
     );
 
@@ -48,8 +48,8 @@ class AdminStatsService {
 
     // Recent purchases (shop only)
     const [recentPurchases] = await pool.execute<RowDataPacket[]>(
-      `SELECT p.id, p.price, p.status, p.created_at, u.username, pr.name as product_name, s.name as server_name
-       FROM purchases p JOIN users u ON p.user_id = u.id JOIN products pr ON p.product_id = pr.id
+      `SELECT p.id, p.price, p.status, p.created_at, u.username, COALESCE(pr.name, '(ลบแล้ว)') as product_name, s.name as server_name
+       FROM purchases p JOIN users u ON p.user_id = u.id LEFT JOIN products pr ON p.product_id = pr.id
        JOIN servers s ON p.server_id = s.id ORDER BY p.created_at DESC LIMIT 10`
     );
 
@@ -183,8 +183,8 @@ class AdminStatsService {
 
     // Activity feed (union of recent activities)
     const [activityFeed] = await pool.execute<RowDataPacket[]>(
-      `(SELECT 'purchase' as activity_type, u.username, pr.name as detail, p.price as amount, p.created_at
-        FROM purchases p JOIN users u ON p.user_id = u.id JOIN products pr ON p.product_id = pr.id
+      `(SELECT 'purchase' as activity_type, u.username, COALESCE(pr.name, '(ลบแล้ว)') as detail, p.price as amount, p.created_at
+        FROM purchases p JOIN users u ON p.user_id = u.id LEFT JOIN products pr ON p.product_id = pr.id
         WHERE p.status='delivered' ORDER BY p.created_at DESC LIMIT 5)
        UNION ALL
        (SELECT 'topup' as activity_type, u.username, t.method as detail, t.amount, t.created_at

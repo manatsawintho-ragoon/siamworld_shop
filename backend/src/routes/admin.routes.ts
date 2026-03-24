@@ -119,9 +119,9 @@ router.get('/logs', async (req: Request, res: Response, next: NextFunction) => {
     if (type === 'all' || type === 'purchase') {
       parts.push({
         sql: `SELECT p.user_id, u.username, u.role,
-              'purchase' as action_type, CONCAT('ซื้อ: ', pr.name) as description,
+              'purchase' as action_type, CONCAT('ซื้อ: ', COALESCE(pr.name, '(ลบแล้ว)')) as description,
               p.price as amount, CAST(p.id AS CHAR) as ref_id, p.status as status_extra, p.created_at as ts
-              FROM purchases p JOIN users u ON p.user_id = u.id JOIN products pr ON p.product_id = pr.id
+              FROM purchases p JOIN users u ON p.user_id = u.id LEFT JOIN products pr ON p.product_id = pr.id
               WHERE 1=1 ${roleWhere} ${searchWhere}`,
         params: [...sp],
       });
@@ -330,6 +330,24 @@ router.post('/products/:id/stop', async (req: Request, res: Response, next: Next
     const id = parseInt(req.params.id);
     const product = await shopService.stopProduct(id);
     auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_product_stop', description: `หยุดขายสินค้า: ${product.name}`, refId: String(id) });
+    res.json({ success: true, product });
+  } catch (err) { next(err); }
+});
+
+router.post('/products/:id/pause', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const product = await shopService.pauseProduct(id);
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_product_pause', description: `หยุดชั่วคราวสินค้า: ${product.name}`, refId: String(id) });
+    res.json({ success: true, product });
+  } catch (err) { next(err); }
+});
+
+router.post('/products/:id/resume', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const product = await shopService.resumeProduct(id);
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_product_resume', description: `กลับมาขายสินค้า: ${product.name}`, refId: String(id) });
     res.json({ success: true, product });
   } catch (err) { next(err); }
 });

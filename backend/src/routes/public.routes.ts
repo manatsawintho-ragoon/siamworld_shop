@@ -106,10 +106,10 @@ router.get('/downloads', async (_req: Request, res: Response, next: NextFunction
 router.get('/recent-purchases', async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const [rows] = await pool.execute(`
-      SELECT u.username, pr.name as product_name, pr.image, p.price, p.created_at
+      SELECT u.username, COALESCE(pr.name, '(ลบแล้ว)') as product_name, pr.image, p.price, p.created_at
       FROM purchases p
       JOIN users u ON p.user_id = u.id
-      JOIN products pr ON p.product_id = pr.id
+      LEFT JOIN products pr ON p.product_id = pr.id
       WHERE p.status = 'delivered'
       ORDER BY p.created_at DESC
       LIMIT 8
@@ -136,16 +136,20 @@ router.get('/daily-topup', async (_req: Request, res: Response, next: NextFuncti
 });
 
 // Recent loot box openings activity feed (public)
-router.get('/recent-lootbox', async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/recent-lootbox', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const [rows] = await pool.execute(`
-      SELECT u.username, lb.name as box_name, wi.item_name, wi.item_image, wi.item_rarity, wi.won_at
-      FROM web_inventory wi
-      JOIN users u ON wi.user_id = u.id
-      JOIN loot_boxes lb ON wi.loot_box_id = lb.id
-      ORDER BY wi.won_at DESC
-      LIMIT 8
-    `);
+    const boxId = req.query.boxId ? parseInt(req.query.boxId as string) : null;
+    const limit = boxId ? 20 : 8;
+    const query = boxId
+      ? `SELECT u.username, lb.name as box_name, wi.item_name, wi.item_image, wi.item_rarity, wi.won_at
+         FROM web_inventory wi JOIN users u ON wi.user_id = u.id JOIN loot_boxes lb ON wi.loot_box_id = lb.id
+         WHERE wi.loot_box_id = ? ORDER BY wi.won_at DESC LIMIT ${limit}`
+      : `SELECT u.username, lb.name as box_name, wi.item_name, wi.item_image, wi.item_rarity, wi.won_at
+         FROM web_inventory wi JOIN users u ON wi.user_id = u.id JOIN loot_boxes lb ON wi.loot_box_id = lb.id
+         ORDER BY wi.won_at DESC LIMIT ${limit}`;
+    const [rows] = boxId
+      ? await pool.execute(query, [boxId])
+      : await pool.execute(query);
     res.json({ success: true, openings: rows });
   } catch (err) { next(err); }
 });

@@ -48,6 +48,9 @@ class ShopService {
     if (product.sale_end && new Date(product.sale_end) < new Date()) {
       throw new AppError('การขายสิ้นสุดแล้ว', 400);
     }
+    if (product.is_paused) {
+      throw new AppError('สินค้านี้หยุดขายชั่วคราว', 400);
+    }
 
     // Check stock limit
     if (product.stock_limit != null) {
@@ -238,7 +241,7 @@ class ShopService {
     const [rows] = await pool.execute<RowDataPacket[]>(
       `SELECT p.*, c.name as category_name,
          (SELECT COUNT(*) FROM purchases pu WHERE pu.product_id = p.id AND pu.status = 'delivered') AS sold_count
-       FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.active = 1 ORDER BY p.id DESC`
+       FROM products p LEFT JOIN categories c ON p.category_id = c.id ORDER BY p.id DESC`
     );
     for (const p of rows) {
       const [servers] = await pool.execute<RowDataPacket[]>(
@@ -287,14 +290,24 @@ class ShopService {
 
   async releaseProduct(id: number, durationMinutes: number, stockLimit?: number | null) {
     await pool.execute(
-      'UPDATE products SET sale_start = NOW(), sale_end = DATE_ADD(NOW(), INTERVAL ? MINUTE), stock_limit = ?, active = 1 WHERE id = ?',
+      'UPDATE products SET sale_start = NOW(), sale_end = DATE_ADD(NOW(), INTERVAL ? MINUTE), stock_limit = ?, is_paused = 0, active = 1 WHERE id = ?',
       [durationMinutes, stockLimit ?? null, id]
     );
     return this.getProduct(id);
   }
 
   async stopProduct(id: number) {
-    await pool.execute('UPDATE products SET sale_end = NOW() WHERE id = ?', [id]);
+    await pool.execute('UPDATE products SET sale_end = NOW(), is_paused = 0 WHERE id = ?', [id]);
+    return this.getProduct(id);
+  }
+
+  async pauseProduct(id: number) {
+    await pool.execute('UPDATE products SET is_paused = 1 WHERE id = ?', [id]);
+    return this.getProduct(id);
+  }
+
+  async resumeProduct(id: number) {
+    await pool.execute('UPDATE products SET is_paused = 0 WHERE id = ?', [id]);
     return this.getProduct(id);
   }
 
@@ -341,9 +354,10 @@ class ShopService {
     try {
       await conn.beginTransaction();
       await conn.execute('DELETE FROM product_servers WHERE product_id = ?', [id]);
+      // purchases.product_id will be SET NULL automatically via FK ON DELETE SET NULL
       await conn.execute('DELETE FROM products WHERE id = ?', [id]);
       await conn.commit();
-    } catch (err) {
+    } catch (err: any) {
       await conn.rollback();
       throw err;
     } finally {
@@ -354,8 +368,8 @@ class ShopService {
   async getPurchases(page: number = 1, limit: number = 20) {
     const offset = (page - 1) * limit;
     const [rows] = await pool.execute<RowDataPacket[]>(
-      `SELECT p.*, u.username, pr.name as product_name, s.name as server_name
-       FROM purchases p JOIN users u ON p.user_id = u.id JOIN products pr ON p.product_id = pr.id
+      `SELECT p.*, u.username, COALESCE(pr.name, '(ลบแล้ว)') as product_name, s.name as server_name
+       FROM purchases p JOIN users u ON p.user_id = u.id LEFT JOIN products pr ON p.product_id = pr.id
        JOIN servers s ON p.server_id = s.id
        ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
       [String(limit), String(offset)]
@@ -367,7 +381,7 @@ class ShopService {
   /** Admin refund a purchase */
   async adminRefund(purchaseId: number) {
     const [rows] = await pool.execute<RowDataPacket[]>(
-      `SELECT p.*, pr.name as product_name FROM purchases p JOIN products pr ON p.product_id = pr.id WHERE p.id = ? AND p.status IN ('delivered','failed','pending')`,
+      `SELECT p.*, COALESCE(pr.name, '(ลบแล้ว)') as product_name FROM purchases p LEFT JOIN products pr ON p.product_id = pr.id WHERE p.id = ? AND p.status IN ('delivered','failed','pending')`,
       [purchaseId]
     );
     if (rows.length === 0) throw new NotFoundError('Purchase not found or already refunded');

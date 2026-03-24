@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import MainLayout from '@/components/MainLayout';
 import HeroCarousel from '@/components/HeroCarousel';
@@ -202,6 +202,227 @@ function ServerStatusWidget({ serverIp, dbServers }: { serverIp?: string; dbServ
   );
 }
 
+/* ── Home Gacha Carousel ─────────────────────────────────── */
+function HomeGachaCarousel({ boxes, noDrag }: { boxes: LootBox[]; noDrag?: boolean }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [hovered, setHovered] = useState(false);
+  const [canLeft, setCanLeft] = useState(false);
+  const [canRight, setCanRight] = useState(false);
+  const dragging = useRef(false);
+  const startX = useRef(0);
+  const scrollStart = useRef(0);
+
+  const checkScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanLeft(el.scrollLeft > 1);
+    setCanRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 1);
+  };
+
+  useEffect(() => {
+    checkScroll();
+    const el = scrollRef.current;
+    if (!el) return;
+    el.addEventListener('scroll', checkScroll, { passive: true });
+    const ro = new ResizeObserver(checkScroll);
+    ro.observe(el);
+    return () => { el.removeEventListener('scroll', checkScroll); ro.disconnect(); };
+  }, [boxes]);
+
+  const scrollBy = (dir: 'left' | 'right') => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir === 'right' ? el.clientWidth * 0.85 : -el.clientWidth * 0.85, behavior: 'smooth' });
+  };
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    dragging.current = true;
+    startX.current = e.clientX;
+    scrollStart.current = el.scrollLeft;
+  };
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!dragging.current || !scrollRef.current) return;
+    scrollRef.current.scrollLeft = scrollStart.current - (e.clientX - startX.current);
+  };
+  const stopDrag = () => { dragging.current = false; };
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => { setHovered(false); stopDrag(); }}
+    >
+      {/* Left arrow */}
+      <button
+        onClick={() => scrollBy('left')}
+        aria-label="เลื่อนซ้าย"
+        className={`absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 z-20 w-8 h-8 rounded-full bg-[#1e2735] border border-[#38404d] shadow-[0_2px_0_#0d1117] flex items-center justify-center text-white hover:brightness-110 transition-opacity active:shadow-none ${hovered && canLeft ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        style={{ transition: 'opacity 0.15s' }}
+      >
+        <i className="fas fa-chevron-left text-[11px]" />
+      </button>
+
+      {/* Scroll track */}
+      <div
+        ref={scrollRef}
+        className="flex gap-2.5 overflow-x-auto pb-0.5 select-none scrollbar-hide"
+        style={{ cursor: 'default' }}
+        onMouseDown={noDrag ? undefined : onMouseDown}
+        onMouseMove={noDrag ? undefined : onMouseMove}
+        onMouseUp={noDrag ? undefined : stopDrag}
+        onMouseLeave={noDrag ? undefined : stopDrag}
+      >
+        {boxes.map(box => {
+          const hasPromo  = box.original_price && box.original_price > box.price;
+          const discPct   = hasPromo ? Math.round((1 - box.price / box.original_price!) * 100) : 0;
+          const isPaused  = !!box.is_paused;
+          const hasSaleEnd = !!box.sale_end;
+          const expired   = hasSaleEnd && new Date(box.sale_end!).getTime() <= Date.now();
+          const active    = !isPaused && hasSaleEnd && !expired;
+          const unlimited = !isPaused && !!box.sale_start && !box.sale_end;
+          const remaining = box.stock_limit != null ? Math.max(0, box.stock_limit - (box.sold_count ?? 0)) : null;
+          const soldOut   = remaining !== null && remaining <= 0;
+          const stockPct  = (box.stock_limit && box.stock_limit > 0)
+            ? Math.round(((box.stock_limit - (box.sold_count ?? 0)) / box.stock_limit) * 100)
+            : 100;
+
+          return (
+            <Link key={box.id} href={`/lootbox/${box.id}`}
+              className={`group relative flex flex-col bg-white border rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md flex-shrink-0 w-[calc(50%-5px)] sm:w-[calc(25%-7.5px)] ${
+                isPaused ? 'border-orange-200 opacity-80' :
+                soldOut || expired ? 'border-gray-200 opacity-75' :
+                'border-gray-200 hover:border-amber-300'
+              }`}>
+
+              {/* Image area */}
+              <div className="relative aspect-[3/4] bg-amber-50 overflow-hidden">
+                {box.category_name && (
+                  <span className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-white/90 backdrop-blur-sm text-gray-700 text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm border border-gray-200/80">
+                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: box.category_color || '#f59e0b' }} />
+                    {box.category_name}
+                  </span>
+                )}
+                {hasPromo && !soldOut && !isPaused && (
+                  <span className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-red-500 text-white text-[11px] font-black px-2 py-0.5 rounded-md shadow-lg">
+                    <i className="fas fa-tag text-[9px]" />
+                    -{discPct}%
+                  </span>
+                )}
+                {isPaused && (
+                  <div className="absolute inset-0 z-10 bg-black/45 flex items-center justify-center">
+                    <div className="bg-orange-500 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg tracking-wide">
+                      <i className="fas fa-pause text-[8px] mr-1" /> หยุดจำหน่ายชั่วคราว
+                    </div>
+                  </div>
+                )}
+                {soldOut && !isPaused && (
+                  <div className="absolute inset-0 z-10 bg-black/55 flex items-center justify-center">
+                    <div className="bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg rotate-[-8deg]">
+                      <i className="fas fa-box text-[8px] mr-1" /> หมดแล้ว
+                    </div>
+                  </div>
+                )}
+                {expired && !soldOut && !isPaused && (
+                  <div className="absolute inset-0 z-10 bg-black/40 flex items-center justify-center">
+                    <div className="bg-gray-700 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg">
+                      <i className="fas fa-clock text-[8px] mr-1" /> หมดเวลา
+                    </div>
+                  </div>
+                )}
+                {box.image ? (
+                  <img src={box.image} alt={box.name} className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <i className="fas fa-box text-5xl text-amber-200 group-hover:text-amber-300 transition-colors" />
+                  </div>
+                )}
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent px-2.5 py-5 flex items-end justify-between gap-1">
+                  {hasPromo ? (
+                    <span className="text-white/75 text-xs font-medium line-through tabular-nums leading-none drop-shadow">
+                      {parseFloat(String(box.original_price)).toLocaleString()} ฿
+                    </span>
+                  ) : <span />}
+                  <span className="bg-amber-500 text-white text-sm font-black px-2.5 py-1 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.3)] tabular-nums leading-none flex-shrink-0">
+                    {parseFloat(String(box.price)).toLocaleString()} ฿
+                  </span>
+                </div>
+              </div>
+
+              {/* Sale info bar */}
+              {(isPaused || active || unlimited || (remaining !== null && box.stock_limit! > 0)) && (
+                <div className={`px-2.5 py-2 border-t ${isPaused ? 'bg-orange-50 border-orange-100' : soldOut ? 'bg-red-50 border-red-100' : expired ? 'bg-gray-50 border-gray-100' : 'bg-amber-50 border-amber-100'}`}>
+                  {isPaused && (
+                    <div className="flex items-center gap-1 mb-1.5">
+                      <i className="fas fa-pause text-orange-500 text-[10px]" />
+                      <span className="text-[10px] font-bold text-orange-600">หยุดจำหน่ายชั่วคราว</span>
+                    </div>
+                  )}
+                  {active && (
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-1">
+                        <i className="fas fa-clock text-amber-500 text-[10px]" />
+                        <span className="text-[10px] font-bold text-gray-600">เวลาเหลือ</span>
+                      </div>
+                      <div className="bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-md tabular-nums shadow-[0_2px_0_#b45309]">
+                        <Countdown endTime={box.sale_end!} />
+                      </div>
+                    </div>
+                  )}
+                  {unlimited && !soldOut && (
+                    <div className="flex items-center gap-1 mb-1.5">
+                      <i className="fas fa-infinity text-green-500 text-[10px]" />
+                      <span className="text-[10px] font-bold text-green-600">ไม่จำกัดเวลา</span>
+                    </div>
+                  )}
+                  {remaining !== null && box.stock_limit! > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-1">
+                          <i className={`fas fa-box text-[9px] ${soldOut ? 'text-red-400' : stockPct <= 20 ? 'text-orange-400' : 'text-green-500'}`} />
+                          <span className="text-[10px] font-bold text-gray-600">
+                            {soldOut ? 'หมดแล้ว' : `เหลือ ${remaining.toLocaleString()} กล่อง`}
+                          </span>
+                        </div>
+                        <span className="text-[9px] font-bold text-gray-400 tabular-nums">
+                          {(box.sold_count ?? 0).toLocaleString()}/{box.stock_limit!.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full transition-all ${soldOut ? 'bg-red-400' : stockPct <= 20 ? 'bg-orange-400' : 'bg-green-400'}`}
+                          style={{ width: `${Math.max(0, stockPct)}%` }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Info */}
+              <div className="p-2.5 flex flex-col flex-1 gap-1">
+                <p className="text-gray-900 font-bold text-xs leading-tight line-clamp-1">{box.name}</p>
+                {box.description && (
+                  <p className="text-gray-400 text-[9px] leading-snug line-clamp-1">{box.description}</p>
+                )}
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* Right arrow */}
+      <button
+        onClick={() => scrollBy('right')}
+        aria-label="เลื่อนขวา"
+        className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 z-20 w-8 h-8 rounded-full bg-[#1e2735] border border-[#38404d] shadow-[0_2px_0_#0d1117] flex items-center justify-center text-white hover:brightness-110 transition-opacity active:shadow-none ${hovered && canRight ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        style={{ transition: 'opacity 0.15s' }}
+      >
+        <i className="fas fa-chevron-right text-[11px]" />
+      </button>
+    </div>
+  );
+}
+
 export default function HomePage() {
   const [slides,    setSlides]    = useState([]);
   const [products,  setProducts]  = useState<Product[]>([]);
@@ -226,6 +447,28 @@ export default function HomePage() {
     ...products.filter(p => p.original_price && p.original_price > p.price),
     ...products.filter(p => !(p.original_price && p.original_price > p.price)).sort((a, b) => b.id - a.id),
   ].filter((p, i, arr) => arr.findIndex(x => x.id === p.id) === i).slice(0, 12);
+
+  // Exclusive = has sale_end OR stock_limit, ไม่รวม paused, เรียงจากด่วนที่สุด (ซ้าย) → ด่วนน้อยสุด (ขวา)
+  const MS_30D = 30 * 24 * 60 * 60 * 1000;
+  const exclusiveUrgency = (b: LootBox): number => {
+    const timeMs = b.sale_end
+      ? Math.max(0, new Date(b.sale_end).getTime() - Date.now())
+      : Infinity;
+    const remaining = b.stock_limit != null ? Math.max(0, b.stock_limit - (b.sold_count ?? 0)) : null;
+    const stockNorm = remaining !== null && b.stock_limit! > 0
+      ? (remaining / b.stock_limit!) * MS_30D
+      : Infinity;
+    return Math.min(timeMs, stockNorm);
+  };
+  const exclusiveBoxes = lootboxes
+    .filter(b => !b.is_paused && (b.sale_end || b.stock_limit != null))
+    .sort((a, b) => exclusiveUrgency(a) - exclusiveUrgency(b));
+
+  // Popular = no sale_end AND no stock_limit, sorted by opens desc, top 4
+  const popularBoxes = lootboxes
+    .filter(b => !b.sale_end && b.stock_limit == null && (b.total_opens ?? b.sold_count ?? 0) > 0)
+    .sort((a, b) => (b.total_opens ?? b.sold_count ?? 0) - (a.total_opens ?? a.sold_count ?? 0))
+    .slice(0, 4);
 
   return (
     <MainLayout>
@@ -278,172 +521,46 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* GACHA boxes */}
-          <div className="bg-white rounded-2xl overflow-hidden border-2 border-green-200 shadow-[0_4px_0_#86efac,0_2px_16px_rgba(0,0,0,0.06)]">
-            <div className="px-4 py-3 border-b border-green-100 flex items-center gap-3">
+          {/* ── GACHA Exclusive Box ── */}
+          {exclusiveBoxes.length > 0 && (
+            <div className={CARD_CLS}>
+              <div className="px-4 py-3 border-b border-green-100 flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-violet-100 border border-violet-200 flex items-center justify-center flex-shrink-0">
+                  <i className="fas fa-gem text-violet-500 text-sm" />
+                </div>
+                <h2 className="font-black text-gray-900 text-sm leading-none">GACHA Exclusive Box</h2>
+                <span className="bg-violet-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full tracking-wide flex-shrink-0">LIMITED</span>
+                <span className="text-gray-400 text-xs">{exclusiveBoxes.length} กล่อง</span>
+                <Link href="/lootbox"
+                  className="ml-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#3498DB] text-white text-[11px] font-bold shadow-[0_3px_0_#1a6da5] hover:shadow-[0_1px_0_#1a6da5] hover:translate-y-[1px] active:shadow-none active:translate-y-[3px] transition-all flex-shrink-0">
+                  ดูกล่องสุ่มทั้งหมด <i className="fas fa-arrow-right text-[9px]" />
+                </Link>
+              </div>
+              <div className="p-3">
+                <HomeGachaCarousel boxes={exclusiveBoxes} noDrag />
+              </div>
+            </div>
+          )}
+
+          {/* ── GACHA กล่องสุ่มยอดนิยม ── */}
+          <div className={CARD_CLS}>
+            <div className="px-4 py-3 border-b border-green-100 flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-box-open text-amber-500 text-sm" />
               </div>
-              <h2 className="font-black text-gray-900 text-sm leading-none">GACHA กล่องสุ่ม ยอดนิยม!! 🔥</h2>
-              {lootboxes.length > 0 && <span className="text-gray-400 text-xs">{lootboxes.length} กล่อง</span>}
+              <h2 className="font-black text-gray-900 text-sm leading-none">GACHA กล่องสุ่ม ยอดนิยม</h2>
+              <span className="bg-amber-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full tracking-wide flex-shrink-0">HOT</span>
+              {popularBoxes.length > 0 && <span className="text-gray-400 text-xs">{popularBoxes.length} กล่อง</span>}
               <Link href="/lootbox"
-                className="ml-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#3498DB] text-white text-[11px] font-bold shadow-[0_3px_0_#1a6da5] hover:shadow-[0_1px_0_#1a6da5] hover:translate-y-[1px] active:shadow-none active:translate-y-[3px] transition-all">
+                className="ml-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#3498DB] text-white text-[11px] font-bold shadow-[0_3px_0_#1a6da5] hover:shadow-[0_1px_0_#1a6da5] hover:translate-y-[1px] active:shadow-none active:translate-y-[3px] transition-all flex-shrink-0">
                 ดูกล่องสุ่มทั้งหมด <i className="fas fa-arrow-right text-[9px]" />
               </Link>
             </div>
             <div className="p-3">
-              {lootboxes.length === 0 ? (
+              {popularBoxes.length === 0 ? (
                 <p className="text-gray-300 text-xs text-center py-6">ยังไม่มีกล่องสุ่ม</p>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                  {[...lootboxes].sort((a, b) => (b.total_opens ?? 0) - (a.total_opens ?? 0)).slice(0, 4).map(box => {
-                    const hasPromo  = box.original_price && box.original_price > box.price;
-                    const discPct   = hasPromo ? Math.round((1 - box.price / box.original_price!) * 100) : 0;
-                    const isPaused    = !!box.is_paused;
-                    const hasSaleEnd  = !!box.sale_end;
-                    const expired     = hasSaleEnd && new Date(box.sale_end!).getTime() <= Date.now();
-                    const active      = !isPaused && hasSaleEnd && !expired;
-                    const unlimited   = !isPaused && !!box.sale_start && !box.sale_end;
-                    const remaining = box.stock_limit != null ? Math.max(0, box.stock_limit - (box.sold_count ?? 0)) : null;
-                    const soldOut   = remaining !== null && remaining <= 0;
-                    const stockPct  = (box.stock_limit && box.stock_limit > 0)
-                      ? Math.round(((box.stock_limit - (box.sold_count ?? 0)) / box.stock_limit) * 100)
-                      : 100;
-                    return (
-                    <Link key={box.id} href={`/lootbox/${box.id}`}
-                      className={`group relative flex flex-col bg-white border rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md ${isPaused ? 'border-orange-200 opacity-80' : soldOut || expired ? 'border-gray-200 opacity-75' : 'border-gray-200 hover:border-amber-300'}`}>
-
-                      {/* Image area */}
-                      <div className="relative aspect-[3/4] bg-amber-50 overflow-hidden">
-
-                        {/* Category badge — top left */}
-                        {box.category_name && (
-                          <span className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-white/90 backdrop-blur-sm text-gray-700 text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm border border-gray-200/80">
-                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: box.category_color || '#f59e0b' }} />
-                            {box.category_name}
-                          </span>
-                        )}
-
-                        {/* Discount badge — top right */}
-                        {hasPromo && !soldOut && !isPaused && (
-                          <span className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-red-500 text-white text-[11px] font-black px-2 py-0.5 rounded-md shadow-lg">
-                            <i className="fas fa-tag text-[9px]" />
-                            -{discPct}%
-                          </span>
-                        )}
-
-                        {/* Paused overlay */}
-                        {isPaused && (
-                          <div className="absolute inset-0 z-10 bg-black/45 flex items-center justify-center">
-                            <div className="bg-orange-500 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg tracking-wide">
-                              <i className="fas fa-pause text-[8px] mr-1" /> หยุดจำหน่ายชั่วคราว
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Sold out overlay */}
-                        {soldOut && !isPaused && (
-                          <div className="absolute inset-0 z-10 bg-black/55 flex items-center justify-center">
-                            <div className="bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg rotate-[-8deg]">
-                              <i className="fas fa-box text-[8px] mr-1" /> หมดแล้ว
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Expired overlay */}
-                        {expired && !soldOut && !isPaused && (
-                          <div className="absolute inset-0 z-10 bg-black/40 flex items-center justify-center">
-                            <div className="bg-gray-700 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg">
-                              <i className="fas fa-clock text-[8px] mr-1" /> หมดเวลา
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Image */}
-                        {box.image ? (
-                          <img src={box.image} alt={box.name} className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <i className="fas fa-box text-5xl text-amber-200 group-hover:text-amber-300 transition-colors" />
-                          </div>
-                        )}
-
-                        {/* Bottom price overlay */}
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent px-2.5 py-5 flex items-end justify-between gap-1">
-                          {hasPromo ? (
-                            <span className="text-white/75 text-xs font-medium line-through tabular-nums leading-none drop-shadow">
-                              {parseFloat(String(box.original_price)).toLocaleString()} ฿
-                            </span>
-                          ) : <span />}
-                          <span className="bg-amber-500 text-white text-sm font-black px-2.5 py-1 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.3)] tabular-nums leading-none flex-shrink-0">
-                            {parseFloat(String(box.price)).toLocaleString()} ฿
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* ── Sale info bar (countdown + stock) ── */}
-                      {(isPaused || active || unlimited || (remaining !== null && box.stock_limit! > 0)) && (
-                        <div className={`px-2.5 py-2 border-t ${isPaused ? 'bg-orange-50 border-orange-100' : soldOut ? 'bg-red-50 border-red-100' : expired ? 'bg-gray-50 border-gray-100' : 'bg-amber-50 border-amber-100'}`}>
-                          {/* Paused row */}
-                          {isPaused && (
-                            <div className="flex items-center gap-1 mb-1.5">
-                              <i className="fas fa-pause text-orange-500 text-[10px]" />
-                              <span className="text-[10px] font-bold text-orange-600">หยุดจำหน่ายชั่วคราว</span>
-                            </div>
-                          )}
-                          {/* Countdown row (timed) */}
-                          {active && (
-                            <div className="flex items-center justify-between mb-1.5">
-                              <div className="flex items-center gap-1">
-                                <i className="fas fa-clock text-amber-500 text-[10px]" />
-                                <span className="text-[10px] font-bold text-gray-600">เวลาเหลือ</span>
-                              </div>
-                              <div className="bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-md tabular-nums shadow-[0_2px_0_#b45309]">
-                                <Countdown endTime={box.sale_end!} />
-                              </div>
-                            </div>
-                          )}
-                          {/* Unlimited badge */}
-                          {unlimited && !soldOut && (
-                            <div className="flex items-center gap-1 mb-1.5">
-                              <i className="fas fa-infinity text-green-500 text-[10px]" />
-                              <span className="text-[10px] font-bold text-green-600">ไม่จำกัดเวลา</span>
-                            </div>
-                          )}
-                          {/* Stock row */}
-                          {remaining !== null && box.stock_limit! > 0 && (
-                            <div>
-                              <div className="flex items-center justify-between mb-1">
-                                <div className="flex items-center gap-1">
-                                  <i className={`fas fa-box text-[9px] ${soldOut ? 'text-red-400' : stockPct <= 20 ? 'text-orange-400' : 'text-green-500'}`} />
-                                  <span className="text-[10px] font-bold text-gray-600">
-                                    {soldOut ? 'หมดแล้ว' : `เหลือ ${remaining.toLocaleString()} กล่อง`}
-                                  </span>
-                                </div>
-                                <span className="text-[9px] font-bold text-gray-400 tabular-nums">
-                                  {(box.sold_count ?? 0).toLocaleString()}/{box.stock_limit!.toLocaleString()}
-                                </span>
-                              </div>
-                              <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                <div className={`h-full rounded-full transition-all ${soldOut ? 'bg-red-400' : stockPct <= 20 ? 'bg-orange-400' : 'bg-green-400'}`}
-                                  style={{ width: `${Math.max(0, stockPct)}%` }} />
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Info below image */}
-                      <div className="p-2.5 flex flex-col flex-1 gap-1">
-                        <p className="text-gray-900 font-bold text-xs leading-tight line-clamp-1">{box.name}</p>
-                        {box.description && (
-                          <p className="text-gray-400 text-[9px] leading-snug line-clamp-1">{box.description}</p>
-                        )}
-                      </div>
-                    </Link>
-                    );
-                  })}
-                </div>
+                <HomeGachaCarousel boxes={popularBoxes} />
               )}
             </div>
           </div>
@@ -454,7 +571,7 @@ export default function HomePage() {
               <div className="px-4 py-3 border-b border-green-100">
                 <SectionHeader
                   icon="fa-store" iconBg="bg-green-100" iconColor="text-green-600"
-                  title="ITEMS สินค้า" count={featured.length}
+                  title="ITEMS สินค้ายอดนิยม" count={featured.length}
                   href="/shop" btnLabel="ดูทั้งหมด" btnColor="bg-[#3498DB]"
                 />
               </div>
