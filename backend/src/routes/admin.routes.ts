@@ -848,10 +848,10 @@ router.delete('/lootboxes/items/:itemId', async (req: Request, res: Response, ne
 router.get('/inventory', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { userId, status } = req.query;
-    let query = `SELECT wi.*, u.username, lb.name as box_name
+    let query = `SELECT wi.*, u.username, COALESCE(lb.name, '(ลบแล้ว)') as box_name
                  FROM web_inventory wi
                  JOIN users u ON wi.user_id = u.id
-                 JOIN loot_boxes lb ON wi.loot_box_id = lb.id`;
+                 LEFT JOIN loot_boxes lb ON wi.loot_box_id = lb.id`;
     const params: (string | number)[] = [];
     const conditions: string[] = [];
     if (userId) { conditions.push('wi.user_id = ?'); params.push(parseInt(userId as string)); }

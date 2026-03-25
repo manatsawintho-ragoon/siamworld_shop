@@ -201,9 +201,9 @@ class LootBoxService {
 
   async getUserInventory(userId: number) {
     const [rows] = await pool.execute<RowDataPacket[]>(
-      `SELECT wi.*, lb.name as box_name
+      `SELECT wi.*, COALESCE(lb.name, '(ลบแล้ว)') as box_name
        FROM web_inventory wi
-       JOIN loot_boxes lb ON wi.loot_box_id = lb.id
+       LEFT JOIN loot_boxes lb ON wi.loot_box_id = lb.id
        WHERE wi.user_id = ?
        ORDER BY wi.won_at DESC`,
       [userId]
@@ -510,8 +510,8 @@ class LootBoxService {
   }
 
   async deleteLootBox(id: number) {
-    // Remove inventory records tied to this box before deleting items/box
-    await pool.execute('DELETE FROM web_inventory WHERE loot_box_id = ?', [id]);
+    // We no longer manually delete web_inventory records here.
+    // Migration 017 changed the foreign key to ON DELETE SET NULL.
     await pool.execute('DELETE FROM loot_boxes WHERE id = ?', [id]);
   }
 
@@ -579,7 +579,8 @@ class LootBoxService {
   }
 
   async deleteLootBoxItem(itemId: number) {
-    await pool.execute('DELETE FROM web_inventory WHERE loot_box_item_id = ?', [itemId]);
+    // We no longer manually delete web_inventory records here.
+    // Migration 017 changed the foreign key to ON DELETE SET NULL.
     await pool.execute('DELETE FROM loot_box_items WHERE id = ?', [itemId]);
   }
 

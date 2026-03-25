@@ -41,8 +41,8 @@ class AdminStatsService {
 
     // Top loot boxes
     const [topLootBoxes] = await pool.execute<RowDataPacket[]>(
-      `SELECT lb.name, lb.image, COUNT(*) as open_count, SUM(lb.price) as total_revenue
-       FROM web_inventory wi JOIN loot_boxes lb ON wi.loot_box_id = lb.id
+      `SELECT COALESCE(lb.name, '(ลบแล้ว)') as name, lb.image, COUNT(*) as open_count, SUM(lb.price) as total_revenue
+       FROM web_inventory wi LEFT JOIN loot_boxes lb ON wi.loot_box_id = lb.id
        GROUP BY wi.loot_box_id, lb.name, lb.image ORDER BY open_count DESC LIMIT 5`
     );
 
@@ -200,6 +200,7 @@ class AdminStatsService {
         ORDER BY wi.won_at DESC LIMIT 5)
        ORDER BY created_at DESC LIMIT 15`
     );
+
 
     return {
       totalRevenue: results.revenue,

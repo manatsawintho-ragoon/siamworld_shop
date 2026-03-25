@@ -5,11 +5,11 @@ import { redis } from '../database/redis';
  * Per-user purchase cooldown to prevent spam buying.
  * Uses Redis to track last purchase time per user.
  */
-export function purchaseCooldown(cooldownSeconds: number = 5) {
+export function purchaseCooldown(cooldownSeconds: number = 5, namespace: string = 'purchase') {
   return async (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) return next();
 
-    const key = `cooldown:purchase:${req.user.userId}`;
+    const key = `cooldown:${namespace}:${req.user.userId}`;
     try {
       const exists = await redis.get(key);
       if (exists) {

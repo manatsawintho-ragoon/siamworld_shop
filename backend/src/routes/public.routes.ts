@@ -141,11 +141,11 @@ router.get('/recent-lootbox', async (req: Request, res: Response, next: NextFunc
     const boxId = req.query.boxId ? parseInt(req.query.boxId as string) : null;
     const limit = boxId ? 20 : 8;
     const query = boxId
-      ? `SELECT u.username, lb.name as box_name, wi.item_name, wi.item_image, wi.item_rarity, wi.won_at
-         FROM web_inventory wi JOIN users u ON wi.user_id = u.id JOIN loot_boxes lb ON wi.loot_box_id = lb.id
+      ? `SELECT u.username, COALESCE(lb.name, '(ลบแล้ว)') as box_name, wi.item_name, wi.item_image, wi.item_rarity, wi.won_at
+         FROM web_inventory wi JOIN users u ON wi.user_id = u.id LEFT JOIN loot_boxes lb ON wi.loot_box_id = lb.id
          WHERE wi.loot_box_id = ? ORDER BY wi.won_at DESC LIMIT ${limit}`
-      : `SELECT u.username, lb.name as box_name, wi.item_name, wi.item_image, wi.item_rarity, wi.won_at
-         FROM web_inventory wi JOIN users u ON wi.user_id = u.id JOIN loot_boxes lb ON wi.loot_box_id = lb.id
+      : `SELECT u.username, COALESCE(lb.name, '(ลบแล้ว)') as box_name, wi.item_name, wi.item_image, wi.item_rarity, wi.won_at
+         FROM web_inventory wi JOIN users u ON wi.user_id = u.id LEFT JOIN loot_boxes lb ON wi.loot_box_id = lb.id
          ORDER BY wi.won_at DESC LIMIT ${limit}`;
     const [rows] = boxId
       ? await pool.execute(query, [boxId])

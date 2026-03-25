@@ -72,7 +72,7 @@ router.get('/lootboxes/:id', async (req: Request, res: Response, next: NextFunct
   } catch (err) { next(err); }
 });
 
-router.post('/lootboxes/:id/open', authenticate, purchaseCooldown(3), validate(openLootBoxSchema), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/lootboxes/:id/open', authenticate, purchaseCooldown(3, 'lootbox'), validate(openLootBoxSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const result = await lootBoxService.openBox(
       req.user!.userId,

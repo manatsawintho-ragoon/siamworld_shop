@@ -34,8 +34,8 @@ function Countdown({ endTime }: { endTime: string }) {
   if (secs <= 0) return <span className="text-red-500 font-black text-[10px]">หมดเวลา</span>;
   const d = Math.floor(secs / 86400), h = Math.floor((secs % 86400) / 3600);
   const m = Math.floor((secs % 3600) / 60), s = secs % 60;
-  if (d > 0) return <span className="tabular-nums font-black text-[10px] text-amber-600">{d}ว {h}ช {m}น</span>;
-  if (h > 0) return <span className="tabular-nums font-black text-[10px] text-amber-600">{h}ช {m}น {s}ว</span>;
+  if (d > 0) return <span className="tabular-nums font-black text-[10px] text-white">{d}ว {h}ช {m}น</span>;
+  if (h > 0) return <span className="tabular-nums font-black text-[10px] text-white">{h}ช {m}น {s}ว</span>;
   return <span className="tabular-nums font-black text-[10px] text-red-500">{String(m).padStart(2,'0')}:{String(s).padStart(2,'0')}</span>;
 }
 
@@ -51,8 +51,8 @@ function BoxCard({ box }: { box: LootBox }) {
   const remaining  = box.stock_limit != null ? Math.max(0, box.stock_limit - (box.sold_count ?? 0)) : null;
   const soldOut    = remaining !== null && remaining <= 0;
   const stockPct   = box.stock_limit && box.stock_limit > 0
-    ? Math.round(((box.stock_limit - (box.sold_count ?? 0)) / box.stock_limit) * 100)
-    : 100;
+    ? Math.round(((box.sold_count ?? 0) / box.stock_limit) * 100)
+    : 0;
 
   // Intrinsic type badge — priority: LIMITED > HOT > category
   const isLimitedBox = !isPaused && (!!box.sale_end || box.stock_limit != null);

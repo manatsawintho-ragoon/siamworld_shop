@@ -71,8 +71,8 @@ function Countdown({ endTime }: { endTime: string }) {
   const h = Math.floor((secs % 86400) / 3600);
   const m = Math.floor((secs % 3600) / 60);
   const s = secs % 60;
-  if (d > 0) return <span className="tabular-nums font-black text-[9px] text-amber-600">{d}ว {h}ช {m}น</span>;
-  if (h > 0) return <span className="tabular-nums font-black text-[9px] text-amber-600">{h}ช {m}น {s}ว</span>;
+  if (d > 0) return <span className="tabular-nums font-black text-[9px] text-white">{d}ว {h}ช {m}น</span>;
+  if (h > 0) return <span className="tabular-nums font-black text-[9px] text-white">{h}ช {m}น {s}ว</span>;
   return <span className="tabular-nums font-black text-[9px] text-red-500">{String(m).padStart(2,'0')}:{String(s).padStart(2,'0')}</span>;
 }
 
@@ -285,8 +285,9 @@ function HomeGachaCarousel({ boxes, noDrag }: { boxes: LootBox[]; noDrag?: boole
           const remaining = box.stock_limit != null ? Math.max(0, box.stock_limit - (box.sold_count ?? 0)) : null;
           const soldOut   = remaining !== null && remaining <= 0;
           const stockPct  = (box.stock_limit && box.stock_limit > 0)
-            ? Math.round(((box.stock_limit - (box.sold_count ?? 0)) / box.stock_limit) * 100)
-            : 100;
+            ? Math.round(((box.sold_count ?? 0) / box.stock_limit) * 100)
+            : 0;
+
 
           return (
             <Link key={box.id} href={`/lootbox/${box.id}`}
@@ -380,7 +381,7 @@ function HomeGachaCarousel({ boxes, noDrag }: { boxes: LootBox[]; noDrag?: boole
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-1">
-                          <i className={`fas fa-box text-[9px] ${soldOut ? 'text-red-400' : stockPct <= 20 ? 'text-orange-400' : 'text-green-500'}`} />
+                          <i className={`fas fa-box text-[9px] ${soldOut ? 'text-red-400' : stockPct >= 80 ? 'text-red-400' : stockPct >= 60 ? 'text-orange-400' : 'text-green-500'}`} />
                           <span className="text-[10px] font-bold text-gray-600">
                             {soldOut ? 'หมดแล้ว' : `เหลือ ${remaining.toLocaleString()} กล่อง`}
                           </span>
@@ -390,8 +391,8 @@ function HomeGachaCarousel({ boxes, noDrag }: { boxes: LootBox[]; noDrag?: boole
                         </span>
                       </div>
                       <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full transition-all ${soldOut ? 'bg-red-400' : stockPct <= 20 ? 'bg-orange-400' : 'bg-green-400'}`}
-                          style={{ width: `${Math.max(0, stockPct)}%` }} />
+                        <div className={`h-full rounded-full transition-all ${soldOut ? 'bg-red-400' : stockPct >= 80 ? 'bg-red-400' : stockPct >= 60 ? 'bg-orange-400' : 'bg-green-400'}`}
+                          style={{ width: `${Math.min(100, Math.max(0, stockPct))}%` }} />
                       </div>
                     </div>
                   )}
