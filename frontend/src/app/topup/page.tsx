@@ -6,8 +6,10 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import QRCode from 'qrcode';
+import { useSettings } from '@/context/SettingsContext';
 
-type View = 'select' | 'promptpay' | 'qr' | 'success';
+type Step = 'selection' | 'amount' | 'qr' | 'upload' | 'truemoney' | 'success';
+type Method = 'promptpay' | 'truemoney' | null;
 
 const AMOUNTS = [50, 100, 200, 300, 500, 1000];
 
@@ -15,36 +17,50 @@ export default function TopupPage() {
   const { user, loading: authLoading, refresh } = useAuth();
   const router = useRouter();
 
-  const [view, setView]       = useState<View>('select');
-  const [amount, setAmount]   = useState(100);
-  const [custom, setCustom]   = useState('');
+  // Step state
+  const [step, setStep] = useState<Step>('selection');
+  const [method, setMethod] = useState<Method>(null);
+  const [amount, setAmount] = useState(100);
+  const [custom, setCustom] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState('');
+  const [error, setError] = useState('');
 
-  // QR step
-  const [qrUrl, setQrUrl]               = useState('');
-  const [reference, setReference]       = useState('');
+  // QR Data
+  const [qrUrl, setQrUrl] = useState('');
   const [recipientName, setRecipientName] = useState('');
-  const [recipientId, setRecipientId]   = useState('');
-  const [qrAmount, setQrAmount]         = useState(0);
+  const [qrAmount, setQrAmount]           = useState(0);
 
-  // Slip upload
+  // Slip Data
   const fileRef = useRef<HTMLInputElement>(null);
   const [slipFile, setSlipFile]       = useState<File | null>(null);
   const [slipPreview, setSlipPreview] = useState('');
   const [verifying, setVerifying]     = useState(false);
 
-  // Success
-  const [successAmount, setSuccessAmount]     = useState(0);
-  const [successBalance, setSuccessBalance]   = useState(0);
+  // TrueMoney Data
+  const [giftLink, setGiftLink] = useState('');
+
+  // Success Data
+  const [successAmount,     setSuccessAmount]     = useState(0);
+  const [successPaid,       setSuccessPaid]       = useState(0);
+  const [successMultiplier, setSuccessMultiplier] = useState(1);
+
+  // Bonus settings from public API
+  const { settings } = useSettings();
+  const bonusEnabled = settings['topup_bonus_enabled'] === 'true';
+  const bonusMult    = parseFloat(settings['topup_bonus_multiplier'] || '1') || 1;
+  const hasBonus     = bonusEnabled && bonusMult > 1;
 
   useEffect(() => { if (!authLoading && !user) router.push('/'); }, [authLoading, user, router]);
-
   if (authLoading || !user) return null;
 
   const selectedAmount = custom ? Math.max(1, Number(custom)) : amount;
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
+  // Handlers
+  const handleSelectMethod = (m: Method) => {
+    if (m === 'truemoney') return; // Disable selection
+    setMethod(m);
+    setStep('amount');
+  };
 
   const handleGenerateQR = async () => {
     setError('');
@@ -56,21 +72,17 @@ export default function TopupPage() {
         body: { amount: selectedAmount },
       }) as any;
 
-      setReference(d.reference);
       setRecipientName(d.recipientName || '');
-      setRecipientId(d.recipientId || '');
       setQrAmount(d.amount);
 
-      // Generate QR image client-side from PromptPay payload
       const img = await QRCode.toDataURL(d.payload, {
-        width: 260,
-        margin: 2,
-        color: { dark: '#003B80', light: '#FFFFFF' },
+        width: 200, margin: 2,
+        color: { dark: '#003b80', light: '#FFFFFF' },
       });
       setQrUrl(img);
-      setView('qr');
+      setStep('qr');
     } catch (err: any) {
-      setError(err?.message || 'เกิดข้อผิดพลาด');
+      setError(err?.message || 'เกิดข้อผิดพลาดในการสร้าง QR Code');
     } finally {
       setLoading(false);
     }
@@ -92,283 +104,504 @@ export default function TopupPage() {
     try {
       const reader = new FileReader();
       const base64 = await new Promise<string>((resolve, reject) => {
-        reader.onload  = ev => resolve(ev.target?.result as string);
+        reader.onload = ev => resolve(ev.target?.result as string);
         reader.onerror = reject;
         reader.readAsDataURL(slipFile);
       });
-
       const d = await api<any>('/payment/slip/verify', {
         method: 'POST',
         token: getToken()!,
         body: { base64 },
       }) as any;
-
       setSuccessAmount(d.amount);
-      setSuccessBalance(d.balanceAfter);
+      setSuccessPaid(d.paid_amount ?? d.amount);
+      setSuccessMultiplier(d.multiplier ?? 1);
       await refresh();
-      setView('success');
+      setStep('success');
     } catch (err: any) {
-      setError(err?.message || 'ตรวจสอบสลิปไม่สำเร็จ');
+      setError(err?.message || 'ตรวจสอบสลิปไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
     } finally {
       setVerifying(false);
     }
   };
 
+  const handleRedeemTrueMoney = async () => {
+    if (!giftLink) return;
+    setLoading(true);
+    setError('');
+    try {
+      const d = await api<any>('/payment/truemoney/redeem', {
+        method: 'POST',
+        token: getToken()!,
+        body: { giftLink },
+      }) as any;
+      setSuccessAmount(d.amount);
+      await refresh();
+      setStep('success');
+    } catch (err: any) {
+      setError(err?.message || 'แลกซองของขวัญไม่สำเร็จ กรุณาตรวจสอบลิงก์อีกครั้ง');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const reset = () => {
-    setView('select');
+    setStep('selection');
+    setMethod(null);
     setError('');
     setQrUrl('');
     setSlipFile(null);
     setSlipPreview('');
     setCustom('');
     setAmount(100);
-    if (fileRef.current) fileRef.current.value = '';
+    setGiftLink('');
+    setSuccessMultiplier(1);
+    setSuccessPaid(0);
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  const goBack = () => {
+    if (step === 'amount' || step === 'truemoney') setStep('selection');
+    else if (step === 'qr') setStep('amount');
+    else if (step === 'upload') setStep('qr');
+  };
 
   return (
     <MainLayout>
-      <div className="max-w-md mx-auto px-4 sm:px-6 py-10">
+      <div className="max-w-4xl mx-auto space-y-3 pb-8 font-prompt">
 
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-black text-foreground flex items-center gap-2">
-            <i className="fas fa-coins text-primary"></i> เติมเงิน
-          </h1>
-          <p className="text-sm text-foreground-muted mt-1">
-            ยอดเงินปัจจุบัน:{' '}
-            <span className="font-bold text-primary">฿{user.wallet_balance?.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
-          </p>
-        </div>
-
-        {/* Back button (not on select/success) */}
-        {(view === 'promptpay' || view === 'qr') && (
-          <button onClick={() => view === 'qr' ? setView('promptpay') : reset()}
-            className="flex items-center gap-1.5 text-xs font-semibold text-foreground-muted hover:text-foreground mb-4 transition-colors">
-            <i className="fas fa-arrow-left"></i> ย้อนกลับ
-          </button>
-        )}
-
-        {/* Error banner */}
+        {/* ── Bonus Promo Banner ── */}
         <AnimatePresence>
-          {error && (
-            <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="flex items-center gap-2 rounded-xl p-3 mb-4 text-sm bg-error-light border border-error/20 text-error-foreground">
-              <i className="fas fa-exclamation-circle flex-shrink-0"></i>
-              <span className="flex-1">{error}</span>
-              <button onClick={() => setError('')} className="opacity-60 hover:opacity-100"><i className="fas fa-times"></i></button>
+          {hasBonus && (
+            <motion.div
+              key="bonus-banner"
+              initial={{ opacity: 0, y: -8, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.98 }}
+              transition={{ duration: 0.25 }}
+              className="relative bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl overflow-hidden shadow-[0_4px_0_#c2410c,0_2px_20px_rgba(249,115,22,0.4)]"
+            >
+              {/* decorative glow */}
+              <div className="absolute -right-8 -top-8 w-40 h-40 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -left-4 -bottom-4 w-24 h-24 bg-black/10 rounded-full blur-2xl pointer-events-none" />
+
+              <div className="relative flex items-center gap-4 px-5 py-4">
+                {/* Icon */}
+                <div className="w-12 h-12 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <i className="fas fa-bolt text-white text-lg" />
+                </div>
+
+                {/* Text */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-black text-white/70 uppercase tracking-widest mb-0.5">โปรโมชั่นพิเศษ</p>
+                  <h3 className="text-lg font-black text-white leading-tight">
+                    เติมเงินวันนี้ ได้รับโบนัส
+                    <span className="ml-2 text-2xl text-yellow-200 drop-shadow">x{bonusMult}</span>
+                  </h3>
+                  <p className="text-[11px] text-white/80 font-bold mt-0.5">
+                    เติม ฿100 → ได้รับ ฿{(100 * bonusMult).toLocaleString()} เข้า Wallet ทันที
+                  </p>
+                </div>
+
+                {/* Multiplier badge */}
+                <div className="flex-shrink-0 text-center bg-white/20 border border-white/30 rounded-xl px-4 py-2">
+                  <p className="text-[9px] font-black text-white/70 uppercase tracking-wider">คูณเงิน</p>
+                  <p className="text-3xl font-black text-white leading-none">x{bonusMult}</p>
+                </div>
+              </div>
+
+              {/* Mini table row preview */}
+              <div className="relative border-t border-white/20 bg-black/10 px-5 py-2 flex items-center gap-4 overflow-x-auto">
+                <span className="text-[10px] font-black text-white/60 uppercase tracking-wider flex-shrink-0">ตัวอย่าง</span>
+                {[50, 100, 200, 500].map(a => (
+                  <span key={a} className="flex items-center gap-1 flex-shrink-0">
+                    <span className="text-[11px] font-bold text-white/80">฿{a}</span>
+                    <i className="fas fa-arrow-right text-[8px] text-white/50" />
+                    <span className="text-[12px] font-black text-yellow-200">฿{(a * bonusMult).toLocaleString()}</span>
+                  </span>
+                ))}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        <AnimatePresence mode="wait">
+        {/* ── Progress Header (Removed Balance) ── */}
+        <div className="bg-white border-2 border-green-200 rounded-xl p-3 flex items-center shadow-theme-sm">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={goBack}
+              disabled={step === 'selection' || step === 'success' || verifying || loading}
+              className="w-9 h-9 rounded-lg hover:bg-green-50 border border-transparent hover:border-green-200 flex items-center justify-center transition-all disabled:opacity-0"
+            >
+              <i className="fas fa-chevron-left text-gray-500"></i>
+            </button>
+            <div>
+              <h1 className="text-lg font-black text-gray-900 leading-none">เติมเงินเข้าระบบ</h1>
+              <div className="flex items-center gap-1.5 mt-2">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className={`h-1.5 rounded-full transition-all duration-500 ${
+                    (step === 'selection' && i === 1) ||
+                    ((step === 'amount' || step === 'truemoney') && i === 2) ||
+                    ((step === 'qr' || step === 'upload') && i === 3) ||
+                    (step === 'success' && i === 4)
+                    ? 'w-6 bg-primary' : 'w-1.5 bg-green-100'
+                  }`} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
 
-          {/* ── STEP 0: Select method ── */}
-          {view === 'select' && (
-            <motion.div key="select" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-              className="space-y-3">
-              <p className="text-xs font-bold text-foreground-muted mb-2">เลือกช่องทางชำระเงิน</p>
+        {/* ── Main Content Area ── */}
+        <div className="min-h-[380px] flex flex-col">
+          <AnimatePresence mode="wait">
+            
+            {/* STEP 1: Selection */}
+            {step === 'selection' && (
+              <motion.div 
+                key="selection" 
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full"
+              >
+                {/* PromptPay Card */}
+                <button 
+                  onClick={() => handleSelectMethod('promptpay')} 
+                  className="group relative bg-white rounded-2xl border-2 border-green-200 overflow-hidden flex flex-col shadow-theme-sm hover:border-[#003b80] hover:shadow-lg transition-all duration-300 text-center h-[280px]"
+                >
+                  <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                    <i className="fas fa-qrcode text-7xl text-[#003b80]"></i>
+                  </div>
+                  
+                  <div className="flex-1 flex flex-col items-center justify-center p-6 gap-4 relative z-10">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-[#003b80]/5 rounded-full blur-2xl group-hover:scale-125 transition-transform duration-500" />
+                      <img 
+                        src="/images/thai_qr_payment.png" 
+                        alt="PromptPay" 
+                        className="relative h-20 w-auto object-contain transform group-hover:scale-105 transition-transform duration-300" 
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="text-xl font-black text-[#003b80]">PromptPay</h3>
+                      <p className="text-xs font-bold text-gray-500 leading-tight">
+                        สแกนจ่ายผ่าน QR Code<br/>
+                        <span className="text-[9px] uppercase tracking-wider opacity-60">รองรับทุกแอปธนาคาร</span>
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-[#003b80] py-3.5 text-white font-black text-[11px] uppercase tracking-widest group-hover:bg-[#004ba3] transition-colors flex items-center justify-center gap-2">
+                    เลือกช่องทางนี้ 
+                    <i className="fas fa-chevron-right text-[9px] group-hover:translate-x-1 transition-transform"></i>
+                  </div>
+                </button>
 
-              {/* PromptPay */}
-              <button onClick={() => { setView('promptpay'); setError(''); }}
-                className="w-full flex items-center gap-4 p-5 rounded-2xl border-2 border-[#003B80]/20 bg-[#003B80]/5 hover:border-[#003B80]/50 hover:bg-[#003B80]/10 transition-all duration-200 group text-left">
-                <div className="w-14 h-14 rounded-2xl bg-[#003B80] flex items-center justify-center flex-shrink-0 shadow-[0_4px_0_#001f5c] group-hover:shadow-[0_2px_0_#001f5c] group-hover:translate-y-0.5 transition-all">
-                  <i className="fas fa-qrcode text-2xl text-white"></i>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-black text-gray-900 text-base">PromptPay</p>
-                  <p className="text-xs text-gray-500 mt-0.5">สแกน QR ด้วยแอปธนาคาร แล้วอัปโหลดสลิป</p>
-                  <div className="flex items-center gap-1.5 mt-2">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> ตรวจสอบอัตโนมัติ
-                    </span>
+                {/* TrueMoney Card (Disabled Version) */}
+                <div className="group relative bg-gray-50 rounded-2xl border-2 border-gray-200 overflow-hidden flex flex-col shadow-sm grayscale opacity-70 text-center h-[280px] cursor-not-allowed">
+                  <div className="absolute top-0 right-0 p-4 opacity-5">
+                    <i className="fas fa-wallet text-7xl text-gray-400"></i>
+                  </div>
+
+                  <div className="flex-1 flex flex-col items-center justify-center p-6 gap-4 relative z-10">
+                    <img 
+                      src="/images/truemoney_wallet.png" 
+                      alt="TrueMoney" 
+                      className="relative h-16 w-auto object-contain" 
+                    />
+                    <div className="space-y-1">
+                      <h3 className="text-xl font-black text-gray-500">TrueMoney Wallet</h3>
+                      <p className="text-xs font-bold text-gray-400 leading-tight">
+                        เติมผ่านซองของขวัญ<br/>
+                        <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest">ยังไม่เปิดใช้งาน (เร็วๆ นี้)</span>
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gray-300 py-3.5 text-white font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2">
+                    ไม่พร้อมใช้งาน
                   </div>
                 </div>
-                <i className="fas fa-chevron-right text-gray-300 group-hover:text-[#003B80] transition-colors"></i>
-              </button>
+              </motion.div>
+            )}
 
-              {/* TrueMoney — coming soon */}
-              <div className="w-full flex items-center gap-4 p-5 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed relative overflow-hidden">
-                <div className="w-14 h-14 rounded-2xl bg-gray-200 flex items-center justify-center flex-shrink-0">
-                  <i className="fas fa-gift text-2xl text-gray-400"></i>
+            {/* STEP 2: TrueMoney Input */}
+            {step === 'truemoney' && (
+              <motion.div 
+                key="truemoney" 
+                initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}
+                className="bg-white rounded-xl border-2 border-green-200 shadow-theme-sm w-full p-6 space-y-4 flex-1"
+              >
+                <div className="flex items-center gap-3 border-b border-green-100 pb-4">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[#ed1c24] text-white">
+                    <i className="fas fa-gift text-lg"></i>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-black text-gray-900 leading-none">ส่งซองของขวัญ</h2>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">ขั้นตอนที่ 2: วางลิงก์ซองของขวัญที่นี่</p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-black text-gray-500 text-base">TrueMoney Wallet</p>
-                  <p className="text-xs text-gray-400 mt-0.5">เติมผ่านซองอังเปา TrueMoney</p>
-                </div>
-                <span className="text-[10px] font-black text-gray-400 bg-gray-100 px-2 py-1 rounded-lg border border-gray-200">เร็วๆ นี้</span>
-              </div>
 
-              {/* Info */}
-              <div className="mt-2 bg-primary/5 border border-primary/10 rounded-xl p-4 text-xs text-foreground-muted space-y-1.5">
-                <p><i className="fas fa-shield-alt text-primary mr-1.5"></i>ระบบตรวจสอบสลิปอัตโนมัติ ป้องกันสลิปปลอม</p>
-                <p><i className="fas fa-bolt text-primary mr-1.5"></i>เงินเข้ากระเป๋าทันทีหลังสลิปผ่าน</p>
-                <p><i className="fas fa-headset text-primary mr-1.5"></i>ปัญหา? ติดต่อผ่าน Discord</p>
-              </div>
-            </motion.div>
-          )}
+                <div className="space-y-3">
+                  <div className="relative group">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#ed1c24]">
+                      <i className="fas fa-link text-lg"></i>
+                    </div>
+                    <input 
+                      type="text" 
+                      value={giftLink} 
+                      onChange={e => setGiftLink(e.target.value)}
+                      placeholder="วางลิงก์ซองของขวัญที่นี่..." 
+                      className="w-full pl-12 pr-4 py-3.5 rounded-lg border-2 border-green-100 bg-gray-50 text-sm font-bold focus:outline-none focus:border-[#ed1c24] transition-all" 
+                    />
+                  </div>
 
-          {/* ── STEP 1: PromptPay — select amount ── */}
-          {view === 'promptpay' && (
-            <motion.div key="promptpay" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-              className="space-y-5">
-              <div className="flex items-center gap-3 p-4 rounded-2xl bg-[#003B80]/5 border border-[#003B80]/15">
-                <div className="w-10 h-10 rounded-xl bg-[#003B80] flex items-center justify-center flex-shrink-0">
-                  <i className="fas fa-qrcode text-white"></i>
+                  <div className="bg-red-50/50 border border-dashed border-red-200 rounded-xl p-4">
+                    <h4 className="text-[11px] font-black text-[#ed1c24] mb-2 flex items-center gap-2">
+                      <i className="fas fa-info-circle"></i>
+                      วิธีเติมเงินผ่านซองของขวัญ
+                    </h4>
+                    <ol className="text-[10px] font-bold text-gray-500 space-y-1 list-decimal ml-4 leading-relaxed">
+                      <li>เข้าแอป TrueMoney Wallet</li>
+                      <li>ไปที่เมนู <span className="text-gray-900">"ส่งซองของขวัญ"</span></li>
+                      <li>สร้างซอง <span className="text-gray-900">"แบ่งจำนวนเงินเท่ากัน"</span> และเลือกผู้รับ <span className="text-gray-900">1 คน</span></li>
+                      <li>คัดลอกลิงก์ซองของขวัญมาวางในช่องด้านบน</li>
+                    </ol>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-black text-gray-900 text-sm">PromptPay</p>
-                  <p className="text-xs text-gray-500">เลือกจำนวนเงินที่ต้องการเติม</p>
-                </div>
-              </div>
 
-              {/* Preset amounts */}
-              <div>
-                <label className="block text-xs font-bold text-foreground-muted mb-2">จำนวนเงิน</label>
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg text-[11px] font-bold flex items-center gap-2">
+                    <i className="fas fa-exclamation-triangle"></i>
+                    {error}
+                  </div>
+                )}
+
+                <button 
+                  onClick={handleRedeemTrueMoney} 
+                  disabled={loading || !giftLink.includes('truemoney.com')}
+                  className="btn w-full py-4 rounded-lg bg-[#ed1c24] text-white font-black text-sm shadow-[0_4px_0_#991b1b] hover:shadow-[0_2px_0_#991b1b] hover:translate-y-[2px] active:shadow-none active:translate-y-[4px] transition-all disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none"
+                >
+                  {loading ? <i className="fas fa-circle-notch fa-spin mr-2"></i> : <i className="fas fa-check-circle mr-2"></i>}
+                  ยืนยันการแลกซองของขวัญ
+                </button>
+              </motion.div>
+            )}
+
+            {/* STEP 2: Amount Input (for PromptPay) */}
+            {step === 'amount' && (
+              <motion.div 
+                key="amount" 
+                initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}
+                className="bg-white rounded-xl border-2 border-green-200 shadow-theme-sm w-full p-6 space-y-4 flex-1"
+              >
+                <div className="flex items-center gap-3 border-b border-green-100 pb-4">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[#003b80] text-white">
+                    <i className="fas fa-qrcode text-lg"></i>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-black text-gray-900 leading-none">ระบุจำนวนเงิน</h2>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">ขั้นตอนที่ 2: เลือกจำนวนพอยท์ที่ต้องการ</p>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-3 gap-2">
                   {AMOUNTS.map(a => (
-                    <button key={a} type="button"
-                      onClick={() => { setAmount(a); setCustom(''); }}
-                      className={`py-3 rounded-xl text-sm font-bold transition-all ${!custom && amount === a
-                        ? 'bg-[#003B80] text-white shadow-[0_4px_0_#001f5c]'
-                        : 'bg-surface-hover text-foreground-muted hover:bg-border'}`}>
+                    <button key={a} onClick={() => { setAmount(a); setCustom(''); }}
+                      className={`py-3 rounded-lg font-black text-sm border-2 transition-all ${!custom && amount === a
+                        ? 'bg-[#003b80] text-white border-[#003b80] shadow-[0_3px_0_#002147]'
+                        : 'bg-gray-50 text-gray-500 border-green-100 hover:border-green-300'
+                      }`}>
                       ฿{a.toLocaleString()}
                     </button>
                   ))}
                 </div>
-              </div>
 
-              {/* Custom amount */}
-              <div>
-                <label className="block text-xs font-bold text-foreground-muted mb-1.5">หรือใส่จำนวนเอง</label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground-muted text-sm font-bold">฿</span>
+                <div className="relative group">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-lg text-[#003b80]">฿</div>
                   <input type="number" value={custom} onChange={e => setCustom(e.target.value)}
-                    placeholder="0" min={1} max={100000}
-                    className="input text-sm pl-8 w-full" />
-                </div>
-              </div>
-
-              <button onClick={handleGenerateQR} disabled={loading || selectedAmount < 1}
-                className="w-full py-3.5 rounded-xl font-black text-white bg-[#003B80] shadow-[0_4px_0_#001f5c] hover:brightness-110 hover:shadow-[0_2px_0_#001f5c] hover:translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2">
-                {loading
-                  ? <><i className="fas fa-spinner fa-spin"></i> สร้าง QR...</>
-                  : <><i className="fas fa-qrcode"></i> สร้าง QR Code (฿{selectedAmount.toLocaleString()})</>}
-              </button>
-            </motion.div>
-          )}
-
-          {/* ── STEP 2: QR display + slip upload ── */}
-          {view === 'qr' && (
-            <motion.div key="qr" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-              className="space-y-4">
-
-              {/* QR card */}
-              <div className="bg-white rounded-2xl border-2 border-[#003B80]/20 overflow-hidden">
-                {/* Header */}
-                <div className="bg-[#003B80] px-5 py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <i className="fas fa-qrcode text-white text-sm"></i>
-                    <span className="font-bold text-white text-sm">PromptPay QR Code</span>
-                  </div>
-                  <span className="text-white/70 text-xs">สแกนเพื่อโอนเงิน</span>
+                    placeholder="ระบุจำนวนเงินอื่นๆ..." className="w-full pl-10 pr-4 py-3 rounded-lg border-2 border-green-100 bg-gray-50 text-base font-black focus:outline-none focus:border-[#003b80] transition-all" />
                 </div>
 
-                {/* QR image */}
-                <div className="flex flex-col items-center py-6 bg-white">
-                  {qrUrl
-                    ? <img src={qrUrl} alt="PromptPay QR" className="w-56 h-56 rounded-lg" />
-                    : <div className="w-56 h-56 flex items-center justify-center"><i className="fas fa-spinner fa-spin text-3xl text-[#003B80]"></i></div>
-                  }
-                  <p className="text-3xl font-black text-[#003B80] mt-4">฿{qrAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</p>
-                  {recipientName && (
-                    <p className="text-sm font-semibold text-gray-700 mt-1">{recipientName}</p>
-                  )}
-                  {recipientId && (
-                    <p className="text-xs text-gray-400 mt-0.5">{recipientId}</p>
-                  )}
-                </div>
-
-                {/* Steps */}
-                <div className="px-5 pb-5 space-y-2">
-                  {[
-                    'เปิดแอปธนาคาร → สแกน QR Code',
-                    `โอน ฿${qrAmount.toLocaleString()} ตามจำนวนที่แสดง`,
-                    'ถ่ายรูปสลิปหรือ screenshot แล้วอัปโหลดด้านล่าง',
-                  ].map((s, i) => (
-                    <div key={i} className="flex items-start gap-2.5 text-xs text-gray-600">
-                      <span className="w-5 h-5 rounded-full bg-[#003B80] text-white text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
-                      {s}
+                {hasBonus ? (
+                  <div className="bg-orange-50 border border-orange-200 rounded-xl p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-center flex-1">
+                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">ยอดที่โอน</p>
+                        <p className="text-xl font-black text-gray-600">฿{selectedAmount.toLocaleString()}</p>
+                      </div>
+                      <div className="flex flex-col items-center px-3">
+                        <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center shadow-sm">
+                          <i className="fas fa-times text-white text-xs" />
+                        </div>
+                        <span className="text-[10px] font-black text-orange-600 mt-1">x{bonusMult}</span>
+                      </div>
+                      <div className="text-center flex-1">
+                        <p className="text-[9px] font-black text-orange-500 uppercase tracking-widest mb-0.5">ได้รับเข้า Wallet</p>
+                        <p className="text-2xl font-black text-orange-600">฿{(selectedAmount * bonusMult).toLocaleString()}</p>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Slip upload */}
-              <div className="card p-5 space-y-3">
-                <p className="text-sm font-black text-foreground">อัปโหลดสลิปโอนเงิน</p>
-                <p className="text-xs text-foreground-muted">อัปโหลดสลิปหรือ screenshot จากแอปธนาคาร เพื่อยืนยันการโอนและรับเงินเข้ากระเป๋า</p>
-
-                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleSlipSelect} />
-
-                {slipPreview ? (
-                  <div className="relative">
-                    <img src={slipPreview} alt="slip preview" className="w-full max-h-64 object-contain rounded-xl border border-border" />
-                    <button onClick={() => { setSlipFile(null); setSlipPreview(''); if (fileRef.current) fileRef.current.value = ''; }}
-                      className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 text-white text-xs flex items-center justify-center hover:bg-black/70">
-                      <i className="fas fa-times"></i>
-                    </button>
+                    <div className="mt-2 pt-2 border-t border-orange-200 text-center">
+                      <span className="text-[10px] font-black text-orange-500">
+                        <i className="fas fa-bolt mr-1" />โบนัส +฿{(selectedAmount * (bonusMult - 1)).toLocaleString()}
+                      </span>
+                    </div>
                   </div>
                 ) : (
-                  <button onClick={() => fileRef.current?.click()}
-                    className="w-full border-2 border-dashed border-border hover:border-primary rounded-xl py-8 flex flex-col items-center gap-2 text-foreground-muted hover:text-primary transition-all">
-                    <i className="fas fa-cloud-upload-alt text-3xl"></i>
-                    <span className="text-sm font-semibold">คลิกเพื่อเลือกรูปสลิป</span>
-                    <span className="text-xs">รองรับ JPEG, PNG, GIF, WebP (ไม่เกิน 4 MB)</span>
-                  </button>
+                  <div className="bg-green-50 border border-dashed border-green-200 rounded-xl p-3 text-center">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">ยอดชำระสุทธิ</p>
+                    <p className="text-2xl font-black text-[#003b80]">฿{selectedAmount.toLocaleString()}</p>
+                  </div>
                 )}
 
-                <button onClick={handleVerifySlip} disabled={!slipFile || verifying}
-                  className="btn-success w-full justify-center py-3 min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed">
-                  {verifying
-                    ? <><i className="fas fa-spinner fa-spin"></i> กำลังตรวจสอบสลิป...</>
-                    : <><i className="fas fa-check-circle"></i> ยืนยันสลิปและรับเงิน</>}
+                <button onClick={handleGenerateQR} disabled={loading || selectedAmount < 1}
+                  className="btn-primary w-full py-4 text-white font-black text-base bg-[#003b80] shadow-[0_4px_0_#002147] hover:shadow-[0_2px_0_#002147] hover:translate-y-[2px] active:shadow-none active:translate-y-[4px] disabled:translate-y-0 disabled:shadow-none">
+                  {loading ? <i className="fas fa-circle-notch fa-spin mr-2"></i> : <i className="fas fa-check-circle mr-2"></i>}
+                  ถัดไป: สร้างรายการชำระเงิน
                 </button>
+              </motion.div>
+            )}
 
-                <p className="text-[10px] text-center text-foreground-muted">
-                  ระบบตรวจสอบสลิปด้วย AI อัตโนมัติ — ใช้เวลาไม่กี่วินาที
-                </p>
-              </div>
-            </motion.div>
-          )}
+            {/* STEP 3: QR Display */}
+            {step === 'qr' && (
+              <motion.div 
+                key="qr" 
+                initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }}
+                className="bg-white rounded-xl border-2 border-green-200 shadow-theme-sm w-full p-6 space-y-4 flex-1 flex flex-col items-center"
+              >
+                <div className="text-center">
+                  <h2 className="text-xl font-black text-[#003b80] leading-none">แสกนชำระเงิน</h2>
+                  <p className="text-xs font-bold text-gray-400 mt-1">สแกน QR Code ด้วยแอปธนาคารของคุณ</p>
+                </div>
 
-          {/* ── STEP 3: Success ── */}
-          {view === 'success' && (
-            <motion.div key="success" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-              className="text-center py-8 space-y-4">
-              <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto shadow-[0_4px_0_#bbf7d0]">
-                <i className="fas fa-check text-3xl text-green-600"></i>
-              </div>
-              <div>
-                <p className="text-2xl font-black text-gray-900">เติมเงินสำเร็จ!</p>
-                <p className="text-4xl font-black text-green-600 mt-2">฿{successAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</p>
-                <p className="text-sm text-gray-500 mt-2">
-                  ยอดเงินใหม่: <span className="font-bold text-gray-800">฿{successBalance.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
-                </p>
-              </div>
-              <div className="flex gap-3 justify-center mt-4">
-                <button onClick={reset} className="px-6 py-2.5 rounded-xl bg-surface-hover text-foreground-muted text-sm font-semibold hover:bg-border transition-all">
-                  เติมเงินอีกครั้ง
+                <div className="relative p-4 bg-white border-2 border-green-100 rounded-2xl shadow-sm">
+                  {qrUrl ? <img src={qrUrl} alt="QR Code" className="w-44 h-44 mx-auto" /> : <div className="w-44 h-44 flex items-center justify-center"><i className="fas fa-circle-notch fa-spin text-2xl text-[#003b80]"></i></div>}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-lg shadow-md border border-gray-100 flex items-center justify-center">
+                    <img src="/images/thai_qr_payment.png" className="w-5 h-auto" />
+                  </div>
+                </div>
+
+                <div className="text-center space-y-0.5 bg-gray-50 py-2.5 px-8 rounded-lg border border-green-100">
+                  <p className="text-xl font-black text-[#003b80]">฿{qrAmount.toLocaleString()}</p>
+                  <p className="text-[10px] font-bold text-gray-500">{recipientName}</p>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2.5 max-w-sm">
+                  <i className="fas fa-info-circle text-amber-500 mt-0.5 text-xs"></i>
+                  <p className="text-[10px] font-bold text-amber-800 leading-relaxed">
+                    เมื่อโอนเงินสำเร็จแล้ว กรุณากดปุ่ม <b>"โอนเงินแล้ว (แจ้งสลิป)"</b> เพื่ออัปโหลดสลิปและรับพอยท์
+                  </p>
+                </div>
+
+                <button onClick={() => setStep('upload')} className="btn w-full py-4 bg-[#003b80] text-white font-black text-sm shadow-[0_4px_0_#002147] hover:shadow-[0_2px_0_#002147] hover:translate-y-[2px] active:shadow-none active:translate-y-[4px] flex items-center justify-center gap-2">
+                  <i className="fas fa-file-invoice-dollar text-xs"></i>
+                  โอนเงินแล้ว (แจ้งสลิป)
                 </button>
-                <button onClick={() => router.push('/shop')} className="btn-success px-6 py-2.5">
-                  <i className="fas fa-store"></i> ไปร้านค้า
-                </button>
-              </div>
-            </motion.div>
-          )}
+              </motion.div>
+            )}
 
-        </AnimatePresence>
+            {/* STEP 4: Slip Upload */}
+            {step === 'upload' && (
+              <motion.div 
+                key="upload" 
+                initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}
+                className="bg-white rounded-xl border-2 border-green-200 shadow-theme-sm w-full p-6 space-y-4 flex-1"
+              >
+                <div className="text-center space-y-1">
+                  <h2 className="text-xl font-black text-gray-900 leading-none">อัปโหลดหลักฐานสลิป</h2>
+                  <p className="text-xs font-bold text-gray-400">อัปโหลดสลิปเพื่อให้ระบบตรวจสอบความถูกต้อง</p>
+                </div>
+
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg text-[11px] font-bold flex items-center gap-2">
+                    <i className="fas fa-exclamation-triangle"></i>
+                    {error}
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleSlipSelect} />
+                  
+                  {slipPreview ? (
+                    <div className="relative group rounded-xl overflow-hidden border-2 border-green-100 bg-gray-50 p-3">
+                      <img src={slipPreview} alt="slip" className="w-full max-h-[220px] object-contain mx-auto" />
+                      <button onClick={() => { setSlipFile(null); setSlipPreview(''); }} className="absolute top-2 right-2 w-8 h-8 rounded-lg bg-white text-red-500 shadow-md flex items-center justify-center hover:bg-red-500 hover:text-white transition-all">
+                        <i className="fas fa-times text-xs"></i>
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => fileRef.current?.click()} className="w-full py-10 border-2 border-dashed border-green-200 rounded-2xl bg-gray-50 flex flex-col items-center justify-center gap-3 group hover:border-primary transition-all">
+                      <div className="w-12 h-12 rounded-lg bg-white border border-green-100 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+                        <i className="fas fa-cloud-upload-alt text-xl text-primary"></i>
+                      </div>
+                      <div className="text-center">
+                        <p className="font-black text-gray-700 uppercase tracking-widest text-[11px]">เลือกรูปภาพสลิป</p>
+                        <p className="text-[9px] font-bold text-gray-400 mt-1">กดเพื่อเลือกไฟล์สลิปจากเครื่องของคุณ</p>
+                      </div>
+                    </button>
+                  )}
+
+                  <button onClick={handleVerifySlip} disabled={!slipFile || verifying}
+                    className="btn-success w-full py-4 text-white font-black text-base shadow-[0_4px_0_#065f46] hover:shadow-[0_2px_0_#065f46] hover:translate-y-[2px] active:shadow-none active:translate-y-[4px] disabled:translate-y-0 disabled:shadow-none">
+                    {verifying ? <><i className="fas fa-circle-notch fa-spin mr-2"></i> กำลังตรวจสอบสลิป...</> : <><i className="fas fa-check-double mr-2"></i> ยืนยันและตรวจสอบสลิป</>}
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* STEP 5: Success */}
+            {step === 'success' && (
+              <motion.div 
+                key="success" 
+                initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                className="bg-white rounded-xl border-2 border-green-200 shadow-theme-sm w-full p-8 space-y-6 text-center flex-1"
+              >
+                <div className="relative inline-block">
+                  <div className="absolute inset-0 bg-green-500/10 rounded-full blur-2xl animate-pulse" />
+                  <div className="relative w-20 h-20 rounded-2xl bg-success flex items-center justify-center text-white shadow-xl mx-auto">
+                    <i className="fas fa-check text-3xl"></i>
+                  </div>
+                </div>
+                
+                <div className="space-y-1">
+                  <h2 className="text-2xl font-black text-gray-900 tracking-tight">ทำรายการสำเร็จ!</h2>
+                  <p className="text-sm font-bold text-gray-500">ยอดเงินได้รับการเติมเข้า Wallet เรียบร้อยแล้ว</p>
+                </div>
+
+                {successMultiplier > 1 ? (
+                  <div className="bg-orange-50 rounded-xl p-4 border border-orange-200 max-w-[260px] mx-auto space-y-2">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-bold text-gray-400">ยอดที่โอน</span>
+                      <span className="font-black text-gray-600">฿{successPaid.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-bold text-orange-500"><i className="fas fa-bolt mr-1" />โบนัส x{successMultiplier}</span>
+                      <span className="font-black text-orange-500">+฿{(successAmount - successPaid).toLocaleString()}</span>
+                    </div>
+                    <div className="border-t border-orange-200 pt-2 flex items-center justify-between">
+                      <span className="text-[10px] font-black text-gray-500 uppercase tracking-wider">ได้รับเข้า Wallet</span>
+                      <span className="text-2xl font-black text-orange-600">฿{successAmount.toLocaleString()}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 rounded-xl p-4 border border-green-100 max-w-[200px] mx-auto">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">จำนวนที่เติมเงิน</p>
+                    <p className="text-3xl font-black text-success">฿{successAmount.toLocaleString()}</p>
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-2.5 max-w-[240px] mx-auto">
+                  <button onClick={() => router.push('/shop')} className="btn-primary w-full py-3 text-white font-black text-[13px] shadow-[0_4px_0_rgb(var(--color-primary-muted))]">
+                    <i className="fas fa-shopping-cart mr-2"></i> ไปที่หน้าร้านค้า
+                  </button>
+                  <button onClick={reset} className="text-[11px] font-black text-gray-400 hover:text-primary transition-colors">
+                    เติมเงินรายการใหม่
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+          </AnimatePresence>
+        </div>
+
       </div>
     </MainLayout>
   );

@@ -1,33 +1,41 @@
+# ============================================================
+#  SiamWorld Shop — Per-Customer Production Stack
+#  Usage: managed by new-customer.sh (Linux) / new-customer.ps1 (Windows)
+#  Do NOT edit manually — use the deploy script
+#
+#  NOTE: MYSQL_ROOT_HOST "%" is intentional — AuthMe plugin on the
+#  customer's Minecraft server connects to this MySQL from outside.
+#  Port is exposed per-customer (MYSQL_EXPOSED_PORT) and protected
+#  by UFW firewall rules on the VPS host.
+# ============================================================
+
 services:
+
   mysql:
     image: mysql:8.0
-    container_name: siamworld-mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-siamworld}
       MYSQL_USER: ${MYSQL_USER:-siamworld}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      MYSQL_ROOT_HOST: "localhost"
+      MYSQL_ROOT_HOST: "%"
     ports:
-      - "127.0.0.1:3306:3306"
+      - "${MYSQL_EXPOSED_PORT}:3306"   # AuthMe plugin connects here from Minecraft server
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ${SOURCE_ROOT}/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_PASSWORD}"]
-      interval: 10s
+      interval: 15s
       timeout: 5s
       retries: 5
     networks:
-      - siamworld
+      - internal
 
   redis:
     image: redis:7-alpine
-    container_name: siamworld-redis
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -36,71 +44,48 @@ services:
       timeout: 5s
       retries: 3
     networks:
-      - siamworld
-
-  # PhpMyAdmin — development only, NOT for production
-  # Start with: docker compose --profile dev up phpmyadmin
-  phpmyadmin:
-    image: phpmyadmin:latest
-    container_name: siamworld-phpmyadmin
-    profiles: ["dev"]
-    restart: unless-stopped
-    environment:
-      PMA_HOST: mysql
-      PMA_PORT: 3306
-      PMA_USER: root
-      PMA_PASSWORD: ${MYSQL_PASSWORD}
-      UPLOAD_LIMIT: 100M
-    ports:
-      - "127.0.0.1:8080:80"
-    depends_on:
-      mysql:
-        condition: service_healthy
-    networks:
-      - siamworld
+      - internal
 
   backend:
     build:
-      context: ./backend
+      context: ${SOURCE_ROOT}/backend
       dockerfile: Dockerfile
-    container_name: siamworld-backend
     restart: unless-stopped
-    env_file: .env
+    env_file: ${CUSTOMER_ENV_FILE}
     environment:
-      DOCKER: "true"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      MYSQL_HOST: mysql
+      REDIS_HOST: redis
+      NODE_ENV: production
     ports:
-      - "${BACKEND_PORT:-4000}:4000"
+      - "${BACKEND_PORT}:4000"
     depends_on:
       mysql:
         condition: service_healthy
       redis:
         condition: service_healthy
     networks:
-      - siamworld
+      - internal
 
   frontend:
     build:
-      context: ./frontend
+      context: ${SOURCE_ROOT}/frontend
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
         NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL}
         BACKEND_INTERNAL_URL: http://backend:4000
-    container_name: siamworld-frontend
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT}:3000"
     depends_on:
       - backend
     networks:
-      - siamworld
+      - internal
 
 volumes:
   mysql_data:
   redis_data:
 
 networks:
-  siamworld:
+  internal:
     driver: bridge

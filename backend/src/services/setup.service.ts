@@ -1,6 +1,9 @@
 import mysql from 'mysql2/promise';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 import { Rcon } from 'rcon-client';
 import { pool } from '../database/connection';
+import { config } from '../config';
 import { encrypt, decrypt, isEncrypted } from '../utils/crypto';
 import { logger } from '../utils/logger';
 import { RowDataPacket } from 'mysql2';
@@ -52,8 +55,11 @@ class SetupService {
       await conn.execute('SELECT 1');
 
       // Check if AuthMe table exists
-      const [tables] = await conn.execute<RowDataPacket[]>(
-        'SHOW TABLES LIKE ?', [config.table || 'authme']
+      // SHOW TABLES LIKE does not support server-side prepared statements in some MySQL versions,
+      // so we inline the sanitized table name instead of using a ? placeholder.
+      const safeTableName = (config.table || 'authme').replace(/[^a-zA-Z0-9_]/g, '');
+      const [tables] = await conn.query<RowDataPacket[]>(
+        `SHOW TABLES LIKE '${safeTableName}'`
       );
       if (tables.length === 0) {
         return { success: false, message: `Table '${config.table || 'authme'}' not found in database '${config.database}'` };
@@ -173,6 +179,73 @@ class SetupService {
       serverCount: servers[0].count,
       hasAdmin: admins[0].count > 0,
     };
+  }
+
+  /**
+   * Return the shop's MySQL connection info (for AuthMe plugin config) + current authme player count.
+   * Password is included because this is an admin-only endpoint needed for plugin setup.
+   */
+  async getAuthMeInfo(): Promise<{
+    dbHost: string; dbPort: number; dbUser: string;
+    dbPassword: string; dbDatabase: string; playerCount: number;
+  }> {
+    const [rows] = await pool.execute<RowDataPacket[]>('SELECT COUNT(*) as count FROM authme');
+    return {
+      dbHost: config.db.host,
+      dbPort: config.db.port,
+      dbUser: config.db.user,
+      dbPassword: config.db.password,
+      dbDatabase: config.db.database,
+      playerCount: rows[0].count,
+    };
+  }
+
+  /**
+   * Create the very first admin account. Only works when no admin exists yet.
+   */
+  async initAdmin(username: string, password: string): Promise<{ token: string }> {
+    const status = await this.getSetupStatus();
+    if (status.hasAdmin) {
+      throw new ValidationError('An admin account already exists');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const now = Date.now();
+
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      const [existing] = await conn.execute<RowDataPacket[]>(
+        'SELECT id FROM authme WHERE LOWER(username) = LOWER(?)', [username]
+      );
+      if (existing.length > 0) throw new ValidationError('Username already taken');
+
+      await conn.execute(
+        'INSERT INTO authme (username, realname, password, regdate, email) VALUES (?, ?, ?, ?, ?)',
+        [username, username, hashedPassword, now, '']
+      );
+
+      const [userResult] = await conn.execute(
+        'INSERT INTO users (username, email, role) VALUES (?, ?, ?)',
+        [username, null, 'admin']
+      );
+      const userId = (userResult as any).insertId;
+      await conn.execute('INSERT INTO wallets (user_id, balance) VALUES (?, 0.00)', [userId]);
+
+      await conn.commit();
+
+      const payload = { userId, username, role: 'admin' };
+      const token = jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn as jwt.SignOptions['expiresIn'] });
+
+      logger.info('Initial admin account created via setup wizard', { userId, username });
+      return { token };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
   }
 
   /**

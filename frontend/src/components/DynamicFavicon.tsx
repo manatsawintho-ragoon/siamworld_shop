@@ -26,5 +26,11 @@ export default function DynamicFavicon() {
     }
   }, [settings.favicon_url, settings.logo_url]);
 
+  useEffect(() => {
+    if (settings.shop_name) {
+      document.title = `${settings.shop_name} | Minecraft Store`;
+    }
+  }, [settings.shop_name]);
+
   return null;
 }

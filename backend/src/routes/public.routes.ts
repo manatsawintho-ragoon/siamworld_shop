@@ -3,6 +3,9 @@ import { pool } from '../database/connection';
 import { settingsService } from '../services/settings.service';
 import { shopService } from '../services/shop.service';
 import { serverService } from '../services/server.service';
+import { z } from 'zod';
+
+const positiveIntParam = z.string().regex(/^\d+$/).transform(Number).optional();
 
 const router = Router();
 
@@ -11,7 +14,7 @@ router.get('/settings', async (_req: Request, res: Response, next: NextFunction)
   try {
     const allSettings = await settingsService.getAll();
     // Only expose non-sensitive settings
-    const publicKeys = ['shop_name', 'shop_subtitle', 'shop_description', 'welcome_message', 'currency', 'currency_symbol', 'maintenance_mode', 'logo_url', 'favicon_url', 'banner_url', 'facebook_url', 'discord_invite', 'website_bg_url', 'server_ip'];
+    const publicKeys = ['shop_name', 'shop_subtitle', 'shop_description', 'welcome_message', 'currency', 'currency_symbol', 'maintenance_mode', 'logo_url', 'favicon_url', 'banner_url', 'facebook_url', 'discord_invite', 'website_bg_url', 'server_ip', 'topup_bonus_enabled', 'topup_bonus_multiplier'];
     const settings: Record<string, string> = {};
     for (const [key, value] of Object.entries(allSettings)) {
       if (publicKeys.includes(key)) {
@@ -39,8 +42,10 @@ router.get('/categories', async (_req: Request, res: Response, next: NextFunctio
 
 router.get('/products', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const serverId = req.query.serverId ? parseInt(req.query.serverId as string) : undefined;
-    const categoryId = req.query.categoryId ? parseInt(req.query.categoryId as string) : undefined;
+    const schema = z.object({ serverId: positiveIntParam, categoryId: positiveIntParam });
+    const parsed = schema.safeParse(req.query);
+    if (!parsed.success) return res.status(400).json({ success: false, error: 'Invalid query parameters' });
+    const { serverId, categoryId } = parsed.data;
     let products = await shopService.getProducts(serverId);
     if (categoryId) {
       products = products.filter((p: any) => p.category_id === categoryId);

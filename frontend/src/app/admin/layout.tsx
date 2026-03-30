@@ -95,6 +95,10 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   }
 
   if (!user || !isAdmin) {
+    // Allow setup wizard to render without admin auth (handles first-time setup)
+    if (pathname === '/admin/setup') {
+      return <>{children}</>;
+    }
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f3f4f6]">
         <div className="text-center bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
@@ -123,7 +127,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         <div className="h-[72px] flex items-center px-6 border-b border-gray-800 flex-shrink-0">
           <Link href="/admin" className="flex items-center gap-3">
             <div className="flex flex-col">
-              <span className="font-black text-white text-lg tracking-wide leading-none">SIAMWORLD</span>
+              <span className="font-black text-white text-lg tracking-wide leading-none">SIAMSITE</span>
               <span className="text-[10px] font-bold text-[#22c55e] tracking-[0.2em] mt-1 -mr-1">ADMIN PANEL</span>
             </div>
           </Link>
@@ -245,7 +249,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
         {/* Footer info */}
         <div className="p-5 border-t border-gray-800">
-          <p className="text-[10px] text-gray-600 text-center">SIAMWORLD ADMIN PANEL</p>
+          <p className="text-[10px] text-gray-600 text-center">SIAMSITE ADMIN PANEL</p>
         </div>
       </aside>
 

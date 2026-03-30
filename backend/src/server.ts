@@ -3,6 +3,7 @@ import express from 'express';
 import http from 'http';
 import cors from 'cors';
 import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { Server as SocketIO } from 'socket.io';
 import { config } from './config';
 import { logger } from './utils/logger';
@@ -40,8 +41,35 @@ const io = new SocketIO(server, {
   pingTimeout: 60000,
 });
 
-// Rate limiting is handled at the Next.js middleware layer (real client IPs available there)
-// Backend only enforces per-user cooldowns via Redis (see middleware/cooldown.ts)
+// ── Rate Limiting ────────────────────────────────────────────────────────────
+
+// Global limiter: 300 req / 15 min per IP
+const globalLimiter = rateLimit({
+  windowMs: config.rateLimit.windowMs,
+  max: config.rateLimit.max,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.path === '/api/health',
+  message: { success: false, error: 'Too many requests, please try again later.' },
+});
+
+// Strict limiter for auth & setup endpoints: 10 req / 15 min per IP
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many attempts, please try again in 15 minutes.' },
+});
+
+// Payment limiter: 30 req / 15 min per IP
+const paymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many payment requests, please slow down.' },
+});
 
 // ── Middleware ───────────────────────────────────────────────────────────────
 
@@ -77,15 +105,18 @@ app.use((req, _res, next) => {
   next();
 });
 
-// Routes
-app.use('/api/auth', authRoutes);
+// Apply global rate limiter to all API routes
+app.use('/api/', globalLimiter);
+
+// Routes — auth & setup get strict rate limit, payment gets medium limit
+app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/setup', authLimiter, setupRoutes);
+app.use('/api/payment', paymentLimiter, paymentRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/wallet', walletRoutes);
-app.use('/api/payment', paymentRoutes);
 app.use('/api/shop', shopRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/public', publicRoutes);
-app.use('/api/setup', setupRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

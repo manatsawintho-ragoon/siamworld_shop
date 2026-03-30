@@ -69,6 +69,12 @@ class PaymentService {
   }
 
   async confirmPromptPay(userId: number, reference: string) {
+    // Read bonus settings before acquiring DB connection
+    const bonusSettings = await settingsService.getAll();
+    const bonusActive = bonusSettings['topup_bonus_enabled'] === 'true';
+    const rawMult = parseFloat(bonusSettings['topup_bonus_multiplier'] || '1');
+    const multiplier = (bonusActive && rawMult > 1) ? rawMult : 1;
+
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
@@ -80,14 +86,18 @@ class PaymentService {
       if (rows.length === 0) throw new NotFoundError('Transaction not found or already confirmed');
 
       const tx = rows[0];
-      const amount = parseFloat(tx.amount);
+      const paidAmount = parseFloat(tx.amount);
+      const creditAmount = parseFloat((paidAmount * multiplier).toFixed(2));
+      const desc = multiplier > 1
+        ? `PromptPay ฿${paidAmount} (โบนัส x${multiplier} = ฿${creditAmount})`
+        : `PromptPay ฿${paidAmount}`;
 
       const [walletRows] = await conn.execute<RowDataPacket[]>(
         'SELECT balance FROM wallets WHERE user_id = ? FOR UPDATE', [userId]
       );
       if (walletRows.length === 0) throw new NotFoundError('Wallet not found');
       const balanceBefore = parseFloat(walletRows[0].balance);
-      const balanceAfter = balanceBefore + amount;
+      const balanceAfter = balanceBefore + creditAmount;
 
       // Mark existing transaction as success (no new duplicate transaction)
       await conn.execute('UPDATE transactions SET status = ? WHERE id = ?', ['success', tx.id]);
@@ -96,13 +106,13 @@ class PaymentService {
       // Audit log
       await conn.execute(
         'INSERT INTO wallet_logs (user_id, action, amount, balance_before, balance_after, source, reference_id, description) VALUES (?,?,?,?,?,?,?,?)',
-        [userId, 'credit', amount, balanceBefore, balanceAfter, 'promptpay', reference, `PromptPay ฿${amount}`]
+        [userId, 'credit', creditAmount, balanceBefore, balanceAfter, 'promptpay', reference, desc]
       );
 
       await conn.commit();
       const wallet = await walletService.getWallet(userId);
-      logger.info('PromptPay confirmed', { userId, amount, reference });
-      return { message: 'Payment confirmed', wallet };
+      logger.info('PromptPay confirmed', { userId, paidAmount, creditAmount, multiplier, reference });
+      return { message: 'Payment confirmed', amount: creditAmount, paid_amount: paidAmount, multiplier, wallet };
     } catch (err) {
       await conn.rollback();
       throw err;
@@ -183,7 +193,17 @@ class PaymentService {
     const transRef = raw.transRef;
     if (!transRef) throw new ValidationError('สลิปนี้ไม่มีรหัสอ้างอิง');
 
-    // 2. Check our own DB for duplicate (belt-and-suspenders)
+    // 2. Read bonus settings (before DB connection)
+    const bonusSettings = await settingsService.getAll();
+    const bonusActive = bonusSettings['topup_bonus_enabled'] === 'true';
+    const rawMult = parseFloat(bonusSettings['topup_bonus_multiplier'] || '1');
+    const multiplier = (bonusActive && rawMult > 1) ? rawMult : 1;
+    const creditAmount = parseFloat((amount * multiplier).toFixed(2));
+    const slipDesc = multiplier > 1
+      ? `สลิป ฿${amount} (โบนัส x${multiplier} = ฿${creditAmount}, ${raw.sender?.bank?.short ?? 'Bank'})`
+      : `สลิป ฿${amount} (${raw.sender?.bank?.short ?? 'Bank'})`;
+
+    // 3. Check our own DB for duplicate (belt-and-suspenders)
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
@@ -218,26 +238,28 @@ class PaymentService {
       if (walletRows.length === 0) throw new NotFoundError('Wallet not found');
 
       const balanceBefore = parseFloat(walletRows[0].balance);
-      const balanceAfter  = balanceBefore + amount;
+      const balanceAfter  = balanceBefore + creditAmount;
 
       await conn.execute('UPDATE wallets SET balance = ? WHERE user_id = ?', [balanceAfter, userId]);
       await conn.execute(
         `INSERT INTO wallet_logs (user_id, action, amount, balance_before, balance_after, source, reference_id, description)
          VALUES (?, 'credit', ?, ?, ?, 'slip', ?, ?)`,
-        [userId, amount, balanceBefore, balanceAfter, transRef, `สลิป ฿${amount} (${raw.sender?.bank?.short ?? 'Bank'})`]
+        [userId, creditAmount, balanceBefore, balanceAfter, transRef, slipDesc]
       );
       await conn.execute(
         `INSERT INTO transactions (user_id, amount, type, method, status, reference, description)
          VALUES (?, ?, 'topup', 'slip', 'success', ?, ?)`,
-        [userId, amount, transRef, `PromptPay ฿${amount}`]
+        [userId, creditAmount, transRef, slipDesc]
       );
 
       await conn.commit();
 
-      logger.info('PromptPay success', { userId, amount, transRef });
+      logger.info('Slip verified', { userId, paidAmount: amount, creditAmount, multiplier, transRef });
 
       return {
-        amount,
+        amount: creditAmount,
+        paid_amount: amount,
+        multiplier,
         transRef,
         senderBank:   raw.sender?.bank?.short ?? null,
         senderName:   raw.sender?.account?.name?.th ?? raw.sender?.account?.name?.en ?? null,

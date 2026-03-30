@@ -540,9 +540,11 @@ export default function LootBoxOpenPage() {
                       </div>
                       <h1 className="text-gray-900 font-black text-xl uppercase tracking-wide leading-tight line-clamp-1">{box.name}</h1>
                       {box.description && <p className="text-gray-400 text-[11px] line-clamp-1 mt-0.5">{box.description}</p>}
-                      <div className="flex items-baseline gap-1.5 mt-2">
-                        <span className="text-green-600 font-black text-3xl tabular-nums tracking-tighter">{parseFloat(String(box.price)).toLocaleString()}</span>
-                        <span className="text-green-600 font-black text-base">฿</span>
+                      <div className="flex items-center gap-2 mt-2.5">
+                        <div className="inline-flex items-baseline gap-1 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 shadow-[0_3px_0_#fde68a]">
+                          <span className="text-amber-600 font-black text-2xl tabular-nums tracking-tighter">{parseFloat(String(box.price)).toLocaleString()}</span>
+                          <span className="text-amber-600 font-black text-sm">฿</span>
+                        </div>
                         {box.original_price && box.original_price > box.price && (
                           <span className="text-gray-300 text-sm font-bold line-through tabular-nums">{parseFloat(String(box.original_price)).toLocaleString()}฿</span>
                         )}
@@ -605,9 +607,9 @@ export default function LootBoxOpenPage() {
                     className="w-full flex items-center justify-center gap-2.5 font-black text-sm uppercase tracking-[0.2em] rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
                     style={{
                       height: '52px',
-                      background: preparing || isLocked ? '#e5e7eb' : 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                      background: preparing || isLocked ? '#e5e7eb' : 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)',
                       color: preparing || isLocked ? '#9ca3af' : '#fff',
-                      boxShadow: preparing || isLocked ? 'none' : '0 6px 0 #0d6b2e, 0 12px 20px rgba(22,163,74,0.2)',
+                      boxShadow: preparing || isLocked ? 'none' : '0 6px 0 #92400e, 0 12px 20px rgba(217,119,6,0.25)',
                     }}>
                     {!preparing && !isLocked && (
                       <div className="absolute inset-0 -skew-x-12 -translate-x-full group-hover:translate-x-[200%] bg-white/25 transition-transform duration-700 pointer-events-none" />
@@ -690,9 +692,9 @@ export default function LootBoxOpenPage() {
                     className="flex items-center justify-center gap-2.5 font-black text-[11px] uppercase tracking-[0.25em] rounded-xl transition-all disabled:opacity-50 h-11 px-8"
                     style={{
                       minWidth: '200px',
-                      background: spinning || isLocked ? '#e5e7eb' : 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                      background: spinning || isLocked ? '#e5e7eb' : 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)',
                       color: spinning || isLocked ? '#9ca3af' : '#fff',
-                      boxShadow: spinning || isLocked ? 'none' : '0 4px 0 #0d6b2e',
+                      boxShadow: spinning || isLocked ? 'none' : '0 4px 0 #92400e, 0 8px 16px rgba(217,119,6,0.2)',
                     }}>
                     <i className={`fas text-sm ${spinning ? 'fa-spinner fa-spin' : isLocked ? 'fa-lock' : 'fa-bolt'}`} />
                     <span>{spinning ? 'กำลังหมุน...' : isPaused ? 'PAUSED' : isSoldOut ? 'SOLD OUT' : isExpired ? 'EXPIRED' : <>OPEN อีกครั้ง &mdash; ฿{parseFloat(String(box.price)).toLocaleString()}</>}</span>

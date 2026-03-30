@@ -39,7 +39,23 @@
       "Bash(docker-compose -f /c/Users/gamec/Desktop/siamworld_shop/docker-compose.yml build frontend)",
       "Bash(docker-compose -f /c/Users/gamec/Desktop/siamworld_shop/docker-compose.yml up -d frontend)",
       "Bash(docker-compose -f /c/Users/gamec/Desktop/siamworld_shop/docker-compose.yml build backend frontend)",
-      "Bash(docker-compose -f /c/Users/gamec/Desktop/siamworld_shop/docker-compose.yml up -d backend frontend)"
+      "Bash(docker-compose -f /c/Users/gamec/Desktop/siamworld_shop/docker-compose.yml up -d backend frontend)",
+      "Bash(for dir:*)",
+      "Bash(do echo:*)",
+      "Read(//c/Users/gamec/Desktop/siamworld_shop/backend/src/**)",
+      "Bash(grep -roh \"bg-green-[0-9]*\\\\|text-green-[0-9]*\\\\|border-green-[0-9]*\\\\|from-green-[0-9]*\\\\|to-green-[0-9]*\\\\|ring-green-[0-9]*\\\\|bg-emerald-[0-9]*\\\\|text-emerald-[0-9]*\\\\|border-emerald-[0-9]*\" /c/Users/gamec/Desktop/siamworld_shop/frontend/src/components/ /c/Users/gamec/Desktop/siamworld_shop/frontend/src/app/ --include=*.tsx)",
+      "Bash(npm uninstall:*)",
+      "Bash(grep -n \"topupSchema\\\\|TopupSchema\" routes/*.ts)",
+      "Bash(rm backend/src/middleware/asyncRoute.ts)",
+      "Bash(rm frontend/src/components/LoginModal.tsx frontend/src/components/OnlinePlayersWidget.tsx frontend/src/components/RankingWidget.tsx frontend/src/components/SidebarLogin.tsx)",
+      "Bash(wc -l backend/src/**/*.ts backend/src/*.ts)",
+      "Bash(xargs wc:*)",
+      "Bash(python /c/Users/gamec/Desktop/siamworld_shop/.agents/skills/webapp-testing/scripts/with_server.py --help)",
+      "Bash(pip show:*)",
+      "Bash(pip install:*)",
+      "Bash(python -m playwright install chromium)",
+      "Bash(python test_webapp.py)",
+      "Bash(grep -n \"router.post\\\\|router.get\\\\|router.delete\\\\|router.put\" /c/Users/gamec/Desktop/siamworld_shop/backend/src/routes/*.ts)"
     ]
   }
 }

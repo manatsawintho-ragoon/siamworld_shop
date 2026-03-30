@@ -46,3 +46,8 @@ export function setToken(token: string) {
 export function removeToken() {
   localStorage.removeItem('token');
 }
+
+/** Shorthand for `getToken() || undefined` — use in api() calls that need auth */
+export function tok(): string | undefined {
+  return getToken() || undefined;
+}
