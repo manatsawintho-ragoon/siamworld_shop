@@ -50,6 +50,7 @@ services:
     build:
       context: ${SOURCE_ROOT}/backend
       dockerfile: Dockerfile
+      network: host
     restart: unless-stopped
     env_file: ${CUSTOMER_ENV_FILE}
     environment:
@@ -70,6 +71,7 @@ services:
     build:
       context: ${SOURCE_ROOT}/frontend
       dockerfile: Dockerfile
+      network: host
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
         NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL}
