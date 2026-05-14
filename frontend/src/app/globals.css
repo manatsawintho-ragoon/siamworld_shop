@@ -34,6 +34,7 @@
     --color-primary-light: 74 222 128;         /* Green-400 #4ade80 */
     --color-primary-foreground: 255 255 255;
     --color-primary-muted: 187 247 208;        /* green-200 — button shadow */
+    --color-primary-shadow: 20 83 45;          /* green-900 — deep button shadow */
 
     /* Actions */
     --color-success: 16 185 129;
@@ -54,6 +55,14 @@
     --shadow-md: 0px 4px 6px -1px rgba(0,0,0,0.07), 0px 2px 4px -1px rgba(0,0,0,0.04);
     --shadow-lg: 0px 10px 15px -3px rgba(0,0,0,0.08), 0px 4px 6px -2px rgba(0,0,0,0.04);
     --shadow-xl: 0px 20px 25px -5px rgba(0,0,0,0.10), 0px 8px 10px -6px rgba(0,0,0,0.06);
+
+    /* Theme-specific extras */
+    --theme-banner-from: #14532d;
+    --theme-banner-to: #15803d;
+    --theme-card-shadow: #86efac;
+    --theme-card-border: #bbf7d0;
+    --theme-wallet-from: #16a34a;
+    --theme-wallet-to: #065f46;
   }
 
   .dark {
@@ -95,13 +104,13 @@ body {
 
 /* Selection */
 ::selection {
-  background: rgba(34, 197, 94, 0.4);
-  color: white;
+  background: rgb(var(--color-primary) / 0.4);
+  color: rgb(var(--color-primary-foreground));
 }
 
 .dark ::selection {
-  background: rgba(34, 197, 94, 0.35);
-  color: rgb(248 250 252);
+  background: rgb(var(--color-primary) / 0.45);
+  color: white;
 }
 
 /* ── Scrollbar ── */
@@ -123,10 +132,14 @@ body {
 
 /* ── MC Header Menu Styles ── */
 .mc-nav-link {
-  @apply relative px-5 py-4 text-sm font-bold tracking-wide uppercase transition-colors duration-200;
-  color: rgb(55 65 81); /* gray-700 — dark text on white nav */
+  @apply relative px-5 py-4 text-sm font-bold tracking-wide uppercase transition-all duration-200;
+  color: rgb(var(--color-foreground-muted)); /* fully readable, adapts to theme */
 }
-.mc-nav-link:hover, .mc-nav-link.active {
+.mc-nav-link:hover {
+  color: rgb(var(--color-primary));
+  text-shadow: 0 0 14px rgb(var(--color-primary-light) / 0.65);
+}
+.mc-nav-link.active {
   color: rgb(var(--color-primary));
 }
 .mc-nav-link::after {
@@ -139,9 +152,15 @@ body {
   height: 3px;
   background-color: rgb(var(--color-primary));
   transition: width 0.3s ease;
+  border-radius: 2px 2px 0 0;
 }
 .mc-nav-link:hover::after, .mc-nav-link.active::after {
   width: 100%;
+}
+
+/* ── Logo hover glow — themed ── */
+.group:hover .logo-float {
+  filter: drop-shadow(0 0 28px rgb(var(--color-primary) / 0.9));
 }
 
 /* ── Card (Boxed Style) ── */
@@ -181,8 +200,8 @@ body {
 .btn-primary {
   @apply btn;
   background: rgb(var(--color-primary));
-  color: white;
-  border-color: rgba(255, 255, 255, 0.1);
+  color: rgb(var(--color-primary-foreground));
+  border-color: rgba(var(--color-primary-foreground), 0.1);
   box-shadow: 0 4px 0 rgb(var(--color-primary-muted));
 }
 .btn-primary:hover:not(:disabled) {
@@ -198,7 +217,7 @@ body {
 .btn-danger {
   @apply btn;
   background: rgb(var(--color-error));
-  color: white;
+  color: white; /* Always white for danger on red */
   box-shadow: 0 4px 0 rgb(var(--color-error-light));
 }
 .btn-danger:hover:not(:disabled) {
@@ -224,7 +243,7 @@ body {
 .btn-success {
   @apply btn;
   background: rgb(var(--color-success));
-  color: white;
+  color: white; /* Always white for success on green */
   box-shadow: 0 4px 0 rgb(var(--color-success-light));
 }
 .btn-success:hover:not(:disabled) {
@@ -234,6 +253,41 @@ body {
 .btn-success:active:not(:disabled) {
   transform: translateY(4px);
   box-shadow: 0 0 0 rgb(var(--color-success-light));
+}
+
+/* Specific close button for modals */
+.btn-close {
+  @apply w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all;
+  background: rgb(var(--color-error));
+  color: white !important;
+  box-shadow: 0 3px 0 rgb(var(--color-error-light));
+}
+.btn-close:hover {
+  filter: brightness(1.1);
+  transform: translateY(1px);
+  box-shadow: 0 2px 0 rgb(var(--color-error-light));
+}
+.btn-close:active {
+  transform: translateY(3px);
+  box-shadow: none;
+}
+
+/* ── Input ── */
+.input {
+  @apply w-full px-3.5 py-2.5 rounded-md text-sm;
+  background: rgb(var(--color-surface));
+  border: 1px solid rgb(var(--color-border));
+  color: rgb(var(--color-foreground));
+  transition: all 0.2s ease;
+}
+.input::placeholder {
+  color: rgb(var(--color-foreground-subtle));
+}
+.input:focus {
+  outline: none;
+  background: rgb(var(--color-surface));
+  border-color: rgb(var(--color-primary));
+  box-shadow: 0 0 0 3px rgba(var(--color-primary), 0.15);
 }
 
 /* ── Input ── */
@@ -348,4 +402,67 @@ table.data-table tbody tr:hover {
 }
 .marquee-track:hover {
   animation-play-state: paused;
+}
+
+/* ── Theme-aware buy button (ProductCard) ── */
+.btn-buy {
+  background: linear-gradient(to bottom, rgb(var(--color-primary-light)), rgb(var(--color-primary)));
+  color: rgb(var(--color-primary-foreground));
+  box-shadow: 0 4px 0 rgb(var(--color-primary-shadow)), inset 0 1px 0 rgba(255,255,255,0.18);
+  transition: background 0.15s ease, box-shadow 0.1s ease, transform 0.1s ease;
+  letter-spacing: 0.01em;
+}
+.btn-buy:hover {
+  background: linear-gradient(to bottom, rgb(var(--color-primary)), rgb(var(--color-primary-hover)));
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 rgb(var(--color-primary-shadow));
+  filter: brightness(1.05);
+}
+.btn-buy:active {
+  transform: translateY(4px);
+  box-shadow: none;
+  filter: brightness(0.97);
+}
+
+/* ── Theme-aware price text ── */
+.theme-price-text {
+  color: rgb(var(--color-primary-hover));
+  font-weight: 900;
+}
+
+/* ── Theme-aware price badge ── */
+.theme-price-badge {
+  background: linear-gradient(135deg, rgb(var(--color-primary)), rgb(var(--color-primary-hover)));
+  color: rgb(var(--color-primary-foreground));
+  box-shadow: 0 2px 10px rgb(var(--color-primary-shadow) / 0.45), inset 0 1px 0 rgba(255,255,255,0.18);
+}
+
+/* ── Theme-aware card ── */
+.theme-card {
+  background: rgb(var(--color-surface));
+  border-radius: 1rem;
+  overflow: hidden;
+  border-width: 2px;
+  border-style: solid;
+  border-color: var(--theme-card-border);
+  box-shadow: 0 4px 0 var(--theme-card-shadow), 0 2px 16px rgba(0,0,0,0.06);
+}
+
+/* ── Theme-aware sidebar card (thinner) ── */
+.theme-sidebar-card {
+  background: rgb(var(--color-surface));
+  border-radius: 1rem;
+  border: 1px solid var(--theme-card-border);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.04);
+  overflow: hidden;
+}
+
+/* ── Theme navbar banner ── */
+.theme-navbar-banner {
+  background: linear-gradient(to bottom, var(--theme-banner-from), var(--theme-banner-to));
+}
+
+/* ── Theme wallet card ── */
+.theme-wallet-card {
+  background: linear-gradient(to bottom right, var(--theme-wallet-from), var(--theme-wallet-to));
 }

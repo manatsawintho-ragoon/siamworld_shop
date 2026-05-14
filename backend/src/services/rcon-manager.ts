@@ -5,6 +5,22 @@ import { decrypt, isEncrypted } from '../utils/crypto';
 import { rconQueue } from './rcon-queue';
 import { rconPool } from './rcon-pool';
 
+/**
+ * Vanilla Minecraft commands that plugins commonly override and silence (return empty).
+ * ONLY these commands get the 'minecraft:' namespace fallback when they return empty.
+ * Plugin commands (cmi, lp, eco, essentials, vault, skript, etc.) must NOT be in this
+ * list — they return empty on success by design and must not get the prefix.
+ */
+const VANILLA_RCON_COMMANDS = new Set([
+  'give', 'effect', 'enchant', 'clear', 'tp', 'teleport', 'kill',
+  'gamemode', 'gm', 'xp', 'experience', 'summon', 'weather', 'time',
+  'title', 'say', 'msg', 'tell', 'w', 'spawnpoint', 'difficulty',
+  'gamerule', 'advancement', 'attribute', 'fill', 'setblock', 'clone',
+  'item', 'loot', 'scoreboard', 'tag', 'team', 'bossbar', 'particle',
+  'playsound', 'stopsound', 'op', 'deop', 'kick', 'ban', 'pardon',
+  'whitelist', 'seed', 'list', 'data', 'forceload', 'function',
+]);
+
 export interface ServerInfo {
   id: number;
   name: string;
@@ -90,20 +106,134 @@ export class RconManager {
       )
       .filter(Boolean);
 
-    return rconQueue.enqueueMultiple(serverId, commands, `product:${serverId}:${sanitized}:${Date.now()}`);
+    const baseKey = `product:${serverId}:${sanitized}:${Date.now()}`;
+    const results: string[] = [];
+
+    for (let i = 0; i < commands.length; i++) {
+      const cmd = commands[i];
+      const key = `${baseKey}:cmd${i}`;
+      let response = await rconQueue.enqueue(serverId, cmd, key);
+
+      // If response is empty AND the command is a vanilla Minecraft command (not a plugin
+      // command like cmi/lp/eco/essentials), retry with 'minecraft:' namespace to bypass
+      // plugin overrides that intercept vanilla commands and return empty.
+      // Plugin commands (cmi, lp, eco, essentials, etc.) must NOT get this prefix —
+      // they work without it when CMI/plugin returns empty on success.
+      const firstWord = cmd.split(/\s+/)[0].toLowerCase().replace(/^\//, '');
+      if (response.trim() === '' && VANILLA_RCON_COMMANDS.has(firstWord)) {
+        try {
+          const mcCmd = `minecraft:${cmd.startsWith('/') ? cmd.slice(1) : cmd}`;
+          const mcResponse = await rconQueue.enqueue(serverId, mcCmd, `${key}:mc`);
+          if (
+            mcResponse &&
+            mcResponse.trim() !== '' &&
+            !mcResponse.toLowerCase().includes('unknown') &&
+            !mcResponse.toLowerCase().includes('invalid')
+          ) {
+            response = mcResponse;
+            logger.info('RCON vanilla command succeeded via minecraft: namespace', { serverId, cmd, response });
+          }
+        } catch {
+          // Fallback also failed — keep original empty response
+        }
+      }
+
+      results.push(response);
+    }
+
+    return results;
   }
 
-  /** Get list of online players on a server via RCON 'list' command (direct, no queue) */
-  async getOnlinePlayers(serverId: number): Promise<string[]> {
+  /**
+   * Get list of online players on a server via RCON 'list' command (direct, no queue).
+   * Returns both the known player names AND the true total count from the response header.
+   * Some plugins truncate the name list (e.g. at 14) but keep the header count accurate.
+   */
+  async getOnlinePlayersData(serverId: number, throwOnError = false): Promise<{ players: string[]; total: number }> {
     try {
-      const response = await this.sendCommandDirect(serverId, 'list');
-      const match = response.match(/:\s*(.+)$/);
-      if (!match || !match[1] || match[1].trim() === '') return [];
-      return match[1].split(',').map((p) => p.trim()).filter(Boolean);
+      // Try 'minecraft:list' first — bypasses plugin overrides that silence plain 'list'
+      // Fall back to plain 'list' for proxies (BungeeCord/Velocity) that don't understand namespaced commands
+      let response = await this.sendCommandDirect(serverId, 'minecraft:list');
+      logger.debug('RCON minecraft:list raw response', { serverId, response });
+
+      if (!response || response.trim() === '' || response.includes('Unknown') || response.includes('unknown')) {
+        response = await this.sendCommandDirect(serverId, 'list');
+        logger.debug('RCON list fallback raw response', { serverId, response });
+      }
+
+      if (!response || response.trim() === '') return { players: [], total: 0 };
+
+      // Strip Minecraft color/format codes (§X) and ANSI escape sequences before parsing
+      const clean = response
+        .replace(/§[0-9a-fk-or]/gi, '')
+        .replace(/\u001b\[[0-9;]*m/g, '');
+
+      // Parse true online count from header: "There are X of a max Y players online:"
+      // Even if the name list is truncated by plugins, the header count is accurate.
+      let total = 0;
+      const countMatch = clean.match(/there\s+are\s+(\d+)/i);
+      if (countMatch) total = parseInt(countMatch[1], 10);
+
+      const match = clean.match(/:\s*(.+)$/s);
+      if (!match || !match[1] || match[1].trim() === '') return { players: [], total };
+
+      const players = match[1]
+        .split(',')
+        .map((p) => p
+          .replace(/\[.*?\]/g, '')  // strip BungeeCord [ServerName] prefix
+          .replace(/\s*\([0-9a-f-]{36}\)/gi, '')  // strip UUID (list uuids format)
+          .trim()
+        )
+        .filter((p) => /^[a-zA-Z0-9_]{1,16}$/.test(p)); // valid Minecraft names only, drop '...' artifacts
+
+      // If header count is larger than known names, list was truncated — log it
+      if (total > players.length) {
+        logger.debug('RCON player list truncated by server plugin', { serverId, total, known: players.length });
+      }
+
+      return { players, total: Math.max(total, players.length) };
     } catch (err) {
       logger.warn('Failed to get online players', { serverId, error: (err as Error).message });
-      return [];
+      // Strict mode lets the caller (verifyPlayerOnline) distinguish "RCON broken"
+      // from "0 players online" so it can fall back to the cached poll.
+      if (throwOnError) throw err;
+      return { players: [], total: 0 };
     }
+  }
+
+  /** Get list of online players on a server (name list only, for backward compat) */
+  async getOnlinePlayers(serverId: number): Promise<string[]> {
+    return (await this.getOnlinePlayersData(serverId)).players;
+  }
+
+  /**
+   * Check if a specific player is online via direct RCON command.
+   * Uses 'execute if entity @a[name=X]' which works even when 'list' is truncated.
+   * Falls back to name-list search if execute is not available.
+   */
+  async checkPlayerOnlineDirect(serverId: number, username: string): Promise<boolean> {
+    const sanitized = username.replace(/[^a-zA-Z0-9_]/g, '');
+    try {
+      // 'execute if entity @a[name=X,limit=1]' returns "Test passed" if player is online.
+      // The name selector is case-sensitive; on "Test failed" / "no entity" we fall through
+      // to the list-based case-insensitive check below — players whose website-username
+      // case differs from their in-game IGN (AuthMe is case-insensitive) would otherwise
+      // be wrongly reported offline.
+      const response = await this.sendCommandDirect(
+        serverId,
+        `execute if entity @a[name=${sanitized},limit=1]`
+      );
+      if (response && response.toLowerCase().includes('passed')) {
+        return true;
+      }
+    } catch {
+      // execute command not available (BungeeCord/Velocity) — fall through to the list
+      // path. The list path uses throwOnError=true so verifyPlayerOnline knows to
+      // consult the Redis cache when RCON itself is unreachable.
+    }
+    const { players } = await this.getOnlinePlayersData(serverId, true);
+    const lower = sanitized.toLowerCase();
+    return players.some((p) => p.toLowerCase() === lower);
   }
 
   /** Check if a specific player is online on a server */
@@ -114,12 +244,12 @@ export class RconManager {
   }
 
   /** Poll all servers and update online players cache */
-  async pollAllServers(): Promise<Map<number, { serverName: string; players: string[] }>> {
-    const result = new Map<number, { serverName: string; players: string[] }>();
+  async pollAllServers(): Promise<Map<number, { serverName: string; players: string[]; total: number }>> {
+    const result = new Map<number, { serverName: string; players: string[]; total: number }>();
     for (const [id, server] of this.servers) {
-      const players = await this.getOnlinePlayers(id);
-      this.onlinePlayers.set(id, players);
-      result.set(id, { serverName: server.name, players });
+      const data = await this.getOnlinePlayersData(id);
+      this.onlinePlayers.set(id, data.players);
+      result.set(id, { serverName: server.name, players: data.players, total: data.total });
     }
     return result;
   }

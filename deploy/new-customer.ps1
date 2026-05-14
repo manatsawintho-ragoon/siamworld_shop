@@ -1,5 +1,5 @@
 # ================================================================
-#  SiamWorld Shop — New Customer Deployment Script
+#  Siamsite Shop — New Customer Deployment Script
 #  Windows Server 2022 / PowerShell 5.1+
 #
 #  Usage:

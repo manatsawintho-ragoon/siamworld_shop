@@ -1,10 +1,10 @@
 -- Performance indexes for high-load production
 -- Uses procedure to add indexes only if they don't already exist
 
-DROP PROCEDURE IF EXISTS siamworld_add_index;
+DROP PROCEDURE IF EXISTS siamsite_add_index;
 
 DELIMITER //
-CREATE PROCEDURE siamworld_add_index(
+CREATE PROCEDURE siamsite_add_index(
   p_table  VARCHAR(64),
   p_index  VARCHAR(64),
   p_cols   VARCHAR(255)
@@ -25,24 +25,24 @@ END //
 DELIMITER ;
 
 -- transactions
-CALL siamworld_add_index('transactions', 'idx_reference',  '`reference`');
-CALL siamworld_add_index('transactions', 'idx_user_type',  '`user_id`, `type`');
-CALL siamworld_add_index('transactions', 'idx_status',     '`status`');
+CALL siamsite_add_index('transactions', 'idx_reference',  '`reference`');
+CALL siamsite_add_index('transactions', 'idx_user_type',  '`user_id`, `type`');
+CALL siamsite_add_index('transactions', 'idx_status',     '`status`');
 
 -- purchases
-CALL siamworld_add_index('purchases', 'idx_idempotency', '`idempotency_key`');
-CALL siamworld_add_index('purchases', 'idx_user_status', '`user_id`, `status`');
-CALL siamworld_add_index('purchases', 'idx_server',      '`server_id`');
+CALL siamsite_add_index('purchases', 'idx_idempotency', '`idempotency_key`');
+CALL siamsite_add_index('purchases', 'idx_user_status', '`user_id`, `status`');
+CALL siamsite_add_index('purchases', 'idx_server',      '`server_id`');
 
 -- wallet_logs
-CALL siamworld_add_index('wallet_logs', 'idx_user_created', '`user_id`, `created_at`');
-CALL siamworld_add_index('wallet_logs', 'idx_source',       '`source`');
-CALL siamworld_add_index('wallet_logs', 'idx_action',       '`action`');
+CALL siamsite_add_index('wallet_logs', 'idx_user_created', '`user_id`, `created_at`');
+CALL siamsite_add_index('wallet_logs', 'idx_source',       '`source`');
+CALL siamsite_add_index('wallet_logs', 'idx_action',       '`action`');
 
 -- web_inventory
-CALL siamworld_add_index('web_inventory', 'idx_user_status', '`user_id`, `status`');
+CALL siamsite_add_index('web_inventory', 'idx_user_status', '`user_id`, `status`');
 
 -- redeem_logs (column is redeemed_at, not created_at)
-CALL siamworld_add_index('redeem_logs', 'idx_redeemed', '`redeemed_at`');
+CALL siamsite_add_index('redeem_logs', 'idx_redeemed', '`redeemed_at`');
 
-DROP PROCEDURE IF EXISTS siamworld_add_index;
+DROP PROCEDURE IF EXISTS siamsite_add_index;

@@ -23,7 +23,7 @@ If the task matches a skill's description, read that skill's full SKILL.md befor
 
 ## Project Overview
 
-SiamWorld Shop is a full-stack e-commerce platform for Minecraft servers. Players authenticate using their in-game AuthMe accounts, top up a wallet, purchase items/permissions (delivered via RCON), and open loot boxes. Admins manage everything through a dashboard.
+Siamsite Shop is a full-stack e-commerce platform for Minecraft servers. Players authenticate using their in-game AuthMe accounts, top up a wallet, purchase items/permissions (delivered via RCON), and open loot boxes. Admins manage everything through a dashboard.
 
 ## Commands
 

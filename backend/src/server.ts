@@ -25,9 +25,11 @@ import setupRoutes from './routes/setup.routes';
 const app = express();
 const server = http.createServer(app);
 
-// Trust the Next.js proxy so rate-limiters use the real client IP
-// (without this, all traffic appears to come from the Next.js container IP)
-app.set('trust proxy', 1);
+// Trust all private/local network proxies (loopback + RFC1918 ranges).
+// This covers the full Docker proxy chain: Browser → NPM → Next.js → Backend.
+// Without this, Express reads the NPM container IP (172.x.x.x) as the client,
+// causing all users to share one rate-limit bucket.
+app.set('trust proxy', 'loopback, linklocal, uniquelocal');
 
 // Allowed origins — reads from CORS_ORIGIN env var (comma-separated)
 const allowedOrigins = config.corsOrigin === '*'
@@ -43,33 +45,42 @@ const io = new SocketIO(server, {
 
 // ── Rate Limiting ────────────────────────────────────────────────────────────
 
-// Global limiter: 300 req / 15 min per IP
+// Safe read-only paths — exempt from ALL rate limiting.
+// These are called on every page load; blocking them = shop looks broken.
+// NOTE: use req.originalUrl (full path) not req.path — when middleware is
+// mounted at /api/, Express strips the prefix from req.path.
+const isSkipped = (req: import('express').Request) => {
+  if (req.method !== 'GET') return false;
+  const url = req.originalUrl.split('?')[0]; // strip query string
+  return (
+    url.startsWith('/api/public/') ||
+    url.startsWith('/api/shop/products') ||
+    url === '/api/health'
+  );
+};
+
+// Global limiter: configurable via env (default 2000 req / 15 min per real IP).
+// Now that trust proxy is fixed, each user gets their own bucket.
 const globalLimiter = rateLimit({
   windowMs: config.rateLimit.windowMs,
   max: config.rateLimit.max,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.path === '/api/health',
+  skip: isSkipped,
   message: { success: false, error: 'Too many requests, please try again later.' },
 });
 
-// Strict limiter for auth & setup endpoints: 10 req / 15 min per IP
+// Auth limiter: 20 login/register attempts per 15 min per real IP.
+// Protects against brute-force while not blocking shared networks.
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 20,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: isSkipped,
   message: { success: false, error: 'Too many attempts, please try again in 15 minutes.' },
 });
 
-// Payment limiter: 30 req / 15 min per IP
-const paymentLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, error: 'Too many payment requests, please slow down.' },
-});
 
 // ── Middleware ───────────────────────────────────────────────────────────────
 
@@ -94,8 +105,8 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Request logging
 app.use((req, _res, next) => {
@@ -111,20 +122,42 @@ app.use('/api/', globalLimiter);
 // Routes — auth & setup get strict rate limit, payment gets medium limit
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/setup', authLimiter, setupRoutes);
-app.use('/api/payment', paymentLimiter, paymentRoutes);
+app.use('/api/payment', paymentRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/shop', shopRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/public', publicRoutes);
 
-// Health check
-app.get('/api/health', (_req, res) => {
-  res.json({ success: true, timestamp: new Date().toISOString() });
+// Health check — includes DB and Redis liveness
+app.get('/api/health', async (_req, res) => {
+  const checks: Record<string, boolean> = { db: false, redis: false };
+  try { await pool.execute('SELECT 1'); checks.db = true; } catch {}
+  try { await redis.ping(); checks.redis = true; } catch {}
+  const ok = checks.db && checks.redis;
+  res.status(ok ? 200 : 503).json({ success: ok, checks, timestamp: new Date().toISOString() });
 });
 
 // Error handler
 app.use(errorHandler);
+
+// Global unhandled error handlers — MUST exist to prevent Node.js crash
+// on async RCON socket errors or unhandled promise rejections.
+process.on('unhandledRejection', (reason: any) => {
+  logger.error('Unhandled Rejection at Promise', {
+    reason: reason instanceof Error ? reason.message : reason,
+    stack: reason instanceof Error ? reason.stack : undefined,
+  });
+});
+
+process.on('uncaughtException', (err: Error) => {
+  logger.error('Uncaught Exception thrown', {
+    error: err.message,
+    stack: err.stack,
+  });
+  // Optional: Graceful shutdown if error is critical
+  // if (!err.message.includes('RCON')) process.exit(1);
+});
 
 // Initialize services
 const rconManager = RconManager.getInstance();
@@ -142,9 +175,9 @@ io.on('connection', (socket) => {
   socket.on('subscribe:players', () => {
     socket.join('players');
     // Send current online players immediately
-    playerTracker.getOnlinePlayers().then((players) => {
-      socket.emit('players:update', players);
-    });
+    playerTracker.getOnlinePlayers()
+      .then((players) => { socket.emit('players:update', players); })
+      .catch((err) => { logger.warn('Socket: failed to fetch online players', { err: err?.message }); });
   });
 
   socket.on('disconnect', () => {

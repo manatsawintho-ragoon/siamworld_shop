@@ -8,6 +8,7 @@ import { redeemInventorySchema, redeemCodeSchema } from '../validators/schemas';
 import { pool } from '../database/connection';
 import { RowDataPacket, PoolConnection } from 'mysql2/promise';
 import bcrypt from 'bcrypt';
+import { destroySession } from '../services/session.service';
 
 const router = Router();
 
@@ -35,7 +36,9 @@ router.post('/change-password', authenticate, async (req: Request, res: Response
 
     const hashed = await bcrypt.hash(newPassword, 10);
     await pool.execute('UPDATE authme SET password = ? WHERE LOWER(username) = LOWER(?)', [hashed, req.user!.username]);
-    res.json({ success: true, message: 'เปลี่ยนรหัสผ่านสำเร็จ' });
+    // Invalidate session — user must log in again with the new password
+    await destroySession(req.user!.userId);
+    res.json({ success: true, message: 'เปลี่ยนรหัสผ่านสำเร็จ กรุณาเข้าสู่ระบบใหม่' });
   } catch (err) { next(err); }
 });
 
@@ -101,6 +104,12 @@ router.post('/redeem-code', authenticate, validate(redeemCodeSchema), async (req
     }
     const redeemCode = codeRows[0];
 
+    // Discount codes are applied at top-up / checkout, not via this endpoint.
+    if (['discount_topup', 'discount_purchase', 'discount_any'].includes(redeemCode.reward_type)) {
+      await conn.rollback();
+      return res.status(400).json({ success: false, message: 'โค้ดส่วนลดต้องใช้ตอนเติมเงินหรือซื้อสินค้า ไม่ใช่หน้านี้' });
+    }
+
     // Check expiry
     if (redeemCode.expires_at && new Date(redeemCode.expires_at) < new Date()) {
       await conn.rollback();
@@ -123,6 +132,30 @@ router.post('/redeem-code', authenticate, validate(redeemCodeSchema), async (req
       return res.status(400).json({ success: false, message: 'คุณใช้โค้ดนี้ไปแล้ว' });
     }
 
+    // RCON-reward codes: server selection required + player must be online in-game.
+    // We gate BEFORE marking the code used so an offline player doesn't burn their one redemption.
+    if (redeemCode.reward_type === 'rcon') {
+      if (!serverId) {
+        await conn.rollback();
+        return res.status(400).json({ success: false, message: 'กรุณาเลือกเซิร์ฟเวอร์' });
+      }
+      const rconMgr = req.app.get('rconManager');
+      // Strict: query RCON directly with no stale-cache fallback. We'd rather block
+      // a real online player on transient RCON failure than silently grant a code to
+      // someone who actually logged off (cache TTL is 10–30s after a real logout).
+      let isOnline = false;
+      try {
+        isOnline = await rconMgr.checkPlayerOnlineDirect(serverId, username);
+      } catch (rconErr) {
+        await conn.rollback();
+        return res.status(503).json({ success: false, message: 'ไม่สามารถตรวจสอบสถานะผู้เล่นได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง' });
+      }
+      if (!isOnline) {
+        await conn.rollback();
+        return res.status(400).json({ success: false, message: 'คุณต้องออนไลน์อยู่ในเซิร์ฟเวอร์ที่เลือกเพื่อใช้โค้ดนี้' });
+      }
+    }
+
     // Mark as used inside the transaction
     await conn.execute(
       'INSERT INTO redeem_logs (code_id, user_id) VALUES (?, ?)',
@@ -143,20 +176,21 @@ router.post('/redeem-code', authenticate, validate(redeemCodeSchema), async (req
       await walletService.topup(userId, amount, 'redeem_code', redeemCode.code, `ใช้โค้ด ${redeemCode.code}`, 'redeem_code');
       res.json({ success: true, message: `ใช้โค้ดสำเร็จ! ได้รับ ${amount} บาท เข้ากระเป๋าเงิน` });
     } else {
-      if (!serverId) {
-        return res.status(400).json({ success: false, message: 'กรุณาเลือกเซิร์ฟเวอร์' });
-      }
       const rconManager = req.app.get('rconManager');
-      const playerTracker = req.app.get('playerTracker');
-      const command = redeemCode.command.replace(/{player}/g, username);
-
-      const isOnline = await playerTracker.isPlayerOnline(serverId, username);
-      if (!isOnline) {
-        return res.status(400).json({ success: false, message: 'คุณต้องออนไลน์อยู่ในเซิร์ฟเวอร์ที่เลือกเพื่อรับไอเท็ม' });
+      try {
+        // Use executeProductCommands so multi-line commands work (one RCON call per line)
+        // and so {player}/{username} placeholders get the same case-insensitive sanitised
+        // replacement that shop purchases use.
+        await rconManager.executeProductCommands(serverId, redeemCode.command, username);
+        res.json({ success: true, message: 'ใช้โค้ดสำเร็จ! ไอเท็มถูกส่งไปยังตัวละครของคุณแล้ว' });
+      } catch (rconErr) {
+        // RCON failed after we already committed the redeem. Compensate by
+        // undoing the redemption so the user can try again instead of losing
+        // their one-use claim.
+        await pool.execute('DELETE FROM redeem_logs WHERE code_id = ? AND user_id = ?', [redeemCode.id, userId]);
+        await pool.execute('UPDATE redeem_codes SET used_count = GREATEST(used_count - 1, 0) WHERE id = ?', [redeemCode.id]);
+        throw rconErr;
       }
-
-      const response = await rconManager.sendCommand(serverId, command);
-      res.json({ success: true, message: 'ใช้โค้ดสำเร็จ! ไอเท็มถูกส่งไปยังตัวละครของคุณแล้ว', rcon_response: response });
     }
   } catch (err) {
     await conn.rollback();

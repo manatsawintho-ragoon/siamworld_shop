@@ -74,6 +74,7 @@ export default function AdminSettings() {
   const [loading, setLoading] = useState(true);
   const [sectionSaving, setSectionSaving] = useState<Record<string, boolean>>({});
   const [sectionSaved, setSectionSaved] = useState<Record<string, boolean>>({});
+  const [smtpHelpOpen, setSmtpHelpOpen] = useState(false);
 
   const [slides, setSlides] = useState<Slide[]>([]);
   const [slidesLoading, setSlidesLoading] = useState(true);
@@ -259,11 +260,26 @@ export default function AdminSettings() {
         <div className="space-y-6">
           {/* ข้อมูลพื้นฐาน */}
           <SectionCard icon="fa-info-circle" title="ข้อมูลพื้นฐาน" description="ตั้งค่าชื่อเว็บไซต์ หัวข้อ และ IP เซิร์ฟเวอร์"
-            actions={<ActionButtons saving={!!sectionSaving.basic} saved={!!sectionSaved.basic} onSave={() => handleSaveKeys('basic', ['shop_name', 'shop_subtitle', 'shop_description', 'server_ip'])} />}
+            actions={<ActionButtons saving={!!sectionSaving.basic} saved={!!sectionSaved.basic} onSave={() => handleSaveKeys('basic', ['shop_name', 'shop_subtitle', 'shop_description', 'server_ip', 'website_logo_url'])} />}
           >
             <div className="space-y-4">
-              <FieldInput label="หัวข้อเว็บไซต์" value={settings.shop_name || ''} onChange={v => set('shop_name', v)} placeholder="เช่น SiamWorld" icon="fa-globe" hint="จะแสดงบน Title Bar ของเบราว์เซอร์" />
-              <FieldInput label="คำบรรยายเว็บไซต์" value={settings.shop_subtitle || ''} onChange={v => set('shop_subtitle', v)} placeholder="เช่น Minecraft Survival Server" icon="fa-heading" hint="หัวข้อที่แสดงบน Banner หน้าแรก" />
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1 space-y-4">
+                  <FieldInput label="หัวข้อเว็บไซต์" value={settings.shop_name || ''} onChange={v => set('shop_name', v)} placeholder="เช่น Siamsite" icon="fa-globe" hint="จะแสดงบน Title Bar ของเบราว์เซอร์" />
+                  <FieldInput label="คำบรรยายเว็บไซต์" value={settings.shop_subtitle || ''} onChange={v => set('shop_subtitle', v)} placeholder="เช่น Minecraft Survival Server" icon="fa-heading" hint="หัวข้อที่แสดงบน Banner หน้าแรก" />
+                </div>
+                <div className="w-full sm:w-32 flex flex-col items-center justify-center gap-2">
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Logo Preview</label>
+                  <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
+                    {settings.website_logo_url ? (
+                      <img src={settings.website_logo_url} alt="Logo" className="w-full h-full object-contain p-2" onError={e => e.currentTarget.style.display = 'none'} />
+                    ) : (
+                      <i className="fas fa-image text-gray-200 text-3xl" />
+                    )}
+                  </div>
+                </div>
+              </div>
+              <FieldInput label="URL รูปภาพ Logo เว็บไซต์" value={settings.website_logo_url || ''} onChange={v => set('website_logo_url', v)} placeholder="https://example.com/logo.png" icon="fa-link" hint="จะแสดงแทนข้อความหัวข้อบน Banner (แนะนำไฟล์ .png พื้นหลังโปร่งใส)" />
               <FieldInput label="คำอธิบายเว็บไซต์ (SEO)" value={settings.shop_description || ''} onChange={v => set('shop_description', v)} placeholder="เช่น เซิร์ฟ Minecraft ที่ดีที่สุด..." icon="fa-align-left" hint="ใช้สำหรับ SEO (Meta Description) ในการค้นหาของ Google" />
               <FieldInput label="IP เซิร์ฟเวอร์ Minecraft" value={settings.server_ip || ''} onChange={v => set('server_ip', v)} placeholder="เช่น play.yourserver.net" icon="fa-server" hint="แสดงบน Navbar และผู้เล่นสามารถคัดลอกได้" />
             </div>
@@ -436,6 +452,95 @@ export default function AdminSettings() {
             </div>
           </SectionCard>
 
+          {/* ── SMTP (for email OTP password reset) ─────────────────────── */}
+          <SectionCard
+            icon="fa-envelope-open-text"
+            title="SMTP (สำหรับรีเซ็ตรหัสผ่านทางอีเมล)"
+            description="ตั้งค่าเซิร์ฟเวอร์ส่งอีเมล หากไม่ตั้งค่า ระบบจะไม่สามารถส่ง OTP ได้"
+            actions={
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => setSmtpHelpOpen(true)}
+                  className="px-3 py-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-bold flex items-center gap-2 border border-amber-200 transition-colors">
+                  <i className="fas fa-circle-question" /> วิธีใช้งาน
+                </button>
+                <ActionButtons saving={!!sectionSaving.smtp} saved={!!sectionSaved.smtp} onSave={() => handleSaveKeys('smtp', ['smtp_host', 'smtp_port', 'smtp_user', 'smtp_password', 'smtp_from', 'smtp_secure'])} />
+              </div>
+            }
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">SMTP Host</label>
+                <input value={settings.smtp_host || ''} onChange={e => set('smtp_host', e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300"
+                  placeholder="smtp.gmail.com" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">Port</label>
+                <input type="number" value={settings.smtp_port || ''} onChange={e => set('smtp_port', e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300"
+                  placeholder="587" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">Username</label>
+                <input value={settings.smtp_user || ''} onChange={e => set('smtp_user', e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300"
+                  placeholder="you@gmail.com" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">Password / App Password</label>
+                <input type="password" value={settings.smtp_password || ''} onChange={e => set('smtp_password', e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300"
+                  placeholder="ใส่รหัสผ่านหรือ App Password" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">From (อีเมลผู้ส่ง)</label>
+                <input value={settings.smtp_from || ''} onChange={e => set('smtp_from', e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300"
+                  placeholder='เช่น "Shop Name <noreply@yourdomain.com>" — ปล่อยว่างจะใช้ Username แทน' />
+              </div>
+              <label className="flex items-start gap-3 cursor-pointer sm:col-span-2 mt-1">
+                <div className={`w-10 h-5 rounded-full transition-colors flex-shrink-0 relative mt-0.5 ${settings.smtp_secure === '1' ? 'bg-green-600' : 'bg-gray-200'}`}
+                  onClick={() => set('smtp_secure', settings.smtp_secure === '1' ? '0' : '1')}>
+                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${settings.smtp_secure === '1' ? 'left-[22px]' : 'left-0.5'}`}></div>
+                </div>
+                <div>
+                  <span className="text-sm font-bold text-gray-800">ใช้การเข้ารหัส SSL (สำหรับพอร์ต 465)</span>
+                  <p className="text-[11px] text-gray-500 mt-0.5">เปิด: ใช้กับพอร์ต <b>465</b> (Gmail, Resend, Brevo SSL) · ปิด: ใช้กับพอร์ต <b>587</b> (STARTTLS — Gmail/Mailgun TLS)</p>
+                </div>
+              </label>
+            </div>
+          </SectionCard>
+
+          {/* ── Visibility toggles ──────────────────────────────────────── */}
+          <SectionCard icon="fa-eye" title="ปุ่ม / Widget ที่แสดงบนเว็บไซต์" description="เปิด/ปิดปุ่มและกล่องต่าง ๆ ที่ไม่อยากให้แสดงในเว็บ"
+            actions={<ActionButtons saving={!!sectionSaving.visibility} saved={!!sectionSaved.visibility} onSave={() => handleSaveKeys('visibility', ['show_lootbox_nav', 'show_download_nav', 'show_topup_rank_widget', 'show_topup_daily_widget', 'show_live_shop_widget', 'show_popular_widget', 'show_welcome_marquee', 'show_server_status_widget', 'show_gacha_live_widget', 'show_exclusive_gacha', 'show_popular_gacha', 'show_new_arrivals'])} />}
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {([
+                ['show_lootbox_nav',           'เมนู Loot Box (Navbar)'],
+                ['show_download_nav',          'เมนู Download (Navbar)'],
+                ['show_welcome_marquee',       'แถบประกาศวิ่ง LIVE (หน้าแรก)'],
+                ['show_server_status_widget',  'สถานะเซิร์ฟเวอร์ (Widget หน้าแรก)'],
+                ['show_exclusive_gacha',       'GACHA Exclusive Box (หน้าแรก)'],
+                ['show_popular_gacha',         'GACHA ยอดนิยม (หน้าแรก)'],
+                ['show_new_arrivals',          'ไอเท็มมาใหม่ (Widget)'],
+                ['show_gacha_live_widget',     'Gacha Live (Widget)'],
+                ['show_topup_rank_widget',     'อันดับยอดเติม (Widget)'],
+                ['show_topup_daily_widget',    'เติมรายวัน (Widget)'],
+                ['show_live_shop_widget',      'Live Shop (Widget)'],
+                ['show_popular_widget',        'สินค้ายอดนิยม (Widget)'],
+              ] as const).map(([key, label]) => (
+                <label key={key} className="flex items-center gap-3 cursor-pointer p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className={`w-10 h-5 rounded-full transition-colors flex-shrink-0 relative ${(settings[key] ?? '1') === '1' ? 'bg-green-600' : 'bg-gray-300'}`}
+                    onClick={() => set(key, (settings[key] ?? '1') === '1' ? '0' : '1')}>
+                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${(settings[key] ?? '1') === '1' ? 'left-[22px]' : 'left-0.5'}`}></div>
+                  </div>
+                  <span className="text-sm font-bold text-gray-800">{label}</span>
+                </label>
+              ))}
+            </div>
+          </SectionCard>
+
           {/* Social Media */}
           <SectionCard icon="fa-share-alt" title="โซเชียลมีเดีย" description="ลิงก์โซเชียลมีเดียที่แสดงบนเว็บไซต์"
             actions={<ActionButtons saving={!!sectionSaving.social} saved={!!sectionSaved.social} onSave={() => handleSaveKeys('social', ['facebook_url', 'discord_invite'])} />}
@@ -603,6 +708,100 @@ export default function AdminSettings() {
               <button type="submit" form="dl-form" disabled={dlSaving}
                 className="flex items-center gap-2 px-5 py-2.5 bg-[#1e2735] disabled:opacity-50 text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#38404d]">
                 {dlSaving ? <><i className="fas fa-spinner fa-spin text-[12px]"></i> บันทึก...</> : <><i className="fas fa-save text-[12px]"></i> บันทึกรายการ</>}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* SMTP help modal */}
+      {smtpHelpOpen && typeof window !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setSmtpHelpOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center">
+                  <i className="fas fa-envelope-open-text" />
+                </div>
+                <h3 className="font-bold text-gray-900">วิธีตั้งค่า SMTP</h3>
+              </div>
+              <button onClick={() => setSmtpHelpOpen(false)} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-500">
+                <i className="fas fa-times" />
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-5 text-sm text-gray-700 leading-relaxed">
+              <p>SMTP ใช้สำหรับส่งอีเมล <b>OTP รีเซ็ตรหัสผ่าน</b> ให้ผู้เล่น ถ้าไม่ตั้งค่า ผู้เล่นจะไม่สามารถรีเซ็ตรหัสผ่านได้</p>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <div className="font-bold text-amber-900 mb-2 flex items-center gap-2">
+                  <i className="fas fa-lightbulb" /> ผู้ให้บริการที่แนะนำ
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <div className="font-semibold text-gray-900">Resend (ฟรี 3,000 อีเมล/เดือน · แนะนำ)</div>
+                    <table className="w-full text-xs mt-1.5">
+                      <tbody>
+                        <tr><td className="text-gray-500 w-28 py-0.5">Host</td><td className="font-mono">smtp.resend.com</td></tr>
+                        <tr><td className="text-gray-500 py-0.5">Port</td><td className="font-mono">465</td></tr>
+                        <tr><td className="text-gray-500 py-0.5">Username</td><td className="font-mono">resend</td></tr>
+                        <tr><td className="text-gray-500 py-0.5">Password</td><td>API Key จาก resend.com → API Keys</td></tr>
+                        <tr><td className="text-gray-500 py-0.5">SSL</td><td><b className="text-green-700">เปิด</b></td></tr>
+                      </tbody>
+                    </table>
+                    <p className="text-[11px] text-gray-500 mt-1">ต้อง verify โดเมนใน resend.com ก่อนถึงจะส่งจากอีเมลของคุณได้</p>
+                  </div>
+
+                  <div className="border-t border-amber-200 pt-3">
+                    <div className="font-semibold text-gray-900">Gmail (ส่วนตัว · ฟรี ~500/วัน)</div>
+                    <table className="w-full text-xs mt-1.5">
+                      <tbody>
+                        <tr><td className="text-gray-500 w-28 py-0.5">Host</td><td className="font-mono">smtp.gmail.com</td></tr>
+                        <tr><td className="text-gray-500 py-0.5">Port</td><td className="font-mono">587</td></tr>
+                        <tr><td className="text-gray-500 py-0.5">Username</td><td className="font-mono">your@gmail.com</td></tr>
+                        <tr><td className="text-gray-500 py-0.5">Password</td><td>App Password (ไม่ใช่รหัส Gmail ปกติ)</td></tr>
+                        <tr><td className="text-gray-500 py-0.5">SSL</td><td><b className="text-gray-700">ปิด</b> (ใช้ STARTTLS)</td></tr>
+                      </tbody>
+                    </table>
+                    <p className="text-[11px] text-gray-500 mt-1">ต้องเปิด 2-Step Verification และสร้าง App Password ที่ <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener" className="text-amber-700 underline">myaccount.google.com/apppasswords</a></p>
+                  </div>
+
+                  <div className="border-t border-amber-200 pt-3">
+                    <div className="font-semibold text-gray-900">Brevo / SendGrid / Mailgun</div>
+                    <p className="text-xs text-gray-600 mt-0.5">ใช้ Host/Port/User/Password ตามที่ผู้ให้บริการให้มา — ดูจาก dashboard ของผู้ให้บริการ</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div className="font-bold text-blue-900 mb-2 flex items-center gap-2">
+                  <i className="fas fa-shield-halved" /> SSL / TLS คืออะไร?
+                </div>
+                <ul className="space-y-1.5 text-xs text-gray-700">
+                  <li>• <b>เปิด SSL (พอร์ต 465):</b> เข้ารหัสตั้งแต่เชื่อมต่อ — ปลอดภัยและรวดเร็วที่สุด <span className="text-gray-500">ใช้กับ Resend, Gmail SSL, Brevo SSL</span></li>
+                  <li>• <b>ปิด SSL (พอร์ต 587):</b> เชื่อมต่อปกติแล้วเข้ารหัสภายหลัง (STARTTLS) <span className="text-gray-500">ใช้กับ Gmail TLS, Mailgun, SendGrid</span></li>
+                  <li>• ถ้าไม่แน่ใจ ดู Port ที่ผู้ให้บริการให้: <b>465 = เปิด</b>, <b>587 = ปิด</b></li>
+                </ul>
+              </div>
+
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                <div className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                  <i className="fas fa-list-ol" /> ขั้นตอนตั้งค่า
+                </div>
+                <ol className="list-decimal list-inside space-y-1 text-xs text-gray-700">
+                  <li>เลือกผู้ให้บริการ (แนะนำ Resend)</li>
+                  <li>คัดลอก Host, Port, Username, Password จากตารางด้านบน</li>
+                  <li>กรอกในฟอร์ม SMTP ด้านล่างนี้</li>
+                  <li>ใส่ From ในรูปแบบ <span className="font-mono">Shop Name &lt;noreply@yourdomain.com&gt;</span></li>
+                  <li>เปิด/ปิด SSL ตาม Port</li>
+                  <li>กด <b>บันทึกการตั้งค่า</b></li>
+                  <li>ทดสอบโดยให้ผู้ใช้ลองรีเซ็ตรหัสผ่าน</li>
+                </ol>
+              </div>
+            </div>
+            <div className="px-6 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end sticky bottom-0">
+              <button onClick={() => setSmtpHelpOpen(false)} className="px-5 py-2.5 bg-[#1e2735] text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#38404d]">
+                เข้าใจแล้ว
               </button>
             </div>
           </div>

@@ -446,7 +446,7 @@ export default function LootBoxOpenPage() {
   );
   if (!box) return null;
 
-  const discount    = box.original_price && box.original_price > box.price
+  const discount    = box.original_price && Number(box.original_price) > Number(box.price)
     ? Math.round((1 - box.price / box.original_price) * 100) : 0;
   const containerW  = VISIBLE * ITEM_SLOT;
   const totalWeight = box.items.reduce((s, i) => s + i.weight, 0);
@@ -513,19 +513,39 @@ export default function LootBoxOpenPage() {
 
                   <div className="flex items-center gap-5 px-6 py-5">
                     {/* Box image */}
-                    <div className="relative flex-shrink-0 group/box">
+                    <motion.div 
+                      className="relative flex-shrink-0 group/box"
+                      animate={preparing ? {
+                        x: [0, -2, 2, -2, 2, 0],
+                        y: [0, 2, -2, 2, -2, 0],
+                        rotate: [0, -1, 1, -1, 1, 0]
+                      } : {}}
+                      transition={{ 
+                        repeat: preparing ? Infinity : 0, 
+                        duration: 0.15,
+                        ease: "linear"
+                      }}
+                    >
                       {discount > 0 && (
                         <span className="absolute -top-2 -right-2 z-10 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-[0_2px_0_#b91c1c]">
                           -{discount}%
                         </span>
                       )}
-                      <div className="w-24 h-24 rounded-2xl bg-green-50 border border-green-100 flex items-center justify-center overflow-hidden shadow-[0_2px_0_#bbf7d0]">
+                      <div className="w-24 h-24 rounded-2xl bg-green-50 border border-green-100 flex items-center justify-center overflow-hidden shadow-[0_2px_0_#bbf7d0] relative">
+                        {preparing && (
+                          <motion.div 
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: [0.2, 0.5, 0.2], scale: [1, 1.2, 1] }}
+                            transition={{ repeat: Infinity, duration: 1 }}
+                            className="absolute inset-0 bg-green-400 blur-xl rounded-full"
+                          />
+                        )}
                         {box.image
                           ? <img src={box.image} alt={box.name}
-                              className="w-full h-full object-contain p-1.5 transition-transform duration-500 group-hover/box:scale-105" />
-                          : <i className="fas fa-box text-4xl text-green-400" />}
+                              className="w-full h-full object-contain p-1.5 transition-transform duration-500 group-hover/box:scale-105 relative z-10" />
+                          : <i className="fas fa-box text-4xl text-green-400 relative z-10" />}
                       </div>
-                    </div>
+                    </motion.div>
 
                     {/* Name + price */}
                     <div className="flex-1 min-w-0">
@@ -545,7 +565,7 @@ export default function LootBoxOpenPage() {
                           <span className="text-amber-600 font-black text-2xl tabular-nums tracking-tighter">{parseFloat(String(box.price)).toLocaleString()}</span>
                           <span className="text-amber-600 font-black text-sm">฿</span>
                         </div>
-                        {box.original_price && box.original_price > box.price && (
+                        {box.original_price && Number(box.original_price) > Number(box.price) && (
                           <span className="text-gray-300 text-sm font-bold line-through tabular-nums">{parseFloat(String(box.original_price)).toLocaleString()}฿</span>
                         )}
                       </div>
@@ -769,22 +789,78 @@ export default function LootBoxOpenPage() {
                   </button>
                 </div>
                 {/* Body */}
-                <div className="p-6 flex flex-col items-center text-center">
-                  <RarityBadge rarity={wonItem.rarity} />
-                  <div className="relative my-5 flex items-center justify-center">
-                    <div className="absolute w-32 h-32 rounded-full animate-pulse"
-                      style={{ background: r.color, opacity: 0.12, filter: 'blur(16px)' }} />
+                <div className="p-8 flex flex-col items-center text-center relative overflow-hidden">
+                  {/* Rays background for rare items */}
+                  {['legendary', 'mythic'].includes(wonItem.rarity.toLowerCase()) && (
+                    <motion.div 
+                      initial={{ opacity: 0, rotate: 0 }}
+                      animate={{ opacity: 0.4, rotate: 360 }}
+                      transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                      className="absolute inset-0 pointer-events-none"
+                      style={{
+                        background: `conic-gradient(from 0deg, transparent, ${r.color}44, transparent 10%, transparent, ${r.color}44, transparent 20%)`,
+                        backgroundSize: '100% 100%'
+                      }}
+                    />
+                  )}
+                  
+                  <motion.div
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ type: 'spring', damping: 15, stiffness: 200, delay: 0.1 }}
+                  >
+                    <RarityBadge rarity={wonItem.rarity} />
+                  </motion.div>
+
+                  <div className="relative my-8 flex items-center justify-center">
+                    {/* Animated Glow */}
+                    <motion.div 
+                      animate={{ 
+                        scale: [1, 1.2, 1],
+                        opacity: [0.3, 0.6, 0.3]
+                      }}
+                      transition={{ repeat: Infinity, duration: 2 }}
+                      className="absolute w-40 h-40 rounded-full"
+                      style={{ background: r.color, filter: 'blur(32px)' }} 
+                    />
+                    
                     {wonItem.image
-                      ? <img src={wonItem.image} alt={wonItem.name}
-                          className="relative w-36 h-36 object-contain z-10"
-                          style={{ filter: `drop-shadow(0 0 18px ${r.color}77)` }} />
-                      : <div className="relative w-36 h-36 rounded-2xl flex items-center justify-center border-2 z-10"
+                      ? <motion.img 
+                          initial={{ y: 20, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          transition={{ delay: 0.3, duration: 0.5 }}
+                          src={wonItem.image} alt={wonItem.name}
+                          className="relative w-40 h-40 object-contain z-10"
+                          style={{ filter: `drop-shadow(0 0 24px ${r.color}aa)` }} />
+                      : <motion.div 
+                          initial={{ y: 20, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          transition={{ delay: 0.3, duration: 0.5 }}
+                          className="relative w-40 h-40 rounded-2xl flex items-center justify-center border-2 z-10"
                           style={{ borderColor: r.color + '44', backgroundColor: r.color + '0d' }}>
-                          <i className="fas fa-cube text-6xl" style={{ color: r.color + '88' }} />
-                        </div>}
+                          <i className="fas fa-cube text-7xl" style={{ color: r.color + '88' }} />
+                        </motion.div>}
                   </div>
-                  <h3 className="text-gray-900 font-black text-xl uppercase tracking-tight leading-tight">{wonItem.name}</h3>
-                  {wonItem.description && <p className="text-gray-400 text-xs mt-1 line-clamp-2">{wonItem.description}</p>}
+
+                  <motion.h3 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 }}
+                    className="text-gray-900 font-black text-2xl uppercase tracking-tight leading-tight drop-shadow-sm"
+                  >
+                    {wonItem.name}
+                  </motion.h3>
+                  
+                  {wonItem.description && (
+                    <motion.p 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.6 }}
+                      className="text-gray-400 text-xs mt-2 line-clamp-2 max-w-[240px]"
+                    >
+                      {wonItem.description}
+                    </motion.p>
+                  )}
                 </div>
                 {/* Footer */}
                 <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">

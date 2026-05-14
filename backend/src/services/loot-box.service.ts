@@ -225,9 +225,11 @@ class LootBoxService {
     rconManager: RconManager,
     playerTracker: PlayerTracker
   ) {
-    // Check player is online before sending RCON
-    const online = await playerTracker.isPlayerOnline(serverId, username);
-    if (!online) throw new PlayerOfflineError('คุณต้องออนไลน์อยู่ในเกมก่อนรับของ');
+    // Player must be online to receive the item via RCON.
+    {
+      const online = await playerTracker.verifyPlayerOnline(serverId, username);
+      if (!online) throw new PlayerOfflineError('คุณต้องออนไลน์อยู่ในเกมก่อนนำของจากกระเป๋าเข้าเกม');
+    }
 
     // Verify item belongs to user and is PENDING
     const [rows] = await pool.execute<RowDataPacket[]>(
@@ -273,8 +275,11 @@ class LootBoxService {
     rconManager: RconManager,
     playerTracker: PlayerTracker
   ) {
-    const online = await playerTracker.isPlayerOnline(serverId, username);
-    if (!online) throw new PlayerOfflineError('คุณต้องออนไลน์อยู่ในเกมก่อนรับของ');
+    // Player must be online to receive items via RCON.
+    {
+      const online = await playerTracker.verifyPlayerOnline(serverId, username);
+      if (!online) throw new PlayerOfflineError('คุณต้องออนไลน์อยู่ในเกมก่อนนำของจากกระเป๋าเข้าเกม');
+    }
 
     const [rows] = await pool.execute<RowDataPacket[]>(
       'SELECT * FROM web_inventory WHERE user_id = ? AND status = ? ORDER BY id ASC',

@@ -1,0 +1,34 @@
+# SiamsiteBridge configuration.
+# After editing, run /siamsite-bridge reload (or restart the server).
+
+panel:
+  # Production endpoint. Leave as-is unless support tells you otherwise.
+  url: wss://panel.siamsite.shop/bridge
+  # Paste your token from panel.siamsite.shop → Dashboard → Bridge → Issue Token.
+  # It is only shown once; if you lose it, just issue a new one.
+  token: "PASTE-YOUR-TOKEN-HERE"
+
+authme:
+  # MySQL credentials. Leave `auto: true` to read from plugins/AuthMe/config.yml
+  # (recommended). Set `auto: false` to use the explicit values below.
+  auto: true
+  host: 127.0.0.1
+  port: 3306
+  database: authme
+  user: authme
+  password: ""
+  # Override the AuthMe table name if your server uses a non-default one.
+  # When auto-detect is on, this is also read from the AuthMe config.
+  table: authme
+
+bridge:
+  # Maximum concurrent DB connections used by the bridge. Don't raise this
+  # unless a support engineer asks — 4 is enough for hundreds of req/sec.
+  connection_pool_size: 4
+  # Async worker threads handling WS frames and bcrypt verifies.
+  worker_threads: 4
+  # Auto-reconnect timing. Exponential backoff with jitter.
+  reconnect_initial_ms: 1000
+  reconnect_max_ms: 60000
+  # Hard cap on in-flight requests per connection. Matches the panel side.
+  max_inflight: 256

@@ -1,4 +1,4 @@
-# SiamWorld Shop — Production SaaS Deployment Guide
+# Siamsite Shop — Production SaaS Deployment Guide
 
 > คู่มือ deploy จริงบน Ubuntu 24.04 VPS ตั้งแต่ศูนย์จนเปิดรับลูกค้าได้
 > อัปเดต: 2026-03-30
@@ -174,12 +174,12 @@ sudo apt install -y jq
 
 ```bash
 # สร้างโฟลเดอร์หลัก
-sudo mkdir -p /opt/siamworld
-sudo chown deploy:deploy /opt/siamworld
-cd /opt/siamworld
+sudo mkdir -p /opt/siamsite
+sudo chown deploy:deploy /opt/siamsite
+cd /opt/siamsite
 
 # Clone repository
-git clone https://github.com/YOUR_ORG/siamworld_shop.git app
+git clone https://github.com/YOUR_ORG/siamsite_shop.git app
 cd app
 
 # ให้สิทธิ์ execute กับ script
@@ -196,8 +196,8 @@ chmod +x deploy/manage-customer.sh
 Nginx Proxy Manager คือ reverse proxy ที่มี UI จัดการง่าย รองรับ Let's Encrypt SSL ฟรี
 
 ```bash
-mkdir -p /opt/siamworld/nginx-proxy-manager
-cd /opt/siamworld/nginx-proxy-manager
+mkdir -p /opt/siamsite/nginx-proxy-manager
+cd /opt/siamsite/nginx-proxy-manager
 
 cat > docker-compose.yml << 'EOF'
 services:
@@ -243,7 +243,7 @@ ssh -L 8181:127.0.0.1:81 deploy@YOUR_VPS_IP -N
 ## 6. สร้าง Shop ลูกค้าแรก (ทดสอบ)
 
 ```bash
-cd /opt/siamworld/app
+cd /opt/siamsite/app
 
 # สร้าง shop ใหม่
 ./deploy/new-customer.sh craftworld craftworld.siamsite.com
@@ -359,9 +359,9 @@ DataSource:
   backend: MYSQL
   mySQLHost: YOUR_VPS_IP
   mySQLPort: 3401          # ← port ของลูกค้านี้ (ดูจาก customers.json)
-  mySQLUsername: siamworld
+  mySQLUsername: siamsite
   mySQLPassword: [ดูใน deploy/customers/craftworld/.env]
-  mySQLDatabase: siamworld
+  mySQLDatabase: siamsite
   mySQLTablename: authme
 ```
 
@@ -372,7 +372,7 @@ DataSource:
 ### ดูรายการลูกค้าทั้งหมด
 
 ```bash
-cd /opt/siamworld/app
+cd /opt/siamsite/app
 ./deploy/manage-customer.sh list
 ```
 
@@ -446,13 +446,13 @@ sudo ss -tlnp | grep -E "80|443|34[0-9]{2}"
 ### สร้าง Backup Script
 
 ```bash
-cat > /opt/siamworld/backup.sh << 'SCRIPT'
+cat > /opt/siamsite/backup.sh << 'SCRIPT'
 #!/bin/bash
 set -euo pipefail
 
-BACKUP_DIR="/opt/siamworld/backups"
+BACKUP_DIR="/opt/siamsite/backups"
 DATE=$(date +%Y%m%d_%H%M%S)
-APP_DIR="/opt/siamworld/app"
+APP_DIR="/opt/siamsite/app"
 KEEP_DAYS=14
 
 mkdir -p "$BACKUP_DIR"
@@ -471,7 +471,7 @@ else
 
         echo "Backing up $NAME..."
         docker exec "sw-${NAME}-mysql-1" mysqldump \
-            -u root -p"${MYSQL_PASS}" siamworld \
+            -u root -p"${MYSQL_PASS}" siamsite \
             --single-transaction --quick \
             | gzip > "$BACKUP_DIR/db_${NAME}_${DATE}.sql.gz"
     done
@@ -489,16 +489,16 @@ find "$BACKUP_DIR" -name "*.gz" -mtime +$KEEP_DAYS -delete
 echo "✅ Backup done: $DATE"
 SCRIPT
 
-chmod +x /opt/siamworld/backup.sh
+chmod +x /opt/siamsite/backup.sh
 
 # ทดสอบ
-/opt/siamworld/backup.sh
+/opt/siamsite/backup.sh
 ```
 
 ### ตั้ง Cron ทำ Backup ทุกวันตี 3
 
 ```bash
-(crontab -l 2>/dev/null; echo "0 3 * * * /opt/siamworld/backup.sh >> /var/log/siamworld-backup.log 2>&1") | crontab -
+(crontab -l 2>/dev/null; echo "0 3 * * * /opt/siamsite/backup.sh >> /var/log/siamsite-backup.log 2>&1") | crontab -
 ```
 
 ### ส่ง Backup ออก VPS (Optional แต่แนะนำ)
@@ -509,7 +509,7 @@ sudo apt install -y rclone
 rclone config  # ทำตาม wizard
 
 # เพิ่มใน backup.sh ก่อน exit:
-rclone copy "$BACKUP_DIR" r2:my-bucket/siamworld-backups/ --max-age 24h
+rclone copy "$BACKUP_DIR" r2:my-bucket/siamsite-backups/ --max-age 24h
 ```
 
 ---
@@ -620,10 +620,10 @@ Docker Compose มี `restart: unless-stopped` อยู่แล้ว — con
 สร้างไฟล์ `deploy/new-customer.sh`:
 
 ```bash
-cat > /opt/siamworld/app/deploy/new-customer.sh << 'SCRIPT'
+cat > /opt/siamsite/app/deploy/new-customer.sh << 'SCRIPT'
 #!/bin/bash
 # ================================================================
-#  SiamWorld Shop — New Customer Deploy (Linux/Ubuntu)
+#  Siamsite Shop — New Customer Deploy (Linux/Ubuntu)
 #  Usage: ./new-customer.sh <name> <domain>
 #  Example: ./new-customer.sh craftworld craftworld.siamsite.com
 # ================================================================
@@ -682,9 +682,9 @@ cat > "$CUSTOMER_ENV" << ENV
 
 MYSQL_HOST=mysql
 MYSQL_PORT=3306
-MYSQL_USER=siamworld
+MYSQL_USER=siamsite
 MYSQL_PASSWORD=$MYSQL_PASSWORD
-MYSQL_DATABASE=siamworld
+MYSQL_DATABASE=siamsite
 MYSQL_EXPOSED_PORT=$MYSQL_PORT
 
 REDIS_HOST=redis
@@ -775,22 +775,22 @@ echo ""
 echo "  AuthMe MySQL Config (ส่งให้ลูกค้า):"
 echo "    mySQLHost     : YOUR_VPS_IP"
 echo "    mySQLPort     : $MYSQL_PORT"
-echo "    mySQLUsername : siamworld"
+echo "    mySQLUsername : siamsite"
 echo "    mySQLPassword : $MYSQL_PASSWORD"
-echo "    mySQLDatabase : siamworld"
+echo "    mySQLDatabase : siamsite"
 echo "    mySQLTablename: authme"
 echo ""
 echo "  Setup URL: https://$DOMAIN/admin/setup"
 echo ""
 SCRIPT
 
-chmod +x /opt/siamworld/app/deploy/new-customer.sh
+chmod +x /opt/siamsite/app/deploy/new-customer.sh
 ```
 
 สร้าง `deploy/manage-customer.sh`:
 
 ```bash
-cat > /opt/siamworld/app/deploy/manage-customer.sh << 'SCRIPT'
+cat > /opt/siamsite/app/deploy/manage-customer.sh << 'SCRIPT'
 #!/bin/bash
 # Usage: ./manage-customer.sh <action> [name]
 # Actions: list, start, stop, restart, logs, rebuild, remove
@@ -857,7 +857,7 @@ case "$ACTION" in
 esac
 SCRIPT
 
-chmod +x /opt/siamworld/app/deploy/manage-customer.sh
+chmod +x /opt/siamsite/app/deploy/manage-customer.sh
 ```
 
 ---
@@ -875,7 +875,7 @@ chmod +x /opt/siamworld/app/deploy/manage-customer.sh
 ./deploy/manage-customer.sh rebuild craftworld    # หลัง git pull
 
 # ── อัปเดต code ─────────────────────────────────────────
-cd /opt/siamworld/app
+cd /opt/siamsite/app
 git pull
 # Rebuild ทุกลูกค้า:
 jq -r '.customers[].name' deploy/customers.json | \
@@ -887,7 +887,7 @@ df -h
 free -h
 
 # ── Backup ทันที ─────────────────────────────────────────
-/opt/siamworld/backup.sh
+/opt/siamsite/backup.sh
 
 # ── เช็ค health ─────────────────────────────────────────
 curl -s https://craftworld.siamsite.com/api/health
@@ -895,4 +895,4 @@ curl -s https://craftworld.siamsite.com/api/health
 
 ---
 
-*SiamWorld Shop v2.x — ห้ามเผยแพร่โดยไม่ได้รับอนุญาต*
+*Siamsite Shop v2.x — ห้ามเผยแพร่โดยไม่ได้รับอนุญาต*

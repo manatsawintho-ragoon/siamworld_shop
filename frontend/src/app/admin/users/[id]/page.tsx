@@ -48,6 +48,13 @@ export default function AdminUserDetail() {
   const [editBalance,     setEditBalance]     = useState('');
   const [savingSettings,  setSavingSettings]  = useState(false);
 
+  // Danger-zone modals
+  const [deleteOpen,    setDeleteOpen]    = useState(false);
+  const [deleteBusy,    setDeleteBusy]    = useState(false);
+  const [transferOpen,  setTransferOpen]  = useState(false);
+  const [transferTo,    setTransferTo]    = useState('');
+  const [transferBusy,  setTransferBusy]  = useState(false);
+
   const loadUser = () => {
     setLoading(true);
     api(`/admin/users/${id}`, { token: getToken()! })
@@ -77,6 +84,50 @@ export default function AdminUserDetail() {
       adminAlert({ title: 'บันทึกไม่สำเร็จ', message: err?.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', type: 'error' });
     } finally {
       setSavingSettings(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!user) return;
+    setDeleteBusy(true);
+    try {
+      await api(`/admin/users/${id}`, { method: 'DELETE', token: getToken()! });
+      adminAlert({ title: 'ลบบัญชีสำเร็จ', message: `${user.username} ถูกลบแล้ว (soft delete)`, type: 'success' });
+      router.push('/admin/users');
+    } catch (err: any) {
+      adminAlert({ title: 'ลบบัญชีไม่สำเร็จ', message: err?.message || 'เกิดข้อผิดพลาด', type: 'error' });
+    } finally {
+      setDeleteBusy(false);
+      setDeleteOpen(false);
+    }
+  };
+
+  const handleTransfer = async () => {
+    if (!user || !transferTo.trim()) return;
+    setTransferBusy(true);
+    try {
+      // Resolve username → user id first. We accept either an id (numeric)
+      // or a username (we'll look it up).
+      let toUserId: number;
+      if (/^\d+$/.test(transferTo.trim())) {
+        toUserId = parseInt(transferTo.trim(), 10);
+      } else {
+        const res = await api<any>(`/admin/users?search=${encodeURIComponent(transferTo.trim())}&limit=1`, { token: getToken()! });
+        const match = res.users?.find((u: any) => u.username.toLowerCase() === transferTo.trim().toLowerCase());
+        if (!match) throw new Error('ไม่พบบัญชีปลายทาง');
+        toUserId = match.id;
+      }
+      const r = await api<any>(`/admin/users/${id}/transfer`, { method: 'POST', token: getToken()!, body: { toUserId } });
+      adminAlert({
+        title: 'โอนข้อมูลสำเร็จ',
+        message: `ย้ายยอด ${r.merged?.balance ?? 0} บาท + ${r.merged?.purchases ?? 0} purchases + ${r.merged?.inventory ?? 0} items`,
+        type: 'success',
+      });
+      router.push(`/admin/users/${toUserId}`);
+    } catch (err: any) {
+      adminAlert({ title: 'โอนข้อมูลไม่สำเร็จ', message: err?.message || 'เกิดข้อผิดพลาด', type: 'error' });
+    } finally {
+      setTransferBusy(false);
     }
   };
 
@@ -258,6 +309,24 @@ export default function AdminUserDetail() {
                 ? <><i className="fas fa-spinner fa-spin" /> กำลังบันทึก...</>
                 : <><i className="fas fa-save" /> บันทึกข้อมูลทั้งหมด</>}
             </button>
+
+            {/* Danger zone — Transfer + Delete */}
+            <div className="pt-4 mt-4 border-t border-gray-200">
+              <p className="text-[11px] font-black text-red-500 uppercase tracking-widest mb-3 flex items-center gap-2"><i className="fas fa-triangle-exclamation text-[10px]" /> การดำเนินการพิเศษ</p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button onClick={() => setTransferOpen(true)}
+                  className="flex-1 py-2 bg-amber-500 text-white font-bold rounded-lg shadow-[0_3px_0_#b45309] text-xs">
+                  <i className="fas fa-arrow-right-arrow-left mr-2" /> โอนข้อมูลไปบัญชีอื่น
+                </button>
+                <button onClick={() => setDeleteOpen(true)}
+                  className="flex-1 py-2 bg-red-500 text-white font-bold rounded-lg shadow-[0_3px_0_#991b1b] text-xs">
+                  <i className="fas fa-user-slash mr-2" /> ลบบัญชี (Soft)
+                </button>
+              </div>
+              <p className="text-[10px] text-gray-400 mt-2 leading-relaxed">
+                "ลบบัญชี" จะปิดการเข้าใช้แต่เก็บข้อมูลเดิมไว้ (audit). "โอนข้อมูล" จะย้ายยอดเงิน + ประวัติการซื้อ + ของในคลังไปอีกบัญชีหนึ่ง
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -345,6 +414,72 @@ export default function AdminUserDetail() {
 
       </div>
 
+      {/* Delete modal */}
+      {deleteOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm" onClick={() => !deleteBusy && setDeleteOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+                <i className="fas fa-user-slash text-red-500" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-base">ลบบัญชี (Soft delete)</h3>
+                <p className="text-[11px] text-gray-500">ผู้ใช้จะถูกล็อกออก และเข้าใช้งานไม่ได้อีก</p>
+              </div>
+            </div>
+            <div className="px-6 py-5 space-y-2">
+              <p className="text-sm text-gray-700">คุณแน่ใจหรือไม่ที่จะลบบัญชี <b>{user.username}</b>?</p>
+              <p className="text-xs text-gray-500 leading-relaxed">ประวัติการเงิน + การซื้อ + audit log จะยังถูกเก็บไว้ ผู้ใช้แค่จะ login ไม่ได้</p>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 flex items-center justify-end gap-2 border-t border-gray-100">
+              <button onClick={() => setDeleteOpen(false)} disabled={deleteBusy}
+                className="px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-700">ยกเลิก</button>
+              <button onClick={handleDelete} disabled={deleteBusy}
+                className="px-5 py-2.5 text-[13px] font-bold rounded-lg bg-red-500 text-white shadow-[0_3px_0_#991b1b]">
+                {deleteBusy ? <i className="fas fa-spinner fa-spin" /> : <><i className="fas fa-trash mr-1.5" /> ยืนยันลบ</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Transfer modal */}
+      {transferOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm" onClick={() => !transferBusy && setTransferOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                <i className="fas fa-arrow-right-arrow-left text-amber-500" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-base">โอนข้อมูลไปบัญชีอื่น</h3>
+                <p className="text-[11px] text-gray-500">ยอดเงิน + ประวัติการซื้อ + ของในคลัง + ประวัติโค้ด</p>
+              </div>
+            </div>
+            <div className="px-6 py-5 space-y-3">
+              <div>
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 block">บัญชีปลายทาง (Username หรือ ID)</label>
+                <input type="text" value={transferTo} onChange={(e) => setTransferTo(e.target.value)}
+                  placeholder="เช่น Notch หรือ 42"
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-amber-400" />
+              </div>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-3.5 py-2.5">
+                <p className="text-[11px] text-amber-700 leading-relaxed">
+                  <i className="fas fa-circle-info mr-1" /> หลังโอน: บัญชี <b>{user.username}</b> จะถูก soft-delete อัตโนมัติ และข้อมูลทั้งหมดจะอยู่ที่บัญชีปลายทาง
+                </p>
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 flex items-center justify-end gap-2 border-t border-gray-100">
+              <button onClick={() => setTransferOpen(false)} disabled={transferBusy}
+                className="px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-700">ยกเลิก</button>
+              <button onClick={handleTransfer} disabled={transferBusy || !transferTo.trim()}
+                className="px-5 py-2.5 text-[13px] font-bold rounded-lg bg-amber-500 text-white shadow-[0_3px_0_#b45309] disabled:opacity-50">
+                {transferBusy ? <i className="fas fa-spinner fa-spin" /> : <><i className="fas fa-check mr-1.5" /> ยืนยันโอนข้อมูล</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

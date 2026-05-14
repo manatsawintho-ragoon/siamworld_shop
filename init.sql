@@ -1,5 +1,5 @@
 -- ============================================================
--- SiamWorld Minecraft Shop - Database Schema
+-- Siamsite Minecraft Shop - Database Schema
 -- Multi-server, RCON integration, AuthMe compatible
 -- ============================================================
 SET NAMES utf8mb4;
@@ -280,6 +280,34 @@ CREATE TABLE IF NOT EXISTS redeem_logs (
   FOREIGN KEY (code_id) REFERENCES redeem_codes(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS slip_logs (
+  id            INT AUTO_INCREMENT PRIMARY KEY,
+  user_id       INT           NOT NULL,
+  trans_ref     VARCHAR(100)  NOT NULL,
+  amount        DECIMAL(10,2) NOT NULL,
+  bank_from     VARCHAR(10)   DEFAULT NULL,
+  bank_to       VARCHAR(10)   DEFAULT NULL,
+  sender_name   VARCHAR(255)  DEFAULT NULL,
+  receiver_name VARCHAR(255)  DEFAULT NULL,
+  slip_date     DATETIME      DEFAULT NULL,
+  created_at    TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_trans_ref (trans_ref),
+  KEY idx_slip_logs_user (user_id),
+  KEY idx_slip_logs_created (created_at),
+  CONSTRAINT fk_slip_logs_user FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  type       ENUM('topup_success','topup_failed') NOT NULL,
+  title      VARCHAR(255) NOT NULL,
+  body       TEXT,
+  is_read    TINYINT(1)   NOT NULL DEFAULT 0,
+  created_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_is_read (is_read),
+  INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Default settings (required for app to function — customizable via Admin Panel)
 INSERT INTO settings (`key`, `value`) VALUES

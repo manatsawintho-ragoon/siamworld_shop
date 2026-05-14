@@ -38,7 +38,7 @@ router.get('/featured', async (req: Request, res: Response, next: NextFunction) 
   } catch (err) { next(err); }
 });
 
-router.post('/buy', authenticate, purchaseCooldown(5), validate(buyProductSchema), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/buy', authenticate, purchaseCooldown(3), validate(buyProductSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const app = req.app;
     const rconManager = app.get('rconManager');
@@ -50,7 +50,9 @@ router.post('/buy', authenticate, purchaseCooldown(5), validate(buyProductSchema
       req.body.serverId,
       playerTracker,
       rconManager,
-      req.body.idempotencyKey
+      req.body.idempotencyKey,
+      req.body.giftToUsername,
+      req.body.discountCode,
     );
     res.json({ success: true, ...result });
   } catch (err) { next(err); }
@@ -72,7 +74,7 @@ router.get('/lootboxes/:id', async (req: Request, res: Response, next: NextFunct
   } catch (err) { next(err); }
 });
 
-router.post('/lootboxes/:id/open', authenticate, purchaseCooldown(3, 'lootbox'), validate(openLootBoxSchema), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/lootboxes/:id/open', authenticate, purchaseCooldown(2, 'lootbox'), validate(openLootBoxSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const result = await lootBoxService.openBox(
       req.user!.userId,

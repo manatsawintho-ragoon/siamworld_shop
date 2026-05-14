@@ -5,6 +5,7 @@ import { RconManager } from './rcon-manager';
 import { PlayerTracker } from './player-tracker';
 import { RowDataPacket } from 'mysql2';
 import { v4 as uuidv4 } from 'uuid';
+import { discountService } from './discount.service';
 
 class ShopService {
   /**
@@ -23,8 +24,14 @@ class ShopService {
     serverId: number,
     playerTracker: PlayerTracker,
     rconManager: RconManager,
-    idempotencyKey?: string
+    idempotencyKey?: string,
+    giftToUsername?: string,
+    discountCode?: string,
   ) {
+    // Determine the recipient (gift or self)
+    const recipient = giftToUsername && giftToUsername.trim() ? giftToUsername.trim() : username;
+    const isGift = recipient !== username;
+
     // 1. Idempotency check
     const idemKey = idempotencyKey || uuidv4();
     const [existing] = await pool.execute<RowDataPacket[]>(
@@ -32,9 +39,16 @@ class ShopService {
     );
     if (existing.length > 0) throw new ConflictError('Duplicate purchase request');
 
-    // 2. Check player is online on target server
-    const online = await playerTracker.isPlayerOnline(serverId, username);
-    if (!online) throw new PlayerOfflineError('คุณต้องออนไลน์อยู่ในเกมก่อนซื้อสินค้า');
+    // 2. Player must be online in-game on target server before purchase.
+    //    For gifts: buyer must be online too (proof of intent); RCON runs for recipient.
+    {
+      const online = await playerTracker.verifyPlayerOnline(serverId, username);
+      if (!online) throw new PlayerOfflineError('คุณต้องออนไลน์อยู่ในเกมก่อนซื้อสินค้า');
+      if (isGift) {
+        const recipientOnline = await playerTracker.verifyPlayerOnline(serverId, recipient);
+        if (!recipientOnline) throw new PlayerOfflineError(`ผู้รับ ${recipient} ต้องออนไลน์อยู่ในเกมด้วย`);
+      }
+    }
 
     // 3. Get product
     const [productRows] = await pool.execute<RowDataPacket[]>(
@@ -64,6 +78,16 @@ class ShopService {
       }
     }
 
+    // Compute effective price (discount code can reduce it; floor 0).
+    const listPrice = parseFloat(product.price);
+    let effectivePrice = listPrice;
+    let discountRow: { id: number; code: string; amount: number } | null = null;
+    if (discountCode && discountCode.trim()) {
+      const preview = await discountService.preview(discountCode.trim(), 'purchase', listPrice, userId);
+      effectivePrice = preview.effectiveAmount;
+      discountRow = { id: preview.codeRow.id, code: preview.codeRow.code, amount: preview.discountAmount };
+    }
+
     // 4. DB Transaction: deduct wallet + create purchase
     const conn = await pool.getConnection();
     let purchaseId: number;
@@ -75,25 +99,35 @@ class ShopService {
         'SELECT * FROM wallets WHERE user_id = ? FOR UPDATE', [userId]
       );
       if (walletRows.length === 0) throw new NotFoundError('Wallet not found');
-      if (parseFloat(walletRows[0].balance) < parseFloat(product.price)) {
+      if (parseFloat(walletRows[0].balance) < effectivePrice) {
         throw new InsufficientBalanceError('ยอดเงินไม่เพียงพอ');
       }
 
-      // Deduct balance
-      await conn.execute('UPDATE wallets SET balance = balance - ? WHERE user_id = ?', [product.price, userId]);
+      // Deduct effective (post-discount) balance.
+      await conn.execute('UPDATE wallets SET balance = balance - ? WHERE user_id = ?', [effectivePrice, userId]);
 
-      // Create purchase record
+      // Create purchase record using effective price so refund + history match.
       const [purchaseResult] = await conn.execute(
         'INSERT INTO purchases (user_id, product_id, server_id, price, status, idempotency_key) VALUES (?,?,?,?,?,?)',
-        [userId, productId, serverId, product.price, 'pending', idemKey]
+        [userId, productId, serverId, effectivePrice, 'pending', idemKey]
       );
       purchaseId = (purchaseResult as any).insertId;
 
       // Record transaction
+      const baseDesc = isGift ? `ส่งของขวัญ ${product.name} ให้ ${recipient}` : `ซื้อ ${product.name}`;
+      const txDesc = discountRow
+        ? `${baseDesc} (โค้ด ${discountRow.code} -฿${discountRow.amount.toFixed(2)})`
+        : baseDesc;
       await conn.execute(
         'INSERT INTO transactions (user_id, amount, type, method, status, reference, description) VALUES (?,?,?,?,?,?,?)',
-        [userId, -product.price, 'purchase', 'wallet', 'success', `purchase:${purchaseId}`, `ซื้อ ${product.name}`]
+        [userId, -effectivePrice, 'purchase', 'wallet', 'success', `purchase:${purchaseId}`, txDesc]
       );
+
+      // Consume discount inside the same tx so a rollback (insufficient stock,
+      // wallet race, etc.) also releases the code for the user.
+      if (discountRow) {
+        await discountService.consume(conn, discountRow.id, userId);
+      }
 
       await conn.commit();
     } catch (err) {
@@ -103,16 +137,26 @@ class ShopService {
       conn.release();
     }
 
-    // 5. Double-check player is still online (race condition: player might have logged out)
-    const stillOnline = await playerTracker.isPlayerOnline(serverId, username);
-    if (!stillOnline) {
-      await this.refundPurchase(purchaseId, userId, product.price, product.name, 'Player went offline during purchase');
-      throw new PlayerOfflineError('ผู้เล่นออกจากเกมระหว่างทำรายการ - ได้คืนเงินแล้ว');
+    // 5. Re-verify player is still online after the wallet debit (race condition).
+    //    If they logged out between check 2 and now, refund instead of running RCON to no one.
+    {
+      const stillOnline = await playerTracker.verifyPlayerOnline(serverId, username);
+      if (!stillOnline) {
+        await this.refundPurchase(purchaseId, userId, effectivePrice, product.name, 'Player went offline during purchase');
+        throw new PlayerOfflineError('ผู้เล่นออกจากเกมระหว่างทำรายการ - ได้คืนเงินแล้ว');
+      }
+      if (isGift) {
+        const recipientStillOnline = await playerTracker.verifyPlayerOnline(serverId, recipient);
+        if (!recipientStillOnline) {
+          await this.refundPurchase(purchaseId, userId, effectivePrice, product.name, 'Gift recipient went offline during purchase');
+          throw new PlayerOfflineError(`ผู้รับ ${recipient} ออกจากเกมระหว่างทำรายการ - ได้คืนเงินแล้ว`);
+        }
+      }
     }
 
     // 6. Execute RCON commands
     try {
-      const results = await rconManager.executeProductCommands(serverId, product.command, username);
+      const results = await rconManager.executeProductCommands(serverId, product.command, recipient);
       await pool.execute(
         'UPDATE purchases SET status = ?, rcon_response = ? WHERE id = ?',
         ['delivered', JSON.stringify(results), purchaseId]
@@ -121,7 +165,7 @@ class ShopService {
       return { purchaseId, status: 'delivered', rconResponse: results };
     } catch (err) {
       logger.error('RCON delivery failed', { purchaseId, error: (err as Error).message });
-      await this.refundPurchase(purchaseId, userId, product.price, product.name, 'RCON delivery failed');
+      await this.refundPurchase(purchaseId, userId, effectivePrice, product.name, 'RCON delivery failed');
       throw new RconError('การส่งไอเท็มล้มเหลว - ได้คืนเงินแล้ว');
     }
   }
@@ -156,7 +200,7 @@ class ShopService {
     if (rows.length === 0) throw new NotFoundError('Purchase not found or not retriable');
 
     const purchase = rows[0];
-    const online = await playerTracker.isPlayerOnline(purchase.server_id, purchase.username);
+    const online = await playerTracker.verifyPlayerOnline(purchase.server_id, purchase.username);
     if (!online) throw new PlayerOfflineError('Player must be online for retry delivery');
 
     try {
@@ -241,7 +285,7 @@ class ShopService {
     const [rows] = await pool.execute<RowDataPacket[]>(
       `SELECT p.*, c.name as category_name,
          (SELECT COUNT(*) FROM purchases pu WHERE pu.product_id = p.id AND pu.status = 'delivered') AS sold_count
-       FROM products p LEFT JOIN categories c ON p.category_id = c.id ORDER BY p.id DESC`
+       FROM products p LEFT JOIN categories c ON p.category_id = c.id ORDER BY p.sort_order ASC, p.id DESC`
     );
     for (const p of rows) {
       const [servers] = await pool.execute<RowDataPacket[]>(

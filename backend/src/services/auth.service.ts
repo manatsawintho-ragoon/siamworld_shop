@@ -6,6 +6,7 @@ import { AuthenticationError } from '../utils/errors';
 import { logger } from '../utils/logger';
 import { RowDataPacket } from 'mysql2';
 import { JwtPayload } from '../middleware/auth';
+import { createSession, destroySession } from './session.service';
 
 class AuthService {
   async register(username: string, password: string, email: string): Promise<{ token: string; user: JwtPayload }> {
@@ -45,7 +46,8 @@ class AuthService {
 
       await conn.commit();
 
-      const payload: JwtPayload = { userId, username, role: 'user' };
+      const jti = await createSession(userId);
+      const payload: JwtPayload = { userId, username, role: 'user', jti };
       const token = jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn as jwt.SignOptions['expiresIn'] });
 
       logger.info('User registered', { userId, username });
@@ -69,22 +71,34 @@ class AuthService {
     const validPassword = await bcrypt.compare(password, authUser.password);
     if (!validPassword) throw new AuthenticationError('Invalid username or password');
 
-    // Ensure app user exists
-    let appUser: { id: number; username: string; role: string } | null = await this.findUser(authUser.username) as { id: number; username: string; role: string } | null;
+    // Ensure app user exists and isn't soft-deleted
+    let appUser: { id: number; username: string; role: string; deleted_at: Date | null } | null =
+      await this.findUser(authUser.username) as any;
     if (!appUser) {
-      appUser = await this.createUser(authUser.username);
+      appUser = { ...(await this.createUser(authUser.username)), deleted_at: null };
+    }
+    if (appUser.deleted_at) {
+      // Soft-deleted users cannot log in. Don't leak why — return the generic error.
+      throw new AuthenticationError('Invalid username or password');
     }
 
-    const payload: JwtPayload = { userId: appUser.id, username: appUser.username, role: appUser.role };
+    // Create new session — atomically replaces any existing session (single-device enforcement)
+    const jti = await createSession(appUser.id);
+    const payload: JwtPayload = { userId: appUser.id, username: appUser.username, role: appUser.role, jti };
     const token = jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn as jwt.SignOptions['expiresIn'] });
 
     logger.info('User logged in', { userId: appUser.id, username: appUser.username });
     return { token, user: payload };
   }
 
+  async logout(userId: number): Promise<void> {
+    await destroySession(userId);
+    logger.info('User logged out', { userId });
+  }
+
   private async findUser(username: string) {
     const [rows] = await pool.execute<RowDataPacket[]>(
-      'SELECT id, username, role FROM users WHERE LOWER(username) = LOWER(?)', [username]
+      'SELECT id, username, role, deleted_at FROM users WHERE LOWER(username) = LOWER(?)', [username]
     );
     return rows[0] || null;
   }

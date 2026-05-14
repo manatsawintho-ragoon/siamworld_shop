@@ -3,6 +3,22 @@ import { useEffect, useMemo, useState } from 'react';
 import MainLayout from '@/components/MainLayout';
 import ProductCard from '@/components/ProductCard';
 import { api } from '@/lib/api';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0 }
+};
 
 interface Product {
   id: number; name: string; description: string;
@@ -19,6 +35,7 @@ export default function ShopPage() {
   const [servers,    setServers]    = useState<Server[]>([]);
   const [catId,      setCatId]      = useState<number | null>(null);
   const [search,     setSearch]     = useState('');
+  const [sort,       setSort]       = useState<'default' | 'price_asc' | 'price_desc' | 'newest'>('default');
   const [loading,    setLoading]    = useState(true);
 
   useEffect(() => {
@@ -29,23 +46,17 @@ export default function ShopPage() {
     ]).finally(() => setLoading(false));
   }, []);
 
-  // Sort: discount-first, then by id desc
-  const sortedProducts = useMemo(() => {
-    return [...products].sort((a, b) => {
-      const aDisc = a.original_price && a.original_price > a.price ? 1 : 0;
-      const bDisc = b.original_price && b.original_price > b.price ? 1 : 0;
-      if (bDisc !== aDisc) return bDisc - aDisc;
-      return b.id - a.id;
-    });
-  }, [products]);
-
   const filtered = useMemo(() => {
-    return sortedProducts.filter(p => {
+    const list = products.filter(p => {
       if (catId && p.category_id !== catId) return false;
       if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
-  }, [sortedProducts, catId, search]);
+    if (sort === 'price_asc')  return [...list].sort((a, b) => a.price - b.price);
+    if (sort === 'price_desc') return [...list].sort((a, b) => b.price - a.price);
+    if (sort === 'newest')     return [...list].sort((a, b) => b.id - a.id);
+    return list;
+  }, [products, catId, search, sort]);
 
   const tabs = useMemo(() => [
     { id: null, name: 'ทั้งหมด', icon: 'fa-layer-group' as const, count: products.length },
@@ -61,80 +72,119 @@ export default function ShopPage() {
 
         {/* Page header */}
         <div>
-          <h1 className="text-xl font-black text-gray-900 flex items-center gap-2">
-            <i className="fas fa-store text-green-600 text-lg" />
+          <h1 className="text-xl font-black text-foreground flex items-center gap-2">
+            <i className="fas fa-store text-primary text-lg" />
             ITEMSHOP
           </h1>
-          <p className="text-gray-400 text-xs mt-0.5">ร้านค้าไอเท็มและยศ</p>
+          <p className="text-foreground-subtle text-xs mt-0.5">ร้านค้าไอเท็มและยศ</p>
         </div>
 
         {/* ── Main card ── */}
-        <div className="bg-white rounded-2xl shadow-[0_4px_0_#d1d5db,0_2px_20px_rgba(0,0,0,0.06)] border border-gray-100 overflow-hidden">
+        <div className="bg-surface rounded-2xl shadow-md border border-border overflow-hidden">
 
           {/* ── Row 1: Category filters + search ── */}
-          <div className="px-4 py-2.5 border-b border-gray-100 flex items-center gap-2 flex-wrap">
+          <div className="px-4 py-2.5 border-b border-border flex items-center gap-2 flex-wrap">
             {tabs.map(t => (
               <button
                 key={String(t.id)}
                 onClick={() => { setCatId(t.id); setSearch(''); }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all active:translate-y-[1px] ${
                   catId === t.id
-                    ? 'bg-green-500 shadow-[0_3px_0_#15803d] text-white'
+                    ? 'text-primary-foreground'
                     : 'bg-white border border-gray-200 text-green-600 hover:border-gray-300'
                 }`}
+                style={catId === t.id ? {
+                  backgroundColor: 'rgb(var(--color-primary))',
+                  boxShadow: '0 3px 0 rgb(var(--color-primary-hover))',
+                } : undefined}
               >
                 <i className={`fas ${t.icon} text-[10px]`} />
                 {t.name}
                 <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
-                  catId === t.id ? 'bg-white/25 text-white' : 'bg-gray-100 text-gray-400'
+                  catId === t.id ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-gray-100 text-gray-400'
                 }`}>
-                  {loading ? '…' : t.count}
-                </span>
+                  {loading ? '…' : t.count
+                }</span>
               </button>
             ))}
 
-            {/* Search */}
+            {/* Sort + Search */}
             <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+              <select
+                value={sort}
+                onChange={e => setSort(e.target.value as typeof sort)}
+                className="py-1.5 pl-2.5 pr-7 rounded-lg border border-border bg-surface text-xs text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all appearance-none"
+                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239ca3af'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center' }}
+              >
+                <option value="default">เรียงปกติ</option>
+                <option value="price_asc">ราคา น้อย→มาก</option>
+                <option value="price_desc">ราคา มาก→น้อย</option>
+                <option value="newest">ใหม่ล่าสุด</option>
+              </select>
               <div className="relative">
-                <i className="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-300 text-[10px]" />
+                <i className="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground-subtle text-[10px]" />
                 <input
                   type="text" value={search} onChange={e => setSearch(e.target.value)}
                   placeholder="ค้นหาสินค้า..."
-                  className="pl-7 pr-7 py-1.5 rounded-lg border border-gray-200 bg-gray-50 text-xs text-gray-700 focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/20 transition-all placeholder:text-gray-300 w-36 sm:w-44"
+                  className="pl-7 pr-7 py-1.5 rounded-lg border border-border bg-surface text-xs text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-foreground-subtle w-36 sm:w-44"
                 />
                 {search && (
-                  <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors">
+                  <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-foreground-subtle hover:text-foreground-muted transition-colors">
                     <i className="fas fa-times text-[10px]" />
                   </button>
                 )}
               </div>
-              <span className="text-xs text-gray-400 font-bold flex-shrink-0">
+              <span className="text-xs text-foreground-subtle font-bold flex-shrink-0">
                 {loading ? '…' : `${filtered.length} ชิ้น`}
               </span>
             </div>
           </div>
 
           {/* ── Grid body ── */}
-          <div className="p-3 overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(100vh - 10rem)' }}>
-            {loading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2.5">
-                {[...Array(15)].map((_, i) => (
-                  <div key={i} className="aspect-[3/4] rounded-xl bg-gray-100 animate-pulse" />
-                ))}
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mb-3">
-                  <i className="fas fa-box-open text-2xl text-gray-300" />
-                </div>
-                <p className="text-gray-600 font-bold text-sm">ไม่พบสินค้า</p>
-                <p className="text-gray-400 text-xs mt-1">ลองค้นหาด้วยคำอื่น หรือเลือกหมวดหมู่อีกครั้ง</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2.5">
-                {filtered.map(p => <ProductCard key={p.id} product={p} servers={servers} />)}
-              </div>
-            )}
+          <div className="p-4 sm:p-6">
+            <AnimatePresence mode="popLayout">
+              {loading ? (
+                <motion.div 
+                  key="skeleton"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-4"
+                >
+                  {[...Array(18)].map((_, i) => (
+                    <div key={i} className="aspect-[3/4] rounded-xl bg-gray-100 animate-pulse" />
+                  ))}
+                </motion.div>
+              ) : filtered.length === 0 ? (
+                <motion.div 
+                  key="empty"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="flex flex-col items-center justify-center py-20 text-center"
+                >
+                  <div className="w-16 h-16 rounded-3xl bg-gray-50 border border-gray-100 flex items-center justify-center mb-4">
+                    <i className="fas fa-box-open text-3xl text-gray-200" />
+                  </div>
+                  <p className="text-gray-600 font-black text-lg">ไม่พบสินค้า</p>
+                  <p className="text-gray-400 text-sm mt-1">ลองค้นหาด้วยคำอื่น หรือเลือกหมวดหมู่อีกครั้ง</p>
+                </motion.div>
+              ) : (
+                <motion.div 
+                  key={`${catId}-${search}-${sort}`}
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-4"
+                >
+                  {filtered.map(p => (
+                    <motion.div key={p.id} variants={itemVariants}>
+                      <ProductCard product={p} servers={servers} />
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
         </div>

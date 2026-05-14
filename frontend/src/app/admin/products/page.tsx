@@ -336,28 +336,19 @@ export default function AdminProducts() {
   // ── New state for redesign ────────────────────────────────
   const [selectedCat,    setSelectedCat]    = useState<number | null>(null);
   const [search,         setSearch]         = useState('');
-  const [featFilter,     setFeatFilter]     = useState<'all' | 'featured' | 'normal'>('all');
   const [page,           setPage]           = useState(1);
   const dragProdIdx = useRef<number | null>(null);
   const PAGE_SIZE = 25;
 
-  const handleToggleFeatured = async (p: Product) => {
-    const next = !p.featured;
-    setProducts(prev => prev.map(x => x.id === p.id ? { ...x, featured: next } : x));
-    try { await api(`/admin/products/${p.id}`, { method: 'PUT', token: getToken()!, body: { featured: next } }); }
-    catch { load(); }
-  };
-
   const handleReorderProducts = async (reordered: Product[]) => {
     setProducts(reordered);
     try { await api('/admin/products/reorder', { method: 'PUT', token: getToken()!, body: { order: reordered.map(p => p.id) } }); }
-    catch { /* silent — sort_order col may not exist yet */ }
+    catch { load(); }
   };
 
   const filtered = products
-    .filter(p => selectedCat === null || p.category_id === selectedCat)
-    .filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase()) || (p.description || '').toLowerCase().includes(search.toLowerCase()))
-    .filter(p => featFilter === 'all' || (featFilter === 'featured' ? p.featured : !p.featured));
+    .filter(p => selectedCat === null || (selectedCat === -1 ? !p.category_id : p.category_id === selectedCat))
+    .filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase()) || (p.description || '').toLowerCase().includes(search.toLowerCase()));
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paged      = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -470,19 +461,6 @@ export default function AdminProducts() {
                 placeholder="ค้นหาสินค้า..."
                 className="pl-7 pr-3 py-1.5 rounded-lg border border-gray-200 text-[11px] focus:outline-none focus:border-[#637469] focus:ring-1 focus:ring-[#637469]/20 w-44" />
             </div>
-            {/* Featured filter pills */}
-            <div className="flex gap-1">
-              {(['all', 'featured', 'normal'] as const).map(f => (
-                <button key={f} onClick={() => { setFeatFilter(f); setPage(1); }}
-                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
-                    featFilter === f
-                      ? 'bg-[#1e2735] text-white shadow-[0_2px_0_#38404d]'
-                      : 'bg-white border border-gray-200 text-gray-500 hover:border-gray-300'
-                  }`}>
-                  {f === 'all' ? 'ทั้งหมด' : f === 'featured' ? '⭐ แนะนำ' : 'ปกติ'}
-                </button>
-              ))}
-            </div>
           </div>
 
           {loading ? (
@@ -500,7 +478,6 @@ export default function AdminProducts() {
                       {selectedCat === null && <th className="text-left px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wide">หมวด</th>}
                       <th className="text-right px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wide">ราคา</th>
                       <th className="text-center px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wide hidden lg:table-cell">สถานะ</th>
-                      <th className="text-center px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wide">แนะนำ</th>
                       <th className="text-center px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wide">แสดง</th>
                       <th className="text-center px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wide">จัดการ</th>
                     </tr>
@@ -554,7 +531,7 @@ export default function AdminProducts() {
                           {/* Price */}
                           <td className="px-3 py-1.5 text-right whitespace-nowrap">
                             <span className="text-[12px] font-black text-gray-800">{p.price?.toLocaleString()} ฿</span>
-                            {p.original_price && p.original_price > p.price && (
+                            {p.original_price && Number(p.original_price) > Number(p.price) && (
                               <span className="text-[10px] text-gray-400 line-through ml-1">{p.original_price?.toLocaleString()}</span>
                             )}
                           </td>
@@ -588,15 +565,6 @@ export default function AdminProducts() {
                             </div>
                           </td>
 
-                          {/* Featured — toggle switch */}
-                          <td className="px-2 py-1.5 text-center">
-                            <label className="flex items-center justify-center cursor-pointer" title={p.featured ? 'ยกเลิกแนะนำ' : 'ตั้งเป็นแนะนำ'} onClick={e => { e.stopPropagation(); handleToggleFeatured(p); }}>
-                              <div className="relative">
-                                <div className={`w-8 h-4 rounded-full transition-colors duration-200 ${p.featured ? 'bg-yellow-400' : 'bg-gray-200'}`} />
-                                <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform duration-200 ${p.featured ? 'translate-x-4' : ''}`} />
-                              </div>
-                            </label>
-                          </td>
                           {/* Active toggle */}
                           <td className="px-2 py-1.5 text-center">
                             <button onClick={() => handleToggleActive(p)}
@@ -637,7 +605,7 @@ export default function AdminProducts() {
                     })}
                     {paged.length === 0 && (
                       <tr>
-                        <td colSpan={8} className="py-16 text-center">
+                        <td colSpan={7} className="py-16 text-center">
                           <i className="fas fa-box-open text-3xl text-gray-200 mb-3 block"></i>
                           <p className="text-sm text-gray-400">ไม่พบสินค้า</p>
                         </td>
@@ -739,6 +707,7 @@ export default function AdminProducts() {
                           </div>
                         )}
                       </div>
+                      <p className="text-[11px] text-gray-400 mt-1 flex items-center gap-1.5"><i className="fas fa-image text-[10px]" /> แนะนำขนาด <b className="text-gray-600">600×600 px</b> (อัตราส่วน 1:1) ไฟล์ .png หรือ .jpg ไม่เกิน 500 KB</p>
                     </div>
                   </div>
                   <div>
@@ -746,11 +715,36 @@ export default function AdminProducts() {
                     <textarea value={editing.description || ''} onChange={e => setEditing({ ...editing, description: e.target.value })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 h-16 resize-none" placeholder="รายละเอียดสินค้า..." />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1.5">RCON Commands *</label>
+                    <label className="block text-xs font-bold text-gray-500 mb-1.5 flex items-center gap-2">
+                      RCON Commands *
+                      {(() => { const cmds = (editing.command || '').split('\n').map(c => c.trim()).filter(Boolean); return cmds.length > 0 ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold"><i className="fas fa-terminal text-[9px]" /> {cmds.length} คำสั่ง</span> : null; })()}
+                    </label>
                     <textarea value={editing.command || ''} onChange={e => setEditing({ ...editing, command: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 h-20 resize-none font-mono"
-                      placeholder={"give {player} diamond 1\nsay {player} bought an item!"} />
-                    <p className="text-xs text-gray-400 mt-1">ใช้ <code className="bg-gray-100 px-1 rounded">{'{player}'}</code> แทนชื่อผู้เล่น</p>
+                      className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 h-24 resize-y font-mono"
+                      placeholder={"give {player} diamond 1\nsay {player} ได้รับไอเท็ม!\nlp user {player} permission set group.vip"} />
+                    <div className="flex items-start gap-2 mt-1.5">
+                      <p className="text-xs text-gray-400 flex-1">1 บรรทัด = 1 คำสั่ง · ใส่ได้ไม่จำกัด · ใช้ <code className="bg-gray-100 px-1 rounded">{'{player}'}</code> แทนชื่อผู้เล่น</p>
+                    </div>
+                    {(() => {
+                      const cmds = (editing.command || '').split('\n').map(c => c.trim()).filter(Boolean);
+                      if (cmds.length === 0) return null;
+                      return (
+                        <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50 overflow-hidden">
+                          <div className="px-3 py-1.5 bg-blue-100/60 flex items-center gap-1.5">
+                            <i className="fas fa-eye text-blue-500 text-[10px]" />
+                            <span className="text-[10px] font-bold text-blue-600">Preview คำสั่งที่จะ run ({cmds.length})</span>
+                          </div>
+                          <div className="px-3 py-2 space-y-1 max-h-28 overflow-y-auto">
+                            {cmds.map((cmd, i) => (
+                              <div key={i} className="flex items-start gap-2">
+                                <span className="text-[9px] font-bold text-blue-400 w-4 text-right flex-shrink-0 mt-0.5">{i + 1}</span>
+                                <code className="text-[11px] text-blue-800 font-mono break-all">{cmd}</code>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-500 mb-1.5">เซิร์ฟเวอร์ที่ใช้ได้</label>
@@ -765,12 +759,6 @@ export default function AdminProducts() {
                         );
                       })}
                     </div>
-                  </div>
-                  <div>
-                    <label className="flex items-center gap-2 cursor-pointer w-fit">
-                      <input type="checkbox" checked={editing.featured || false} onChange={e => setEditing({ ...editing, featured: e.target.checked })} className="accent-[#1e2735] w-4 h-4" />
-                      <span className="text-sm"><i className="fas fa-star text-yellow-500 mr-1"></i>สินค้าแนะนำ</span>
-                    </label>
                   </div>
                 </div>
 
@@ -1032,22 +1020,42 @@ export default function AdminProducts() {
           onMouseUp={e => { if (bd.current && e.target === e.currentTarget) setViewingCmd(null); }}>
           <div className="bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-full max-w-lg overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                <i className="fas fa-terminal text-blue-500 text-xs"></i>
+              <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center flex-shrink-0">
+                <i className="fas fa-terminal text-green-400 text-xs"></i>
               </div>
               <div className="flex-1 text-center">
-                <h3 className="font-bold text-gray-900 text-base">คำสั่ง RCON</h3>
-                <p className="text-[11px] text-gray-500">{viewingCmd.name}</p>
+                <h3 className="font-bold text-gray-900 text-base flex items-center justify-center gap-2">
+                  RCON Commands
+                  {(() => { const n = (viewingCmd.command || '').split('\n').map((c: string) => c.trim()).filter(Boolean).length; return n > 0 ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold"><i className="fas fa-terminal text-[8px]" /> {n} คำสั่ง</span> : null; })()}
+                </h3>
+                <p className="text-[11px] text-gray-500 mt-0.5">{viewingCmd.name}</p>
               </div>
               <button onClick={() => setViewingCmd(null)} className="w-8 h-8 rounded-lg bg-red-500 border border-red-600 flex items-center justify-center text-white shadow-[0_4px_0_#b91c1c] flex-shrink-0">
                 <i className="fas fa-times text-xs"></i>
               </button>
             </div>
-            <div className="p-5">
-              <pre className="bg-gray-900 text-green-400 text-sm font-mono p-4 rounded-lg whitespace-pre-wrap break-all max-h-[300px] overflow-y-auto">
-                {viewingCmd.command || '(ยังไม่มีคำสั่ง)'}
-              </pre>
-              <p className="text-[10px] text-gray-400 mt-2">ใช้ <code className="bg-gray-100 px-1 rounded">{'{player}'}</code> แทนชื่อผู้เล่น</p>
+            <div className="p-5 space-y-3">
+              {(() => {
+                const cmds = (viewingCmd.command || '').split('\n').map((c: string) => c.trim()).filter(Boolean);
+                if (cmds.length === 0) return <p className="text-sm text-gray-400 text-center py-4">(ยังไม่มีคำสั่ง)</p>;
+                return (
+                  <div className="rounded-xl border border-gray-800 bg-gray-900 overflow-hidden">
+                    <div className="px-3 py-2 bg-gray-800 flex items-center gap-2 border-b border-gray-700">
+                      <div className="flex gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500/80" /><span className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" /><span className="w-2.5 h-2.5 rounded-full bg-green-500/80" /></div>
+                      <span className="text-[10px] text-gray-400 font-mono ml-1">รัน {cmds.length} คำสั่งตามลำดับ</span>
+                    </div>
+                    <div className="p-3 space-y-1.5 max-h-[280px] overflow-y-auto">
+                      {cmds.map((cmd: string, i: number) => (
+                        <div key={i} className="flex items-start gap-2.5">
+                          <span className="text-[10px] font-bold text-gray-500 w-5 text-right flex-shrink-0 mt-0.5 tabular-nums">{i + 1}</span>
+                          <code className="text-[12px] text-green-400 font-mono break-all leading-relaxed">{cmd}</code>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+              <p className="text-[10px] text-gray-400">ใช้ <code className="bg-gray-100 px-1 rounded">{'{player}'}</code> แทนชื่อผู้เล่น · คำสั่งจะรันตามลำดับเมื่อผู้เล่นซื้อ</p>
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-# SiamWorld Shop
+# Siamsite Shop
 
 ระบบร้านค้าออนไลน์สำหรับ Minecraft Server
 ผู้เล่นเข้าสู่ระบบด้วยบัญชี **AuthMe**, เติมเงินผ่าน **PromptPay / TrueMoney** และซื้อสินค้า/สิทธิ์ที่ส่งผ่าน **RCON** เข้าเซิร์ฟโดยตรง
@@ -84,8 +84,8 @@
 
 ```bash
 # 1. Clone
-git clone https://github.com/yourorg/siamworld-shop.git
-cd siamworld-shop
+git clone https://github.com/yourorg/siamsite-shop.git
+cd siamsite-shop
 
 # 2. สร้าง .env จาก template
 cp .env.example .env
@@ -103,11 +103,11 @@ Container ที่ควรมีสถานะ `running`:
 
 | Container | Port | คำอธิบาย |
 |-----------|------|---------|
-| `siamworld-mysql` | 3306 | MySQL Database |
-| `siamworld-redis` | 6379 | Redis Cache |
-| `siamworld-backend` | 4000 | Backend API |
-| `siamworld-frontend` | 3000 | หน้าเว็บ |
-| `siamworld-phpmyadmin` | 8080 | จัดการ Database |
+| `siamsite-mysql` | 3306 | MySQL Database |
+| `siamsite-redis` | 6379 | Redis Cache |
+| `siamsite-backend` | 4000 | Backend API |
+| `siamsite-frontend` | 3000 | หน้าเว็บ |
+| `siamsite-phpmyadmin` | 8080 | จัดการ Database |
 
 ---
 
@@ -119,9 +119,9 @@ Container ที่ควรมีสถานะ `running`:
 # ── Database ──────────────────────────────────────────────────
 MYSQL_HOST=mysql          # ใช้ "mysql" ถ้ารัน Docker / "localhost" ถ้า Manual
 MYSQL_PORT=3306
-MYSQL_USER=siamworld
+MYSQL_USER=siamsite
 MYSQL_PASSWORD=ใส่_password_แข็งแรง   # ห้ามใช้ค่า default
-MYSQL_DATABASE=siamworld
+MYSQL_DATABASE=siamsite
 
 # ── Redis ─────────────────────────────────────────────────────
 REDIS_HOST=redis          # ใช้ "redis" ถ้ารัน Docker / "localhost" ถ้า Manual
@@ -185,13 +185,13 @@ DataSource:
   backend: MYSQL
   mySQLHost: IP_ของ_MySQL_Server   # เช่น 1.2.3.4 หรือ host.docker.internal
   mySQLPort: 3306
-  mySQLUsername: siamworld
+  mySQLUsername: siamsite
   mySQLPassword: ใส่_password_เดียวกับ_.env
-  mySQLDatabase: siamworld
+  mySQLDatabase: siamsite
   mySQLTablename: authme
 ```
 
-> **สำคัญ:** AuthMe ต้องใช้ MySQL database เดียวกับระบบร้าน (`siamworld` database)
+> **สำคัญ:** AuthMe ต้องใช้ MySQL database เดียวกับระบบร้าน (`siamsite` database)
 > ห้ามใช้ SQLite (ค่า default ของ AuthMe) เพราะระบบอ่าน password จาก MySQL โดยตรง
 
 ### 3. Firewall — เปิด Port ที่จำเป็น
@@ -265,24 +265,24 @@ eco give {username} 1000
 # รัน migration ทีละไฟล์ตามลำดับ
 for f in migrations/0*.sql; do
   echo "Running $f..."
-  cat "$f" | docker exec -i siamworld-mysql mysql -uroot -p${MYSQL_PASSWORD} ${MYSQL_DATABASE}
+  cat "$f" | docker exec -i siamsite-mysql mysql -uroot -p${MYSQL_PASSWORD} ${MYSQL_DATABASE}
 done
 ```
 
 หรือรันทีละไฟล์:
 
 ```bash
-cat migrations/001_add_logs_tables.sql     | docker exec -i siamworld-mysql mysql -uroot -p<PASSWORD> siamworld
-cat migrations/002_add_downloads.sql       | docker exec -i siamworld-mysql mysql -uroot -p<PASSWORD> siamworld
-cat migrations/003_add_email_to_users.sql  | docker exec -i siamworld-mysql mysql -uroot -p<PASSWORD> siamworld
-cat migrations/004_add_redeem_codes.sql    | docker exec -i siamworld-mysql mysql -uroot -p<PASSWORD> siamworld
-cat migrations/004_fix_downloads_schema.sql| docker exec -i siamworld-mysql mysql -uroot -p<PASSWORD> siamworld
-cat migrations/005_add_reward_type_to_codes.sql | docker exec -i siamworld-mysql mysql -uroot -p<PASSWORD> siamworld
-cat migrations/006_add_mythic_rarity.sql   | docker exec -i siamworld-mysql mysql -uroot -p<PASSWORD> siamworld
-cat migrations/007_add_lootbox_categories.sql   | docker exec -i siamworld-mysql mysql -uroot -p<PASSWORD> siamworld
-cat migrations/008_audit_logs.sql          | docker exec -i siamworld-mysql mysql -uroot -p<PASSWORD> siamworld
-cat migrations/009_add_performance_indexes.sql  | docker exec -i siamworld-mysql mysql -uroot -p<PASSWORD> siamworld
-cat migrations/010_audit_log_retention.sql | docker exec -i siamworld-mysql mysql -uroot -p<PASSWORD> siamworld
+cat migrations/001_add_logs_tables.sql     | docker exec -i siamsite-mysql mysql -uroot -p<PASSWORD> siamsite
+cat migrations/002_add_downloads.sql       | docker exec -i siamsite-mysql mysql -uroot -p<PASSWORD> siamsite
+cat migrations/003_add_email_to_users.sql  | docker exec -i siamsite-mysql mysql -uroot -p<PASSWORD> siamsite
+cat migrations/004_add_redeem_codes.sql    | docker exec -i siamsite-mysql mysql -uroot -p<PASSWORD> siamsite
+cat migrations/004_fix_downloads_schema.sql| docker exec -i siamsite-mysql mysql -uroot -p<PASSWORD> siamsite
+cat migrations/005_add_reward_type_to_codes.sql | docker exec -i siamsite-mysql mysql -uroot -p<PASSWORD> siamsite
+cat migrations/006_add_mythic_rarity.sql   | docker exec -i siamsite-mysql mysql -uroot -p<PASSWORD> siamsite
+cat migrations/007_add_lootbox_categories.sql   | docker exec -i siamsite-mysql mysql -uroot -p<PASSWORD> siamsite
+cat migrations/008_audit_logs.sql          | docker exec -i siamsite-mysql mysql -uroot -p<PASSWORD> siamsite
+cat migrations/009_add_performance_indexes.sql  | docker exec -i siamsite-mysql mysql -uroot -p<PASSWORD> siamsite
+cat migrations/010_audit_log_retention.sql | docker exec -i siamsite-mysql mysql -uroot -p<PASSWORD> siamsite
 ```
 
 > migration ทุกไฟล์เขียนแบบ idempotent (รันซ้ำได้ไม่เสียหาย)
@@ -295,7 +295,7 @@ cat migrations/010_audit_log_retention.sql | docker exec -i siamworld-mysql mysq
 
 ```bash
 git clone <repo>
-cd siamworld-shop
+cd siamsite-shop
 cp .env.example .env     # แก้ค่าใน .env
 docker compose up -d     # รัน containers
 # Apply migrations (ดูหัวข้อด้านบน)
@@ -355,7 +355,7 @@ cd backend && npm run build    # ต้องไม่มี error ก่อน 
 ## โครงสร้างโปรเจค
 
 ```
-siamworld-shop/
+siamsite-shop/
 ├── backend/
 │   ├── src/
 │   │   ├── config/          # Env validation (zod)
@@ -444,7 +444,7 @@ docker compose logs backend | grep -i "connection"
 ### ปัญหา: AuthMe login ไม่ได้
 
 1. ตรวจ AuthMe config ใน Minecraft server — ต้องใช้ MySQL ไม่ใช่ SQLite
-2. ตรวจว่า `authme` table มีอยู่ใน Database (`siamworld` schema)
+2. ตรวจว่า `authme` table มีอยู่ใน Database (`siamsite` schema)
 3. ดู: `docker compose logs backend | grep "auth"`
 
 ---

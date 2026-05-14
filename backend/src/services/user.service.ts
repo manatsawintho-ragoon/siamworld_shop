@@ -2,6 +2,7 @@ import { pool } from '../database/connection';
 import bcrypt from 'bcrypt';
 import { NotFoundError } from '../utils/errors';
 import { RowDataPacket } from 'mysql2';
+import { destroySession } from './session.service';
 
 class UserService {
   async getProfile(userId: number) {
@@ -180,6 +181,145 @@ class UserService {
     }
 
     return { logs: [], pagination: { page: 1, totalPages: 0, total: 0 } };
+  }
+
+  /**
+   * Soft-delete a user. Preserves wallet/transaction/audit history so account
+   * losses and disputes can still be resolved. The user can no longer log in
+   * (auth.service.login checks deleted_at) and their session is destroyed.
+   */
+  async softDeleteUser(userId: number): Promise<void> {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const [rows] = await conn.execute<RowDataPacket[]>(
+        'SELECT username, deleted_at FROM users WHERE id = ?', [userId]
+      );
+      if (rows.length === 0) throw new NotFoundError('User not found');
+      if ((rows[0] as any).deleted_at) {
+        await conn.rollback();
+        throw new Error('ผู้ใช้นี้ถูกลบไปแล้ว');
+      }
+      await conn.execute('UPDATE users SET deleted_at = NOW() WHERE id = ?', [userId]);
+      await conn.commit();
+    } catch (err) {
+      try { await conn.rollback(); } catch { /* tx may be committed */ }
+      throw err;
+    } finally {
+      conn.release();
+    }
+    // Kill any active session so the JWT can't be reused. Failure here is
+    // non-fatal — the JWT will still expire on its own.
+    try { await destroySession(userId); } catch { /* ignore */ }
+  }
+
+  /**
+   * Transfer all financial + game-state from one user to another in a single
+   * transaction. The source user keeps its row + audit trail; the target
+   * absorbs balances, purchases, inventory, and redeem-code usage.
+   *
+   * Order matters:
+   *   1. Lock both wallets (smaller id first to avoid deadlocks).
+   *   2. Merge balances.
+   *   3. Re-attribute FK rows.
+   *   4. Soft-delete the source so the username can't double-claim history.
+   */
+  async transferData(fromUserId: number, toUserId: number): Promise<{
+    merged: { balance: number; transactions: number; purchases: number; inventory: number; redeemLogs: number };
+  }> {
+    if (fromUserId === toUserId) throw new Error('ผู้ใช้ต้นทางและปลายทางต้องไม่ใช่บัญชีเดียวกัน');
+
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      const [fromRows] = await conn.execute<RowDataPacket[]>(
+        'SELECT id, username, deleted_at FROM users WHERE id = ? FOR UPDATE', [fromUserId]
+      );
+      const [toRows] = await conn.execute<RowDataPacket[]>(
+        'SELECT id, username, deleted_at FROM users WHERE id = ? FOR UPDATE', [toUserId]
+      );
+      if (fromRows.length === 0) throw new NotFoundError('ไม่พบผู้ใช้ต้นทาง');
+      if (toRows.length === 0) throw new NotFoundError('ไม่พบผู้ใช้ปลายทาง');
+      if ((toRows[0] as any).deleted_at) throw new Error('ผู้ใช้ปลายทางถูกลบไปแล้ว');
+
+      // Lock wallets in stable id order to avoid deadlocks under concurrent transfers.
+      const a = Math.min(fromUserId, toUserId);
+      const b = Math.max(fromUserId, toUserId);
+      const [walletA] = await conn.execute<RowDataPacket[]>(
+        'SELECT user_id, balance FROM wallets WHERE user_id = ? FOR UPDATE', [a]
+      );
+      const [walletB] = await conn.execute<RowDataPacket[]>(
+        'SELECT user_id, balance FROM wallets WHERE user_id = ? FOR UPDATE', [b]
+      );
+      const fromBalance = parseFloat(
+        (walletA[0] as any)?.user_id === fromUserId
+          ? ((walletA[0] as any)?.balance ?? '0')
+          : ((walletB[0] as any)?.balance ?? '0')
+      );
+      const toBalance = parseFloat(
+        (walletA[0] as any)?.user_id === toUserId
+          ? ((walletA[0] as any)?.balance ?? '0')
+          : ((walletB[0] as any)?.balance ?? '0')
+      );
+
+      // 1. Balance merge — credit target, zero source.
+      if (fromBalance > 0) {
+        if (walletA.length + walletB.length < 2) {
+          // Target had no wallet row yet — create one with the merged amount.
+          await conn.execute('INSERT INTO wallets (user_id, balance) VALUES (?, ?)', [toUserId, toBalance + fromBalance]);
+        } else {
+          await conn.execute('UPDATE wallets SET balance = balance + ? WHERE user_id = ?', [fromBalance, toUserId]);
+        }
+        await conn.execute('UPDATE wallets SET balance = 0 WHERE user_id = ?', [fromUserId]);
+
+        // Audit the merge as a paired wallet_log entry on each side.
+        await conn.execute(
+          'INSERT INTO wallet_logs (user_id, action, amount, balance_before, balance_after, source, description) VALUES (?,?,?,?,?,?,?)',
+          [fromUserId, 'debit', fromBalance, fromBalance, 0, 'admin', `โอนยอดเงินไปที่ ${(toRows[0] as any).username}`]
+        );
+        await conn.execute(
+          'INSERT INTO wallet_logs (user_id, action, amount, balance_before, balance_after, source, description) VALUES (?,?,?,?,?,?,?)',
+          [toUserId, 'credit', fromBalance, toBalance, toBalance + fromBalance, 'admin', `รับโอนยอดจาก ${(fromRows[0] as any).username}`]
+        );
+      }
+
+      // 2. Re-attribute single-FK tables. CHANGE_ROWS counts how many we moved.
+      const [tx] = await conn.execute('UPDATE transactions SET user_id = ? WHERE user_id = ?', [toUserId, fromUserId]);
+      const [pu] = await conn.execute('UPDATE purchases SET user_id = ? WHERE user_id = ?', [toUserId, fromUserId]);
+      const [wi] = await conn.execute('UPDATE web_inventory SET user_id = ? WHERE user_id = ?', [toUserId, fromUserId]);
+      // truemoney_used uses user_id as audit only; safe to re-attribute.
+      await conn.execute('UPDATE truemoney_used SET user_id = ? WHERE user_id = ?', [toUserId, fromUserId]);
+
+      // 3. redeem_logs has UNIQUE (code_id, user_id). UPDATE IGNORE silently skips
+      //    conflicts (target already used that code); a follow-up DELETE removes
+      //    the leftover source rows that were not moved.
+      const [rl] = await conn.execute('UPDATE IGNORE redeem_logs SET user_id = ? WHERE user_id = ?', [toUserId, fromUserId]);
+      await conn.execute('DELETE FROM redeem_logs WHERE user_id = ?', [fromUserId]);
+
+      // 4. Soft-delete the source so its username is retired in this app.
+      await conn.execute('UPDATE users SET deleted_at = NOW() WHERE id = ?', [fromUserId]);
+
+      await conn.commit();
+
+      // Best-effort: kill source's session so they're logged out instantly.
+      try { await destroySession(fromUserId); } catch { /* ignore */ }
+
+      return {
+        merged: {
+          balance: fromBalance,
+          transactions: (tx as any).affectedRows || 0,
+          purchases: (pu as any).affectedRows || 0,
+          inventory: (wi as any).affectedRows || 0,
+          redeemLogs: (rl as any).affectedRows || 0,
+        },
+      };
+    } catch (err) {
+      try { await conn.rollback(); } catch { /* already committed */ }
+      throw err;
+    } finally {
+      conn.release();
+    }
   }
 }
 

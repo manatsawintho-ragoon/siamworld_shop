@@ -319,8 +319,10 @@ export default function AdminCodeManager() {
                         <span className="text-sm font-bold text-amber-600">{code.point_amount} บาท</span>
                       ) : (
                         <button onClick={() => setViewingCmd({ code: code.code, command: code.command || '' })}
-                          className="text-sm font-bold text-blue-600 hover:text-blue-800 hover:underline transition-colors cursor-pointer">
-                          <i className="fas fa-terminal text-[10px] mr-1"></i>ดูคำสั่ง
+                          className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors cursor-pointer group">
+                          <i className="fas fa-terminal text-[10px]"></i>
+                          <span>ดูคำสั่ง</span>
+                          {(() => { const n = (code.command || '').split('\n').map((c: string) => c.trim()).filter(Boolean).length; return n > 0 ? <span className="px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[9px] font-black">{n}</span> : null; })()}
                         </button>
                       )}
                     </td>
@@ -415,19 +417,25 @@ export default function AdminCodeManager() {
 
               {/* ── Code display row ── */}
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1.5">รหัสโค้ด</label>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">รหัสโค้ด <span className="font-normal text-gray-400">(พิมพ์เองหรือกดสุ่ม)</span></label>
                 <div className="flex gap-2.5">
-                  <div className="flex-1 px-4 py-2.5 rounded-lg border-2 border-gray-200 bg-gray-50 font-mono font-black text-gray-800 tracking-[0.2em] text-[15px] select-all flex items-center min-w-0">
-                    {editing.code || <span className="text-gray-300 font-normal tracking-normal text-sm">กดสุ่มโค้ด →</span>}
-                  </div>
+                  <input
+                    value={editing.code || ''}
+                    onChange={e => setEditing({ ...editing, code: e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '') })}
+                    className="flex-1 px-4 py-2.5 rounded-lg border-2 border-gray-200 bg-gray-50 font-mono font-black text-gray-800 tracking-[0.15em] text-[15px] focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 min-w-0 transition-colors placeholder:font-normal placeholder:tracking-normal placeholder:text-sm placeholder:text-gray-300"
+                    placeholder="เช่น WELCOME2024 หรือกดสุ่ม →"
+                    maxLength={32}
+                    spellCheck={false}
+                  />
                   <button
                     type="button"
                     onClick={() => setEditing({ ...editing, code: generateCode() })}
                     className="flex items-center gap-1.5 px-4 py-2.5 bg-orange-500 text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#c2410c] hover:brightness-110 transition-all active:shadow-[0_1px_0_#c2410c] active:translate-y-[2px] whitespace-nowrap flex-shrink-0"
                   >
-                    <i className="fas fa-random text-[11px]"></i> สุ่มโค้ด
+                    <i className="fas fa-random text-[11px]"></i> สุ่ม
                   </button>
                 </div>
+                <p className="text-[11px] text-gray-400 mt-1">ใช้ได้เฉพาะ A-Z, 0-9, _ และ - (ไม่เกิน 32 ตัวอักษร)</p>
               </div>
 
               {/* ── 2-Column Grid ── */}
@@ -479,17 +487,38 @@ export default function AdminCodeManager() {
                   {/* RCON command / Amount */}
                   {(editing.reward_type || 'rcon') === 'rcon' ? (
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 mb-1.5">
+                      <label className="block text-xs font-bold text-gray-500 mb-1.5 flex items-center gap-2">
                         คำสั่ง RCON <span className="text-red-400">*</span>
-                        <span className="ml-1.5 font-normal text-gray-400">ใช้ {'{player}'} แทนชื่อผู้เล่น</span>
+                        {(() => { const cmds = (editing.command || '').split('\n').map(c => c.trim()).filter(Boolean); return cmds.length > 0 ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold"><i className="fas fa-terminal text-[9px]" /> {cmds.length} คำสั่ง</span> : null; })()}
                       </label>
                       <textarea
                         value={editing.command || ''}
                         onChange={e => setEditing({ ...editing, command: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm font-mono focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 resize-none bg-gray-50 transition-colors"
+                        className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm font-mono focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 resize-y bg-gray-50 transition-colors"
                         rows={4}
-                        placeholder="give {player} diamond 64"
+                        placeholder={"give {player} diamond 64\nlp user {player} permission set group.vip"}
                       />
+                      <p className="text-[11px] text-gray-400 mt-1">1 บรรทัด = 1 คำสั่ง · ใส่ได้ไม่จำกัด · ใช้ <code className="bg-gray-100 px-1 rounded">{'{player}'}</code> แทนชื่อผู้เล่น</p>
+                      {(() => {
+                        const cmds = (editing.command || '').split('\n').map(c => c.trim()).filter(Boolean);
+                        if (cmds.length === 0) return null;
+                        return (
+                          <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50 overflow-hidden">
+                            <div className="px-3 py-1.5 bg-blue-100/60 flex items-center gap-1.5">
+                              <i className="fas fa-eye text-blue-500 text-[10px]" />
+                              <span className="text-[10px] font-bold text-blue-600">Preview คำสั่งที่จะ run ({cmds.length})</span>
+                            </div>
+                            <div className="px-3 py-2 space-y-1 max-h-24 overflow-y-auto">
+                              {cmds.map((cmd, i) => (
+                                <div key={i} className="flex items-start gap-2">
+                                  <span className="text-[9px] font-bold text-blue-400 w-4 text-right flex-shrink-0 mt-0.5">{i + 1}</span>
+                                  <code className="text-[11px] text-blue-800 font-mono break-all">{cmd}</code>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   ) : (
                     <div>
@@ -680,21 +709,44 @@ export default function AdminCodeManager() {
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm"
           onMouseDown={e => { cmdBackdropDown.current = e.target === e.currentTarget; }}
           onMouseUp={e => { if (cmdBackdropDown.current && e.target === e.currentTarget) setViewingCmd(null); }}>
-          <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-full max-w-md overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-full max-w-lg overflow-hidden">
             <div className="relative px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                <i className="fas fa-terminal text-blue-500 text-xs"></i>
+              <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center flex-shrink-0">
+                <i className="fas fa-terminal text-green-400 text-xs"></i>
               </div>
               <div className="flex-1 text-center">
-                <h3 className="font-bold text-gray-900 text-base">คำสั่ง RCON</h3>
-                <p className="text-[11px] text-gray-500">โค้ด: <code className="font-mono font-bold text-orange-500">{viewingCmd.code}</code></p>
+                <h3 className="font-bold text-gray-900 text-base flex items-center justify-center gap-2">
+                  RCON Commands
+                  {(() => { const n = (viewingCmd.command || '').split('\n').map(c => c.trim()).filter(Boolean).length; return n > 0 ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold"><i className="fas fa-terminal text-[8px]" /> {n} คำสั่ง</span> : null; })()}
+                </h3>
+                <p className="text-[11px] text-gray-500 mt-0.5">โค้ด: <code className="font-mono font-bold text-orange-500">{viewingCmd.code}</code></p>
               </div>
               <button onClick={() => setViewingCmd(null)} className="w-8 h-8 rounded-lg bg-red-500 border border-red-600 flex items-center justify-center text-white shadow-[0_4px_0_#b91c1c] flex-shrink-0">
                 <i className="fas fa-times text-xs"></i>
               </button>
             </div>
-            <div className="p-5">
-              <pre className="bg-gray-900 text-green-400 text-sm font-mono p-4 rounded-lg whitespace-pre-wrap break-all max-h-[300px] overflow-y-auto">{viewingCmd.command}</pre>
+            <div className="p-5 space-y-3">
+              {(() => {
+                const cmds = (viewingCmd.command || '').split('\n').map(c => c.trim()).filter(Boolean);
+                if (cmds.length === 0) return <p className="text-sm text-gray-400 text-center py-4">(ยังไม่มีคำสั่ง)</p>;
+                return (
+                  <div className="rounded-xl border border-gray-800 bg-gray-900 overflow-hidden">
+                    <div className="px-3 py-2 bg-gray-800 flex items-center gap-2 border-b border-gray-700">
+                      <div className="flex gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500/80" /><span className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" /><span className="w-2.5 h-2.5 rounded-full bg-green-500/80" /></div>
+                      <span className="text-[10px] text-gray-400 font-mono ml-1">รัน {cmds.length} คำสั่งตามลำดับ</span>
+                    </div>
+                    <div className="p-3 space-y-1.5 max-h-[280px] overflow-y-auto">
+                      {cmds.map((cmd, i) => (
+                        <div key={i} className="flex items-start gap-2.5">
+                          <span className="text-[10px] font-bold text-gray-500 w-5 text-right flex-shrink-0 mt-0.5 tabular-nums">{i + 1}</span>
+                          <code className="text-[12px] text-green-400 font-mono break-all leading-relaxed">{cmd}</code>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+              <p className="text-[10px] text-gray-400">ใช้ <code className="bg-gray-100 px-1 rounded">{'{player}'}</code> แทนชื่อผู้เล่น · คำสั่งจะรันตามลำดับเมื่อ player ออนไลน์</p>
             </div>
           </div>
         </div>,

@@ -24,6 +24,8 @@ export default function SetupWizardPage() {
   const [authmeTestMsg, setAuthmeTestMsg] = useState('');
   const [showDbPassword, setShowDbPassword] = useState(false);
   const [authmePlayerCount, setAuthmePlayerCount] = useState<number | null>(null);
+  const [authmeInfo, setAuthmeInfo] = useState<{ dbHost: string; dbPort: number; dbUser: string; dbPassword: string; dbDatabase: string } | null>(null);
+  const [loadingAuthmeInfo, setLoadingAuthmeInfo] = useState(false);
   // Steps 4–5: Server Config
   const [server, setServer] = useState({
     name: '', host: '', port: 25565,
@@ -39,6 +41,28 @@ export default function SetupWizardPage() {
       })
       .catch(() => setHasAdmin(false));
   }, []);
+
+  useEffect(() => {
+    if (step !== 3) return;
+    setLoadingAuthmeInfo(true);
+    api('/setup/authme-info', { method: 'GET', token: getToken() || undefined })
+      .then((res: any) => {
+        if (res.success !== false) {
+          setAuthmeInfo(res);
+          // Auto-fill form if fields are empty
+          setAuthmeForm(prev => ({
+            ...prev,
+            host: prev.host || res.dbHost || '',
+            port: (!prev.port || prev.port === 3306) && res.dbPort ? res.dbPort : prev.port,
+            user: prev.user || res.dbUser || '',
+            password: prev.password || res.dbPassword || '',
+            database: prev.database || res.dbDatabase || '',
+          }));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingAuthmeInfo(false));
+  }, [step]);
 
   // ── Handlers ───────────────────────────────────────────────
 
@@ -211,7 +235,7 @@ export default function SetupWizardPage() {
 
   return (
     <div className={isFirstTime ? 'min-h-screen bg-[#f4f5f7] flex items-start justify-center pt-10 p-4' : ''}>
-      <div className={`w-full mx-auto ${step === 3 ? 'max-w-4xl' : 'max-w-2xl'}`}>
+      <div className={`w-full mx-auto ${step === 3 || step === 5 ? 'max-w-4xl' : 'max-w-2xl'}`}>
 
         {/* Header */}
         <div className="mb-6">
@@ -366,6 +390,12 @@ export default function SetupWizardPage() {
                 </div>
               </div>
 
+              {loadingAuthmeInfo && (
+                <div className="px-4 py-2 bg-amber-50 border-b border-amber-100 text-xs text-amber-600 flex items-center gap-1.5">
+                  <i className="fas fa-spinner fa-spin text-[10px]"></i>กำลังโหลดข้อมูลฐานข้อมูล...
+                </div>
+              )}
+
               {/* Form fields */}
               <div className="p-4 space-y-3">
 
@@ -385,7 +415,7 @@ export default function SetupWizardPage() {
                         value={authmeForm.host}
                         onChange={e => setAuthmeForm(p => ({ ...p, host: e.target.value }))}
                         className="w-full pl-8 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 bg-white"
-                        placeholder="127.0.0.1"
+                        placeholder="main.siamsite.shop"
                       />
                     </div>
                   </div>
@@ -546,7 +576,7 @@ export default function SetupWizardPage() {
                 </div>
                 <div>
                   <h3 className="font-bold text-white text-sm">คู่มือตั้งค่า AuthMe</h3>
-                  <p className="text-[11px] text-white/50">หาข้อมูลจาก config.yml</p>
+                  <p className="text-[11px] text-white/50">ข้อมูลถูกกรอกอัตโนมัติแล้ว — ตั้งค่า AuthMe ให้ชี้มาที่ VPS</p>
                 </div>
               </div>
 
@@ -554,9 +584,31 @@ export default function SetupWizardPage() {
                 {/* Steps */}
                 <div className="space-y-2.5">
                   {[
-                    { n: '1', title: 'เปิดไฟล์ config', sub: <code className="text-[10px] text-[#22c55e] bg-white/10 px-1.5 py-0.5 rounded">plugins/AuthMe/config.yml</code> },
-                    { n: '2', title: 'ค้นหา DataSource:', sub: <span className="text-[10px] text-white/40">ดู key แต่ละช่องในตารางด้านล่าง</span> },
-                    { n: '3', title: 'กรอกค่าในฟอร์มซ้าย', sub: <span className="text-[10px] text-white/40">แล้วกด "ทดสอบการเชื่อมต่อ"</span> },
+                    {
+                      n: '1',
+                      title: 'ข้อมูลฐานข้อมูลถูกกรอกอัตโนมัติแล้ว',
+                      sub: <span className="text-[10px] text-white/50">ตรวจสอบค่าในฟอร์มซ้ายให้ถูกต้อง</span>,
+                    },
+                    {
+                      n: '2',
+                      title: 'แก้ไฟล์ AuthMe config',
+                      sub: <code className="text-[10px] text-[#22c55e] bg-white/10 px-1.5 py-0.5 rounded">plugins/AuthMe/config.yml</code>,
+                    },
+                    {
+                      n: '3',
+                      title: 'ตั้งค่า DataSource ตามตัวอย่างด้านล่าง',
+                      sub: <span className="text-[10px] text-white/50">ใส่ค่าเดียวกับที่แสดงในฟอร์มซ้าย</span>,
+                    },
+                    {
+                      n: '4',
+                      title: 'Restart Minecraft server',
+                      sub: <span className="text-[10px] text-white/50">AuthMe จะสร้างตาราง authme ให้อัตโนมัติ</span>,
+                    },
+                    {
+                      n: '5',
+                      title: 'กดปุ่ม \'ทดสอบการเชื่อมต่อ\' ด้านซ้าย',
+                      sub: <span className="text-[10px] text-white/50">เพื่อยืนยันว่า AuthMe เชื่อมต่อสำเร็จ</span>,
+                    },
                   ].map(({ n, title, sub }) => (
                     <div key={n} className="flex gap-2.5 items-start">
                       <div className="w-5 h-5 rounded-full bg-[#22c55e] flex items-center justify-center flex-shrink-0 text-[9px] font-black text-white mt-0.5">{n}</div>
@@ -572,17 +624,17 @@ export default function SetupWizardPage() {
                 <div className="bg-black/40 rounded-xl p-3 font-mono text-[10px] leading-[1.65]">
                   <span className="text-purple-400">DataSource:</span><br />
                   {'  '}<span className="text-blue-300">backend:</span> <span className="text-amber-300">MYSQL</span><br />
-                  {'  '}<span className="text-blue-300">mySQLHost:</span> <span className="text-white/50">your-db-host</span><br />
-                  {'  '}<span className="text-blue-300">mySQLPort:</span> <span className="text-green-400">3306</span><br />
-                  {'  '}<span className="text-blue-300">mySQLUsername:</span> <span className="text-white/50">username</span><br />
-                  {'  '}<span className="text-blue-300">mySQLPassword:</span> <span className="text-white/50">password</span><br />
-                  {'  '}<span className="text-blue-300">mySQLDatabase:</span> <span className="text-white/50">database</span><br />
-                  {'  '}<span className="text-blue-300">mySQLTablename:</span> <span className="text-green-400">authme</span>
+                  {'  '}<span className="text-blue-300">mySQLHost:</span> <span className="text-[#22c55e]">{authmeInfo?.dbHost || '<Host จาก env>'}</span><br />
+                  {'  '}<span className="text-blue-300">mySQLPort:</span> <span className="text-amber-300">{authmeInfo?.dbPort || '<Port จาก env>'}</span><br />
+                  {'  '}<span className="text-blue-300">mySQLUsername:</span> <span className="text-[#22c55e]">{authmeInfo?.dbUser || '<Username>'}</span><br />
+                  {'  '}<span className="text-blue-300">mySQLPassword:</span> <span className="text-[#22c55e]">{authmeInfo?.dbPassword || '<Password>'}</span><br />
+                  {'  '}<span className="text-blue-300">mySQLDatabase:</span> <span className="text-[#22c55e]">{authmeInfo?.dbDatabase || '<Database>'}</span><br />
+                  {'  '}<span className="text-blue-300">mySQLTablename:</span> <span className="text-amber-300">authme</span>
                 </div>
 
                 {/* Field mapping */}
                 <div className="bg-white/5 rounded-xl p-3">
-                  <p className="text-[9px] font-bold text-white/30 uppercase tracking-wider mb-2">ช่องฟอร์ม ↔ key ใน config</p>
+                  <p className="text-[9px] font-bold text-white/30 uppercase tracking-wider mb-2">ช่องฟอร์มซ้าย ↔ key ใน config.yml</p>
                   <div className="grid grid-cols-2 gap-x-2 gap-y-1.5">
                     {[
                       { field: 'Host', key: 'mySQLHost' },
@@ -604,7 +656,7 @@ export default function SetupWizardPage() {
                 <div className="flex gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl p-2.5">
                   <i className="fas fa-triangle-exclamation text-amber-400 text-[10px] mt-0.5 flex-shrink-0"></i>
                   <p className="text-[10px] text-amber-200/80 leading-relaxed">
-                    MySQL ต้องเปิด <strong className="text-amber-300">port 3306</strong> ให้ภายนอก (VPS / server อื่น) เข้าถึงได้
+                    Port ที่ใช้คือ <strong className="text-amber-300">{authmeInfo?.dbPort ?? '33xxx'}</strong> — ไม่ใช่ 3306 (เป็น port พิเศษของร้านนี้)
                   </p>
                 </div>
               </div>
@@ -632,6 +684,10 @@ export default function SetupWizardPage() {
                 <input type="text" value={server.host}
                   onChange={e => setServer(p => ({ ...p, host: e.target.value }))}
                   className={INPUT} placeholder="host.docker.internal" />
+                <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">
+                  Minecraft อยู่บน VPS เดียวกัน → <code className="bg-gray-100 px-1 rounded text-[10px]">host.docker.internal</code><br />
+                  Minecraft อยู่เครื่องอื่น → IP สาธารณะของเครื่องนั้น
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Game Port</label>
@@ -665,65 +721,128 @@ export default function SetupWizardPage() {
 
         {/* ── Step 5: RCON Config ────────────────────────────── */}
         {step === 5 && (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
-            <div>
-              <h2 className="text-lg font-bold text-gray-900">ตั้งค่า RCON</h2>
-              <p className="text-sm text-gray-500 mt-0.5">
-                เปิดใช้งาน <code className="text-[#22c55e] bg-gray-100 px-1.5 py-0.5 rounded text-xs">enable-rcon=true</code> ใน server.properties ก่อน
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
+          <div className={`grid grid-cols-1 lg:grid-cols-[7fr_5fr] gap-4 items-start`}>
+            {/* ── LEFT: Form ── */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">RCON Port</label>
-                <input type="number" value={server.rcon_port}
-                  onChange={e => setServer(p => ({ ...p, rcon_port: parseInt(e.target.value) || 25575 }))}
-                  className={INPUT} />
+                <h2 className="text-lg font-bold text-gray-900">ตั้งค่า RCON</h2>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  RCON คือช่องทางให้เว็บส่งคำสั่งไปยัง Minecraft server เช่น ให้ permission หรือ spawn item หลังซื้อของ
+                </p>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">RCON Password <span className="text-red-500">*</span></label>
-                <input type="password" value={server.rcon_password}
-                  onChange={e => setServer(p => ({ ...p, rcon_password: e.target.value }))}
-                  className={INPUT} placeholder="Your RCON password" />
-              </div>
-            </div>
 
-            <div>
-              <button onClick={testRcon}
-                disabled={rconStatus === 'testing' || !server.rcon_password}
-                className={`px-4 py-2 rounded-xl font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                  rconStatus === 'success' ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' :
-                  rconStatus === 'error' ? 'bg-red-100 text-red-700 border border-red-300' :
-                  'bg-blue-100 text-blue-700 border border-blue-200 hover:bg-blue-200'
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">RCON Port</label>
+                  <input type="number" value={server.rcon_port}
+                    onChange={e => setServer(p => ({ ...p, rcon_port: parseInt(e.target.value) || 25575 }))}
+                    className={INPUT} />
+                  <p className="text-[11px] text-gray-400 mt-1">default คือ 25575</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">RCON Password <span className="text-red-500">*</span></label>
+                  <input type="password" value={server.rcon_password}
+                    onChange={e => setServer(p => ({ ...p, rcon_password: e.target.value }))}
+                    className={INPUT} placeholder="รหัสที่ตั้งใน server.properties" />
+                </div>
+              </div>
+
+              <div>
+                <button onClick={testRcon}
+                  disabled={rconStatus === 'testing' || !server.rcon_password}
+                  className={`px-4 py-2 rounded-xl font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                    rconStatus === 'success' ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' :
+                    rconStatus === 'error' ? 'bg-red-100 text-red-700 border border-red-300' :
+                    'bg-blue-100 text-blue-700 border border-blue-200 hover:bg-blue-200'
+                  }`}>
+                  {rconStatus === 'testing' ? <><i className="fas fa-spinner fa-spin mr-2"></i>กำลังทดสอบ...</> :
+                   rconStatus === 'success' ? <><i className="fas fa-check mr-2"></i>เชื่อมต่อสำเร็จ</> :
+                   rconStatus === 'error' ? <><i className="fas fa-rotate-right mr-2"></i>ลองอีกครั้ง</> :
+                   <><i className="fas fa-plug mr-2"></i>ทดสอบการเชื่อมต่อ RCON</>}
+                </button>
+              </div>
+
+              {message && (
+                <div className={`p-3 rounded-xl text-sm ${
+                  rconStatus === 'success'
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : 'bg-red-50 text-red-600 border border-red-200'
                 }`}>
-                {rconStatus === 'testing' ? <><i className="fas fa-spinner fa-spin mr-2"></i>กำลังทดสอบ...</> :
-                 rconStatus === 'success' ? <><i className="fas fa-check mr-2"></i>เชื่อมต่อสำเร็จ</> :
-                 rconStatus === 'error' ? <><i className="fas fa-rotate-right mr-2"></i>ลองอีกครั้ง</> :
-                 <><i className="fas fa-plug mr-2"></i>ทดสอบการเชื่อมต่อ RCON</>}
-              </button>
+                  <i className={`fas ${rconStatus === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation'} mr-2`}></i>
+                  {message}
+                </div>
+              )}
+
+              <div className="flex justify-between pt-2">
+                <button onClick={() => { setStep(4); setMessage(''); }}
+                  className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-sm transition-colors">
+                  <i className="fas fa-arrow-left mr-1.5"></i>ย้อนกลับ
+                </button>
+                <button onClick={saveServer}
+                  disabled={saving || !server.rcon_password}
+                  className="px-6 py-2.5 bg-[#16a34a] hover:bg-[#15803d] text-white font-bold rounded-xl shadow-[0_4px_0_#0d6b2e] active:shadow-none active:translate-y-[3px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
+                  {saving ? <><i className="fas fa-spinner fa-spin mr-2"></i>กำลังบันทึก...</> : <><i className="fas fa-floppy-disk mr-1.5"></i>บันทึกและเสร็จสิ้น</>}
+                </button>
+              </div>
             </div>
 
-            {message && (
-              <div className={`p-3 rounded-xl text-sm ${
-                rconStatus === 'success'
-                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                  : 'bg-red-50 text-red-600 border border-red-200'
-              }`}>
-                <i className={`fas ${rconStatus === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation'} mr-2`}></i>
-                {message}
+            {/* ── RIGHT: RCON Guide ── */}
+            <div className="bg-[#1e2735] rounded-2xl p-4 shadow-[0_4px_0_#131820] text-white">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-7 h-7 rounded-lg bg-[#22c55e]/20 flex items-center justify-center flex-shrink-0">
+                  <i className="fas fa-terminal text-[#22c55e] text-[10px]"></i>
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-sm">วิธีเปิด RCON บน Minecraft</h3>
+                  <p className="text-[11px] text-white/50">แก้ไฟล์ server.properties</p>
+                </div>
               </div>
-            )}
 
-            <div className="flex justify-between pt-2">
-              <button onClick={() => { setStep(4); setMessage(''); }}
-                className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-sm transition-colors">
-                <i className="fas fa-arrow-left mr-1.5"></i>ย้อนกลับ
-              </button>
-              <button onClick={saveServer}
-                disabled={saving || !server.rcon_password}
-                className="px-6 py-2.5 bg-[#16a34a] hover:bg-[#15803d] text-white font-bold rounded-xl shadow-[0_4px_0_#0d6b2e] active:shadow-none active:translate-y-[3px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
-                {saving ? <><i className="fas fa-spinner fa-spin mr-2"></i>กำลังบันทึก...</> : <><i className="fas fa-floppy-disk mr-1.5"></i>บันทึกและเสร็จสิ้น</>}
-              </button>
+              <div className="space-y-3">
+                <div className="space-y-2.5">
+                  {[
+                    { n: '1', title: 'เปิดไฟล์ server.properties', sub: <span className="text-[10px] text-white/50">อยู่ใน root folder ของ Minecraft server</span> },
+                    { n: '2', title: 'แก้ค่า 3 บรรทัดตามตัวอย่างด้านล่าง', sub: <span className="text-[10px] text-white/50">enable-rcon, rcon.port, rcon.password</span> },
+                    { n: '3', title: 'Restart Minecraft server', sub: <span className="text-[10px] text-white/50">RCON จะเปิดใช้งานหลัง restart</span> },
+                    { n: '4', title: 'กรอก Port และ Password ในฟอร์มซ้าย', sub: <span className="text-[10px] text-white/50">ใส่ค่าเดียวกับที่ตั้งใน server.properties</span> },
+                  ].map(({ n, title, sub }) => (
+                    <div key={n} className="flex gap-2.5 items-start">
+                      <div className="w-5 h-5 rounded-full bg-[#22c55e] flex items-center justify-center flex-shrink-0 text-[9px] font-black text-white mt-0.5">{n}</div>
+                      <div>
+                        <p className="text-[12px] font-semibold text-white leading-tight">{title}</p>
+                        <div className="mt-0.5">{sub}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* server.properties snippet */}
+                <div className="bg-black/40 rounded-xl p-3 font-mono text-[10px] leading-[1.65]">
+                  <span className="text-gray-500"># เปิด RCON</span><br />
+                  <span className="text-blue-300">enable-rcon</span><span className="text-white">=</span><span className="text-amber-300">true</span><br />
+                  <br />
+                  <span className="text-gray-500"># port (ใส่ตรงนี้ในฟอร์ม)</span><br />
+                  <span className="text-blue-300">rcon.port</span><span className="text-white">=</span><span className="text-[#22c55e]">25575</span><br />
+                  <br />
+                  <span className="text-gray-500"># รหัสผ่าน (ตั้งเองได้)</span><br />
+                  <span className="text-blue-300">rcon.password</span><span className="text-white">=</span><span className="text-amber-300">YourSecretPassword</span>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex gap-2 bg-blue-500/10 border border-blue-500/20 rounded-xl p-2.5">
+                    <i className="fas fa-circle-info text-blue-400 text-[10px] mt-0.5 flex-shrink-0"></i>
+                    <p className="text-[10px] text-blue-200/80 leading-relaxed">
+                      <strong className="text-blue-300">Host ของ RCON</strong> = ค่าที่กรอกไว้ใน step ก่อนหน้า (<code className="text-blue-300">{server.host || 'host.docker.internal'}</code>)
+                    </p>
+                  </div>
+                  <div className="flex gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl p-2.5">
+                    <i className="fas fa-triangle-exclamation text-amber-400 text-[10px] mt-0.5 flex-shrink-0"></i>
+                    <p className="text-[10px] text-amber-200/80 leading-relaxed">
+                      ถ้ากด "ทดสอบ" แล้วไม่ผ่าน ให้ตรวจว่า Minecraft server เปิดอยู่และ firewall อนุญาต port 25575 แล้ว
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}

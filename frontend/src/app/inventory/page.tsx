@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import MainLayout from '@/components/MainLayout';
 import { api, getToken } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -49,9 +50,9 @@ function ServerSelect({ servers, value, onChange }: { servers: Server[]; value: 
       {servers.map(s => (
         <button key={s.id} type="button" onClick={() => onChange(s.id)}
           className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border-2 text-xs font-bold transition-all ${
-            value === s.id ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+            value === s.id ? 'border-green-500 bg-green-50 text-green-700' : 'border-border bg-surface text-foreground-subtle hover:border-gray-300'
           }`}>
-          <i className={`fas fa-server text-[10px] ${value === s.id ? 'text-green-600' : 'text-gray-400'}`} />
+          <i className={`fas fa-server text-[10px] ${value === s.id ? 'text-green-600' : 'text-foreground-subtle'}`} />
           <span className="truncate">{s.name}</span>
           {value === s.id && <i className="fas fa-check text-green-500 text-[10px] ml-auto" />}
         </button>
@@ -64,6 +65,7 @@ export default function InventoryPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const backdropRef = useRef(false);
+  const [mounted, setMounted] = useState(false);
 
   const [items, setItems]               = useState<InventoryItem[]>([]);
   const [servers, setServers]           = useState<Server[]>([]);
@@ -84,6 +86,8 @@ export default function InventoryPage() {
 
   const [toast, setToast] = useState('');
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 4000); };
+
+  useEffect(() => { setMounted(true); }, []);
 
   const load = () => {
     if (!getToken()) return;
@@ -167,7 +171,7 @@ export default function InventoryPage() {
         {/* ── Page Header ── */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
               <i className="fas fa-box text-[#f97316]" />
               คลังของรางวัล
               {pendingCount > 0 && (
@@ -176,7 +180,7 @@ export default function InventoryPage() {
                 </span>
               )}
             </h1>
-            <p className="text-xs text-gray-400 mt-0.5">ไอเท็มที่คุณสุ่มได้ กดรับเพื่อส่งเข้าเกม Minecraft ของคุณ</p>
+            <p className="text-xs text-foreground-subtle mt-0.5">ไอเท็มที่คุณสุ่มได้ กดรับเพื่อส่งเข้าเกม Minecraft ของคุณ</p>
           </div>
           {pendingCount > 0 && (
             <button onClick={() => { setRedeemAllError(''); setRedeemAllModal(true); }}
@@ -210,12 +214,12 @@ export default function InventoryPage() {
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-[13px] font-bold transition-all whitespace-nowrap select-none ${
                   filter === f.key
                     ? 'bg-[#1e2735] text-white shadow-[0_4px_0_#38404d] active:shadow-[0_1px_0_#38404d] active:translate-y-[3px]'
-                    : 'bg-white border border-gray-200 text-gray-600 shadow-[0_4px_0_#d1d5db] hover:brightness-95 active:shadow-[0_1px_0_#d1d5db] active:translate-y-[3px]'
+                    : 'bg-surface border border-border text-foreground-muted shadow-sm hover:brightness-95 active:shadow-sm active:translate-y-[3px]'
                 }`}>
-                <i className={`fas fa-${f.icon} text-[11px] ${filter === f.key ? 'text-white/80' : 'text-gray-400'}`} />
+                <i className={`fas fa-${f.icon} text-[11px] ${filter === f.key ? 'text-white/80' : 'text-foreground-subtle'}`} />
                 {f.label}
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black tabular-nums min-w-[18px] text-center leading-none ${
-                  filter === f.key ? 'bg-white/15 text-white' : 'bg-gray-100 text-gray-500'
+                  filter === f.key ? 'bg-white/15 text-white' : 'bg-surface-hover text-foreground-subtle'
                 }`}>{f.count}</span>
               </button>
             ))}
@@ -223,7 +227,7 @@ export default function InventoryPage() {
 
           {/* Search */}
           <div className="relative flex-1 min-w-0">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-subtle pointer-events-none">
               <i className="fas fa-search text-sm" />
             </div>
             <input
@@ -231,11 +235,11 @@ export default function InventoryPage() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="ค้นหาชื่อไอเท็ม, กล่อง, ระดับ..."
-              className="w-full pl-9 pr-9 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 bg-white shadow-[0_3px_0_#e5e7eb]"
+              className="w-full pl-9 pr-9 py-2.5 rounded-lg border border-border text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-foreground-subtle bg-surface shadow-sm"
             />
             {search && (
               <button onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded flex items-center justify-center text-gray-300 hover:text-gray-500 transition-colors">
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded flex items-center justify-center text-foreground-subtle hover:text-foreground-subtle transition-colors">
                 <i className="fas fa-times text-[11px]" />
               </button>
             )}
@@ -246,15 +250,15 @@ export default function InventoryPage() {
         {loading ? (
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
             {Array.from({ length: 12 }).map((_, i) => (
-              <div key={i} className="rounded-xl h-44 bg-gray-100 animate-pulse" />
+              <div key={i} className="rounded-xl h-44 bg-surface-hover animate-pulse" />
             ))}
           </div>
         ) : paginated.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
-              <i className="fas fa-box-open text-2xl text-gray-300" />
+          <div className="flex flex-col items-center justify-center py-20 text-foreground-subtle">
+            <div className="w-16 h-16 rounded-2xl bg-surface-hover flex items-center justify-center mb-4">
+              <i className="fas fa-box-open text-2xl text-foreground-subtle" />
             </div>
-            <p className="text-sm font-bold text-gray-500">
+            <p className="text-sm font-bold text-foreground-subtle">
               {search ? `ไม่พบ "${search}"` : filter === 'PENDING' ? 'ไม่มีไอเท็มรอรับ' : 'คลังว่างเปล่า'}
             </p>
             {!search && filter !== 'REDEEMED' && (
@@ -283,7 +287,7 @@ export default function InventoryPage() {
                 return (
                   <div key={item.id}
                     className={`relative flex flex-col rounded-xl border overflow-hidden transition-all duration-200 ${
-                      isPending ? 'bg-white border-gray-200' : 'bg-gray-50/80 border-gray-100'
+                      isPending ? 'bg-surface border-border' : 'bg-surface-hover/80 border-border'
                     }`}
                     style={cardStyle}
                   >
@@ -318,11 +322,11 @@ export default function InventoryPage() {
                     {/* Info */}
                     <div className="px-2 pb-2 flex flex-col flex-1">
                       <RarityBadge rarity={item.item_rarity} />
-                      <p className={`font-bold text-[12px] leading-tight line-clamp-2 mt-1 ${isPending ? 'text-gray-900' : 'text-gray-400'}`}>
+                      <p className={`font-bold text-[12px] leading-tight line-clamp-2 mt-1 ${isPending ? 'text-foreground' : 'text-foreground-subtle'}`}>
                         {item.item_name}
                       </p>
-                      <p className="text-[9px] text-gray-400 truncate mt-0.5">{item.box_name}</p>
-                      <p className="text-[9px] text-gray-300 tabular-nums mt-0.5">
+                      <p className="text-[9px] text-foreground-subtle truncate mt-0.5">{item.box_name}</p>
+                      <p className="text-[9px] text-foreground-subtle tabular-nums mt-0.5">
                         {new Date(item.won_at).toLocaleDateString('th-TH')}
                       </p>
                       {isPending && (
@@ -342,31 +346,31 @@ export default function InventoryPage() {
             {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between pt-2">
-                <p className="text-[11px] text-gray-400 tabular-nums">
+                <p className="text-[11px] text-foreground-subtle tabular-nums">
                   {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} จาก {filtered.length} ชิ้น
                 </p>
                 <div className="flex items-center gap-1.5">
                   <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                    className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-gray-500 shadow-[0_3px_0_#d1d5db] hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:shadow-none active:translate-y-[2px]">
+                    className="w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center text-foreground-subtle shadow-sm hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:shadow-none active:translate-y-[2px]">
                     <i className="fas fa-chevron-left text-[11px]" />
                   </button>
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => {
                     const show = p === 1 || p === totalPages || Math.abs(p - page) <= 1;
                     if ((p === page - 2 && page > 3) || (p === page + 2 && page < totalPages - 2))
-                      return <span key={p} className="text-gray-300 px-1 text-xs">…</span>;
+                      return <span key={p} className="text-foreground-subtle px-1 text-xs">…</span>;
                     if (!show) return null;
                     return (
                       <button key={p} onClick={() => setPage(p)}
                         className={`w-8 h-8 rounded-lg text-[12px] font-bold transition-all ${
                           p === page
                             ? 'bg-[#16a34a] text-white shadow-[0_3px_0_#0d6b2e] active:shadow-none active:translate-y-[2px]'
-                            : 'bg-white border border-gray-200 text-gray-500 shadow-[0_3px_0_#d1d5db] hover:brightness-95 active:shadow-none active:translate-y-[2px]'
+                            : 'bg-surface border border-border text-foreground-subtle shadow-sm hover:brightness-95 active:shadow-none active:translate-y-[2px]'
                         }`}>{p}
                       </button>
                     );
                   })}
                   <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                    className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-gray-500 shadow-[0_3px_0_#d1d5db] hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:shadow-none active:translate-y-[2px]">
+                    className="w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center text-foreground-subtle shadow-sm hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:shadow-none active:translate-y-[2px]">
                     <i className="fas fa-chevron-right text-[11px]" />
                   </button>
                 </div>
@@ -376,126 +380,136 @@ export default function InventoryPage() {
         )}
       </div>
 
-      {/* ── Single Redeem Modal ── */}
-      <AnimatePresence>
-        {redeemModal && (() => {
-          const rar = getRarity(redeemModal.item_rarity);
-          const shadow = RARITY_SHADOW[redeemModal.item_rarity] ?? RARITY_SHADOW.common;
-          return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/50 backdrop-blur-[2px]"
-              onMouseDown={e => { backdropRef.current = e.target === e.currentTarget; }}
-              onMouseUp={e => { if (backdropRef.current && e.target === e.currentTarget) setRedeemModal(null); }}>
-              <motion.div initial={{ opacity: 0, scale: 0.95, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 8 }} transition={{ type: 'spring', stiffness: 400, damping: 26 }}
-                className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_8px_40px_rgba(0,0,0,0.18)] border border-gray-200/80 w-full max-w-sm overflow-hidden">
-                <div className="relative px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
-                  <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
-                    <i className="fas fa-gamepad text-green-600 text-xs" />
-                  </div>
-                  <div className="flex-1 text-center">
-                    <h3 className="font-bold text-gray-900 text-base">ส่งไอเท็มเข้าเกม</h3>
-                    <p className="text-[11px] text-gray-400">เลือกเซิร์ฟเวอร์ที่ออนไลน์อยู่</p>
-                  </div>
-                  <button onClick={() => setRedeemModal(null)}
-                    className="w-8 h-8 rounded-lg bg-red-500 border border-red-600 flex items-center justify-center text-white shadow-[0_3px_0_#b91c1c] hover:brightness-110 transition-all active:shadow-none active:translate-y-[2px]">
-                    <i className="fas fa-times text-xs" />
-                  </button>
-                </div>
-                <div className="p-5 space-y-4">
-                  <div className="flex items-center gap-3 p-3 rounded-xl border"
-                    style={{ backgroundColor: rar.color + '0d', borderColor: rar.color + '33',
-                      borderTopColor: rar.color, borderTopWidth: '3px',
-                      boxShadow: `0 3px 0 ${shadow.bottom}` }}>
-                    {redeemModal.item_image
-                      ? <img src={redeemModal.item_image} alt={redeemModal.item_name} className="w-14 h-14 object-contain flex-shrink-0" style={{ filter: `drop-shadow(0 0 6px ${rar.color}88)` }} />
-                      : <i className="fas fa-cube text-3xl flex-shrink-0" style={{ color: rar.color }} />}
-                    <div className="min-w-0">
-                      <RarityBadge rarity={redeemModal.item_rarity} />
-                      <p className="font-bold text-gray-900 text-sm leading-tight mt-1 line-clamp-2">{redeemModal.item_name}</p>
-                      <p className="text-[10px] text-gray-400 truncate">{redeemModal.box_name}</p>
+      {/* ── Single Redeem Modal (portal → always centered on viewport) ── */}
+      {mounted && typeof document !== 'undefined' && createPortal(
+        <div data-theme-portal="">
+          <AnimatePresence>
+            {redeemModal && (() => {
+              const rar = getRarity(redeemModal.item_rarity);
+              const shadow = RARITY_SHADOW[redeemModal.item_rarity] ?? RARITY_SHADOW.common;
+              return (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-black/50 backdrop-blur-[2px]"
+                  onMouseDown={e => { backdropRef.current = e.target === e.currentTarget; }}
+                  onMouseUp={e => { if (backdropRef.current && e.target === e.currentTarget) setRedeemModal(null); }}>
+                  <motion.div initial={{ opacity: 0, scale: 0.95, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 8 }} transition={{ type: 'spring', stiffness: 400, damping: 26 }}
+                    className="bg-surface rounded-2xl shadow-sm border border-border/80 w-full max-w-sm overflow-hidden">
+                    <div className="relative px-6 py-4 border-b border-border bg-surface-hover/60 flex items-center">
+                      <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
+                        <i className="fas fa-gamepad text-green-600 text-xs" />
+                      </div>
+                      <div className="flex-1 text-center">
+                        <h3 className="font-bold text-foreground text-base">ส่งไอเท็มเข้าเกม</h3>
+                        <p className="text-[11px] text-foreground-subtle">เลือกเซิร์ฟเวอร์ที่ออนไลน์อยู่</p>
+                      </div>
+                      <button onClick={() => setRedeemModal(null)}
+                        className="w-8 h-8 rounded-lg bg-red-500 border border-red-600 flex items-center justify-center text-white shadow-[0_3px_0_#b91c1c] hover:brightness-110 transition-all active:shadow-none active:translate-y-[2px]">
+                        <i className="fas fa-times text-xs" />
+                      </button>
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-2">เซิร์ฟเวอร์</label>
-                    <ServerSelect servers={servers} value={selectedServer} onChange={setSelectedServer} />
-                  </div>
-                  <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
-                    <i className="fas fa-triangle-exclamation text-amber-500 text-xs mt-0.5 flex-shrink-0" />
-                    <p className="text-[11px] text-amber-700 leading-relaxed">คุณต้องออนไลน์อยู่ในเกมก่อนกดรับ ระบบจะส่งไอเท็มเข้าตัวละครทันที</p>
-                  </div>
-                  {redeemError && (
-                    <div className="text-red-500 text-xs bg-red-50 px-3 py-2 rounded-lg border border-red-100 flex items-center gap-1.5">
-                      <i className="fas fa-circle-xmark" /> {redeemError}
+                    <div className="p-5 space-y-4">
+                      <div className="flex items-center gap-3 p-3 rounded-xl border"
+                        style={{ backgroundColor: rar.color + '0d', borderColor: rar.color + '33',
+                          borderTopColor: rar.color, borderTopWidth: '3px',
+                          boxShadow: `0 3px 0 ${shadow.bottom}` }}>
+                        {redeemModal.item_image
+                          ? <img src={redeemModal.item_image} alt={redeemModal.item_name} className="w-14 h-14 object-contain flex-shrink-0" style={{ filter: `drop-shadow(0 0 6px ${rar.color}88)` }} />
+                          : <i className="fas fa-cube text-3xl flex-shrink-0" style={{ color: rar.color }} />}
+                        <div className="min-w-0">
+                          <RarityBadge rarity={redeemModal.item_rarity} />
+                          <p className="font-bold text-foreground text-sm leading-tight mt-1 line-clamp-2">{redeemModal.item_name}</p>
+                          <p className="text-[10px] text-foreground-subtle truncate">{redeemModal.box_name}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-foreground-subtle mb-2">เซิร์ฟเวอร์</label>
+                        <ServerSelect servers={servers} value={selectedServer} onChange={setSelectedServer} />
+                      </div>
+                      <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+                        <i className="fas fa-triangle-exclamation text-amber-500 text-xs mt-0.5 flex-shrink-0" />
+                        <p className="text-[11px] text-amber-700 leading-relaxed">คุณต้องออนไลน์อยู่ในเกมก่อนกดรับ ระบบจะส่งไอเท็มเข้าตัวละครทันที</p>
+                      </div>
+                      {redeemError && (
+                        <div className="text-red-500 text-xs bg-red-50 px-3 py-2 rounded-lg border border-red-100 flex items-center gap-1.5">
+                          <i className="fas fa-circle-xmark" /> {redeemError}
+                        </div>
+                      )}
                     </div>
-                  )}
+                    <div className="px-5 py-3.5 border-t border-border bg-surface-hover/60 flex items-center justify-end gap-2">
+                      <button onClick={() => setRedeemModal(null)}
+                        className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-surface border border-border text-foreground shadow-sm hover:brightness-95 transition-all active:shadow-sm active:translate-y-[2px]">
+                        <i className="fas fa-times text-[12px]" /> ยกเลิก
+                      </button>
+                      <button onClick={handleRedeem} disabled={redeemLoading || selectedServer === 0}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-[#16a34a] disabled:opacity-50 text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#0d6b2e] hover:brightness-110 transition-all active:shadow-[0_2px_0_#0d6b2e] active:translate-y-[2px]">
+                        {redeemLoading ? <><i className="fas fa-spinner fa-spin text-[12px]" /> กำลังส่ง...</> : <><i className="fas fa-gamepad text-[12px]" /> ส่งเข้าเกม</>}
+                      </button>
+                    </div>
+                  </motion.div>
                 </div>
-                <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">
-                  <button onClick={() => setRedeemModal(null)}
-                    className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-800 shadow-[0_4px_0_#d1d5db] hover:brightness-95 transition-all active:shadow-[0_1px_0_#d1d5db] active:translate-y-[2px]">
-                    <i className="fas fa-times text-[12px]" /> ยกเลิก
-                  </button>
-                  <button onClick={handleRedeem} disabled={redeemLoading || selectedServer === 0}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-[#16a34a] disabled:opacity-50 text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#0d6b2e] hover:brightness-110 transition-all active:shadow-[0_2px_0_#0d6b2e] active:translate-y-[2px]">
-                    {redeemLoading ? <><i className="fas fa-spinner fa-spin text-[12px]" /> กำลังส่ง...</> : <><i className="fas fa-gamepad text-[12px]" /> ส่งเข้าเกม</>}
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          );
-        })()}
-      </AnimatePresence>
+              );
+            })()}
+          </AnimatePresence>
+        </div>,
+        document.body
+      )}
 
-      {/* ── Redeem All Modal ── */}
-      <AnimatePresence>
-        {redeemAllModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/50 backdrop-blur-[2px]"
-            onMouseDown={e => { backdropRef.current = e.target === e.currentTarget; }}
-            onMouseUp={e => { if (backdropRef.current && e.target === e.currentTarget && !redeemAllLoading) setRedeemAllModal(false); }}>
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 8 }} transition={{ type: 'spring', stiffness: 400, damping: 26 }}
-              className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_8px_40px_rgba(0,0,0,0.18)] border border-gray-200/80 w-full max-w-sm overflow-hidden">
-              <div className="relative px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
-                <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
-                  <i className="fas fa-gamepad text-green-600 text-xs" />
-                </div>
-                <div className="flex-1 text-center">
-                  <h3 className="font-bold text-gray-900 text-base">รับทั้งหมด</h3>
-                  <p className="text-[11px] text-gray-400 tabular-nums">{pendingCount} ไอเท็มรอการรับ</p>
-                </div>
-                <button onClick={() => !redeemAllLoading && setRedeemAllModal(false)}
-                  className="w-8 h-8 rounded-lg bg-red-500 border border-red-600 flex items-center justify-center text-white shadow-[0_3px_0_#b91c1c] hover:brightness-110 transition-all active:shadow-none active:translate-y-[2px]">
-                  <i className="fas fa-times text-xs" />
-                </button>
-              </div>
-              <div className="p-5 space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-2">เซิร์ฟเวอร์</label>
-                  <ServerSelect servers={servers} value={redeemAllServer} onChange={setRedeemAllServer} />
-                </div>
-                <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
-                  <i className="fas fa-triangle-exclamation text-amber-500 text-xs mt-0.5 flex-shrink-0" />
-                  <p className="text-[11px] text-amber-700 leading-relaxed">คุณต้องออนไลน์อยู่ในเกมก่อนรับของ ระบบจะส่งทุกไอเท็มเข้าเกมพร้อมกัน</p>
-                </div>
-                {redeemAllError && (
-                  <div className="text-red-500 text-xs bg-red-50 px-3 py-2 rounded-lg border border-red-100 flex items-center gap-1.5">
-                    <i className="fas fa-circle-xmark" /> {redeemAllError}
+      {/* ── Redeem All Modal (portal → always centered on viewport) ── */}
+      {mounted && typeof document !== 'undefined' && createPortal(
+        <div data-theme-portal="">
+          <AnimatePresence>
+            {redeemAllModal && (
+              <div className="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-black/50 backdrop-blur-[2px]"
+                onMouseDown={e => { backdropRef.current = e.target === e.currentTarget; }}
+                onMouseUp={e => { if (backdropRef.current && e.target === e.currentTarget && !redeemAllLoading) setRedeemAllModal(false); }}>
+                <motion.div initial={{ opacity: 0, scale: 0.95, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 8 }} transition={{ type: 'spring', stiffness: 400, damping: 26 }}
+                  className="bg-surface rounded-2xl shadow-sm border border-border/80 w-full max-w-sm overflow-hidden">
+                  <div className="relative px-6 py-4 border-b border-border bg-surface-hover/60 flex items-center">
+                    <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
+                      <i className="fas fa-gamepad text-green-600 text-xs" />
+                    </div>
+                    <div className="flex-1 text-center">
+                      <h3 className="font-bold text-foreground text-base">รับทั้งหมด</h3>
+                      <p className="text-[11px] text-foreground-subtle tabular-nums">{pendingCount} ไอเท็มรอการรับ</p>
+                    </div>
+                    <button onClick={() => !redeemAllLoading && setRedeemAllModal(false)}
+                      className="w-8 h-8 rounded-lg bg-red-500 border border-red-600 flex items-center justify-center text-white shadow-[0_3px_0_#b91c1c] hover:brightness-110 transition-all active:shadow-none active:translate-y-[2px]">
+                      <i className="fas fa-times text-xs" />
+                    </button>
                   </div>
-                )}
+                  <div className="p-5 space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-foreground-subtle mb-2">เซิร์ฟเวอร์</label>
+                      <ServerSelect servers={servers} value={redeemAllServer} onChange={setRedeemAllServer} />
+                    </div>
+                    <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+                      <i className="fas fa-triangle-exclamation text-amber-500 text-xs mt-0.5 flex-shrink-0" />
+                      <p className="text-[11px] text-amber-700 leading-relaxed">คุณต้องออนไลน์อยู่ในเกมก่อนรับของ ระบบจะส่งทุกไอเท็มเข้าเกมพร้อมกัน</p>
+                    </div>
+                    {redeemAllError && (
+                      <div className="text-red-500 text-xs bg-red-50 px-3 py-2 rounded-lg border border-red-100 flex items-center gap-1.5">
+                        <i className="fas fa-circle-xmark" /> {redeemAllError}
+                      </div>
+                    )}
+                  </div>
+                  <div className="px-5 py-3.5 border-t border-border bg-surface-hover/60 flex items-center justify-end gap-2">
+                    <button onClick={() => setRedeemAllModal(false)} disabled={redeemAllLoading}
+                      className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-surface border border-border text-foreground shadow-sm hover:brightness-95 transition-all active:shadow-sm active:translate-y-[2px] disabled:opacity-50">
+                      <i className="fas fa-times text-[12px]" /> ยกเลิก
+                    </button>
+                    <button onClick={handleRedeemAll} disabled={redeemAllLoading || redeemAllServer === 0}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-[#16a34a] disabled:opacity-50 text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#0d6b2e] hover:brightness-110 transition-all active:shadow-[0_2px_0_#0d6b2e] active:translate-y-[2px]">
+                      {redeemAllLoading ? <><i className="fas fa-spinner fa-spin text-[12px]" /> กำลังส่ง...</> : <><i className="fas fa-gamepad text-[12px]" /> ส่งทั้งหมด</>}
+                    </button>
+                  </div>
+                </motion.div>
               </div>
-              <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">
-                <button onClick={() => setRedeemAllModal(false)} disabled={redeemAllLoading}
-                  className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-800 shadow-[0_4px_0_#d1d5db] hover:brightness-95 transition-all active:shadow-[0_1px_0_#d1d5db] active:translate-y-[2px] disabled:opacity-50">
-                  <i className="fas fa-times text-[12px]" /> ยกเลิก
-                </button>
-                <button onClick={handleRedeemAll} disabled={redeemAllLoading || redeemAllServer === 0}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-[#16a34a] disabled:opacity-50 text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#0d6b2e] hover:brightness-110 transition-all active:shadow-[0_2px_0_#0d6b2e] active:translate-y-[2px]">
-                  {redeemAllLoading ? <><i className="fas fa-spinner fa-spin text-[12px]" /> กำลังส่ง...</> : <><i className="fas fa-gamepad text-[12px]" /> ส่งทั้งหมด</>}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+            )}
+          </AnimatePresence>
+        </div>,
+        document.body
+      )}
     </MainLayout>
   );
 }

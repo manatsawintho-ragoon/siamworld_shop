@@ -55,6 +55,14 @@ router.get('/status', asyncHandler(async (_req, res) => {
 
 router.post('/init-admin', validate(initAdminSchema), asyncHandler(async (req, res) => {
   const result = await setupService.initAdmin(req.body.username, req.body.password);
+  // Set httpOnly cookie so the browser is immediately authenticated for subsequent setup steps
+  res.cookie('auth_token', result.token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict' as const,
+    maxAge: 24 * 60 * 60 * 1000,
+    path: '/',
+  });
   res.json({ success: true, ...result });
 }));
 

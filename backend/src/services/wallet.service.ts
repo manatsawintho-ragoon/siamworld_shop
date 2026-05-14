@@ -121,12 +121,17 @@ class WalletService {
 
   async getTransactions(userId: number, page: number = 1, limit: number = 20) {
     const offset = (page - 1) * limit;
+    // Show only completed transactions — pending/failed PromptPay QRs are not shown.
     const [rows] = await pool.execute<RowDataPacket[]>(
-      'SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
+      `SELECT * FROM transactions
+       WHERE user_id = ? AND status IN ('success', 'refunded')
+       ORDER BY created_at DESC LIMIT ? OFFSET ?`,
       [userId, String(limit), String(offset)]
     );
     const [countResult] = await pool.execute<RowDataPacket[]>(
-      'SELECT COUNT(*) as total FROM transactions WHERE user_id = ?', [userId]
+      `SELECT COUNT(*) as total FROM transactions
+       WHERE user_id = ? AND status IN ('success', 'refunded')`,
+      [userId]
     );
     const total = countResult[0].total;
     return { transactions: rows, pagination: { page, totalPages: Math.ceil(total / limit), total } };

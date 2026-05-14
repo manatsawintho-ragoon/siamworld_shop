@@ -42,8 +42,8 @@ const TX_CONFIG: Record<string, { label: string; icon: string; color: string; bg
   admin_adjust: { label: 'Admin',        icon: 'fa-shield-alt',         color: 'text-purple-500', bg: 'bg-purple-50' },
 };
 
-const CARD = 'bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden';
-const SECTION_HEADER = 'px-5 py-3.5 border-b border-gray-100 bg-gray-50/60 flex items-center gap-2.5';
+const CARD = 'bg-surface rounded-2xl shadow-theme-sm border border-border/70 overflow-hidden';
+const SECTION_HEADER = 'px-5 py-3.5 border-b border-border bg-surface-hover/60 flex items-center gap-2.5';
 
 export default function ProfilePage() {
   const { user, loading: authLoading, refresh } = useAuth();
@@ -113,7 +113,7 @@ export default function ProfilePage() {
     }
   };
 
-  const inputCls = 'w-full pl-9 pr-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 bg-white';
+  const inputCls = 'w-full pl-9 pr-3.5 py-2.5 rounded-lg border border-border text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-foreground-subtle bg-surface';
 
   const isPositive = (type: string) => type === 'topup' || type === 'refund';
 
@@ -123,10 +123,10 @@ export default function ProfilePage() {
 
         {/* Page Header */}
         <div>
-          <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+          <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
             <i className="fas fa-user text-[#f97316]" /> โปรไฟล์
           </h1>
-          <p className="text-xs text-gray-400 mt-0.5">ข้อมูลบัญชีและประวัติธุรกรรม</p>
+          <p className="text-xs text-foreground-subtle mt-0.5">ข้อมูลบัญชีและประวัติธุรกรรม</p>
         </div>
 
         {/* ── Profile Card ── */}
@@ -137,7 +137,7 @@ export default function ProfilePage() {
               <div className="flex items-end gap-4">
                 <div className="w-16 h-16 rounded-2xl border-4 border-white shadow-md overflow-hidden flex-shrink-0 bg-green-50">
                   {profileLoading ? (
-                    <div className="w-full h-full bg-gray-100 animate-pulse" />
+                    <div className="w-full h-full bg-surface-hover animate-pulse" />
                   ) : (
                     <img
                       src={`https://mc-heads.net/avatar/${profile?.username || 'steve'}/64`}
@@ -150,9 +150,9 @@ export default function ProfilePage() {
                 </div>
                 <div className="mb-1">
                   {profileLoading ? (
-                    <div className="h-6 w-32 bg-gray-100 rounded animate-pulse mb-2" />
+                    <div className="h-6 w-32 bg-surface-hover rounded animate-pulse mb-2" />
                   ) : (
-                    <h2 className="text-xl font-black text-gray-900 leading-tight">{profile?.username}</h2>
+                    <h2 className="text-xl font-black text-foreground leading-tight">{profile?.username}</h2>
                   )}
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     {profile?.role === 'admin' ? (
@@ -165,12 +165,12 @@ export default function ProfilePage() {
                       </span>
                     )}
                     {profile?.email && (
-                      <span className="text-xs text-gray-400 flex items-center gap-1">
+                      <span className="text-xs text-foreground-subtle flex items-center gap-1">
                         <i className="fas fa-envelope text-[10px]" /> {profile.email}
                       </span>
                     )}
                     {profile?.created_at && (
-                      <span className="text-xs text-gray-400 flex items-center gap-1">
+                      <span className="text-xs text-foreground-subtle flex items-center gap-1">
                         <i className="fas fa-calendar text-[10px]" />
                         สมาชิกตั้งแต่ {new Date(profile.created_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'short' })}
                       </span>
@@ -204,13 +204,13 @@ export default function ProfilePage() {
                   { icon: 'fa-arrow-up',   bg: 'bg-red-50',   ic: 'text-red-500',   label: 'ใช้จ่ายรวม',  value: `฿${profile.total_spent.toLocaleString()}` },
                   { icon: 'fa-bag-shopping', bg: 'bg-amber-50', ic: 'text-amber-500', label: 'รายการซื้อ', value: `${profile.purchase_count} ครั้ง` },
                 ].map((s, i) => (
-                  <div key={i} className="bg-white rounded-xl border border-gray-200 p-3 flex items-center gap-3">
+                  <div key={i} className="bg-surface rounded-xl border border-border p-3 flex items-center gap-3">
                     <div className={`w-9 h-9 rounded-lg ${s.bg} flex items-center justify-center flex-shrink-0`}>
                       <i className={`fas ${s.icon} ${s.ic} text-sm`} />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-black text-gray-800 tabular-nums truncate">{s.value}</p>
-                      <p className="text-[10px] text-gray-400">{s.label}</p>
+                      <p className="text-sm font-black text-foreground tabular-nums truncate">{s.value}</p>
+                      <p className="text-[10px] text-foreground-subtle">{s.label}</p>
                     </div>
                   </div>
                 ))}
@@ -226,21 +226,21 @@ export default function ProfilePage() {
               <i className="fas fa-key text-amber-500 text-xs" />
             </div>
             <div>
-              <h3 className="font-bold text-gray-900 text-sm">เปลี่ยนรหัสผ่าน</h3>
-              <p className="text-[11px] text-gray-400">รหัสผ่าน Authme สำหรับเข้าเกม</p>
+              <h3 className="font-bold text-foreground text-sm">เปลี่ยนรหัสผ่าน</h3>
+              <p className="text-[11px] text-foreground-subtle">รหัสผ่านสำหรับเข้าเกม</p>
             </div>
           </div>
           <form onSubmit={handleChangePassword} className="p-5">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
-                { label: 'รหัสผ่านปัจจุบัน', icon: 'fa-lock', value: currentPw, setter: setCurrentPw, placeholder: 'รหัสผ่าน Authme ที่ใช้อยู่' },
+                { label: 'รหัสผ่านปัจจุบัน', icon: 'fa-lock', value: currentPw, setter: setCurrentPw, placeholder: 'รหัสผ่านที่ใช้อยู่' },
                 { label: 'รหัสผ่านใหม่',     icon: 'fa-key',  value: newPw,     setter: setNewPw,     placeholder: 'อย่างน้อย 8 ตัวอักษร' },
                 { label: 'ยืนยันรหัสผ่านใหม่', icon: 'fa-check-circle', value: confirmPw, setter: setConfirmPw, placeholder: 'พิมพ์รหัสผ่านใหม่อีกครั้ง' },
               ].map(f => (
                 <div key={f.label}>
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5">{f.label}</label>
+                  <label className="block text-xs font-bold text-foreground-subtle mb-1.5">{f.label}</label>
                   <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-subtle">
                       <i className={`fas ${f.icon} text-sm`} />
                     </div>
                     <input
@@ -274,8 +274,8 @@ export default function ProfilePage() {
                 <i className="fas fa-clock-rotate-left text-green-600 text-xs" />
               </div>
               <div>
-                <h3 className="font-bold text-gray-900 text-sm">ประวัติธุรกรรม</h3>
-                <p className="text-[11px] text-gray-400">รายการทั้งหมด {pagination.total} รายการ</p>
+                <h3 className="font-bold text-foreground text-sm">ประวัติธุรกรรม</h3>
+                <p className="text-[11px] text-foreground-subtle">รายการทั้งหมด {pagination.total} รายการ</p>
               </div>
             </div>
           </div>
@@ -285,8 +285,8 @@ export default function ProfilePage() {
               <i className="fas fa-spinner fa-spin text-2xl text-green-500" />
             </div>
           ) : transactions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-              <i className="fas fa-receipt text-3xl mb-3 text-gray-300" />
+            <div className="flex flex-col items-center justify-center py-16 text-foreground-subtle">
+              <i className="fas fa-receipt text-3xl mb-3 text-foreground-subtle" />
               <p className="text-sm font-medium">ยังไม่มีธุรกรรม</p>
             </div>
           ) : (
@@ -294,35 +294,49 @@ export default function ProfilePage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-xs text-gray-400 uppercase border-b border-gray-100">
+                    <tr className="text-left text-xs text-foreground-subtle uppercase border-b border-border">
                       <th className="px-5 py-3 font-medium">ประเภท</th>
                       <th className="px-5 py-3 font-medium">จำนวนเงิน</th>
                       <th className="px-5 py-3 font-medium hidden sm:table-cell">รายละเอียด</th>
                       <th className="px-5 py-3 font-medium text-right">วันที่</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-border">
                     {transactions.map(tx => {
-                      const cfg = TX_CONFIG[tx.type] || { label: tx.type, icon: 'fa-circle', color: 'text-gray-400', bg: 'bg-gray-50' };
-                      const positive = isPositive(tx.type);
+                      const cfg = TX_CONFIG[tx.type] || { label: tx.type, icon: 'fa-circle', color: 'text-foreground-subtle', bg: 'bg-surface-hover' };
+                      const isPending = tx.status === 'pending';
+                      const isFailed  = tx.status === 'failed' || tx.status === 'refunded';
+                      const positive  = isPositive(tx.type) && !isPending && !isFailed;
                       return (
-                        <tr key={tx.id} className="hover:bg-gray-50/60 transition-colors">
+                        <tr key={tx.id} className={`hover:bg-surface-hover/60 transition-colors ${isPending ? 'opacity-60' : ''}`}>
                           <td className="px-5 py-3">
-                            <span className={`inline-flex items-center gap-1.5 text-[12px] font-bold px-2.5 py-1 rounded-md ${cfg.bg} ${cfg.color}`}>
-                              <i className={`fas ${cfg.icon} text-[10px]`} />
-                              {cfg.label}
-                            </span>
+                            <div className="flex flex-col gap-1">
+                              <span className={`inline-flex items-center gap-1.5 text-[12px] font-bold px-2.5 py-1 rounded-md ${cfg.bg} ${cfg.color}`}>
+                                <i className={`fas ${cfg.icon} text-[10px]`} />
+                                {cfg.label}
+                              </span>
+                              {isPending && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-yellow-50 text-yellow-600 w-fit">
+                                  <i className="fas fa-clock text-[9px]" /> รอดำเนินการ
+                                </span>
+                              )}
+                              {isFailed && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-red-50 text-red-500 w-fit">
+                                  <i className="fas fa-times text-[9px]" /> {tx.status === 'refunded' ? 'คืนเงิน' : 'ไม่สำเร็จ'}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-5 py-3">
-                            <span className={`font-black text-sm tabular-nums ${positive ? 'text-green-600' : 'text-red-500'}`}>
-                              {positive ? '+' : '-'}฿{Math.abs(parseFloat(String(tx.amount))).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                            <span className={`font-black text-sm tabular-nums ${isPending ? 'text-foreground-subtle' : positive ? 'text-green-600' : 'text-red-500'}`}>
+                              {isPending ? '' : positive ? '+' : '-'}฿{Math.abs(parseFloat(String(tx.amount))).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                             </span>
                           </td>
                           <td className="px-5 py-3 hidden sm:table-cell">
-                            <span className="text-gray-400 text-[12px] max-w-[220px] truncate block">{tx.description || '—'}</span>
+                            <span className="text-foreground-subtle text-[12px] max-w-[220px] truncate block">{tx.description || '—'}</span>
                           </td>
                           <td className="px-5 py-3 text-right">
-                            <span className="text-gray-400 text-[11px] tabular-nums whitespace-nowrap">
+                            <span className="text-foreground-subtle text-[11px] tabular-nums whitespace-nowrap">
                               {new Date(tx.created_at).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })}
                             </span>
                           </td>
@@ -335,15 +349,15 @@ export default function ProfilePage() {
 
               {/* Pagination */}
               {pagination.totalPages > 1 && (
-                <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between">
-                  <p className="text-[11px] text-gray-400">
+                <div className="px-5 py-4 border-t border-border flex items-center justify-between">
+                  <p className="text-[11px] text-foreground-subtle">
                     หน้า {pagination.page} จาก {pagination.totalPages}
                   </p>
                   <div className="flex items-center gap-1.5">
                     <button
                       disabled={pagination.page <= 1}
                       onClick={() => loadTx(pagination.page - 1)}
-                      className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-gray-500 shadow-[0_2px_0_#e5e7eb] hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                      className="w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center text-foreground-subtle shadow-sm hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
                       <i className="fas fa-chevron-left text-[11px]" />
                     </button>
                     {Array.from({ length: Math.min(pagination.totalPages, 5) }, (_, i) => {
@@ -359,7 +373,7 @@ export default function ProfilePage() {
                           className={`w-8 h-8 rounded-lg text-[12px] font-bold transition-all ${
                             p === pagination.page
                               ? 'bg-[#16a34a] text-white shadow-[0_3px_0_#0d6b2e]'
-                              : 'bg-white border border-gray-200 text-gray-500 shadow-[0_2px_0_#e5e7eb] hover:brightness-95'
+                              : 'bg-surface border border-border text-foreground-subtle shadow-sm hover:brightness-95'
                           }`}>
                           {p}
                         </button>
@@ -368,7 +382,7 @@ export default function ProfilePage() {
                     <button
                       disabled={pagination.page >= pagination.totalPages}
                       onClick={() => loadTx(pagination.page + 1)}
-                      className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-gray-500 shadow-[0_2px_0_#e5e7eb] hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                      className="w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center text-foreground-subtle shadow-sm hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
                       <i className="fas fa-chevron-right text-[11px]" />
                     </button>
                   </div>

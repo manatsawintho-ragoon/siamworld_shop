@@ -1,23 +1,38 @@
 import { pool } from '../database/connection';
 import { RowDataPacket } from 'mysql2';
+import { encrypt, decrypt, isEncrypted } from '../utils/crypto';
+
+// Keys stored encrypted at rest in the settings table.
+// encrypt/decrypt is transparent — callers always work with plaintext.
+const SENSITIVE_SETTINGS = new Set(['easyslip_api_key', 'smtp_password']);
+
+function maybeDecrypt(key: string, value: string): string {
+  if (!SENSITIVE_SETTINGS.has(key)) return value;
+  if (isEncrypted(value)) {
+    try { return decrypt(value); } catch { return value; } // corrupt entry — return as-is
+  }
+  return value; // legacy plain-text — pass through until next save
+}
 
 class SettingsService {
   async getAll(): Promise<Record<string, string>> {
     const [rows] = await pool.execute<RowDataPacket[]>('SELECT `key`, `value` FROM settings');
     const settings: Record<string, string> = {};
-    for (const row of rows) { settings[row.key] = row.value; }
+    for (const row of rows) { settings[row.key] = maybeDecrypt(row.key, row.value); }
     return settings;
   }
 
   async get(key: string): Promise<string | null> {
     const [rows] = await pool.execute<RowDataPacket[]>('SELECT `value` FROM settings WHERE `key` = ?', [key]);
-    return rows.length > 0 ? rows[0].value : null;
+    if (rows.length === 0) return null;
+    return maybeDecrypt(key, rows[0].value);
   }
 
   async set(key: string, value: string) {
+    const stored = SENSITIVE_SETTINGS.has(key) ? encrypt(value) : value;
     await pool.execute(
       'INSERT INTO settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = ?',
-      [key, value, value]
+      [key, stored, stored]
     );
   }
 

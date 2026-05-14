@@ -1,5 +1,5 @@
 """
-SiamWorld Shop — Playwright E2E Tests
+Siamsite Shop — Playwright E2E Tests
 Tests: homepage, navigation, shop, lootbox, topup, admin setup, admin login guard
 """
 from playwright.sync_api import sync_playwright, expect
@@ -138,7 +138,7 @@ with sync_playwright() as p:
     def t_screenshot():
         page.goto(BASE)
         page.wait_for_load_state('networkidle')
-        page.screenshot(path='/tmp/siamworld_home.png', full_page=True)
+        page.screenshot(path='/tmp/siamsite_home.png', full_page=True)
     test('Homepage screenshot captured', t_screenshot)
 
     browser.close()

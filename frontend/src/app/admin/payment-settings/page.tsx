@@ -26,6 +26,9 @@ export default function PaymentSettingsPage() {
   const [saving,       setSaving]       = useState(false);
   const [esStatus,     setEsStatus]     = useState<EasySlipStatus | null>(null);
   const [testing,      setTesting]      = useState(false);
+  const [esKey,        setEsKey]        = useState('');
+  const [showEsKey,    setShowEsKey]    = useState(false);
+  const [savingEsKey,  setSavingEsKey]  = useState(false);
 
   // Bonus multiplier state
   const [bonusEnabled,  setBonusEnabled]  = useState(false);
@@ -77,6 +80,21 @@ export default function PaymentSettingsPage() {
       adminAlert({ type: 'success', title: 'บันทึกข้อมูลแล้ว' });
     } catch { adminAlert({ type: 'error', title: 'บันทึกไม่สำเร็จ' }); }
     finally  { setSaving(false); }
+  };
+
+  const handleSaveEsKey = async () => {
+    if (!esKey.trim()) return;
+    setSavingEsKey(true);
+    try {
+      await api('/admin/settings', {
+        method: 'PUT', token: getToken()!,
+        body: { settings: [{ key: 'easyslip_api_key', value: esKey.trim() }] },
+      });
+      setEsKey('');
+      await load();
+      adminAlert({ type: 'success', title: 'บันทึก EasySlip API Key แล้ว' });
+    } catch { adminAlert({ type: 'error', title: 'บันทึกไม่สำเร็จ' }); }
+    finally  { setSavingEsKey(false); }
   };
 
   const handleTest = async () => {
@@ -335,31 +353,42 @@ export default function PaymentSettingsPage() {
               <label className="block text-xs font-bold text-gray-500 mb-1.5">
                 <i className="fas fa-key mr-1.5 text-gray-400" />Access Key
               </label>
-              {esStatus?.configured ? (
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-gray-200 bg-gray-50">
-                    <i className="fas fa-lock text-gray-300 text-xs flex-shrink-0" />
-                    <code className="flex-1 text-xs text-gray-400 tracking-[0.2em] truncate">
-                      {esStatus.keyPreview ?? '••••••••-••••-••••-••••-••••••••••••'}
-                    </code>
-                    <span className="flex-shrink-0 flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-50 border border-green-200 px-2 py-0.5 rounded">
-                      <i className="fas fa-check text-[9px]" /> ตั้งค่าแล้ว
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-gray-400 flex items-center gap-1 px-0.5">
-                    <i className="fas fa-shield-halved text-gray-300" />
-                    Key ถูกป้องกันโดยระบบ — ไม่สามารถดูหรือแก้ไขผ่านหน้านี้ได้
-                  </p>
-                </div>
-              ) : (
-                <div className="px-3.5 py-2.5 rounded-lg border border-red-200 bg-red-50 flex items-center gap-2">
-                  <i className="fas fa-circle-xmark text-red-400 text-sm flex-shrink-0" />
-                  <div>
-                    <p className="text-xs font-bold text-red-700">ยังไม่ได้ตั้งค่า</p>
-                    <p className="text-[10px] text-red-500">กรุณาติดต่อผู้ดูแลระบบเพื่อตั้งค่า</p>
-                  </div>
+              {esStatus?.configured && (
+                <div className="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-gray-200 bg-gray-50 mb-2">
+                  <i className="fas fa-lock text-gray-300 text-xs flex-shrink-0" />
+                  <code className="flex-1 text-xs text-gray-400 tracking-[0.2em] truncate">
+                    {esStatus.keyPreview ?? '••••••••-••••-••••-••••-••••••••••••'}
+                  </code>
+                  <span className="flex-shrink-0 flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-50 border border-green-200 px-2 py-0.5 rounded">
+                    <i className="fas fa-check text-[9px]" /> ตั้งค่าแล้ว
+                  </span>
                 </div>
               )}
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type={showEsKey ? 'text' : 'password'}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-gray-200 bg-white pr-8 focus:outline-none focus:border-orange-400"
+                    placeholder={esStatus?.configured ? 'ใส่ key ใหม่เพื่อเปลี่ยน...' : 'วาง EasySlip API Key...'}
+                    value={esKey}
+                    onChange={e => setEsKey(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    onClick={() => setShowEsKey(v => !v)}
+                  >
+                    <i className={`fas ${showEsKey ? 'fa-eye-slash' : 'fa-eye'} text-xs`} />
+                  </button>
+                </div>
+                <button
+                  onClick={handleSaveEsKey}
+                  disabled={!esKey.trim() || savingEsKey}
+                  className="px-3 py-2 text-xs font-bold bg-[#1e2735] text-white rounded-lg shadow-[0_3px_0_#38404d] hover:brightness-110 active:shadow-none active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                >
+                  {savingEsKey ? <i className="fas fa-spinner fa-spin" /> : 'บันทึก'}
+                </button>
+              </div>
             </div>
 
             <div className="flex-1" />

@@ -179,6 +179,7 @@ function ItemGrid({ items, totalWeight, onEdit, onDelete, onViewCmd }: {
               {item.description && (
                 <p className="text-[10px] text-gray-400 mt-0.5 truncate">{item.description}</p>
               )}
+              {(() => { const n = (item.command || '').split('\n').map((c: string) => c.trim()).filter(Boolean).length; return n > 0 ? <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 text-[9px] font-bold"><i className="fas fa-terminal text-[8px]" /> {n} cmd</span> : null; })()}
             </div>
             {/* Colored bottom accent */}
             <div className="h-2 w-full flex-shrink-0" style={{ background: `linear-gradient(90deg, ${rc.color}88, ${rc.color}, ${rc.color}88)` }} />
@@ -227,9 +228,10 @@ function ItemList({ items, totalWeight, onEdit, onDelete, onViewCmd }: {
             <div className="flex-1 min-w-0">
               <p className="text-[13px] font-semibold text-gray-800 truncate">{item.name}</p>
               <p className="text-[10px] text-gray-400 truncate mt-0.5">
-                {item.description || <span className="font-mono">{item.command}</span>}
+                {item.description || <span className="font-mono text-[9px]">{item.command.split('\n')[0]}</span>}
               </p>
             </div>
+            {(() => { const n = (item.command || '').split('\n').map((c: string) => c.trim()).filter(Boolean).length; return n > 0 ? <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 text-[9px] font-bold flex-shrink-0"><i className="fas fa-terminal text-[8px]" /> {n} cmd</span> : null; })()}
             <span className="text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded flex-shrink-0 text-white"
               style={{ backgroundColor: rc.color }}>{rc.label}</span>
             <div className="w-24 flex-shrink-0 hidden lg:block">
@@ -358,7 +360,7 @@ export default function AdminLootBoxes() {
         description: boxModal.description || null,
         image: boxModal.image || null,
         price: Number(boxModal.price),
-        original_price: origPrice && origPrice > Number(boxModal.price) ? origPrice : null,
+        original_price: origPrice && Number(origPrice) > Number(boxModal.price) ? origPrice : null,
         active: boxModal.active !== false,
         category_id: boxModal.category_id ?? null,
         stock_limit: boxModal.stock_limit ?? null,
@@ -603,7 +605,7 @@ export default function AdminLootBoxes() {
                         </div>
                         {/* Row 2: ราคาเดิม + -% + ราคา + · + items */}
                         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                          {box.original_price && box.original_price > box.price ? (
+                          {box.original_price && Number(box.original_price) > Number(box.price) ? (
                             <>
                               <span className={`text-[11px] line-through whitespace-nowrap flex-shrink-0 ${isOpen ? 'text-gray-400' : 'text-gray-300'}`}>
                                 ฿{parseFloat(String(box.original_price)).toLocaleString()}
@@ -979,15 +981,38 @@ export default function AdminLootBoxes() {
                 <i className="fas fa-terminal text-green-400 text-xs" />
               </div>
               <div className="flex-1 text-center">
-                <h3 className="font-bold text-gray-900 text-sm">{viewingCmd.name}</h3>
-                <p className="text-[11px] text-gray-400">RCON Command</p>
+                <h3 className="font-bold text-gray-900 text-sm flex items-center justify-center gap-2">
+                  RCON Commands
+                  {(() => { const n = (viewingCmd.command || '').split('\n').map((c: string) => c.trim()).filter(Boolean).length; return n > 0 ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold"><i className="fas fa-terminal text-[8px]" /> {n} คำสั่ง</span> : null; })()}
+                </h3>
+                <p className="text-[11px] text-gray-400 mt-0.5">{viewingCmd.name}</p>
               </div>
               <button onClick={() => setViewingCmd(null)} className="w-8 h-8 rounded-lg bg-red-500 border border-red-600 flex items-center justify-center text-white shadow-[0_4px_0_#b91c1c] hover:brightness-110 transition-all">
                 <i className="fas fa-times text-xs" />
               </button>
             </div>
-            <div className="p-5">
-              <pre className="bg-gray-900 text-green-400 text-sm font-mono p-4 rounded-xl whitespace-pre-wrap break-all max-h-[300px] overflow-y-auto">{viewingCmd.command}</pre>
+            <div className="p-5 space-y-3">
+              {(() => {
+                const cmds = (viewingCmd.command || '').split('\n').map((c: string) => c.trim()).filter(Boolean);
+                if (cmds.length === 0) return <p className="text-sm text-gray-400 text-center py-4">(ยังไม่มีคำสั่ง)</p>;
+                return (
+                  <div className="rounded-xl border border-gray-800 bg-gray-900 overflow-hidden">
+                    <div className="px-3 py-2 bg-gray-800 flex items-center gap-2 border-b border-gray-700">
+                      <div className="flex gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500/80" /><span className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" /><span className="w-2.5 h-2.5 rounded-full bg-green-500/80" /></div>
+                      <span className="text-[10px] text-gray-400 font-mono ml-1">รัน {cmds.length} คำสั่งตามลำดับ</span>
+                    </div>
+                    <div className="p-3 space-y-1.5 max-h-[280px] overflow-y-auto">
+                      {cmds.map((cmd: string, i: number) => (
+                        <div key={i} className="flex items-start gap-2.5">
+                          <span className="text-[10px] font-bold text-gray-500 w-5 text-right flex-shrink-0 mt-0.5 tabular-nums">{i + 1}</span>
+                          <code className="text-[12px] text-green-400 font-mono break-all leading-relaxed">{cmd}</code>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+              <p className="text-[10px] text-gray-400">ใช้ <code className="bg-gray-100 px-1 rounded">{'{player}'}</code> แทนชื่อผู้เล่น · คำสั่งจะรันตามลำดับเมื่อผู้เล่นรับไอเท็มในเกม</p>
             </div>
           </div>
         </div>,
@@ -1852,13 +1877,34 @@ function ItemModal({ item, saving, error, totalWeight, originalWeight, onChange,
 
               {/* RCON Command */}
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1.5">
-                  RCON Command <span className="text-red-400">*</span>
-                  <span className="ml-1.5 font-normal text-gray-400">ใช้ {'{player}'} แทนชื่อผู้เล่น</span>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5 flex items-center gap-2">
+                  RCON Commands <span className="text-red-400">*</span>
+                  {(() => { const cmds = (item.command || '').split('\n').map(c => c.trim()).filter(Boolean); return cmds.length > 0 ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold"><i className="fas fa-terminal text-[9px]" /> {cmds.length} คำสั่ง</span> : null; })()}
                 </label>
                 <textarea value={item.command || ''} onChange={e => onChange({ ...item, command: e.target.value })}
-                  className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-xs font-mono focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 resize-none bg-gray-50 transition-colors"
-                  rows={3} placeholder="give {player} diamond 1" />
+                  className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-xs font-mono focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 resize-y bg-gray-50 transition-colors"
+                  rows={3} placeholder={"give {player} diamond 1\nlp user {player} permission set group.vip"} />
+                <p className="text-[11px] text-gray-400 mt-1">1 บรรทัด = 1 คำสั่ง · ใส่ได้ไม่จำกัด · ใช้ <code className="bg-gray-100 px-1 rounded">{'{player}'}</code> แทนชื่อผู้เล่น</p>
+                {(() => {
+                  const cmds = (item.command || '').split('\n').map(c => c.trim()).filter(Boolean);
+                  if (cmds.length === 0) return null;
+                  return (
+                    <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50 overflow-hidden">
+                      <div className="px-3 py-1.5 bg-blue-100/60 flex items-center gap-1.5">
+                        <i className="fas fa-eye text-blue-500 text-[10px]" />
+                        <span className="text-[10px] font-bold text-blue-600">Preview คำสั่งที่จะ run ({cmds.length})</span>
+                      </div>
+                      <div className="px-3 py-2 space-y-1 max-h-24 overflow-y-auto">
+                        {cmds.map((cmd, i) => (
+                          <div key={i} className="flex items-start gap-2">
+                            <span className="text-[9px] font-bold text-blue-400 w-4 text-right flex-shrink-0 mt-0.5">{i + 1}</span>
+                            <code className="text-[11px] text-blue-800 font-mono break-all">{cmd}</code>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>

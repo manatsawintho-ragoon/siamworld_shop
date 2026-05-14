@@ -34,3 +34,13 @@ export class PlayerOfflineError extends AppError {
 export class RconError extends AppError {
   constructor(message = 'RCON command failed') { super(message, 502, 'RCON_ERROR'); }
 }
+export class SessionKickedError extends AppError {
+  constructor(message = 'เซสชันถูกยกเลิก: มีการเข้าสู่ระบบจากอุปกรณ์อื่น') {
+    super(message, 401, 'SESSION_KICKED');
+  }
+}
+export class SessionExpiredError extends AppError {
+  constructor(message = 'เซสชันหมดอายุเนื่องจากไม่มีการใช้งาน กรุณาเข้าสู่ระบบใหม่') {
+    super(message, 401, 'SESSION_EXPIRED');
+  }
+}

@@ -16,7 +16,7 @@ export function purchaseCooldown(cooldownSeconds: number = 5, namespace: string 
         const ttl = await redis.ttl(key);
         res.status(429).json({
           success: false,
-          error: `กรุณารอ ${ttl} วินาทีก่อนซื้อสินค้าถัดไป`,
+          error: `กรุณารอ ${ttl} วินาที ก่อนทำรายการถัดไป`,
           code: 'PURCHASE_COOLDOWN',
           retryAfter: ttl,
         });

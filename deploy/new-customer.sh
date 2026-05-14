@@ -1,6 +1,6 @@
 #!/bin/bash
 # ================================================================
-#  SiamWorld Shop — New Customer Deployment Script
+#  Siamsite Shop — New Customer Deployment Script
 #  Ubuntu / Linux Server
 #
 #  Usage:
@@ -17,14 +17,16 @@ set -e
 # ── Parse arguments ────────────────────────────────────────────
 NAME=""
 DOMAIN=""
+MC_IP=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         --name)   NAME="$2";   shift 2 ;;
         --domain) DOMAIN="$2"; shift 2 ;;
+        --mc-ip)  MC_IP="$2";  shift 2 ;;
         -h|--help)
-            echo "Usage: $0 --name <name> --domain <domain>"
-            echo "Example: $0 --name craftworld --domain craftworld.siamsite.shop"
+            echo "Usage: $0 --name <name> --domain <domain> [--mc-ip <minecraft_server_ip>]"
+            echo "Example: $0 --name craftworld --domain craftworld.siamsite.shop --mc-ip 1.2.3.4"
             exit 0
             ;;
         *) echo "[ERROR] Unknown argument: $1"; exit 1 ;;
@@ -33,7 +35,7 @@ done
 
 if [[ -z "$NAME" || -z "$DOMAIN" ]]; then
     echo "[ERROR] --name and --domain are required."
-    echo "Usage: $0 --name <name> --domain <domain>"
+    echo "Usage: $0 --name <name> --domain <domain> [--mc-ip <minecraft_server_ip>]"
     exit 1
 fi
 
@@ -63,7 +65,52 @@ fi
 
 # ── Paths ──────────────────────────────────────────────────────
 DEPLOY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SOURCE_ROOT="$(dirname "$DEPLOY_DIR")"
+
+# SOURCE_ROOT — path the Docker CLIENT uses for build contexts.
+# When running inside the panel container the source tree is mounted at /source,
+# so the inherited env var (SOURCE_ROOT=/source) is already correct.
+# On a bare host, fall back to the parent directory of DEPLOY_DIR.
+if [[ -n "${SOURCE_ROOT:-}" && -d "${SOURCE_ROOT}/backend" ]]; then
+    : # keep inherited value (container: /source, host already set)
+else
+    SOURCE_ROOT="$(dirname "$DEPLOY_DIR")"
+fi
+
+# HOST_SOURCE_ROOT — path the Docker DAEMON uses for bind mounts.
+# The daemon runs on the host, so it needs the real host filesystem path,
+# not the container-internal mount path.
+# Priority: HOST_SOURCE_ROOT env var (set in panel-compose.yml) → panel.env SOURCE_ROOT → SOURCE_ROOT
+if [[ -z "${HOST_SOURCE_ROOT:-}" ]]; then
+    PANEL_ENV="$DEPLOY_DIR/panel.env"
+    if [[ -f "$PANEL_ENV" ]]; then
+        _HR=$(grep '^SOURCE_ROOT=' "$PANEL_ENV" | cut -d= -f2-)
+        [[ -n "$_HR" ]] && HOST_SOURCE_ROOT="$_HR"
+    fi
+fi
+HOST_SOURCE_ROOT="${HOST_SOURCE_ROOT:-$SOURCE_ROOT}"
+
+# MYSQL_HOSTNAME — optional DNS-only subdomain for AuthMe plugin (bypasses Cloudflare proxy).
+# Read from panel.env if not already set in environment.
+if [[ -z "${MYSQL_HOSTNAME:-}" ]]; then
+    PANEL_ENV="$DEPLOY_DIR/panel.env"
+    if [[ -f "$PANEL_ENV" ]]; then
+        _MH=$(grep '^MYSQL_HOSTNAME=' "$PANEL_ENV" | cut -d= -f2-)
+        [[ -n "$_MH" ]] && MYSQL_HOSTNAME="$_MH"
+    fi
+fi
+
+# Validate
+if [[ "$SOURCE_ROOT" == "/" || -z "$SOURCE_ROOT" ]]; then
+    echo "[ERROR] Cannot locate source root for build context."
+    echo "  Set SOURCE_ROOT= in $DEPLOY_DIR/panel.env"
+    exit 1
+fi
+if [[ "$HOST_SOURCE_ROOT" == "/" || -z "$HOST_SOURCE_ROOT" ]]; then
+    echo "[ERROR] Cannot locate host source root for volume mounts."
+    echo "  Set SOURCE_ROOT= in $DEPLOY_DIR/panel.env"
+    exit 1
+fi
+
 CUSTOMERS_DIR="$DEPLOY_DIR/customers"
 CUSTOMER_DIR="$CUSTOMERS_DIR/$NAME"
 CUSTOMER_ENV="$CUSTOMER_DIR/.env"
@@ -142,13 +189,18 @@ FRONTEND_PORT=$FRONTEND_PORT
 
 # Rate limiting
 RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX=300
+RATE_LIMIT_MAX=2000
+
+# MySQL external hostname for AuthMe plugin (DNS-only subdomain bypassing Cloudflare proxy)
+# Set MYSQL_HOSTNAME in panel.env to configure this value automatically.
+MYSQL_HOSTNAME=${MYSQL_HOSTNAME:-}
 
 # EasySlip — fill in Admin Panel > ตั้งค่า > ระบบเติมเงิน
 EASYSLIP_API_KEY=
 
 # Internal paths (do not change)
 SOURCE_ROOT=$SOURCE_ROOT
+HOST_SOURCE_ROOT=$HOST_SOURCE_ROOT
 CUSTOMER_ENV_FILE=$CUSTOMER_ENV
 EOF
 
@@ -160,6 +212,7 @@ echo "  Domain             : $DOMAIN"
 echo "  Frontend port      : $FRONTEND_PORT"
 echo "  Backend port       : $BACKEND_PORT"
 echo "  MySQL exposed port : $MYSQL_EXPOSED_PORT"
+echo "  Minecraft server IP: ${MC_IP:-"(not set — UFW rule skipped)"}"
 echo "============================================================"
 echo ""
 echo "[1/2] Building & starting Docker containers..."
@@ -168,6 +221,7 @@ echo ""
 
 # ── Run Docker Compose ─────────────────────────────────────────
 export SOURCE_ROOT
+export HOST_SOURCE_ROOT
 export CUSTOMER_ENV_FILE="$CUSTOMER_ENV"
 
 docker compose \
@@ -212,6 +266,18 @@ else
         > "$CUSTOMERS_JSON"
 fi
 
+# ── UFW Firewall Rule ──────────────────────────────────────────
+if [[ -n "$MC_IP" ]]; then
+    echo "[UFW] เพิ่ม firewall rule สำหรับ MySQL port $MYSQL_EXPOSED_PORT จาก $MC_IP..."
+    nsenter -t 1 -m -u -i -n -p -- /usr/sbin/iptables -I DOCKER-USER 1 -p tcp --dport "$MYSQL_EXPOSED_PORT" -s "$MC_IP" -j ACCEPT 2>/dev/null && \
+    nsenter -t 1 -m -u -i -n -p -- /usr/sbin/netfilter-persistent save 2>/dev/null || \
+        echo "[FW] WARNING: ไม่สามารถเพิ่ม rule ได้ — กรุณาเพิ่มด้วยตนเอง: iptables -I DOCKER-USER 1 -p tcp --dport $MYSQL_EXPOSED_PORT -s $MC_IP -j ACCEPT"
+    echo "[UFW] เสร็จแล้ว"
+else
+    echo "[UFW] ไม่ได้ระบุ --mc-ip — ข้ามการตั้งค่า firewall"
+    echo "[UFW] หมายเหตุ: MySQL port $MYSQL_EXPOSED_PORT ยังไม่ถูกจำกัด IP"
+fi
+
 # ── Print NPM instructions ─────────────────────────────────────
 echo ""
 echo "============================================================"
@@ -253,4 +319,53 @@ echo "    https://$DOMAIN/admin/setup"
 echo ""
 echo "  Credentials saved at:"
 echo "    $CUSTOMER_ENV"
+echo ""
+echo "============================================================"
+echo "  AuthMe Plugin (config.yml) — ส่งให้ลูกค้าตั้งค่า"
+echo "============================================================"
+echo ""
+echo "  แก้ไข plugins/AuthMe/config.yml บน Minecraft server:"
+echo ""
+echo "    DataSource:"
+echo "      backend: MYSQL"
+echo "      caching: false"
+echo "      mySQLHost: ${MYSQL_HOSTNAME:-$DOMAIN}"
+echo "      mySQLPort: '$MYSQL_EXPOSED_PORT'"
+echo "      mySQLUseSSL: true"
+echo "      mySQLCheckServerCertificate: false"
+echo "      mySQLAllowPublicKeyRetrieval: true"
+echo "      mySQLUsername: siamworld"
+echo "      mySQLPassword: '$MYSQL_PASSWORD'"
+echo "      mySQLDatabase: siamworld"
+echo "      mySQLTablename: authme"
+echo "      poolSize: 10"
+echo "      maxLifetime: 1770"
+echo ""
+echo "  สำคัญ:"
+echo "    - caching: false   (ต้อง false เพราะมี web integration)"
+echo "    - maxLifetime: 1770  (ต้อง < wait_timeout 1800 บน MySQL)"
+echo "    - หลังแก้ config ให้ restart Minecraft server"
+echo ""
+echo "============================================================"
+echo "  AuthMe Connection Mode — เลือกตามความต้องการ"
+echo "============================================================"
+echo ""
+echo "  Option 1 (Default — ง่าย, ไม่ต้องตั้งค่าเพิ่ม)"
+echo "  ─────────────────────────────────────────────────────"
+echo "  AuthMe → Panel MySQL (ตาม config ด้านบน)"
+echo "  ✓ ไม่ต้องทำอะไรเพิ่ม"
+echo "  ✗ ถ้า Panel server ดับ = Minecraft server login ไม่ได้"
+echo ""
+echo "  Option 2 (HA — Minecraft ทำงานได้แม้ Panel ดับ)"
+echo "  ─────────────────────────────────────────────────────"
+echo "  Customer MySQL (Master) → Panel MySQL (Replica)"
+echo "  AuthMe → localhost (customer's own MySQL)"
+echo "  ✓ Panel ดับ = Minecraft ยัง login/register ได้ปกติ"
+echo "  ✓ replication sync อัตโนมัติเมื่อ Panel กลับมา"
+echo "  ต้องการ: Tailscale + MySQL บนเครื่อง Minecraft"
+echo ""
+echo "  วิธี upgrade เป็น Option 2 (ทำทีหลังได้):"
+echo "  1. (มีข้อมูลเก่า) ./manage-customer.sh --action migrate-to-replica --name $NAME"
+echo "  2.                 ./manage-customer.sh --action setup-replica      --name $NAME"
+echo "  3.                 ./manage-customer.sh --action connect-replica    --name $NAME --host <tailscale-ip>"
 echo ""

@@ -1,0 +1,112 @@
+# ============================================================
+#  Siamsite Panel — Control Panel Stack
+#  Start ONCE on the VPS (not per-customer)
+#
+#  Usage:
+#    cd deploy
+#    docker compose -f panel-compose.yml --env-file panel.env up -d --build
+# ============================================================
+
+services:
+
+  panel-mysql:
+    image: mysql:8.0
+    container_name: panel-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${PANEL_MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: siamworld_panel
+      MYSQL_USER: panel
+      MYSQL_PASSWORD: ${PANEL_MYSQL_PASSWORD}
+    volumes:
+      - panel_mysql_data:/var/lib/mysql
+      - ${SOURCE_ROOT}/panel/database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${PANEL_MYSQL_ROOT_PASSWORD}"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - panel_internal
+
+  panel-redis:
+    image: redis:7-alpine
+    container_name: panel-redis
+    restart: unless-stopped
+    volumes:
+      - panel_redis_data:/data
+    networks:
+      - panel_internal
+
+  panel-backend:
+    build:
+      context: ${SOURCE_ROOT}/panel/backend
+      dockerfile: Dockerfile
+      network: host
+    container_name: panel-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: "--dns-result-order=ipv4first"
+      PANEL_BACKEND_PORT: 5000
+      PANEL_MYSQL_HOST: panel-mysql
+      PANEL_MYSQL_PORT: 3306
+      PANEL_MYSQL_USER: panel
+      PANEL_MYSQL_PASSWORD: ${PANEL_MYSQL_PASSWORD}
+      PANEL_MYSQL_DATABASE: siamworld_panel
+      PANEL_REDIS_HOST: panel-redis
+      PANEL_REDIS_PORT: 6379
+      PANEL_JWT_SECRET: ${PANEL_JWT_SECRET}
+      PANEL_CORS_ORIGIN: https://${PANEL_DOMAIN}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      FACEBOOK_CLIENT_ID: ${FACEBOOK_CLIENT_ID}
+      FACEBOOK_CLIENT_SECRET: ${FACEBOOK_CLIENT_SECRET}
+      BACKEND_URL: ${BACKEND_URL}
+      FRONTEND_URL: ${FRONTEND_URL}
+      DEPLOY_DIR: /deploy
+      SOURCE_ROOT: /source
+      MYSQL_HOSTNAME: ${MYSQL_HOSTNAME:-}
+    privileged: true
+    pid: host
+    volumes:
+      - ${SOURCE_ROOT}/deploy:/deploy          # access to new-customer.sh & customers.json
+      - ${SOURCE_ROOT}:/source:ro              # read-only source for init.sql ref
+      - /var/run/docker.sock:/var/run/docker.sock  # docker control for deploy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "5000:5000"
+    depends_on:
+      panel-mysql:
+        condition: service_healthy
+      panel-redis:
+        condition: service_started
+    networks:
+      - panel_internal
+
+  panel-frontend:
+    build:
+      context: ${SOURCE_ROOT}/panel/frontend
+      dockerfile: Dockerfile
+      network: host
+      args:
+        PANEL_BACKEND_INTERNAL_URL: http://panel-backend:5000
+    container_name: panel-frontend
+    restart: unless-stopped
+    environment:
+      PANEL_BACKEND_INTERNAL_URL: http://panel-backend:5000
+    ports:
+      - "2000:2000"
+    depends_on:
+      - panel-backend
+    networks:
+      - panel_internal
+
+volumes:
+  panel_mysql_data:
+  panel_redis_data:
+
+networks:
+  panel_internal:
+    driver: bridge

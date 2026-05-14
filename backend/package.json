@@ -1,7 +1,7 @@
 {
-  "name": "siamworld-backend",
+  "name": "siamsite-backend",
   "version": "2.0.0",
-  "description": "SiamWorld Minecraft Shop Backend - Multi-server RCON",
+  "description": "Siamsite Minecraft Shop Backend - Multi-server RCON",
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
@@ -30,7 +30,9 @@
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.5.0",
+    "@types/nodemailer": "^8.0.0",
     "@types/uuid": "^10.0.0",
+    "nodemailer": "^7.0.13",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.5.4"

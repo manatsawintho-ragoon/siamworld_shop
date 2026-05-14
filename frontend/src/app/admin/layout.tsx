@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { AdminAlertProvider } from '@/components/AdminAlert';
 import { motion, AnimatePresence } from 'framer-motion';
+import NotificationBell from '@/components/NotificationBell';
 
 // Menu Categorization (Verity Style)
 const MENU_CATEGORIES = [
@@ -34,6 +35,7 @@ const MENU_CATEGORIES = [
     category: 'PAGE MANAGER',
     items: [
       { href: '/admin/settings', icon: 'fa-paint-roller', label: 'ตั้งค่าหน้าเว็บไซต์' },
+      { href: '/admin/appearance', icon: 'fa-palette', label: 'Appearance / Theme' },
     ]
   },
   {
@@ -275,7 +277,8 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <NotificationBell />
             <div className="relative">
               <button
                 onClick={() => setUserMenuOpen(v => !v)}

@@ -8,6 +8,7 @@ import { encrypt, decrypt, isEncrypted } from '../utils/crypto';
 import { logger } from '../utils/logger';
 import { RowDataPacket } from 'mysql2';
 import { ValidationError } from '../utils/errors';
+import { createSession } from './session.service';
 
 interface AuthMeConfig {
   host: string;
@@ -34,6 +35,12 @@ class SetupService {
         return 'host.docker.internal';
       }
     }
+    // If the host matches the configured external MySQL hostname (e.g. db.siamsite.shop),
+    // resolve to the internal Docker service name to avoid hairpin NAT failure.
+    const mysqlHostname = process.env.MYSQL_HOSTNAME;
+    if (mysqlHostname && host === mysqlHostname) {
+      return process.env.MYSQL_HOST || 'mysql';
+    }
     return host;
   }
 
@@ -44,9 +51,14 @@ class SetupService {
   async testAuthMeConnection(config: AuthMeConfig): Promise<{ success: boolean; message: string; playerCount?: number }> {
     let conn: mysql.Connection | null = null;
     try {
+      const resolvedHost = this.resolveHost(config.host);
+      // If resolveHost mapped external hostname to internal container, use internal port (3306)
+      const resolvedPort = (resolvedHost !== config.host)
+        ? parseInt(process.env.MYSQL_PORT || '3306', 10)
+        : config.port;
       conn = await mysql.createConnection({
-        host: this.resolveHost(config.host),
-        port: config.port,
+        host: resolvedHost,
+        port: resolvedPort,
         user: config.user,
         password: config.password,
         database: config.database,
@@ -190,9 +202,22 @@ class SetupService {
     dbPassword: string; dbDatabase: string; playerCount: number;
   }> {
     const [rows] = await pool.execute<RowDataPacket[]>('SELECT COUNT(*) as count FROM authme');
+
+    // Use the shop's public domain (from CORS_ORIGIN) as the external MySQL host shown to users.
+    // MYSQL_HOSTNAME is only used internally (resolveHost) to avoid hairpin NAT — not for display.
+    let externalHost: string = config.db.host;
+    try {
+      const origin = config.corsOrigin.replace(/,$/, '').split(',')[0].trim();
+      if (origin && origin.startsWith('http')) {
+        externalHost = new URL(origin).hostname;
+      }
+    } catch { /* keep config.db.host as fallback */ }
+
+    const externalPort = config.db.exposedPort ?? config.db.port;
+
     return {
-      dbHost: config.db.host,
-      dbPort: config.db.port,
+      dbHost: externalHost,
+      dbPort: externalPort,
       dbUser: config.db.user,
       dbPassword: config.db.password,
       dbDatabase: config.db.database,
@@ -235,7 +260,9 @@ class SetupService {
 
       await conn.commit();
 
-      const payload = { userId, username, role: 'admin' };
+      // Create server-side session so the returned token is immediately usable for the setup wizard
+      const jti = await createSession(userId);
+      const payload = { userId, username, role: 'admin', jti };
       const token = jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn as jwt.SignOptions['expiresIn'] });
 
       logger.info('Initial admin account created via setup wizard', { userId, username });

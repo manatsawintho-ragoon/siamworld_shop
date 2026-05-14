@@ -19,7 +19,10 @@ const CONNECT_TIMEOUT_MS = 10000;
 const COMMAND_TIMEOUT_MS = 10000;
 const RECONNECT_DELAY_MS = 3000;
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes idle → close
-const FAILURE_COOLDOWN_MS = 60_000; // After connection failure, wait 60s before retrying
+// Short cooldown so one transient ECONNRESET doesn't block real-user actions
+// (purchases, redemptions) for a full minute. Long enough to stop a tight retry
+// loop; short enough that the next polling tick or a user click recovers fast.
+const FAILURE_COOLDOWN_MS = 5_000;
 
 /**
  * Persistent RCON Connection Pool
@@ -194,22 +197,13 @@ export class RconPool {
       password: config.password,
     });
 
-    // Connect with timeout
-    await Promise.race([
-      rcon.connect(),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('RCON connect timeout')), CONNECT_TIMEOUT_MS)
-      ),
-    ]);
-
     const entry: PoolEntry = {
       rcon,
-      connected: true,
+      connected: false,
       lastUsed: Date.now(),
       serverId,
       config,
     };
-    this.pool.set(serverId, entry);
 
     // Listen for disconnect → mark as not connected, attempt silent reconnect
     rcon.on('end', () => {
@@ -223,8 +217,39 @@ export class RconPool {
       }
     });
 
-    logger.info('RCON pool: connection established', { serverId, host: config.host, port: config.port });
-    return rcon;
+    // Handle socket errors (ETIMEDOUT, ECONNRESET, etc.) — must be caught or Node.js crashes
+    rcon.on('error', (err: Error) => {
+      const wasConnected = entry.connected;
+      entry.connected = false;
+      this.pool.delete(serverId);
+      this.failedAt.set(serverId, Date.now());
+
+      if (wasConnected) {
+        logger.warn('RCON pool: connection error', { serverId, error: err.message });
+        setTimeout(() => {
+          this.silentReconnect(serverId, config);
+        }, RECONNECT_DELAY_MS);
+      }
+    });
+
+    // Connect with timeout
+    try {
+      await Promise.race([
+        rcon.connect(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('RCON connect timeout')), CONNECT_TIMEOUT_MS)
+        ),
+      ]);
+
+      entry.connected = true;
+      this.pool.set(serverId, entry);
+      logger.info('RCON pool: connection established', { serverId, host: config.host, port: config.port });
+      return rcon;
+    } catch (err) {
+      this.pool.delete(serverId);
+      this.failedAt.set(serverId, Date.now());
+      throw err;
+    }
   }
 
   /**

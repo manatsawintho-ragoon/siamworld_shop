@@ -14,7 +14,12 @@ router.get('/settings', async (_req: Request, res: Response, next: NextFunction)
   try {
     const allSettings = await settingsService.getAll();
     // Only expose non-sensitive settings
-    const publicKeys = ['shop_name', 'shop_subtitle', 'shop_description', 'welcome_message', 'currency', 'currency_symbol', 'maintenance_mode', 'logo_url', 'favicon_url', 'banner_url', 'facebook_url', 'discord_invite', 'website_bg_url', 'server_ip', 'topup_bonus_enabled', 'topup_bonus_multiplier'];
+    const publicKeys = ['shop_name', 'shop_subtitle', 'shop_description', 'welcome_message', 'currency', 'currency_symbol', 'maintenance_mode', 'logo_url', 'favicon_url', 'banner_url', 'facebook_url', 'discord_invite', 'website_bg_url', 'server_ip', 'topup_bonus_enabled', 'topup_bonus_multiplier', 'theme_name', 'website_logo_url',
+      // New appearance toggles (1 = visible, 0 = hidden).
+      'show_lootbox_nav', 'show_download_nav', 'show_topup_rank_widget', 'show_topup_daily_widget', 'show_live_shop_widget', 'show_popular_widget',
+      'show_welcome_marquee', 'show_server_status_widget', 'show_gacha_live_widget', 'show_exclusive_gacha', 'show_popular_gacha', 'show_new_arrivals',
+      // Product image dimension hint (used by the upload UI placeholder).
+      'product_image_width', 'product_image_height'];
     const settings: Record<string, string> = {};
     for (const [key, value] of Object.entries(allSettings)) {
       if (publicKeys.includes(key)) {
@@ -58,6 +63,41 @@ router.get('/products/featured', async (_req: Request, res: Response, next: Next
   try {
     const products = await shopService.getFeaturedProducts();
     res.json({ success: true, products });
+  } catch (err) { next(err); }
+});
+
+// Top 4 products by real purchase count (delivered)
+router.get('/products/popular', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT p.id, p.name, p.description, p.price, p.original_price, p.image,
+              c.name as category_name,
+              COUNT(pu.id) AS purchase_count
+       FROM products p
+       LEFT JOIN categories c ON p.category_id = c.id
+       LEFT JOIN purchases pu ON pu.product_id = p.id AND pu.status = 'delivered'
+       WHERE p.active = 1
+       GROUP BY p.id
+       ORDER BY purchase_count DESC, p.created_at DESC
+       LIMIT 4`
+    );
+    res.json({ success: true, products: rows });
+  } catch (err) { next(err); }
+});
+
+// 4 newest products
+router.get('/products/new-arrivals', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT p.id, p.name, p.description, p.price, p.original_price, p.image,
+              c.name as category_name
+       FROM products p
+       LEFT JOIN categories c ON p.category_id = c.id
+       WHERE p.active = 1
+       ORDER BY p.created_at DESC
+       LIMIT 4`
+    );
+    res.json({ success: true, products: rows });
   } catch (err) { next(err); }
 });
 

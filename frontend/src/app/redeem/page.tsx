@@ -18,6 +18,7 @@ export default function RedeemCodePage() {
   const [serverId, setServerId] = useState<number>(0);
   const [loading, setLoading]   = useState(false);
   const [result, setResult]     = useState<{ success: boolean; message: string } | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     api('/public/servers').then(d => {
@@ -29,9 +30,18 @@ export default function RedeemCodePage() {
 
   if (!authLoading && !user) { router.push('/'); return null; }
 
-  const handleRedeem = async (e: React.FormEvent) => {
+  // Step 1: button click → open the "are you logged in-game?" confirmation modal.
+  // Step 2: modal "yes" → actually call the redeem endpoint.
+  // This stops players from spamming codes before they've logged into the MC server.
+  const handleRedeemClick = (e: React.FormEvent) => {
     e.preventDefault();
     if (!code.trim()) return;
+    setResult(null);
+    setConfirmOpen(true);
+  };
+
+  const doRedeem = async () => {
+    setConfirmOpen(false);
     setLoading(true); setResult(null);
     try {
       const body: any = { code: code.trim() };
@@ -51,27 +61,27 @@ export default function RedeemCodePage() {
 
         {/* Page Header */}
         <div>
-          <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+          <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
             <i className="fas fa-ticket-alt text-[#f97316]" /> แลกโค้ด
           </h1>
-          <p className="text-xs text-gray-400 mt-0.5">กรอกโค้ดเพื่อรับไอเท็มหรือเครดิตเข้าบัญชีทันที</p>
+          <p className="text-xs text-foreground-subtle mt-0.5">กรอกโค้ดเพื่อรับไอเท็มหรือเครดิตเข้าบัญชีทันที</p>
         </div>
 
         {/* ── Main Redeem Card ── */}
-        <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
+        <div className="bg-surface rounded-2xl shadow-sm border border-border/70 overflow-hidden">
 
           {/* Card Header */}
-          <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/60 flex items-center gap-2.5">
+          <div className="px-5 py-3.5 border-b border-border bg-surface-hover/60 flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
               <i className="fas fa-ticket-alt text-amber-500 text-xs" />
             </div>
             <div>
-              <h3 className="font-bold text-gray-900 text-sm">กรอกโค้ด</h3>
-              <p className="text-[11px] text-gray-400">โค้ดแต่ละตัวสามารถใช้ได้ 1 ครั้งต่อบัญชี</p>
+              <h3 className="font-bold text-foreground text-sm">กรอกโค้ด</h3>
+              <p className="text-[11px] text-foreground-subtle">โค้ดแต่ละตัวสามารถใช้ได้ 1 ครั้งต่อบัญชี</p>
             </div>
           </div>
 
-          <form onSubmit={handleRedeem} className="p-5 space-y-5">
+          <form onSubmit={handleRedeemClick} className="p-5 space-y-5">
 
             {/* Result Banner */}
             <AnimatePresence>
@@ -109,11 +119,11 @@ export default function RedeemCodePage() {
 
             {/* Code Input */}
             <div>
-              <label className="block text-xs font-bold text-gray-500 mb-2">
+              <label className="block text-xs font-bold text-foreground-subtle mb-2">
                 โค้ดไอเท็ม <span className="text-red-400">*</span>
               </label>
               <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-foreground-subtle pointer-events-none">
                   <i className="fas fa-ticket-alt text-base" />
                 </div>
                 <input
@@ -122,7 +132,7 @@ export default function RedeemCodePage() {
                   value={code}
                   onChange={e => { setCode(e.target.value.toUpperCase()); setResult(null); }}
                   placeholder="เช่น WELCOME2024"
-                  className="w-full pl-11 pr-11 py-3.5 rounded-xl border border-gray-200 font-mono font-black text-gray-800 text-lg tracking-[0.15em] text-center focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-200 placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:text-base bg-gray-50/50 transition-all"
+                  className="w-full pl-11 pr-11 py-3.5 rounded-xl border border-border font-mono font-black text-foreground text-lg tracking-[0.15em] text-center focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-foreground-subtle placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:text-base bg-surface-hover/50 transition-all"
                   required
                   autoComplete="off"
                   spellCheck={false}
@@ -130,12 +140,12 @@ export default function RedeemCodePage() {
                 />
                 {code && (
                   <button type="button" onClick={() => { setCode(''); setResult(null); inputRef.current?.focus(); }}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors">
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-surface-hover hover:bg-gray-200 flex items-center justify-center text-foreground-subtle hover:text-foreground-muted transition-colors">
                     <i className="fas fa-times text-[11px]" />
                   </button>
                 )}
               </div>
-              <p className="text-[10px] text-gray-400 mt-1.5 flex items-center gap-1">
+              <p className="text-[10px] text-foreground-subtle mt-1.5 flex items-center gap-1">
                 <i className="fas fa-info-circle" />
                 ตัวอักษรจะถูกแปลงเป็นตัวพิมพ์ใหญ่อัตโนมัติ
               </p>
@@ -144,7 +154,7 @@ export default function RedeemCodePage() {
             {/* Server Select */}
             {servers.length > 0 && (
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-2">
+                <label className="block text-xs font-bold text-foreground-subtle mb-2">
                   เซิร์ฟเวอร์ที่จะรับไอเท็ม
                 </label>
                 <div className={`grid gap-2 ${servers.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
@@ -156,14 +166,14 @@ export default function RedeemCodePage() {
                       className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border-2 text-sm font-bold transition-all ${
                         serverId === s.id
                           ? 'border-green-500 bg-green-50 text-green-700 shadow-[0_2px_0_#16a34a]'
-                          : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50'
+                          : 'border-border bg-surface text-foreground-subtle hover:border-gray-300 hover:bg-surface-hover'
                       }`}
                       aria-pressed={serverId === s.id}
                     >
                       <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        serverId === s.id ? 'bg-green-100' : 'bg-gray-100'
+                        serverId === s.id ? 'bg-green-100' : 'bg-surface-hover'
                       }`}>
-                        <i className={`fas fa-server text-[11px] ${serverId === s.id ? 'text-green-600' : 'text-gray-400'}`} />
+                        <i className={`fas fa-server text-[11px] ${serverId === s.id ? 'text-green-600' : 'text-foreground-subtle'}`} />
                       </div>
                       <span className="truncate">{s.name}</span>
                       {serverId === s.id && (
@@ -172,7 +182,7 @@ export default function RedeemCodePage() {
                     </button>
                   ))}
                 </div>
-                <p className="text-[10px] text-gray-400 mt-1.5 flex items-center gap-1">
+                <p className="text-[10px] text-foreground-subtle mt-1.5 flex items-center gap-1">
                   <i className="fas fa-circle-info" />
                   สำหรับโค้ดประเภทไอเท็ม คุณต้องออนไลน์ในเซิร์ฟเวอร์ที่เลือก
                 </p>
@@ -180,7 +190,7 @@ export default function RedeemCodePage() {
             )}
 
             {servers.length === 0 && (
-              <div className="flex items-center gap-2 text-gray-400 text-xs py-2">
+              <div className="flex items-center gap-2 text-foreground-subtle text-xs py-2">
                 <i className="fas fa-spinner fa-spin" />
                 กำลังโหลดเซิร์ฟเวอร์...
               </div>
@@ -203,12 +213,12 @@ export default function RedeemCodePage() {
         </div>
 
         {/* ── Tips Card ── */}
-        <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/60 flex items-center gap-2.5">
+        <div className="bg-surface rounded-2xl shadow-sm border border-border/70 overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-border bg-surface-hover/60 flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
               <i className="fas fa-circle-info text-blue-500 text-xs" />
             </div>
-            <h3 className="font-bold text-gray-900 text-sm">วิธีใช้งาน</h3>
+            <h3 className="font-bold text-foreground text-sm">วิธีใช้งาน</h3>
           </div>
           <div className="p-5 space-y-3">
             {[
@@ -221,13 +231,58 @@ export default function RedeemCodePage() {
                 <div className={`w-7 h-7 rounded-lg ${tip.bg} flex items-center justify-center flex-shrink-0 mt-0.5`}>
                   <i className={`fas ${tip.icon} ${tip.color} text-[11px]`} />
                 </div>
-                <p className="text-[12px] text-gray-500 leading-relaxed">{tip.text}</p>
+                <p className="text-[12px] text-foreground-subtle leading-relaxed">{tip.text}</p>
               </div>
             ))}
           </div>
         </div>
 
       </div>
+
+      {/* "Are you logged in-game?" confirmation modal */}
+      <AnimatePresence>
+        {confirmOpen && (
+          <motion.div
+            className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setConfirmOpen(false)}
+          >
+            <motion.div
+              className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden"
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-6 py-5 border-b border-gray-100 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                  <i className="fas fa-gamepad text-amber-500" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-base">ตรวจสอบสถานะการเล่น</h3>
+                  <p className="text-[11px] text-gray-500 mt-0.5">ก่อนใช้โค้ดประเภทไอเท็ม</p>
+                </div>
+              </div>
+              <div className="px-6 py-5">
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  คุณ <b>กำลังออนไลน์ในเซิร์ฟเวอร์ Minecraft</b> ใช่ไหม?
+                </p>
+                <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+                  หากคุณยังไม่ได้เข้าเกม กรุณาเข้าเกมก่อนแล้วกลับมากดยืนยัน เพื่อให้ระบบส่งไอเท็มถึงตัวคุณได้ทันที
+                </p>
+              </div>
+              <div className="px-6 py-4 bg-gray-50 flex items-center justify-end gap-2 border-t border-gray-100">
+                <button onClick={() => setConfirmOpen(false)}
+                  className="px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-700">
+                  ยังไม่ได้เข้าเกม
+                </button>
+                <button onClick={doRedeem}
+                  className="px-5 py-2.5 text-[13px] font-bold rounded-lg bg-amber-500 text-white shadow-[0_3px_0_#b45309]">
+                  <i className="fas fa-check mr-1.5" /> ยืนยัน — ออนไลน์อยู่
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </MainLayout>
   );
 }

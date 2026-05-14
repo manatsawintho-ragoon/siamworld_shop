@@ -8,6 +8,7 @@ import { useSettings } from '@/context/SettingsContext';
 import { api } from '@/lib/api';
 import { getRarity } from '@/lib/rarity';
 import { useOnlinePlayers } from '@/hooks/useOnlinePlayers';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Product {
   id: number; name: string; description: string;
@@ -25,14 +26,12 @@ interface RecentLootbox {
   item_image?: string; item_rarity: string; won_at: string;
 }
 
-// Rarity config imported from shared lib — see src/lib/rarity.ts
-
 function timeAgo(dateStr: string) {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (diff < 60)   return `${diff}s`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
-  return `${Math.floor(diff / 86400)}d`;
+  if (diff < 60)    return `${diff} วิ`;
+  if (diff < 3600)  return `${Math.floor(diff / 60)} นาที`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} ชม.`;
+  return `${Math.floor(diff / 86400)} วัน`;
 }
 
 function SectionHeader({ icon, iconBg, iconColor, title, count, href, btnLabel, btnColor }: {
@@ -55,10 +54,8 @@ function SectionHeader({ icon, iconBg, iconColor, title, count, href, btnLabel, 
   );
 }
 
-/* ── White activity card shared style ─────────────────────── */
-const CARD_CLS = 'bg-white rounded-2xl overflow-hidden border-2 border-green-200 shadow-[0_4px_0_#86efac,0_2px_16px_rgba(0,0,0,0.06)]';
+const CARD_CLS = 'theme-card';
 
-/* ── Countdown component ─────────────────────────────────── */
 function Countdown({ endTime }: { endTime: string }) {
   const calc = () => Math.max(0, Math.floor((new Date(endTime).getTime() - Date.now()) / 1000));
   const [secs, setSecs] = useState(calc);
@@ -76,7 +73,6 @@ function Countdown({ endTime }: { endTime: string }) {
   return <span className="tabular-nums font-black text-[9px] text-red-500">{String(m).padStart(2,'0')}:{String(s).padStart(2,'0')}</span>;
 }
 
-/* ── Server Status Widget ───────────────────────────────────── */
 function ServerStatusWidget({ serverIp, dbServers }: { serverIp?: string; dbServers: Array<{ id: number; name: string; max_players?: number }> }) {
   const { servers: wsServers, totalOnline, connected } = useOnlinePlayers();
   const [copied, setCopied] = useState(false);
@@ -100,9 +96,7 @@ function ServerStatusWidget({ serverIp, dbServers }: { serverIp?: string; dbServ
   });
 
   return (
-    <div className="bg-white rounded-2xl overflow-hidden border-2 border-green-200 shadow-[0_4px_0_#86efac,0_2px_16px_rgba(0,0,0,0.06)]">
-
-      {/* Header */}
+    <div className="theme-card">
       <div className="px-4 py-3 bg-[#1e2735] flex items-center gap-2.5">
         <div className="w-7 h-7 rounded-lg bg-green-500/20 border border-green-500/30 flex items-center justify-center flex-shrink-0">
           <i className="fas fa-server text-green-400 text-[11px]" />
@@ -116,10 +110,7 @@ function ServerStatusWidget({ serverIp, dbServers }: { serverIp?: string; dbServ
           <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
         </span>
       </div>
-
       <div className="p-3 space-y-2.5">
-
-        {/* IP Copy */}
         {serverIp && (
           <button onClick={copyIp}
             className="w-full flex items-center gap-2.5 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl hover:border-green-300 hover:bg-green-50/60 transition-all group text-left">
@@ -137,8 +128,6 @@ function ServerStatusWidget({ serverIp, dbServers }: { serverIp?: string; dbServ
             </div>
           </button>
         )}
-
-        {/* Total Online */}
         <div className="flex items-center gap-3 px-3 py-2.5 bg-green-50 border border-green-200 rounded-xl">
           <span className="relative flex h-3 w-3 flex-shrink-0">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
@@ -148,13 +137,11 @@ function ServerStatusWidget({ serverIp, dbServers }: { serverIp?: string; dbServ
             <p className="text-[9px] text-green-600 font-black uppercase tracking-wider leading-none">กำลังออนไลน์</p>
             <p className="text-green-700 font-black text-2xl tabular-nums leading-tight mt-0.5">
               {totalOnline}
-              <span className="text-sm font-bold text-green-600/70 ml-1">คน</span>
+              <span className="text-sm font-bold text-green-600 opacity-70 ml-1">คน</span>
             </p>
           </div>
           <i className="fas fa-users text-green-200 text-2xl flex-shrink-0" />
         </div>
-
-        {/* Per-server rows */}
         <div className="space-y-1.5">
           {!connected ? (
             <div className="flex items-center justify-center gap-2 py-4">
@@ -165,7 +152,6 @@ function ServerStatusWidget({ serverIp, dbServers }: { serverIp?: string; dbServ
             <p className="text-gray-300 text-[11px] text-center py-3">ไม่มีเซิร์ฟเวอร์</p>
           ) : serverRows.map(srv => (
             <div key={srv.id} className="px-2.5 py-2 rounded-lg bg-gray-50 border border-gray-100 space-y-1.5">
-              {/* Row 1: dot + name + count */}
               <div className="flex items-center gap-2">
                 <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${srv.online ? 'bg-green-500' : 'bg-red-400'}`} />
                 <span className="text-[11px] font-bold text-gray-700 truncate flex-1 min-w-0">{srv.name}</span>
@@ -182,7 +168,6 @@ function ServerStatusWidget({ serverIp, dbServers }: { serverIp?: string; dbServ
                   </span>
                 )}
               </div>
-              {/* Row 2: progress bar (only when online + maxPlayers known) */}
               {srv.online && srv.maxPlayers > 0 && (
                 <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
                   <div
@@ -196,13 +181,11 @@ function ServerStatusWidget({ serverIp, dbServers }: { serverIp?: string; dbServ
             </div>
           ))}
         </div>
-
       </div>
     </div>
   );
 }
 
-/* ── Home Gacha Carousel ─────────────────────────────────── */
 function HomeGachaCarousel({ boxes, noDrag }: { boxes: LootBox[]; noDrag?: boolean }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [hovered, setHovered] = useState(false);
@@ -249,33 +232,16 @@ function HomeGachaCarousel({ boxes, noDrag }: { boxes: LootBox[]; noDrag?: boole
   const stopDrag = () => { dragging.current = false; };
 
   return (
-    <div
-      className="relative"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => { setHovered(false); stopDrag(); }}
-    >
-      {/* Left arrow */}
-      <button
-        onClick={() => scrollBy('left')}
-        aria-label="เลื่อนซ้าย"
+    <div className="relative" onMouseEnter={() => setHovered(true)} onMouseLeave={() => { setHovered(false); stopDrag(); }}>
+      <button onClick={() => scrollBy('left')} aria-label="เลื่อนซ้าย"
         className={`absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 z-20 w-8 h-8 rounded-full bg-[#1e2735] border border-[#38404d] shadow-[0_2px_0_#0d1117] flex items-center justify-center text-white hover:brightness-110 transition-opacity active:shadow-none ${hovered && canLeft ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-        style={{ transition: 'opacity 0.15s' }}
-      >
+        style={{ transition: 'opacity 0.15s' }}>
         <i className="fas fa-chevron-left text-[11px]" />
       </button>
-
-      {/* Scroll track */}
-      <div
-        ref={scrollRef}
-        className="flex gap-2.5 overflow-x-auto pb-0.5 select-none scrollbar-hide"
-        style={{ cursor: 'default' }}
-        onMouseDown={noDrag ? undefined : onMouseDown}
-        onMouseMove={noDrag ? undefined : onMouseMove}
-        onMouseUp={noDrag ? undefined : stopDrag}
-        onMouseLeave={noDrag ? undefined : stopDrag}
-      >
+      <div ref={scrollRef} className="flex gap-2.5 overflow-x-auto pb-0.5 select-none scrollbar-hide"
+        style={{ cursor: 'default' }} onMouseDown={noDrag ? undefined : onMouseDown} onMouseMove={noDrag ? undefined : onMouseMove} onMouseUp={noDrag ? undefined : stopDrag} onMouseLeave={noDrag ? undefined : stopDrag}>
         {boxes.map(box => {
-          const hasPromo  = box.original_price && box.original_price > box.price;
+          const hasPromo  = box.original_price && Number(box.original_price) > Number(box.price);
           const discPct   = hasPromo ? Math.round((1 - box.price / box.original_price!) * 100) : 0;
           const isPaused  = !!box.is_paused;
           const hasSaleEnd = !!box.sale_end;
@@ -284,140 +250,43 @@ function HomeGachaCarousel({ boxes, noDrag }: { boxes: LootBox[]; noDrag?: boole
           const unlimited = !isPaused && !!box.sale_start && !box.sale_end;
           const remaining = box.stock_limit != null ? Math.max(0, box.stock_limit - (box.sold_count ?? 0)) : null;
           const soldOut   = remaining !== null && remaining <= 0;
-          const stockPct  = (box.stock_limit && box.stock_limit > 0)
-            ? Math.round(((box.sold_count ?? 0) / box.stock_limit) * 100)
-            : 0;
-
-
+          const stockPct  = (box.stock_limit && box.stock_limit > 0) ? Math.round(((box.sold_count ?? 0) / box.stock_limit) * 100) : 0;
           return (
             <Link key={box.id} href={`/lootbox/${box.id}`}
-              className={`group relative flex flex-col bg-white border rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md flex-shrink-0 w-[calc(50%-5px)] sm:w-[calc(25%-7.5px)] ${
-                isPaused ? 'border-orange-200 opacity-80' :
-                soldOut || expired ? 'border-gray-200 opacity-75' :
-                'border-gray-200 hover:border-amber-300'
-              }`}>
-
-              {/* Image area */}
+              className={`group relative flex flex-col bg-white border rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md flex-shrink-0 w-[calc(50%-5px)] sm:w-[calc(25%-7.5px)] ${isPaused ? 'border-orange-200 opacity-80' : soldOut || expired ? 'border-gray-200 opacity-75' : 'border-gray-200 hover:border-amber-300'}`}>
               <div className="relative aspect-[3/4] bg-amber-50 overflow-hidden">
-                {box.category_name && (
-                  <span className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-white/90 backdrop-blur-sm text-gray-700 text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm border border-gray-200/80">
-                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: box.category_color || '#f59e0b' }} />
-                    {box.category_name}
-                  </span>
-                )}
-                {hasPromo && !soldOut && !isPaused && (
-                  <span className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-red-500 text-white text-[11px] font-black px-2 py-0.5 rounded-md shadow-lg">
-                    <i className="fas fa-tag text-[9px]" />
-                    -{discPct}%
-                  </span>
-                )}
-                {isPaused && (
-                  <div className="absolute inset-0 z-10 bg-black/45 flex items-center justify-center">
-                    <div className="bg-orange-500 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg tracking-wide">
-                      <i className="fas fa-pause text-[8px] mr-1" /> หยุดจำหน่ายชั่วคราว
-                    </div>
-                  </div>
-                )}
-                {soldOut && !isPaused && (
-                  <div className="absolute inset-0 z-10 bg-black/55 flex items-center justify-center">
-                    <div className="bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg rotate-[-8deg]">
-                      <i className="fas fa-box text-[8px] mr-1" /> หมดแล้ว
-                    </div>
-                  </div>
-                )}
-                {expired && !soldOut && !isPaused && (
-                  <div className="absolute inset-0 z-10 bg-black/40 flex items-center justify-center">
-                    <div className="bg-gray-700 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg">
-                      <i className="fas fa-clock text-[8px] mr-1" /> หมดเวลา
-                    </div>
-                  </div>
-                )}
-                {box.image ? (
-                  <img src={box.image} alt={box.name} className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <i className="fas fa-box text-5xl text-amber-200 group-hover:text-amber-300 transition-colors" />
-                  </div>
-                )}
+                {box.category_name && <span className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-white/90 backdrop-blur-sm text-gray-700 text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm border border-gray-200/80"><span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: box.category_color || '#f59e0b' }} />{box.category_name}</span>}
+                {hasPromo && !soldOut && !isPaused && <span className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-red-500 text-white text-[11px] font-black px-2 py-0.5 rounded-md shadow-lg"><i className="fas fa-tag text-[9px]" />-{discPct}%</span>}
+                {isPaused && <div className="absolute inset-0 z-10 bg-black/45 flex items-center justify-center"><div className="bg-orange-500 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg tracking-wide"><i className="fas fa-pause text-[8px] mr-1" /> หยุดจำหน่ายชั่วคราว</div></div>}
+                {soldOut && !isPaused && <div className="absolute inset-0 z-10 bg-black/55 flex items-center justify-center"><div className="bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg rotate-[-8deg]"><i className="fas fa-box text-[8px] mr-1" /> หมดแล้ว</div></div>}
+                {expired && !soldOut && !isPaused && <div className="absolute inset-0 z-10 bg-black/40 flex items-center justify-center"><div className="bg-gray-700 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg"><i className="fas fa-clock text-[8px] mr-1" /> หมดเวลา</div></div>}
+                {box.image ? <img src={box.image} alt={box.name} className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300" /> : <div className="w-full h-full flex items-center justify-center"><i className="fas fa-box text-5xl text-amber-200 group-hover:text-amber-300 transition-colors" /></div>}
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent px-2.5 py-5 flex items-end justify-between gap-1">
-                  {hasPromo ? (
-                    <span className="text-white/75 text-xs font-medium line-through tabular-nums leading-none drop-shadow">
-                      {parseFloat(String(box.original_price)).toLocaleString()} ฿
-                    </span>
-                  ) : <span />}
-                  <span className="bg-amber-500 text-white text-sm font-black px-2.5 py-1 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.3)] tabular-nums leading-none flex-shrink-0">
-                    {parseFloat(String(box.price)).toLocaleString()} ฿
-                  </span>
+                  {hasPromo ? <span className="text-white/75 text-xs font-medium line-through tabular-nums leading-none drop-shadow">{parseFloat(String(box.original_price)).toLocaleString()} ฿</span> : <span />}
+                  <span className="theme-price-badge text-sm font-black px-2.5 py-1 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.3)] tabular-nums leading-none flex-shrink-0">{parseFloat(String(box.price)).toLocaleString()} ฿</span>
                 </div>
               </div>
-
-              {/* Sale info bar */}
               {(isPaused || active || unlimited || (remaining !== null && box.stock_limit! > 0)) && (
                 <div className={`px-2.5 py-2 border-t ${isPaused ? 'bg-orange-50 border-orange-100' : soldOut ? 'bg-red-50 border-red-100' : expired ? 'bg-gray-50 border-gray-100' : 'bg-amber-50 border-amber-100'}`}>
-                  {isPaused && (
-                    <div className="flex items-center gap-1 mb-1.5">
-                      <i className="fas fa-pause text-orange-500 text-[10px]" />
-                      <span className="text-[10px] font-bold text-orange-600">หยุดจำหน่ายชั่วคราว</span>
-                    </div>
-                  )}
-                  {active && (
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className="flex items-center gap-1">
-                        <i className="fas fa-clock text-amber-500 text-[10px]" />
-                        <span className="text-[10px] font-bold text-gray-600">เวลาเหลือ</span>
-                      </div>
-                      <div className="bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-md tabular-nums shadow-[0_2px_0_#b45309]">
-                        <Countdown endTime={box.sale_end!} />
-                      </div>
-                    </div>
-                  )}
-                  {unlimited && !soldOut && (
-                    <div className="flex items-center gap-1 mb-1.5">
-                      <i className="fas fa-infinity text-green-500 text-[10px]" />
-                      <span className="text-[10px] font-bold text-green-600">ไม่จำกัดเวลา</span>
-                    </div>
-                  )}
+                  {isPaused && <div className="flex items-center gap-1 mb-1.5"><i className="fas fa-pause text-orange-500 text-[10px]" /><span className="text-[10px] font-bold text-orange-600">หยุดจำหน่ายชั่วคราว</span></div>}
+                  {active && <div className="flex items-center justify-between mb-1.5"><div className="flex items-center gap-1"><i className="fas fa-clock text-amber-500 text-[10px]" /><span className="text-[10px] font-bold text-gray-600">เวลาเหลือ</span></div><div className="bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-md tabular-nums shadow-[0_2px_0_#b45309]"><Countdown endTime={box.sale_end!} /></div></div>}
+                  {unlimited && !soldOut && <div className="flex items-center gap-1 mb-1.5"><i className="fas fa-infinity text-green-500 text-[10px]" /><span className="text-[10px] font-bold text-green-600">ไม่จำกัดเวลา</span></div>}
                   {remaining !== null && box.stock_limit! > 0 && (
                     <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-1">
-                          <i className={`fas fa-box text-[9px] ${soldOut ? 'text-red-400' : stockPct >= 80 ? 'text-red-400' : stockPct >= 60 ? 'text-orange-400' : 'text-green-500'}`} />
-                          <span className="text-[10px] font-bold text-gray-600">
-                            {soldOut ? 'หมดแล้ว' : `เหลือ ${remaining.toLocaleString()} กล่อง`}
-                          </span>
-                        </div>
-                        <span className="text-[9px] font-bold text-gray-400 tabular-nums">
-                          {(box.sold_count ?? 0).toLocaleString()}/{box.stock_limit!.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full transition-all ${soldOut ? 'bg-red-400' : stockPct >= 80 ? 'bg-red-400' : stockPct >= 60 ? 'bg-orange-400' : 'bg-green-400'}`}
-                          style={{ width: `${Math.min(100, Math.max(0, stockPct))}%` }} />
-                      </div>
+                      <div className="flex items-center justify-between mb-1"><div className="flex items-center gap-1"><i className={`fas fa-box text-[9px] ${soldOut ? 'text-red-400' : stockPct >= 80 ? 'text-red-400' : stockPct >= 60 ? 'text-orange-400' : 'text-green-500'}`} /><span className="text-[10px] font-bold text-gray-600">{soldOut ? 'หมดแล้ว' : `เหลือ ${remaining.toLocaleString()} กล่อง`}</span></div><span className="text-[9px] font-bold text-gray-400 tabular-nums">{(box.sold_count ?? 0).toLocaleString()}/{box.stock_limit!.toLocaleString()}</span></div>
+                      <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden"><div className={`h-full rounded-full transition-all ${soldOut ? 'bg-red-400' : stockPct >= 80 ? 'bg-red-400' : stockPct >= 60 ? 'bg-orange-400' : 'bg-green-400'}`} style={{ width: `${Math.min(100, Math.max(0, stockPct))}%` }} /></div>
                     </div>
                   )}
                 </div>
               )}
-
-              {/* Info */}
-              <div className="p-2.5 flex flex-col flex-1 gap-1">
-                <p className="text-gray-900 font-bold text-xs leading-tight line-clamp-1">{box.name}</p>
-                {box.description && (
-                  <p className="text-gray-400 text-[9px] leading-snug line-clamp-1">{box.description}</p>
-                )}
-              </div>
+              <div className="p-2.5 flex flex-col flex-1 gap-1"><p className="text-gray-900 font-bold text-xs leading-tight line-clamp-1">{box.name}</p>{box.description && <p className="text-gray-400 text-[9px] leading-snug line-clamp-1">{box.description}</p>}</div>
             </Link>
           );
         })}
       </div>
-
-      {/* Right arrow */}
-      <button
-        onClick={() => scrollBy('right')}
-        aria-label="เลื่อนขวา"
+      <button onClick={() => scrollBy('right')} aria-label="เลื่อนขวา"
         className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 z-20 w-8 h-8 rounded-full bg-[#1e2735] border border-[#38404d] shadow-[0_2px_0_#0d1117] flex items-center justify-center text-white hover:brightness-110 transition-opacity active:shadow-none ${hovered && canRight ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-        style={{ transition: 'opacity 0.15s' }}
-      >
+        style={{ transition: 'opacity 0.15s' }}>
         <i className="fas fa-chevron-right text-[11px]" />
       </button>
     </div>
@@ -425,264 +294,125 @@ function HomeGachaCarousel({ boxes, noDrag }: { boxes: LootBox[]; noDrag?: boole
 }
 
 export default function HomePage() {
-  const [slides,    setSlides]    = useState([]);
-  const [products,  setProducts]  = useState<Product[]>([]);
-  const [servers,   setServers]   = useState<Server[]>([]);
-  const [lootboxes, setLootboxes] = useState<LootBox[]>([]);
-  const [recentBuy, setRecentBuy] = useState<RecentPurchase[]>([]);
-  const [recentBox, setRecentBox] = useState<RecentLootbox[]>([]);
+  const [slides,      setSlides]      = useState([]);
+  const [servers,     setServers]     = useState<Server[]>([]);
+  const [lootboxes,   setLootboxes]   = useState<LootBox[]>([]);
+  const [recentBuy,   setRecentBuy]   = useState<RecentPurchase[]>([]);
+  const [recentBox,   setRecentBox]   = useState<RecentLootbox[]>([]);
+  const [popularItems,   setPopularItems]   = useState<Product[]>([]);
+  const [newArrivals,    setNewArrivals]    = useState<Product[]>([]);
+  const [homeLoading,    setHomeLoading]    = useState(true);
+  const [ipCopied,       setIpCopied]       = useState(false);
   const { settings } = useSettings();
 
   useEffect(() => {
     Promise.all([
       api('/public/slides').then(d => setSlides((d.slides as never[]) || [])).catch(() => {}),
-      api('/public/products').then(d => setProducts((d.products as Product[]) || [])).catch(() => {}),
       api('/public/servers').then(d => setServers((d.servers as Server[]) || [])).catch(() => {}),
       api('/shop/lootboxes').then(d => setLootboxes((d.boxes as LootBox[]) || [])).catch(() => {}),
       api('/public/recent-purchases').then(d => setRecentBuy((d.purchases as RecentPurchase[]) || [])).catch(() => {}),
       api('/public/recent-lootbox').then(d => setRecentBox((d.openings as RecentLootbox[]) || [])).catch(() => {}),
-    ]);
+      api('/public/products/popular').then(d => setPopularItems((d.products as Product[]) || [])).catch(() => {}),
+      api('/public/products/new-arrivals').then(d => setNewArrivals((d.products as Product[]) || [])).catch(() => {}),
+    ]).finally(() => setHomeLoading(false));
   }, []);
 
-  const featured = [
-    ...products.filter(p => p.original_price && p.original_price > p.price),
-    ...products.filter(p => !(p.original_price && p.original_price > p.price)).sort((a, b) => b.id - a.id),
-  ].filter((p, i, arr) => arr.findIndex(x => x.id === p.id) === i).slice(0, 12);
-
-  // Exclusive = has sale_end OR stock_limit, ไม่รวม paused, เรียงจากด่วนที่สุด (ซ้าย) → ด่วนน้อยสุด (ขวา)
   const MS_30D = 30 * 24 * 60 * 60 * 1000;
   const exclusiveUrgency = (b: LootBox): number => {
-    const timeMs = b.sale_end
-      ? Math.max(0, new Date(b.sale_end).getTime() - Date.now())
-      : Infinity;
+    const timeMs = b.sale_end ? Math.max(0, new Date(b.sale_end).getTime() - Date.now()) : Infinity;
     const remaining = b.stock_limit != null ? Math.max(0, b.stock_limit - (b.sold_count ?? 0)) : null;
-    const stockNorm = remaining !== null && b.stock_limit! > 0
-      ? (remaining / b.stock_limit!) * MS_30D
-      : Infinity;
+    const stockNorm = remaining !== null && b.stock_limit! > 0 ? (remaining / b.stock_limit!) * MS_30D : Infinity;
     return Math.min(timeMs, stockNorm);
   };
-  const exclusiveBoxes = lootboxes
-    .filter(b => !b.is_paused && (b.sale_end || b.stock_limit != null))
-    .sort((a, b) => exclusiveUrgency(a) - exclusiveUrgency(b));
-
-  // Popular = no sale_end AND no stock_limit, sorted by opens desc, top 4
-  const popularBoxes = lootboxes
-    .filter(b => !b.sale_end && b.stock_limit == null && (b.total_opens ?? b.sold_count ?? 0) > 0)
-    .sort((a, b) => (b.total_opens ?? b.sold_count ?? 0) - (a.total_opens ?? a.sold_count ?? 0))
-    .slice(0, 4);
+  const exclusiveBoxes = lootboxes.filter(b => !b.is_paused && (b.sale_end || b.stock_limit != null)).sort((a, b) => exclusiveUrgency(a) - exclusiveUrgency(b));
+  const popularBoxes = lootboxes.filter(b => !b.sale_end && b.stock_limit == null && (b.total_opens ?? b.sold_count ?? 0) > 0).sort((a, b) => (b.total_opens ?? b.sold_count ?? 0) - (a.total_opens ?? a.sold_count ?? 0)).slice(0, 4);
 
   return (
     <MainLayout>
-
-      {/* ── Broadcast ─────────────────────────────────────────── */}
-      {settings.welcome_message && (
-        <div className="flex items-stretch overflow-hidden rounded-2xl mb-4 bg-white border-2 border-green-200 shadow-[0_4px_0_#86efac,0_2px_16px_rgba(0,0,0,0.06)]">
+      {settings.welcome_message && (settings.show_welcome_marquee ?? '1') === '1' && (
+        <div className="flex items-stretch overflow-hidden rounded-2xl mb-4 theme-card">
           <div className="bg-green-600 px-5 flex items-center gap-2.5 flex-shrink-0">
-            <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-60" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white" />
-            </span>
-            <i className="fas fa-bullhorn text-white text-sm" />
-            <span className="text-white text-[11px] font-black uppercase tracking-[0.2em] hidden sm:inline">LIVE</span>
+            <span className="relative flex h-2.5 w-2.5 flex-shrink-0"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-60" /><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white" /></span>
+            <i className="fas fa-bullhorn text-white text-sm" /><span className="text-white text-[11px] font-black uppercase tracking-[0.2em] hidden sm:inline">LIVE</span>
           </div>
-          <div className="flex-1 overflow-hidden py-3">
-            <div className="marquee-track">
-              <span className="text-green-500 text-base px-6 select-none">✦</span>
-              <span className="text-green-800 text-sm font-bold px-8">{settings.welcome_message}</span>
-              <span className="text-green-500 text-base px-6 select-none">✦</span>
+          <div className="flex-1 overflow-hidden py-3"><div className="marquee-track"><i className="fas fa-circle text-[6px] px-6 select-none" style={{ color: 'rgb(var(--color-primary))' }} /><span className="text-green-800 text-sm font-bold px-8">{settings.welcome_message}</span><i className="fas fa-circle text-[6px] px-6 select-none" style={{ color: 'rgb(var(--color-primary))' }} /></div></div>
+        </div>
+      )}
+      {settings.server_ip && (
+        <button className="lg:hidden w-full flex items-center gap-3 px-4 py-3 bg-[#1e2735] rounded-xl border border-[#38404d] shadow-[0_3px_0_#0d1117] mb-1" onClick={() => { navigator.clipboard.writeText(settings.server_ip!).then(() => { setIpCopied(true); setTimeout(() => setIpCopied(false), 2000); }).catch(() => {}); }}>
+          <div className="w-7 h-7 rounded-lg bg-green-500/20 border border-green-500/30 flex items-center justify-center flex-shrink-0"><i className="fas fa-server text-green-400 text-[11px]" /></div>
+          <span className="flex-1 font-mono text-sm font-bold text-white truncate text-left">{settings.server_ip}</span>
+          <div className={`flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg flex-shrink-0 transition-all ${ipCopied ? 'bg-green-500 text-white shadow-[0_2px_0_#15803d]' : 'bg-white/10 text-gray-300 border border-white/20'}`}><i className={`fas ${ipCopied ? 'fa-check' : 'fa-copy'} text-[10px]`} />{ipCopied ? 'Copied!' : 'คัดลอก IP'}</div>
+        </button>
+      )}
+      {homeLoading && (
+        <div className="flex flex-col lg:flex-row gap-4 mb-5 animate-pulse">
+          <div className="flex-1 min-w-0 flex flex-col gap-3">
+            <div className="rounded-2xl overflow-hidden bg-gray-200 w-full h-[200px] md:h-[260px] lg:h-[300px]" />
+            <div className="theme-card overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2.5"><div className="w-8 h-8 rounded-xl bg-gray-200" /><div className="h-3 w-32 bg-gray-200 rounded-full" /><div className="h-4 w-14 bg-gray-200 rounded-full ml-auto" /></div>
+              <div className="p-3 flex gap-2.5 overflow-hidden">{[0,1,2,3].map(i => (<div key={i} className="flex-shrink-0 w-[calc(50%-5px)] sm:w-[calc(25%-7.5px)] rounded-xl bg-gray-100 overflow-hidden border border-gray-100"><div className="aspect-[3/4] bg-gray-200" /><div className="p-2.5 space-y-1.5"><div className="h-2.5 bg-gray-200 rounded-full w-3/4" /><div className="h-2 bg-gray-100 rounded-full w-1/2" /></div></div>))}</div>
             </div>
+            <div className="theme-card overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2.5"><div className="w-8 h-8 rounded-xl bg-gray-200" /><div className="h-3 w-28 bg-gray-200 rounded-full" /><div className="h-4 w-14 bg-gray-200 rounded-full ml-auto" /></div>
+              <div className="p-3 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">{[0,1,2,3].map(i => (<div key={i} className="rounded-xl border border-gray-100 overflow-hidden"><div className="aspect-square bg-gray-200" /><div className="p-2.5 space-y-1.5"><div className="h-2.5 bg-gray-200 rounded-full w-3/4" /><div className="h-5 bg-gray-200 rounded-lg w-1/2 mt-2" /></div></div>))}</div>
+            </div>
+          </div>
+          <div className="flex flex-col gap-3 lg:w-[230px] flex-shrink-0">
+            <div className="theme-card overflow-hidden"><div className="px-4 py-3 bg-gray-200 h-[52px]" /><div className="p-3 space-y-2"><div className="h-10 bg-gray-100 rounded-xl" /><div className="h-16 bg-gray-100 rounded-xl" /><div className="space-y-1.5">{[0,1].map(i => <div key={i} className="h-10 bg-gray-100 rounded-lg" />)}</div></div></div>
+            {[0,1].map(col => (<div key={col} className="theme-card overflow-hidden"><div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2.5"><div className="w-8 h-8 rounded-xl bg-gray-200" /><div className="h-3 w-20 bg-gray-200 rounded-full" /></div><div className="px-2 py-2 space-y-1">{[0,1,2,3].map(i => (<div key={i} className="flex items-center gap-2.5 px-2 py-1.5"><div className="w-10 h-10 rounded-xl bg-gray-200 flex-shrink-0" /><div className="flex-1 space-y-1.5"><div className="h-2.5 bg-gray-200 rounded-full w-3/4" /><div className="h-2 bg-gray-100 rounded-full w-1/3" /></div></div>))}</div></div>))}
           </div>
         </div>
       )}
-
-      {/* ── Hero row: Carousel + Activity (right) ────────────────── */}
-      <div className="flex flex-col lg:flex-row gap-4 mb-5">
-
-        {/* ── Left: Carousel ─── */}
-        <div className="flex-1 min-w-0 flex flex-col gap-3">
-
-          {/* Carousel */}
-          <div className="rounded-2xl overflow-hidden shadow-[0_4px_0_rgba(0,0,0,0.12),0_2px_20px_rgba(0,0,0,0.08)]">
-            <div className="w-full h-[220px] bg-gray-800">
-              {slides.length > 0 ? (
-                <HeroCarousel slides={slides} />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-900 via-green-800 to-green-900 relative overflow-hidden">
-                  <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, #22c55e 0%, transparent 60%)' }} />
-                  <div className="relative z-10 text-center logo-float">
-                    <div className="text-4xl md:text-5xl font-black tracking-tighter text-white drop-shadow-[0_0_20px_rgba(34,197,94,0.6)] mb-2">
-                      {settings.shop_name || 'SiamWorld'}
-                    </div>
-                    <p className="text-green-400 font-bold text-sm tracking-widest uppercase">
-                      {settings.shop_subtitle || 'ระบบร้านค้ามายคราฟ'}
-                    </p>
-                  </div>
-                </div>
-              )}
+      <div className={`flex flex-col lg:flex-row gap-4 mb-5${homeLoading ? ' hidden' : ''}`}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, ease: "easeOut" }} className="flex-1 min-w-0 flex flex-col gap-3">
+          <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6 }} className="rounded-2xl overflow-hidden shadow-[0_4px_0_rgba(0,0,0,0.12),0_2px_20px_rgba(0,0,0,0.08)]">
+            <div className="w-full h-[200px] md:h-[260px] lg:h-[300px] bg-gray-800">
+              {slides.length > 0 ? <HeroCarousel slides={slides} /> : <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-900 via-green-800 to-green-900 relative overflow-hidden"><div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, #22c55e 0%, transparent 60%)' }} /><div className="relative z-10 text-center logo-float"><div className="text-4xl md:text-5xl font-black tracking-tighter text-white drop-shadow-[0_0_20px_rgba(34,197,94,0.6)] mb-2">{settings.shop_name || 'Siamsite'}</div><p className="text-green-400 font-bold text-sm tracking-widest uppercase">{settings.shop_subtitle || 'ระบบร้านค้ามายคราฟ'}</p></div></div>}
             </div>
-          </div>
-
-          {/* ── GACHA Exclusive Box ── */}
-          {exclusiveBoxes.length > 0 && (
-            <div className={CARD_CLS}>
-              <div className="px-4 py-3 border-b border-green-100 flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-violet-100 border border-violet-200 flex items-center justify-center flex-shrink-0">
-                  <i className="fas fa-gem text-violet-500 text-sm" />
-                </div>
-                <h2 className="font-black text-gray-900 text-sm leading-none">GACHA Exclusive Box</h2>
-                <span className="bg-violet-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full tracking-wide flex-shrink-0">LIMITED</span>
-                <span className="text-gray-400 text-xs">{exclusiveBoxes.length} กล่อง</span>
-                <Link href="/lootbox"
-                  className="ml-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#3498DB] text-white text-[11px] font-bold shadow-[0_3px_0_#1a6da5] hover:shadow-[0_1px_0_#1a6da5] hover:translate-y-[1px] active:shadow-none active:translate-y-[3px] transition-all flex-shrink-0">
-                  ดูกล่องสุ่มทั้งหมด <i className="fas fa-arrow-right text-[9px]" />
-                </Link>
-              </div>
-              <div className="p-3">
-                <HomeGachaCarousel boxes={exclusiveBoxes} noDrag />
-              </div>
-            </div>
+          </motion.div>
+          {(settings.show_exclusive_gacha ?? '1') === '1' && exclusiveBoxes.length > 0 && (
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5 }} className={CARD_CLS}>
+              <div className="px-4 py-3 border-b border-green-100 flex items-center gap-2.5"><div className="w-8 h-8 rounded-xl bg-violet-100 border border-violet-200 flex items-center justify-center flex-shrink-0"><i className="fas fa-gem text-violet-500 text-sm" /></div><h2 className="font-black text-gray-900 text-sm leading-none">GACHA Exclusive Box</h2><span className="bg-violet-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full tracking-wide flex-shrink-0">LIMITED</span><span className="text-gray-400 text-xs">{exclusiveBoxes.length} กล่อง</span><Link href="/lootbox" className="ml-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#3498DB] text-white text-[11px] font-bold shadow-[0_3px_0_#1a6da5] hover:shadow-[0_1px_0_#1a6da5] hover:translate-y-[1px] active:shadow-none active:translate-y-[3px] transition-all flex-shrink-0">ดูกล่องสุ่มทั้งหมด <i className="fas fa-arrow-right text-[9px]" /></Link></div>
+              <div className="p-3"><HomeGachaCarousel boxes={exclusiveBoxes} noDrag /></div>
+            </motion.div>
           )}
-
-          {/* ── GACHA กล่องสุ่มยอดนิยม ── */}
-          <div className={CARD_CLS}>
-            <div className="px-4 py-3 border-b border-green-100 flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center flex-shrink-0">
-                <i className="fas fa-box-open text-amber-500 text-sm" />
-              </div>
-              <h2 className="font-black text-gray-900 text-sm leading-none">GACHA กล่องสุ่ม ยอดนิยม</h2>
-              <span className="bg-amber-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full tracking-wide flex-shrink-0">HOT</span>
-              {popularBoxes.length > 0 && <span className="text-gray-400 text-xs">{popularBoxes.length} กล่อง</span>}
-              <Link href="/lootbox"
-                className="ml-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#3498DB] text-white text-[11px] font-bold shadow-[0_3px_0_#1a6da5] hover:shadow-[0_1px_0_#1a6da5] hover:translate-y-[1px] active:shadow-none active:translate-y-[3px] transition-all flex-shrink-0">
-                ดูกล่องสุ่มทั้งหมด <i className="fas fa-arrow-right text-[9px]" />
-              </Link>
-            </div>
-            <div className="p-3">
-              {popularBoxes.length === 0 ? (
-                <p className="text-gray-300 text-xs text-center py-6">ยังไม่มีกล่องสุ่ม</p>
-              ) : (
-                <HomeGachaCarousel boxes={popularBoxes} />
-              )}
-            </div>
-          </div>
-
-          {/* ── Items (inside right column, after GACHA boxes) ── */}
-          {featured.length > 0 && (
-            <div className="bg-white rounded-2xl overflow-hidden border-2 border-green-200 shadow-[0_4px_0_#86efac,0_2px_16px_rgba(0,0,0,0.06)]">
-              <div className="px-4 py-3 border-b border-green-100">
-                <SectionHeader
-                  icon="fa-store" iconBg="bg-green-100" iconColor="text-green-600"
-                  title="ITEMS สินค้ายอดนิยม" count={featured.length}
-                  href="/shop" btnLabel="ดูทั้งหมด" btnColor="bg-[#3498DB]"
-                />
-              </div>
-              <div className="p-3">
-                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-                  {featured.map(p => <ProductCard key={p.id} product={p} servers={servers} />)}
-                </div>
-              </div>
-            </div>
+          {(settings.show_popular_gacha ?? '1') === '1' && popularBoxes.length > 0 && (
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5, delay: 0.1 }} className={CARD_CLS}>
+              <div className="px-4 py-3 border-b border-green-100 flex items-center gap-2.5"><div className="w-8 h-8 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center flex-shrink-0"><i className="fas fa-box-open text-amber-500 text-sm" /></div><h2 className="font-black text-gray-900 text-sm leading-none">GACHA กล่องสุ่ม ยอดนิยม</h2><span className="bg-amber-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full tracking-wide flex-shrink-0">HOT</span><span className="text-gray-400 text-xs">{popularBoxes.length} กล่อง</span><Link href="/lootbox" className="ml-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#3498DB] text-white text-[11px] font-bold shadow-[0_3px_0_#1a6da5] hover:shadow-[0_1px_0_#1a6da5] hover:translate-y-[1px] active:shadow-none active:translate-y-[3px] transition-all flex-shrink-0">ดูกล่องสุ่มทั้งหมด <i className="fas fa-arrow-right text-[9px]" /></Link></div>
+              <div className="p-3"><HomeGachaCarousel boxes={popularBoxes} /></div>
+            </motion.div>
           )}
-
-        </div>
-
-        {/* ── Right: Activity column (SERVER STATUS + GACHA LIVE + SHOP LIVE) ─── */}
-        <div className="flex flex-col gap-3 lg:w-[230px] flex-shrink-0 self-start">
-
-          {/* SERVER STATUS */}
-          <ServerStatusWidget serverIp={settings.server_ip} dbServers={servers} />
-
-          {/* GACHA LIVE */}
+          {(settings.show_popular_widget ?? '1') === '1' && popularItems.length > 0 && (
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5, delay: 0.2 }} className="theme-card">
+              <div className="px-4 py-3 border-b border-green-100"><SectionHeader icon="fa-fire" iconBg="bg-red-100" iconColor="text-red-500" title="ITEMS สินค้ายอดนิยม" count={popularItems.length} href="/shop" btnLabel="ดูทั้งหมด" btnColor="bg-[#3498DB]" /></div>
+              <div className="p-3"><div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">{popularItems.map(p => <ProductCard key={p.id} product={p} servers={servers} />)}</div></div>
+            </motion.div>
+          )}
+          {(settings.show_new_arrivals ?? '1') === '1' && newArrivals.length > 0 && (
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5, delay: 0.3 }} className="theme-card">
+              <div className="px-4 py-3 border-b border-blue-100"><SectionHeader icon="fa-star" iconBg="bg-blue-100" iconColor="text-blue-500" title="ไอเท็มมาใหม่" count={newArrivals.length} href="/shop" btnLabel="ดูทั้งหมด" btnColor="bg-[#3498DB]" /></div>
+              <div className="p-3"><div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">{newArrivals.map(p => <ProductCard key={p.id} product={p} servers={servers} />)}</div></div>
+            </motion.div>
+          )}
+        </motion.div>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }} className="flex flex-col gap-3 lg:w-[230px] flex-shrink-0 self-start">
+          {(settings.show_server_status_widget ?? '1') === '1' && (
+            <ServerStatusWidget serverIp={settings.server_ip} dbServers={servers} />
+          )}
+          {(settings.show_gacha_live_widget ?? '1') === '1' && (
           <div className={CARD_CLS}>
-            <div className="px-4 py-3 border-b border-green-100 flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center flex-shrink-0">
-                <i className="fas fa-box-open text-amber-500 text-sm" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-gray-900 font-black text-xs leading-none">GACHA LIVE</p>
-                <p className="text-gray-400 text-[9px] mt-0.5">เปิดกล่องล่าสุด</p>
-              </div>
-              <span className="relative flex h-2 w-2 flex-shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
-              </span>
-            </div>
-            <div className="px-2 py-2 space-y-0.5">
-              {recentBox.length === 0 ? (
-                <p className="text-gray-300 text-xs text-center py-6">ยังไม่มีข้อมูล</p>
-              ) : recentBox.slice(0, 5).map((r, i) => {
-                const rar = getRarity(r.item_rarity);
-                return (
-                  <div key={i} className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-green-50 transition-colors">
-                    <div className="w-10 h-10 rounded-xl flex-shrink-0 border border-gray-200 bg-gray-50 flex items-center justify-center">
-                      {r.item_image
-                        ? <img src={r.item_image} alt={r.item_name} className="w-9 h-9 object-contain" style={{ imageRendering: 'pixelated' }} />
-                        : <i className="fas fa-gem text-gray-300 text-sm" />}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-gray-900 text-[11px] font-bold truncate leading-snug">{r.item_name}</p>
-                      <p className="text-gray-400 text-[9px] truncate">{r.username}</p>
-                    </div>
-                    <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-                      <span className="inline-flex items-center gap-1 text-[8px] font-black uppercase tracking-[0.1em] px-1.5 py-0.5 rounded-md text-white leading-none"
-                        style={{ backgroundColor: rar.color, boxShadow: `0 1px 0 ${rar.color}88` }}>
-                        <span className="w-1 h-1 rounded-sm bg-white/60 flex-shrink-0" />
-                        {rar.label}
-                      </span>
-                      <span className="text-gray-400 text-[8px] tabular-nums">{timeAgo(r.won_at)}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <div className="px-4 py-3 border-b border-green-100 flex items-center gap-2.5"><div className="w-8 h-8 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center flex-shrink-0"><i className="fas fa-box-open text-amber-500 text-sm" /></div><div className="flex-1 min-w-0"><p className="text-gray-900 font-black text-xs leading-none">GACHA LIVE</p><p className="text-gray-400 text-[9px] mt-0.5">เปิดกล่องล่าสุด</p></div><span className="relative flex h-2 w-2 flex-shrink-0"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" /></span></div>
+            <div className="px-2 py-2 space-y-0.5">{recentBox.length === 0 ? <p className="text-gray-300 text-xs text-center py-6">ยังไม่มีข้อมูล</p> : recentBox.slice(0, 5).map((r, i) => { const rar = getRarity(r.item_rarity); return (<div key={i} className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-green-50 transition-colors"><div className="w-10 h-10 rounded-xl flex-shrink-0 border border-gray-200 bg-gray-50 flex items-center justify-center">{r.item_image ? <img src={r.item_image} alt={r.item_name} className="w-9 h-9 object-contain" style={{ imageRendering: 'pixelated' }} /> : <i className="fas fa-gem text-gray-300 text-sm" />}</div><div className="min-w-0 flex-1"><p className="text-gray-900 text-[11px] font-bold truncate leading-snug">{r.item_name}</p><p className="text-gray-400 text-[9px] truncate">{r.username}</p></div><div className="flex flex-col items-end gap-0.5 flex-shrink-0"><span className="inline-flex items-center gap-1 text-[8px] font-black uppercase tracking-[0.1em] px-1.5 py-0.5 rounded-md text-white leading-none" style={{ backgroundColor: rar.color, boxShadow: `0 1px 0 ${rar.color}88` }}><span className="w-1 h-1 rounded-sm bg-white/60 flex-shrink-0" />{rar.label}</span><span className="text-gray-400 text-[8px] tabular-nums">{timeAgo(r.won_at)}</span></div></div>); })}</div>
           </div>
-
-          {/* SHOP LIVE */}
+          )}
+          {(settings.show_live_shop_widget ?? '1') === '1' && (
           <div className={CARD_CLS}>
-            <div className="px-4 py-3 border-b border-green-100 flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-green-100 border border-green-200 flex items-center justify-center flex-shrink-0">
-                <i className="fas fa-shopping-bag text-green-600 text-sm" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-gray-900 font-black text-xs leading-none">SHOP LIVE</p>
-                <p className="text-gray-400 text-[9px] mt-0.5">ซื้อไอเท็มล่าสุด</p>
-              </div>
-              <span className="relative flex h-2 w-2 flex-shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-              </span>
-            </div>
-            <div className="px-2 py-2 space-y-0.5">
-              {recentBuy.length === 0 ? (
-                <p className="text-gray-300 text-xs text-center py-6">ยังไม่มีข้อมูล</p>
-              ) : recentBuy.slice(0, 5).map((r, i) => (
-                <div key={i} className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-green-50 transition-colors">
-                  <div className="w-10 h-10 rounded-xl flex-shrink-0 border border-gray-200 bg-gray-50 flex items-center justify-center">
-                    {r.image
-                      ? <img src={r.image} alt={r.product_name} className="w-9 h-9 object-contain" style={{ imageRendering: 'pixelated' }} />
-                      : <i className="fas fa-box text-gray-300 text-sm" />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-gray-900 text-[11px] font-bold truncate leading-snug">{r.product_name}</p>
-                    <p className="text-gray-400 text-[9px] truncate">{r.username}</p>
-                  </div>
-                  <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-                    <div className="inline-flex items-center gap-1 text-[8px] font-black px-1.5 py-0.5 rounded-md text-white leading-none"
-                      style={{ backgroundColor: '#16a34a', boxShadow: '0 1px 0 #15803d88' }}>
-                      <i className="fas fa-coins text-[7px]" />
-                      {parseFloat(String(r.price)).toLocaleString()}
-                    </div>
-                    <span className="text-gray-400 text-[8px] tabular-nums">{timeAgo(r.created_at)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-        </div>
-
+            <div className="px-4 py-3 border-b border-green-100 flex items-center gap-2.5"><div className="w-8 h-8 rounded-xl bg-green-100 border border-green-200 flex items-center justify-center flex-shrink-0"><i className="fas fa-shopping-bag text-green-600 text-sm" /></div><div className="flex-1 min-w-0"><p className="text-gray-900 font-black text-xs leading-none">SHOP LIVE</p><p className="text-gray-400 text-[9px] mt-0.5">ซื้อไอเท็มล่าสุด</p></div><span className="relative flex h-2 w-2 flex-shrink-0"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" /></span></div>
+            <div className="px-2 py-2 space-y-0.5">{recentBuy.length === 0 ? <p className="text-gray-300 text-xs text-center py-6">ยังไม่มีข้อมูล</p> : recentBuy.slice(0, 5).map((r, i) => (<div key={i} className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-green-50 transition-colors"><div className="w-10 h-10 rounded-xl flex-shrink-0 border border-gray-200 bg-gray-50 flex items-center justify-center">{r.image ? <img src={r.image} alt={r.product_name} className="w-9 h-9 object-contain" style={{ imageRendering: 'pixelated' }} /> : <i className="fas fa-box text-gray-300 text-sm" />}</div><div className="min-w-0 flex-1"><p className="text-gray-900 text-[11px] font-bold truncate leading-snug">{r.product_name}</p><p className="text-gray-400 text-[9px] truncate">{r.username}</p></div><div className="flex flex-col items-end gap-0.5 flex-shrink-0"><div className="inline-flex items-center gap-1 text-[8px] font-black px-1.5 py-0.5 rounded-md text-white leading-none" style={{ backgroundColor: 'rgb(var(--color-primary-hover))', boxShadow: '0 1px 0 rgb(var(--color-primary-hover) / 0.53)' }}><i className="fas fa-coins text-[7px]" />{parseFloat(String(r.price)).toLocaleString()}</div><span className="text-gray-400 text-[8px] tabular-nums">{timeAgo(r.created_at)}</span></div></div>))}</div>
+          </div>)}
+        </motion.div>
       </div>
-
     </MainLayout>
   );
 }

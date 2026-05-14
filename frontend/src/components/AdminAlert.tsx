@@ -19,9 +19,21 @@ interface AlertState extends AlertOptions {
   resolve: (value: boolean) => void;
 }
 
+interface ToastOptions {
+  title: string;
+  message?: string;
+  type?: AlertType;
+  duration?: number;
+}
+
+interface ToastItem extends ToastOptions {
+  id: number;
+}
+
 interface AlertContextValue {
   alert: (opts: AlertOptions) => Promise<void>;
   confirm: (opts: AlertOptions) => Promise<boolean>;
+  toast: (opts: ToastOptions) => void;
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -83,6 +95,8 @@ const TYPE_CONFIG = {
 export function AdminAlertProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AlertState | null>(null);
   const backdropDown = useRef(false);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const toastId = useRef(0);
 
   const close = useCallback((value: boolean) => {
     setState(prev => { prev?.resolve(value); return null; });
@@ -102,11 +116,45 @@ export function AdminAlertProvider({ children }: { children: React.ReactNode }) 
     return show('confirm', opts);
   }, [show]);
 
+  const toast = useCallback((opts: ToastOptions) => {
+    const id = ++toastId.current;
+    setToasts(prev => [...prev, { ...opts, id }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), opts.duration ?? 3500);
+  }, []);
+
   const cfg = state ? TYPE_CONFIG[state.type ?? 'info'] : null;
 
   return (
-    <AlertContext.Provider value={{ alert, confirm }}>
+    <AlertContext.Provider value={{ alert, confirm, toast }}>
       {children}
+
+      {/* ── Toast Container ── */}
+      <div className="fixed bottom-5 right-5 z-[9997] flex flex-col gap-2 items-end pointer-events-none">
+        <AnimatePresence>
+          {toasts.map(t => {
+            const tc = TYPE_CONFIG[t.type ?? 'success'];
+            return (
+              <motion.div
+                key={t.id}
+                initial={{ opacity: 0, x: 60, scale: 0.92 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 60, scale: 0.92 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 26 }}
+                className={`pointer-events-auto flex items-start gap-3 bg-white rounded-xl border border-gray-200 shadow-[0_4px_0_#c5cad3,0_8px_24px_rgba(0,0,0,0.14)] px-4 py-3 max-w-[300px] overflow-hidden ${tc.glow}`}
+              >
+                <div className={`h-full absolute left-0 top-0 bottom-0 w-1 ${tc.accent} rounded-l-xl`} />
+                <div className={`w-7 h-7 rounded-lg ${tc.iconWrap.replace('ring-4 ring-green-200','').replace('ring-4 ring-red-200','').replace('ring-4 ring-amber-200','').replace('ring-4 ring-slate-200','')} flex items-center justify-center flex-shrink-0 mt-0.5`}>
+                  <i className={`fas ${tc.icon} ${tc.iconColor} text-sm`} />
+                </div>
+                <div className="flex-1 min-w-0 pl-1">
+                  <p className="font-black text-gray-900 text-[13px] leading-tight">{t.title}</p>
+                  {t.message && <p className="text-gray-500 text-[11px] mt-0.5 leading-snug">{t.message}</p>}
+                </div>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      </div>
 
       <AnimatePresence>
         {state && cfg && (
@@ -180,7 +228,7 @@ export function AdminAlertProvider({ children }: { children: React.ReactNode }) 
                   {state.mode === 'confirm' && (
                     <button
                       onClick={() => close(false)}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-[13px] font-bold rounded-xl bg-white border border-gray-200 text-gray-700 shadow-[0_4px_0_#d1d5db] hover:brightness-95 transition-all active:shadow-[0_1px_0_#d1d5db] active:translate-y-[2px]"
+                      className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-[13px] font-bold rounded-xl bg-surface border border-border text-foreground-muted shadow-sm hover:bg-surface-hover transition-all active:shadow-none active:translate-y-[2px]"
                     >
                       <i className="fas fa-times text-[11px]" />
                       {state.cancelLabel ?? 'ยกเลิก'}

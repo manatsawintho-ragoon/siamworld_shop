@@ -3,8 +3,20 @@ import './globals.css';
 import Providers from './providers';
 
 export const metadata: Metadata = {
-  title: 'SiamWorld Shop — Minecraft Item Store',
-  description: 'ร้านค้าไอเท็ม Minecraft ออนไลน์ ส่งอัตโนมัติทันที | SiamWorld MC Shop',
+  title: 'SIAMSITE STORE | ร้านค้ามายคราฟอัตโนมัติที่ดีที่สุด',
+  description: 'ซื้อไอเท็ม Minecraft เติมเงินอัตโนมัติ รับของทันที 24 ชั่วโมง ระบบที่รวดเร็วและปลอดภัยที่สุดสำหรับคุณ',
+  keywords: 'ร้านค้ามายคราฟ, เติมเงินมายคราฟ, ซื้อไอเท็มมายคราฟ, Minecraft Store, PromptPay, TrueMoney',
+  openGraph: {
+    title: 'SIAMSITE STORE | ร้านค้ามายคราฟอัตโนมัติที่ดีที่สุด',
+    description: 'ซื้อไอเท็ม Minecraft เติมเงินอัตโนมัติ รับของทันที 24 ชั่วโมง',
+    type: 'website',
+    locale: 'th_TH',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SIAMSITE STORE | ร้านค้ามายคราฟอัตโนมัติที่ดีที่สุด',
+    description: 'ซื้อไอเท็ม Minecraft เติมเงินอัตโนมัติ รับของทันที 24 ชั่วโมง',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

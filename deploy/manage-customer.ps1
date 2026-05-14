@@ -1,5 +1,5 @@
 # ================================================================
-#  SiamWorld Shop — Customer Management Script
+#  Siamsite Shop — Customer Management Script
 #
 #  Usage:
 #    .\manage-customer.ps1 -Name "shopname" -Action list

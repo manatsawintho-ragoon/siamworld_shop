@@ -1,9 +1,11 @@
 'use client';
 import { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { useSettings } from '@/context/SettingsContext';
 
 export default function DynamicFavicon() {
   const { settings } = useSettings();
+  const pathname = usePathname();
 
   useEffect(() => {
     const faviconUrl = (settings.favicon_url !== undefined && settings.favicon_url !== '')
@@ -26,11 +28,12 @@ export default function DynamicFavicon() {
     }
   }, [settings.favicon_url, settings.logo_url]);
 
+  // Re-apply title on every navigation so Next.js router doesn't override it
   useEffect(() => {
     if (settings.shop_name) {
       document.title = `${settings.shop_name} | Minecraft Store`;
     }
-  }, [settings.shop_name]);
+  }, [settings.shop_name, pathname]);
 
   return null;
 }

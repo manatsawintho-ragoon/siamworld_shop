@@ -12,6 +12,7 @@ import { serverService } from '../services/server.service';
 import { settingsService } from '../services/settings.service';
 import { auditService } from '../services/audit.service';
 import { easySlipService } from '../services/easyslip.service';
+import { notificationService } from '../services/notification.service';
 import {
   createProductSchema, updateProductSchema,
   createServerSchema, updateServerSchema,
@@ -276,6 +277,58 @@ router.post('/users/:id/topup', async (req: Request, res: Response, next: NextFu
     const { amount, description } = req.body;
     const wallet = await walletService.topup(id, amount, 'admin', undefined, description || 'Admin adjust', 'admin_adjust');
     res.json({ success: true, wallet });
+  } catch (err) { next(err); }
+});
+
+// Soft-delete a user (admin-only). Preserves history; sets users.deleted_at.
+router.delete('/users/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (Number.isNaN(id) || id <= 0) return res.status(400).json({ success: false, message: 'Invalid user id' });
+    if (id === req.user!.userId) return res.status(400).json({ success: false, message: 'ไม่สามารถลบบัญชีของตัวเองได้' });
+
+    const [targetUser] = await pool.execute<RowDataPacket[]>('SELECT username, role FROM users WHERE id = ?', [id]);
+    if (targetUser.length === 0) return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
+    const targetUsername = (targetUser[0] as any).username;
+    if ((targetUser[0] as any).role === 'admin') {
+      return res.status(400).json({ success: false, message: 'ไม่สามารถลบบัญชีแอดมินได้ ให้ลดสิทธิ์เป็น user ก่อน' });
+    }
+
+    await userService.softDeleteUser(id);
+    auditService.log({
+      userId: req.user!.userId, username: req.user!.username, actionType: 'admin_user_delete',
+      description: `ลบบัญชี (soft) ${targetUsername}`, refId: String(id), meta: { target: targetUsername },
+    });
+    res.json({ success: true, message: 'ลบบัญชีสำเร็จ' });
+  } catch (err) { next(err); }
+});
+
+// Transfer all data from :id (source) to body.toUserId (target).
+router.post('/users/:id/transfer', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const fromId = parseInt(req.params.id);
+    const toId = parseInt(req.body.toUserId);
+    if (Number.isNaN(fromId) || Number.isNaN(toId) || fromId <= 0 || toId <= 0) {
+      return res.status(400).json({ success: false, message: 'Invalid user ids' });
+    }
+    if (fromId === toId) return res.status(400).json({ success: false, message: 'ผู้ใช้ต้นทางและปลายทางต้องไม่ใช่บัญชีเดียวกัน' });
+    if (fromId === req.user!.userId) return res.status(400).json({ success: false, message: 'ไม่สามารถโอนข้อมูลจากบัญชีของตัวเองได้' });
+
+    const [usernames] = await pool.execute<RowDataPacket[]>(
+      'SELECT id, username FROM users WHERE id IN (?, ?)', [fromId, toId]
+    );
+    if (usernames.length < 2) return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้ต้นทางหรือปลายทาง' });
+    const fromName = (usernames.find((u: any) => u.id === fromId) as any)?.username;
+    const toName = (usernames.find((u: any) => u.id === toId) as any)?.username;
+
+    const result = await userService.transferData(fromId, toId);
+    auditService.log({
+      userId: req.user!.userId, username: req.user!.username, actionType: 'admin_user_transfer',
+      description: `โอนข้อมูล ${fromName} → ${toName}`, refId: `${fromId}->${toId}`,
+      amount: result.merged.balance,
+      meta: { fromId, toId, fromName, toName, ...result.merged },
+    });
+    res.json({ success: true, message: 'โอนข้อมูลสำเร็จ', ...result });
   } catch (err) { next(err); }
 });
 
@@ -570,10 +623,12 @@ router.put('/settings', validate(updateSettingsSchema), async (req: Request, res
 // ─── EasySlip status & test ──────
 // Returns whether a key is configured + masked preview (never the full key)
 router.get('/easyslip/status', async (_req: Request, res: Response) => {
+  const dbKey = await settingsService.get('easyslip_api_key');
   const { easyslipApiKey } = (await import('../config')).config;
-  const configured = !!easyslipApiKey;
+  const key = dbKey || easyslipApiKey;
+  const configured = !!key;
   const keyPreview = configured
-    ? easyslipApiKey.slice(0, 8) + '-••••-••••-••••-••••••••••••'
+    ? key.slice(0, 8) + '-••••-••••-••••-••••••••••••'
     : null;
   res.json({ success: true, configured, keyPreview });
 });
@@ -636,6 +691,37 @@ router.delete('/slides/:id', async (req: Request, res: Response, next: NextFunct
 });
 
 // ─── RCON Console ───────────────
+
+/** Debug: get raw 'list' response + parsed player names for a specific server */
+router.get('/servers/:id/players-debug', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const rconManager = req.app.get('rconManager');
+    const server = rconManager.getServer(id);
+    if (!server) return res.status(404).json({ success: false, message: 'Server not found or disabled' });
+
+    let rawResponse = '';
+    let parsedPlayers: string[] = [];
+    let error = null;
+    try {
+      rawResponse = await rconManager.sendCommandDirect(id, 'list');
+      parsedPlayers = await rconManager.getOnlinePlayers(id);
+    } catch (err) {
+      error = (err as Error).message;
+    }
+
+    res.json({
+      success: true,
+      serverId: id,
+      serverName: server.name,
+      rawResponse,
+      parsedPlayers,
+      parsedCount: parsedPlayers.length,
+      error,
+    });
+  } catch (err) { next(err); }
+});
+
 router.post('/rcon/command', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { serverId, command } = req.body;
@@ -921,14 +1007,34 @@ router.get('/codes', async (_req: Request, res: Response, next: NextFunction) =>
 
 router.post('/codes', validate(createRedeemCodeSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { code, description, command, max_uses, active, expires_at, reward_type, point_amount } = req.body;
+    const {
+      code, description, command, max_uses, active, expires_at, reward_type, point_amount,
+      discount_percent, discount_amount, min_topup_amount,
+    } = req.body;
     const [result] = await pool.execute(
-      'INSERT INTO redeem_codes (code, description, reward_type, point_amount, command, max_uses, active, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [code, description || null, reward_type || 'rcon', point_amount || null, command || null, max_uses ?? 1, active !== false ? 1 : 0, expires_at || null]
+      `INSERT INTO redeem_codes
+         (code, description, reward_type, point_amount, discount_percent, discount_amount, min_topup_amount, command, max_uses, active, expires_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        code,
+        description || null,
+        reward_type || 'rcon',
+        point_amount || null,
+        discount_percent ?? null,
+        discount_amount ?? null,
+        min_topup_amount ?? null,
+        command || null,
+        max_uses ?? 1,
+        active !== false ? 1 : 0,
+        expires_at || null,
+      ]
     );
     const id = (result as any).insertId;
     const [rows] = await pool.execute('SELECT * FROM redeem_codes WHERE id = ?', [id]);
-    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_code_create', description: `สร้างโค้ด: ${code} (${reward_type === 'point' ? `+${point_amount} ฿` : 'RCON'})`, refId: String(id), meta: { code, reward_type, point_amount, max_uses } });
+    const summary = reward_type === 'point' ? `+${point_amount} ฿`
+                  : reward_type?.startsWith('discount') ? `discount ${discount_percent ? discount_percent + '%' : '฿' + discount_amount}`
+                  : 'RCON';
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_code_create', description: `สร้างโค้ด: ${code} (${summary})`, refId: String(id), meta: { code, reward_type, point_amount, discount_percent, discount_amount, min_topup_amount, max_uses } });
     res.json({ success: true, code: (rows as any[])[0] });
   } catch (err) { next(err); }
 });
@@ -938,7 +1044,7 @@ router.put('/codes/:id', validate(updateRedeemCodeSchema), async (req: Request, 
     const id = parseInt(req.params.id);
     const fields: string[] = [];
     const values: any[] = [];
-    const allowed = ['code', 'description', 'reward_type', 'point_amount', 'command', 'max_uses', 'active', 'expires_at'];
+    const allowed = ['code', 'description', 'reward_type', 'point_amount', 'discount_percent', 'discount_amount', 'min_topup_amount', 'command', 'max_uses', 'active', 'expires_at'];
     for (const key of allowed) {
       if (req.body[key] !== undefined) {
         if (key === 'active') {
@@ -966,6 +1072,29 @@ router.delete('/codes/:id', async (req: Request, res: Response, next: NextFuncti
     await pool.execute('DELETE FROM redeem_codes WHERE id = ?', [id]);
     auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'admin_code_delete', description: `ลบโค้ด: ${codeName}`, refId: String(id) });
     res.json({ success: true, message: 'Code deleted' });
+  } catch (err) { next(err); }
+});
+
+// ── Notifications ──────────────────────────────────────────────────────────────
+
+router.get('/notifications', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data = await notificationService.getRecent(40);
+    res.json({ success: true, ...data });
+  } catch (err) { next(err); }
+});
+
+router.post('/notifications/read-all', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    await notificationService.markAllRead();
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+router.post('/notifications/:id/read', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await notificationService.markRead(parseInt(req.params.id));
+    res.json({ success: true });
   } catch (err) { next(err); }
 });
 

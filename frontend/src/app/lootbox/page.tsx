@@ -41,7 +41,7 @@ function Countdown({ endTime }: { endTime: string }) {
 
 // ─── BoxCard ──────────────────────────────────────────────────────────────────
 function BoxCard({ box }: { box: LootBox }) {
-  const hasPromo   = box.original_price && box.original_price > box.price;
+  const hasPromo   = box.original_price && Number(box.original_price) > Number(box.price);
   const discPct    = hasPromo ? Math.round((1 - box.price / box.original_price!) * 100) : 0;
   const isPaused   = !!box.is_paused;
   const hasSaleEnd = !!box.sale_end;
@@ -80,14 +80,14 @@ function BoxCard({ box }: { box: LootBox }) {
           </span>
         )}
         {!isLimitedBox && !isHotBox && box.category_name && (
-          <span className="absolute top-1.5 left-1.5 z-10 flex items-center gap-1 bg-white/90 backdrop-blur-sm text-gray-700 text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm border border-gray-200/80 leading-none">
+          <span className="absolute top-1.5 left-1.5 z-10 flex items-center gap-1 bg-surface/90 backdrop-blur-sm text-foreground-muted text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm border border-border/80 leading-none">
             <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: box.category_color || '#f59e0b' }} />
             {box.category_name}
           </span>
         )}
         {/* Category badge below type badge (when type badge present) */}
         {(isLimitedBox || isHotBox) && box.category_name && (
-          <span className="absolute top-6 left-1.5 z-10 flex items-center gap-1 bg-white/90 backdrop-blur-sm text-gray-700 text-[8px] font-bold px-1.5 py-0.5 rounded-full shadow-sm border border-gray-200/80 leading-none">
+          <span className="absolute top-6 left-1.5 z-10 flex items-center gap-1 bg-surface/90 backdrop-blur-sm text-foreground-muted text-[8px] font-bold px-1.5 py-0.5 rounded-full shadow-sm border border-border/80 leading-none">
             <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ backgroundColor: box.category_color || '#f59e0b' }} />
             {box.category_name}
           </span>
@@ -211,11 +211,11 @@ function BoxCard({ box }: { box: LootBox }) {
 }
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
-const TYPE_FILTERS: { key: TypeFilter; label: string; icon: string; color: string; activeBg: string; activeShadow: string }[] = [
-  { key: 'all',     label: 'ทั้งหมด',   icon: 'fa-layer-group', color: 'text-green-600',  activeBg: 'bg-green-500',  activeShadow: 'shadow-[0_3px_0_#15803d]' },
-  { key: 'limited', label: 'LIMITED',   icon: 'fa-gem',          color: 'text-violet-600', activeBg: 'bg-violet-500', activeShadow: 'shadow-[0_3px_0_#5b21b6]' },
+const TYPE_FILTERS: { key: TypeFilter; label: string; icon: string; color: string; activeBg: string; activeShadow: string; themed?: boolean }[] = [
+  { key: 'all',     label: 'ทั้งหมด',   icon: 'fa-layer-group', color: 'text-primary',  activeBg: '',              activeShadow: '',                          themed: true },
+  { key: 'limited', label: 'LIMITED',   icon: 'fa-gem',          color: 'text-violet-500', activeBg: 'bg-violet-500', activeShadow: 'shadow-[0_3px_0_#5b21b6]' },
   { key: 'hot',     label: 'ยอดนิยม',   icon: 'fa-fire',         color: 'text-amber-500',  activeBg: 'bg-amber-500',  activeShadow: 'shadow-[0_3px_0_#b45309]' },
-  { key: 'normal',  label: 'กล่องปกติ', icon: 'fa-box',          color: 'text-gray-500',   activeBg: 'bg-[#1e2735]',  activeShadow: 'shadow-[0_3px_0_#38404d]' },
+  { key: 'normal',  label: 'กล่องปกติ', icon: 'fa-box',          color: 'text-foreground-subtle',   activeBg: 'bg-gray-800',  activeShadow: 'shadow-[0_3px_0_#1f2937]' },
 ];
 
 export default function LootBoxListPage() {
@@ -223,6 +223,7 @@ export default function LootBoxListPage() {
   const [loading, setLoading]   = useState(true);
   const [typeFilter, setTypeFilter]       = useState<TypeFilter>('all');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [search, setSearch]     = useState('');
 
   useEffect(() => {
     api('/shop/lootboxes')
@@ -258,8 +259,8 @@ export default function LootBoxListPage() {
     const limited = [...boxes].filter(isLimited).sort((a, b) => urgencyScore(a) - urgencyScore(b));
     const hot     = [...boxes].filter(isHot).sort((a, b) => (b.sold_count ?? 0) - (a.sold_count ?? 0));
     const normal  = [...boxes].filter(isNormal).sort((a, b) => {
-      const aDisc = a.original_price && a.original_price > a.price ? 1 : 0;
-      const bDisc = b.original_price && b.original_price > b.price ? 1 : 0;
+      const aDisc = a.original_price && Number(a.original_price) > Number(a.price) ? 1 : 0;
+      const bDisc = b.original_price && Number(b.original_price) > Number(b.price) ? 1 : 0;
       if (bDisc !== aDisc) return bDisc - aDisc; // มีส่วนลดขึ้นก่อน
       return a.sort_order - b.sort_order;
     });
@@ -270,12 +271,14 @@ export default function LootBoxListPage() {
     };
   }, [boxes]);
 
-  // Apply category filter on top of type filter
+  // Apply category + search filter on top of type filter
   const filtered = useMemo(() => {
     const base = byType[typeFilter] ?? [];
-    if (!categoryFilter) return base;
-    return base.filter(b => b.category_name === categoryFilter);
-  }, [byType, typeFilter, categoryFilter]);
+    const catFiltered = categoryFilter ? base.filter(b => b.category_name === categoryFilter) : base;
+    if (!search.trim()) return catFiltered;
+    const q = search.toLowerCase();
+    return catFiltered.filter(b => b.name.toLowerCase().includes(q) || b.description?.toLowerCase().includes(q));
+  }, [byType, typeFilter, categoryFilter, search]);
 
   // Category counts within current type pool
   const categoryCounts = useMemo(() => {
@@ -309,23 +312,40 @@ export default function LootBoxListPage() {
                 onClick={() => { setTypeFilter(f.key); setCategoryFilter(null); }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all active:translate-y-[1px] ${
                   typeFilter === f.key
-                    ? `${f.activeBg} ${f.activeShadow} text-white`
+                    ? `${f.themed ? 'text-primary-foreground' : `${f.activeBg} ${f.activeShadow} text-white`}`
                     : `bg-white border border-gray-200 ${f.color} hover:border-gray-300`
                 }`}
+                style={typeFilter === f.key && f.themed ? {
+                  backgroundColor: 'rgb(var(--color-primary))',
+                  boxShadow: '0 3px 0 rgb(var(--color-primary-hover))',
+                } : undefined}
               >
                 <i className={`fas ${f.icon} text-[10px]`} />
                 {f.label}
                 <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
-                  typeFilter === f.key ? 'bg-white/25 text-white' : 'bg-gray-100 text-gray-400'
+                  typeFilter === f.key ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-gray-100 text-gray-400'
                 }`}>
                   {loading ? '…' : counts[f.key]}
                 </span>
               </button>
             ))}
 
-            <span className="ml-auto text-xs text-gray-400 font-bold flex-shrink-0">
-              {loading ? '…' : `${filtered.length} กล่อง`}
-            </span>
+            <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+              <div className="relative">
+                <i className="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground-subtle text-[10px]" />
+                <input
+                  type="text" value={search} onChange={e => setSearch(e.target.value)}
+                  placeholder="ค้นหากล่อง..."
+                  className="pl-7 pr-7 py-1.5 rounded-lg border border-border bg-surface text-xs text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-foreground-subtle w-32 sm:w-40"
+                />
+                {search && (
+                  <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-foreground-subtle hover:text-foreground-muted transition-colors">
+                    <i className="fas fa-times text-[10px]" />
+                  </button>
+                )}
+              </div>
+              <span className="text-xs text-foreground-subtle font-bold">{loading ? '…' : `${filtered.length} กล่อง`}</span>
+            </div>
           </div>
 
           {/* ── Row 2: Category filters (แสดงเมื่อมี category) ── */}

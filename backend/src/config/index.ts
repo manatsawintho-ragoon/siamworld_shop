@@ -6,6 +6,8 @@ const envSchema = z.object({
   MYSQL_USER: z.string().min(1),
   MYSQL_PASSWORD: z.string().min(1),
   MYSQL_DATABASE: z.string().min(1),
+  MYSQL_EXPOSED_PORT: z.string().optional(),
+  MYSQL_HOSTNAME: z.string().optional(),
   REDIS_HOST: z.string().default('redis'),
   REDIS_PORT: z.string().default('6379'),
   JWT_SECRET: z.string().min(32),
@@ -15,7 +17,7 @@ const envSchema = z.object({
   NODE_ENV: z.string().default('production'),
   CORS_ORIGIN: z.string().default('*'),
   RATE_LIMIT_WINDOW_MS: z.string().default('900000'),
-  RATE_LIMIT_MAX: z.string().default('100'),
+  RATE_LIMIT_MAX: z.string().default('2000'),
   LOG_LEVEL: z.string().default('info'),
   EASYSLIP_API_KEY: z.string().optional(),
 });
@@ -35,6 +37,8 @@ export const config = {
   db: {
     host: env.MYSQL_HOST,
     port: parseInt(env.MYSQL_PORT, 10),
+    exposedPort: env.MYSQL_EXPOSED_PORT ? parseInt(env.MYSQL_EXPOSED_PORT, 10) : null,
+    hostname: env.MYSQL_HOSTNAME || null,
     user: env.MYSQL_USER,
     password: env.MYSQL_PASSWORD,
     database: env.MYSQL_DATABASE,

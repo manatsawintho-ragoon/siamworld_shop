@@ -22,10 +22,22 @@ export const registerSchema = z.object({
   email: z.string().email('Invalid email format').max(255),
 });
 
+// ─── Password reset (email OTP) ──────────────────────────────
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email('Invalid email format').max(255),
+});
+
+export const resetPasswordSchema = z.object({
+  email: z.string().email('Invalid email format').max(255),
+  otp: z.string().regex(/^\d{6}$/, 'OTP must be 6 digits'),
+  newPassword: z.string().min(8, 'Password must be at least 8 characters').max(255),
+});
+
 // ─── Wallet / Payment ────────────────────────────────────────
 
 export const topupSchema = z.object({
-  amount: z.number().positive().max(999999999),
+  amount: z.number().min(10, 'ยอดขั้นต่ำ 10 บาท').max(999999999),
   description: z.string().max(500).optional(),
 });
 
@@ -35,11 +47,19 @@ export const trueMoneyRedeemSchema = z.object({
 
 // Accepts one of: base64 image, public URL, or QR payload string
 export const slipVerifySchema = z.object({
-  base64:  z.string().min(1).optional(),
-  url:     z.string().url().max(2048).optional(),
-  payload: z.string().min(1).max(128).optional(),
+  base64:         z.string().min(1).optional(),
+  url:            z.string().url().max(2048).optional(),
+  payload:        z.string().min(1).max(128).optional(),
+  expectedAmount: z.number().positive().optional(),  // QR amount for lock validation
+  discountCode:   z.string().min(1).max(100).optional(),
 }).refine(d => !!(d.base64 || d.url || d.payload), {
   message: 'Provide one of: base64, url, or payload',
+});
+
+export const discountPreviewSchema = z.object({
+  code:    z.string().min(1).max(100),
+  context: z.enum(['topup', 'purchase']),
+  amount:  z.number().positive(),
 });
 
 // ─── Shop ────────────────────────────────────────────────────
@@ -48,6 +68,8 @@ export const buyProductSchema = z.object({
   productId: z.number().int().positive(),
   serverId:  z.number().int().positive(),
   idempotencyKey: z.string().max(64).optional(),
+  giftToUsername: z.string().max(64).optional(),
+  discountCode:   z.string().min(1).max(100).optional(),
 });
 
 // ─── Loot Box ────────────────────────────────────────────────
@@ -225,13 +247,19 @@ export const updateDownloadSchema  = z.object(downloadBaseFields);
 // ─── Redeem Codes ────────────────────────────────────────────
 
 const redeemCodeBaseFields = {
-  description:  z.string().max(500).optional().nullable(),
-  reward_type:  z.enum(['rcon', 'point']).optional(),
-  point_amount: z.number().positive().optional().nullable(),
-  command:      z.string().max(5000).optional().nullable(),
-  max_uses:     z.number().int().min(0).optional(),
-  active:       boolFlag.optional(),
-  expires_at:   z.string().optional().nullable(),
+  description:      z.string().max(500).optional().nullable(),
+  reward_type:      z.enum(['rcon', 'point', 'discount_topup', 'discount_purchase', 'discount_any']).optional(),
+  point_amount:     z.number().positive().optional().nullable(),
+  // Discount: at most one of percent/amount should be set. We don't enforce
+  // mutual-exclusion at the schema level — discount.service.preview prefers
+  // percent when both are non-zero, which is documented.
+  discount_percent: z.number().min(0).max(100).optional().nullable(),
+  discount_amount:  z.number().min(0).optional().nullable(),
+  min_topup_amount: z.number().min(0).optional().nullable(),
+  command:          z.string().max(5000).optional().nullable(),
+  max_uses:         z.number().int().min(0).optional(),
+  active:           boolFlag.optional(),
+  expires_at:       z.string().optional().nullable(),
 };
 
 const codeRegex = /^[a-zA-Z0-9_-]+$/;

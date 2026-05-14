@@ -6,6 +6,7 @@ import { useAdminAlert } from '@/components/AdminAlert';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import PageTransition from '@/components/PageTransition';
 import { api, setToken } from '@/lib/api';
 
 interface RankEntry  { username: string; total_topup: number; }
@@ -91,11 +92,16 @@ function GreenLogin() {
       {mode === 'login' ? (
         <form onSubmit={handleLogin} className="space-y-2.5">
           <input type="text" placeholder="ชื่อผู้ใช้ในเกม (Minecraft)" value={username} onChange={e => setUsername(e.target.value)} className={inputCls} disabled={busy} />
-          <input type="password" placeholder="รหัสผ่าน Authme" value={password} onChange={e => setPassword(e.target.value)} className={inputCls} disabled={busy} />
+          <input type="password" placeholder="รหัสผ่าน" value={password} onChange={e => setPassword(e.target.value)} className={inputCls} disabled={busy} />
           <button type="submit" disabled={busy}
             className="w-full py-3 bg-green-600 hover:bg-green-500 text-white text-sm font-black rounded-xl transition-all shadow-[0_4px_0_#14532d] hover:shadow-[0_2px_0_#14532d] hover:translate-y-[2px] active:shadow-none active:translate-y-[4px]">
             {busy ? <i className="fas fa-spinner fa-spin" /> : <><i className="fas fa-sign-in-alt mr-2" />เข้าสู่ระบบ</>}
           </button>
+          <div className="text-center pt-1">
+            <Link href="/forgot-password" className="text-[11px] font-bold text-gray-400 hover:text-green-600 transition-colors">
+              ลืมรหัสผ่าน?
+            </Link>
+          </div>
         </form>
       ) : (
         <form onSubmit={handleRegister} className="space-y-2.5">
@@ -116,9 +122,17 @@ function GreenLogin() {
 
 /* ── Main Layout ───────────────────────────────────────────── */
 export default function MainLayout({ children }: { children: React.ReactNode }) {
-  const { user, logout, loading, isAdmin } = useAuth();
+  const { user, logout, loading, isAdmin, sessionMessage, clearSessionMessage } = useAuth();
   const { settings } = useSettings();
   const { alert: showAlert } = useAdminAlert();
+
+  // Show session message as an alert whenever it appears (kicked or expired)
+  useEffect(() => {
+    if (sessionMessage) {
+      showAlert({ type: 'warning', title: 'เซสชันสิ้นสุด', message: sessionMessage });
+      clearSessionMessage();
+    }
+  }, [sessionMessage, showAlert, clearSessionMessage]);
 
   const handleLogout = () => {
     logout();
@@ -128,71 +142,75 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [dailyTopup, setDailyTopup] = useState<DailyEntry[]>([]);
   const discordUrl  = settings.discord_invite || '';
   const facebookUrl = settings.facebook_url   || '';
+  // Visibility toggles (default visible). Skip the network calls entirely when
+  // the widget is hidden so we don't waste requests on data we won't render.
+  const showTopupRank  = (settings.show_topup_rank_widget  ?? '1') === '1';
+  const showTopupDaily = (settings.show_topup_daily_widget ?? '1') === '1';
 
   useEffect(() => {
-    api('/public/topup-ranking').then(d => setRanking((d.ranking  as RankEntry[])  || [])).catch(() => {});
-    api('/public/daily-topup').then(d  => setDailyTopup((d.daily  as DailyEntry[]) || [])).catch(() => {});
-  }, []);
+    if (showTopupRank)  api('/public/topup-ranking').then(d => setRanking((d.ranking  as RankEntry[])  || [])).catch(() => {});
+    if (showTopupDaily) api('/public/daily-topup').then(d  => setDailyTopup((d.daily  as DailyEntry[]) || [])).catch(() => {});
+  }, [showTopupRank, showTopupDaily]);
 
-  const CARD = 'bg-white rounded-2xl border-2 border-green-200 shadow-[0_4px_0_#86efac,0_2px_16px_rgba(0,0,0,0.06)] overflow-hidden';
-  const DIV  = 'border-b border-green-100';
+  const CARD = 'theme-sidebar-card';
+  const DIV  = 'border-b border-gray-50';
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#f1f4f8]">
+    <div className="flex flex-col min-h-screen frontend-page" style={{ backgroundColor: 'rgb(var(--color-background))' }}>
       <Navbar />
 
-      <div className="flex-1 max-w-[1300px] mx-auto w-full px-4 sm:px-6 py-6 flex flex-col lg:flex-row gap-5">
+      <div className="flex-1 max-w-[1300px] mx-auto w-full px-4 sm:px-6 py-6 flex flex-col lg:flex-row gap-6">
 
         {/* ── Sidebar ── */}
-        <aside className="w-full lg:w-[270px] flex-shrink-0 order-1">
-          <div className="sticky top-4 space-y-4">
+        <aside className="w-full lg:w-[280px] flex-shrink-0 order-1">
+          <div className="sticky top-4 space-y-5">
 
             {/* ── Member Card ── */}
             <div className={CARD}>
 
               {/* Header */}
-              <div className={`relative px-5 pt-5 pb-4 ${DIV}`}>
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-400 via-emerald-500 to-green-400" />
+              <div className={`relative px-6 py-5 ${DIV} bg-gradient-to-b from-gray-50/50 to-white`}>
+                <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'linear-gradient(to right, rgb(var(--color-primary-light)), rgb(var(--color-primary)), rgb(var(--color-primary-light)))' }} />
 
                 {loading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <i className="fas fa-spinner fa-spin text-green-400 text-2xl" />
+                  <div className="flex items-center justify-center py-6">
+                    <i className="fas fa-spinner fa-spin text-green-500 text-2xl" />
                   </div>
                 ) : user ? (
                   <div className="flex items-center gap-4">
                     <div className="relative flex-shrink-0">
-                      <div className="w-16 h-16 rounded-2xl border-2 border-green-200 overflow-hidden shadow-md">
+                      <div className="w-14 h-14 rounded-2xl border-2 border-green-100 bg-white p-0.5 overflow-hidden shadow-sm">
                         <img
                           src={`https://mc-heads.net/avatar/${user.username}/64`}
                           alt={user.username}
-                          className="w-full h-full"
+                          className="w-full h-full rounded-xl"
                           style={{ imageRendering: 'pixelated' }}
                           onError={(e) => { (e.target as HTMLImageElement).src = 'https://mc-heads.net/avatar/steve/64'; }}
                         />
                       </div>
-                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white shadow" />
+                      <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-white shadow-sm" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-gray-900 font-black text-base truncate leading-tight">{user.username}</p>
+                      <p className="text-gray-900 font-black text-lg truncate leading-tight tracking-tight">{user.username}</p>
                       {isAdmin ? (
-                        <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-black bg-gradient-to-r from-orange-500 to-amber-500 text-white px-2 py-0.5 rounded-full uppercase tracking-wider">
+                        <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-black bg-orange-500 text-white px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
                           <i className="fas fa-shield-alt text-[8px]" /> Admin
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-black bg-green-100 text-green-700 px-2 py-0.5 rounded-full border border-green-200">
-                          <i className="fas fa-leaf text-[8px]" /> Member
+                        <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-black bg-green-500 text-white px-2.5 py-0.5 rounded-full shadow-sm uppercase tracking-wider">
+                          <i className="fas fa-user text-[8px]" /> Member
                         </span>
                       )}
                     </div>
                   </div>
                 ) : (
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-200 flex items-center justify-center flex-shrink-0">
-                      <i className="fas fa-users text-green-500 text-lg" />
+                    <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-100 flex items-center justify-center flex-shrink-0">
+                      <i className="fas fa-user-circle text-green-500 text-2xl" />
                     </div>
                     <div>
                       <p className="text-gray-900 font-black text-sm leading-tight">ระบบสมาชิก</p>
-                      <p className="text-gray-400 text-xs mt-0.5">เข้าสู่ระบบหรือสมัครใหม่</p>
+                      <p className="text-gray-400 text-[11px] mt-0.5 font-medium">เข้าสู่ระบบเพื่อใช้งาน</p>
                     </div>
                   </div>
                 )}
@@ -202,47 +220,50 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               {!loading && user && (
                 <>
                   {/* Wallet — Highlight Card */}
-                  <div className="px-4 py-3 border-b border-green-100">
-                    <div className="relative bg-[#168d41] rounded-xl p-4 text-white shadow-[0_4px_0_#0f6530,0_2px_16px_rgba(22,141,65,0.40)] border border-[#1faa4f]/30 overflow-hidden">
-                      <div className="absolute -right-5 -top-5 w-28 h-28 bg-black/10 rounded-full blur-2xl pointer-events-none" />
-                      <p className="text-white text-[10px] font-black uppercase tracking-[0.18em] mb-2 drop-shadow">ยอดเงินคงเหลือ</p>
-                      <div className="leading-none">
-                        <span className="text-white font-black text-3xl tabular-nums drop-shadow-md" style={{ textShadow: '0 1px 6px rgba(0,0,0,0.25)' }}>
+                  <div className="px-5 py-4 border-b border-gray-50">
+                    <div className="relative theme-wallet-card rounded-2xl p-5 text-white shadow-[0_10px_20px_-5px_rgba(0,0,0,0.25)] border border-white/10 overflow-hidden">
+                      <div className="absolute -right-6 -top-6 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-green-100 text-[10px] font-black uppercase tracking-[0.2em] drop-shadow-sm">ยอดเงินคงเหลือ</p>
+                        <i className="fas fa-wallet text-green-200/50 text-sm" />
+                      </div>
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-white font-black text-3xl tabular-nums drop-shadow-md">
                           {user.wallet_balance?.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                         </span>
-                        <span className="text-white/80 text-base font-bold ml-1.5">฿</span>
+                        <span className="text-green-200 text-lg font-bold">฿</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Redeem Code CTA */}
-                  <div className="px-4 py-3 border-b border-green-100">
+                  <div className="px-5 py-3 border-b border-gray-50">
                     <Link href="/redeem"
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-amber-500 text-white text-sm font-bold shadow-[0_4px_0_#b45309] hover:brightness-110 transition-all active:shadow-[0_2px_0_#b45309] active:translate-y-[2px]">
-                      <i className="fas fa-ticket-alt text-[13px]" /> แลกโค้ด
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-amber-500 text-white text-sm font-bold shadow-[0_4px_0_rgb(217,119,6)] hover:brightness-110 transition-all active:shadow-none active:translate-y-[4px]">
+                      <i className="fas fa-ticket-alt text-[13px]" /> แลกโค้ดรางวัล
                     </Link>
                   </div>
 
                   {/* Quick actions — Profile + Inventory */}
-                  <div className="px-4 py-3 border-b border-green-100 grid grid-cols-2 gap-2">
+                  <div className="px-5 py-4 border-b border-gray-50 grid grid-cols-2 gap-3">
                     {[
-                      { href: '/profile',   icon: 'fa-user', label: 'โปรไฟล์' },
-                      { href: '/inventory', icon: 'fa-box',  label: 'คลัง' },
+                      { href: '/profile',   icon: 'fa-user-circle', label: 'โปรไฟล์' },
+                      { href: '/inventory', icon: 'fa-box-open',  label: 'คลังของ' },
                     ].map(a => (
                       <Link key={a.href} href={a.href}
-                        className="flex flex-col items-center gap-2 py-3.5 rounded-xl bg-white border border-gray-200 text-gray-600 hover:border-green-300 hover:text-green-600 hover:bg-green-50 transition-all shadow-[0_2px_0_#e5e7eb]">
-                        <i className={`fas ${a.icon} text-base`} />
-                        <span className="text-xs font-bold leading-none">{a.label}</span>
+                        className="flex flex-col items-center gap-2 py-4 rounded-xl bg-white border border-gray-200 text-gray-700 hover:text-primary hover:border-primary/50 hover:bg-primary/10 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-[2px] active:shadow-none">
+                        <i className={`fas ${a.icon} text-lg`} />
+                        <span className="text-[11px] font-bold tracking-wide">{a.label}</span>
                       </Link>
                     ))}
                   </div>
 
                   {/* Admin */}
                   {isAdmin && (
-                    <div className="px-4 py-3 border-b border-green-100">
+                    <div className="px-5 py-3 border-b border-gray-50">
                       <Link href="/admin"
-                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#f97316] text-white text-sm font-bold shadow-[0_3px_0_#c2410c] hover:brightness-110 transition-all active:shadow-[0_1px_0_#c2410c] active:translate-y-[2px]">
-                        <i className="fas fa-shield-alt text-xs" /> Admin Panel
+                        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gray-900 text-white text-sm font-bold shadow-[0_4px_0_rgb(31,41,55)] hover:bg-gray-800 transition-all active:shadow-none active:translate-y-[4px]">
+                        <i className="fas fa-shield-alt text-xs text-orange-400" /> Admin Dashboard
                       </Link>
                     </div>
                   )}
@@ -250,7 +271,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   {/* Logout */}
                   <div className="px-4 py-3">
                     <button onClick={handleLogout}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white border border-gray-200 text-red-500 text-sm font-bold shadow-[0_3px_0_#d1d5db] hover:brightness-95 transition-all active:shadow-[0_1px_0_#d1d5db] active:translate-y-[1px]">
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white border border-gray-200 text-red-500 hover:bg-red-500/10 text-sm font-bold shadow-sm transition-all active:shadow-none active:translate-y-[1px]">
                       <i className="fas fa-sign-out-alt text-xs" /> ออกจากระบบ
                     </button>
                   </div>
@@ -262,11 +283,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             </div>
 
             {/* ── Top Donate ── */}
-            {ranking.length > 0 && (
+            {showTopupRank && ranking.length > 0 && (
               <div className={CARD}>
                 {/* Header */}
                 <div className={`relative px-5 py-4 ${DIV} flex items-center gap-3`}>
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-400" />
+                  <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'linear-gradient(to right, rgb(var(--color-primary-light)), rgb(var(--color-primary)), rgb(var(--color-primary-light)))' }} />
                   <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center flex-shrink-0">
                     <i className="fas fa-trophy text-amber-500 text-sm" />
                   </div>
@@ -303,9 +324,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                       {/* Name */}
                       <span className={`text-xs font-bold truncate flex-1 ${i === 0 ? 'text-amber-700' : 'text-gray-700'}`}>{r.username}</span>
                       {/* Amount */}
-                      <div className="flex items-center gap-1 flex-shrink-0 bg-green-50 border border-green-200 rounded-lg px-2 py-0.5">
+                      <div className="flex items-center gap-1 flex-shrink-0 rounded-lg px-2 py-0.5" style={{ backgroundColor: 'rgb(var(--color-primary) / 0.1)', border: '1px solid rgb(var(--color-border))' }}>
                         <i className="fas fa-coins text-amber-500 text-[9px]" />
-                        <span className="text-green-700 text-[11px] font-black tabular-nums">{r.total_topup.toLocaleString()}</span>
+                        <span className="text-[11px] font-black tabular-nums" style={{ color: 'rgb(var(--color-primary))' }}>{r.total_topup.toLocaleString()}</span>
                       </div>
                     </div>
                   ))}
@@ -314,20 +335,20 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             )}
 
             {/* ── Daily TOPUP ── */}
-            <div className={CARD}>
+            {showTopupDaily && <div className={CARD}>
               {/* Header */}
               <div className={`relative px-5 py-4 ${DIV} flex items-center gap-3`}>
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400" />
-                <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center flex-shrink-0">
-                  <i className="fas fa-calendar-day text-blue-500 text-sm" />
+                <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'linear-gradient(to right, rgb(var(--color-primary-light)), rgb(var(--color-primary)), rgb(var(--color-primary-light)))' }} />
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgb(var(--color-primary) / 0.1)', border: '1px solid rgb(var(--color-border))' }}>
+                  <i className="fas fa-calendar-day text-sm" style={{ color: 'rgb(var(--color-primary))' }} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-gray-900 font-black text-sm leading-none">DAILY TOPUP</p>
                   <p className="text-gray-400 text-[10px] mt-0.5">เติมเงินล่าสุดวันนี้</p>
                 </div>
                 <span className="relative flex h-2 w-2 flex-shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: 'rgb(var(--color-primary-light))' }} />
+                  <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: 'rgb(var(--color-primary))' }} />
                 </span>
               </div>
 
@@ -339,34 +360,36 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   <div key={i} className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors">
                     {/* Rank number */}
                     <div className="w-5 flex items-center justify-center flex-shrink-0">
-                      <span className="text-blue-300 text-xs font-black">{i + 1}</span>
+                      <span className="text-xs font-black" style={{ color: 'rgb(var(--color-primary-light))' }}>{i + 1}</span>
                     </div>
                     {/* Avatar */}
                     <img
                       src={`https://mc-heads.net/avatar/${r.username}/28`}
                       alt={r.username}
-                      className="w-7 h-7 rounded-lg flex-shrink-0 border border-blue-100"
-                      style={{ imageRendering: 'pixelated' }}
+                      className="w-7 h-7 rounded-lg flex-shrink-0"
+                      style={{ imageRendering: 'pixelated', border: '1px solid rgb(var(--color-border-muted))' }}
                       onError={(e) => { (e.target as HTMLImageElement).src = 'https://mc-heads.net/avatar/steve/28'; }}
                     />
                     {/* Name */}
                     <span className="text-xs font-bold truncate flex-1 text-gray-700">{r.username}</span>
                     {/* Amount */}
-                    <div className="flex items-center gap-1 flex-shrink-0 bg-blue-50 border border-blue-200 rounded-lg px-2 py-0.5">
-                      <i className="fas fa-coins text-blue-400 text-[9px]" />
-                      <span className="text-blue-700 text-[11px] font-black tabular-nums">{Number(r.total_topup).toLocaleString()}</span>
+                    <div className="flex items-center gap-1 flex-shrink-0 rounded-lg px-2 py-0.5" style={{ backgroundColor: 'rgb(var(--color-primary) / 0.1)', border: '1px solid rgb(var(--color-border))' }}>
+                      <i className="fas fa-coins text-[9px]" style={{ color: 'rgb(var(--color-primary))' }} />
+                      <span className="text-[11px] font-black tabular-nums" style={{ color: 'rgb(var(--color-primary-hover))' }}>{Number(r.total_topup).toLocaleString()}</span>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
+            </div>}
 
           </div>
         </aside>
 
         {/* Main content */}
         <main className="flex-1 min-w-0 order-2">
-          {children}
+          <PageTransition>
+            {children}
+          </PageTransition>
         </main>
 
       </div>

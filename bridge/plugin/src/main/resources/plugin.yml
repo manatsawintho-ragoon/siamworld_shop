@@ -1,0 +1,31 @@
+name: SiamsiteBridge
+version: '1.0.0'
+main: shop.siamsite.bridge.SiamsiteBridgePlugin
+# Lowest API level we compile against. Plugin runs on 1.16 through the latest
+# Paper/Spigot/Bukkit release without recompilation.
+api-version: '1.16'
+author: Siamsite
+website: https://panel.siamsite.shop
+description: Outbound WSS gateway connecting AuthMe to the Siamsite shop panel.
+# Soft-depend on AuthMe so we load *after* it (we read its config file and DB).
+# Listed as soft-depend rather than depend so the plugin still starts in
+# `/status` mode for diagnostics even if AuthMe is missing.
+softdepend: [AuthMe]
+load: POSTWORLD
+
+commands:
+  siamsite-bridge:
+    description: Manage the Siamsite Bridge plugin.
+    usage: |
+      /<command> status   - show connection state
+      /<command> stats    - show counters
+      /<command> reload   - reload config and reconnect
+      /<command> reconnect - force-reconnect now
+    aliases: [ssbridge, ssb]
+    permission: siamsitebridge.admin
+    permission-message: "You don't have permission to manage SiamsiteBridge."
+
+permissions:
+  siamsitebridge.admin:
+    description: Manage the SiamsiteBridge plugin.
+    default: op

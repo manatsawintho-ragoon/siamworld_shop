@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>shop.siamsite</groupId>
+  <artifactId>siamsite-bridge</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+
+  <name>SiamsiteBridge</name>
+  <description>Outbound WSS gateway plugin connecting AuthMe to the Siamsite panel.</description>
+
+  <properties>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <repositories>
+    <!-- Spigot/Paper public maven repos. Both serve a Spigot-API artifact that
+         works across 1.16+ since we only call stable Bukkit APIs. -->
+    <repository>
+      <id>spigotmc</id>
+      <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+    </repository>
+    <repository>
+      <id>papermc</id>
+      <url>https://repo.papermc.io/repository/maven-public/</url>
+    </repository>
+    <repository>
+      <id>sonatype</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+    </repository>
+  </repositories>
+
+  <dependencies>
+    <!-- Compile against an old Spigot API so the resulting jar loads on any
+         server >= 1.16. Marked `provided` because the server supplies its own
+         Bukkit/Spigot/Paper runtime. -->
+    <dependency>
+      <groupId>org.spigotmc</groupId>
+      <artifactId>spigot-api</artifactId>
+      <version>1.16.5-R0.1-SNAPSHOT</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- WebSocket client. Small, no transitive deps. -->
+    <dependency>
+      <groupId>org.java-websocket</groupId>
+      <artifactId>Java-WebSocket</artifactId>
+      <version>1.5.7</version>
+    </dependency>
+
+    <!-- JSON. Relocated by shade to avoid clashes with other plugins. -->
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>2.11.0</version>
+    </dependency>
+
+    <!-- MySQL JDBC driver. Required for reading the local AuthMe table. -->
+    <dependency>
+      <groupId>com.mysql</groupId>
+      <artifactId>mysql-connector-j</artifactId>
+      <version>8.4.0</version>
+    </dependency>
+
+    <!-- HikariCP for a bounded connection pool (size 4). -->
+    <dependency>
+      <groupId>com.zaxxer</groupId>
+      <artifactId>HikariCP</artifactId>
+      <version>5.1.0</version>
+    </dependency>
+
+    <!-- Bcrypt verify, compatible with AuthMe's $2a$10$ format. -->
+    <dependency>
+      <groupId>at.favre.lib</groupId>
+      <artifactId>bcrypt</artifactId>
+      <version>0.10.2</version>
+    </dependency>
+
+    <!-- SLF4J no-op so HikariCP doesn't print "no logger" warnings. -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-nop</artifactId>
+      <version>2.0.13</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <finalName>siamsite-bridge-${project.version}</finalName>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.6.0</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals><goal>shade</goal></goals>
+            <configuration>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <!-- minimizeJar prunes classes only reached via SPI / reflection
+                   (the MySQL JDBC driver registers itself this way). Keeping
+                   the jar a bit larger is worth the operational safety. -->
+              <minimizeJar>false</minimizeJar>
+              <relocations>
+                <relocation>
+                  <pattern>com.google.gson</pattern>
+                  <shadedPattern>shop.siamsite.bridge.shaded.gson</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.java_websocket</pattern>
+                  <shadedPattern>shop.siamsite.bridge.shaded.ws</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>com.zaxxer.hikari</pattern>
+                  <shadedPattern>shop.siamsite.bridge.shaded.hikari</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>at.favre.lib</pattern>
+                  <shadedPattern>shop.siamsite.bridge.shaded.bcrypt</shadedPattern>
+                </relocation>
+                <!-- NOTE: mysql-connector-j is *not* relocated. Relocation breaks
+                     the JDBC SPI registration (META-INF/services/java.sql.Driver)
+                     and rewrites internal NPE-protection paths. Each Bukkit
+                     plugin has its own classloader, so cross-plugin conflict
+                     isn't a concern; we just ship the driver as-is. -->
+              </relocations>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                    <exclude>module-info.class</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+              <!-- Merge META-INF/services so the MySQL JDBC SPI registration
+                   survives the shade. Without this, multiple jars contributing
+                   service files would clobber each other. -->
+              <transformers>
+                <transformer
+                  implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+              </transformers>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
