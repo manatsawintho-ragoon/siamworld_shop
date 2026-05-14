@@ -11,6 +11,10 @@ build/
 .env
 .env.local
 .env.*.local
+# Deploy/panel env files (real secrets) — *.example files stay committable
+panel.env
+deploy/panel.env
+deploy/customers/*/.env
 
 # ── Logs ─────────────────────────────────────────────────────
 *.log
@@ -30,8 +34,15 @@ docker-compose.override.yml
 *.sqlite3
 *.bak
 coverage/
+*.tsbuildinfo
 
 # ── Internal tools (not needed by the team) ───────────────────
 CLAUDE.md
 .agents/
 skills-lock.json
+.claude/
+.openclaude-profile.json
+
+# ── Local scratch files (screenshots, throwaway scripts) ─────
+fix_theme.js
+easy_slip_plan.png
