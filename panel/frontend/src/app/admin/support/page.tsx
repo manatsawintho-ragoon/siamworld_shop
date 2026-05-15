@@ -351,7 +351,6 @@ export default function AdminSupportPage() {
           )}
         </motion.div>
       </div>
-      </div>
     </div>
   );
 }
