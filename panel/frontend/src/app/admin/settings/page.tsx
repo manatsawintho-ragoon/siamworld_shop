@@ -259,6 +259,32 @@ export default function AdminSettingsPage() {
             <Field label="EasySlip API Key" name="easyslip_api_key" value={settings['easyslip_api_key'] || ''} onChange={set}
               type="password" placeholder="••••••••••••••••" hint="ใช้สำหรับตรวจสอบสลิปอัตโนมัติผ่าน EasySlip API" />
           </Section>
+
+          {/* Cloudflare Turnstile (CAPTCHA) */}
+          <Section icon="fa-shield-halved" title="CAPTCHA (Cloudflare Turnstile)" desc="Bot Protection on Login & Register" delay={0.35}>
+            <InfoBanner variant="info">
+              สมัครฟรีที่ <b>dash.cloudflare.com → Turnstile</b> เลือก widget mode &quot;Managed&quot;
+              คัดลอก Site Key (Public) และ Secret Key มาวางที่ช่องด้านล่าง แล้วเปิดสวิตช์เพื่อบังคับใช้
+            </InfoBanner>
+            <div className="flex items-center justify-between gap-4 p-4 bg-secondary/30 rounded-2xl border border-border">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wider">เปิดใช้งาน CAPTCHA</p>
+                <p className="text-[10px] font-bold text-muted-foreground mt-0.5">ต้องใส่ทั้ง Site Key และ Secret Key ก่อนเปิด</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => set('enable_turnstile', settings['enable_turnstile'] === '1' ? '0' : '1')}
+                className={`relative w-12 h-7 rounded-full transition-colors flex-shrink-0 ${settings['enable_turnstile'] === '1' ? 'bg-primary' : 'bg-secondary border border-border'}`}
+                aria-pressed={settings['enable_turnstile'] === '1'}
+              >
+                <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-sm transition-all ${settings['enable_turnstile'] === '1' ? 'left-6' : 'left-1'}`} />
+              </button>
+            </div>
+            <Field label="Site Key (Public)" name="turnstile_site_key" value={settings['turnstile_site_key'] || ''} onChange={set}
+              placeholder="0x4AAAAAAA..." hint="โชว์ได้ ไม่ลับ ใช้บน frontend" />
+            <Field label="Secret Key" name="turnstile_secret" value={settings['turnstile_secret'] || ''} onChange={set}
+              type="password" placeholder="0x4AAAAAAA..." hint="ใช้ตรวจสอบ token บน backend — เก็บเป็นความลับ" />
+          </Section>
         </div>
 
         <div className="space-y-8">

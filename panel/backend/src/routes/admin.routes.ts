@@ -2,8 +2,16 @@ import { Router } from 'express';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
+import fsp from 'fs/promises';
 import { asyncRoute } from '../middleware/asyncRoute';
 import { requireAdmin } from '../middleware/auth';
+
+/** Clamp a query param to a sensible page/limit range; rejects NaN and unbounded fetches. */
+function safePagination(rawPage: unknown, rawLimit: unknown, defaultLimit = 20, maxLimit = 100): { page: number; limit: number; offset: number } {
+  const page = Math.max(parseInt(String(rawPage)) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(String(rawLimit)) || defaultLimit, 1), maxLimit);
+  return { page, limit, offset: (page - 1) * limit };
+}
 import { subscriptionService } from '../services/subscription.service';
 import { deployService } from '../services/deploy.service';
 import { paymentService } from '../services/payment.service';
@@ -35,8 +43,8 @@ router.get('/stats/charts', asyncRoute(async (_req, res) => {
 }));
 
 router.get('/audit-logs', asyncRoute(async (req, res) => {
-  const page = parseInt(String(req.query.page)) || 1;
-  const result = await subscriptionService.getAuditLogs(page);
+  const { page, limit } = safePagination(req.query.page, req.query.limit, 50);
+  const result = await subscriptionService.getAuditLogs(page, limit);
   res.json(result);
 }));
 
@@ -62,17 +70,17 @@ router.get('/search', asyncRoute(async (req, res) => {
 
 // Subscriptions
 router.get('/subscriptions', asyncRoute(async (req, res) => {
-  const page = parseInt(String(req.query.page)) || 1;
+  const { page, limit } = safePagination(req.query.page, req.query.limit);
   const status = req.query.status as string | undefined;
-  const result = await subscriptionService.getAllAdmin(page, 20, status);
+  const result = await subscriptionService.getAllAdmin(page, limit, status);
   res.json(result);
 }));
 
 // Sync subscriptions from customers.json into the panel DB (must be before /:id routes)
 router.post('/subscriptions/sync-filesystem', asyncRoute(async (req, res) => {
   const deployDir = config.deployDir;
-  const { stdout } = await execAsync(`cat "${deployDir}/customers.json"`);
-  const registry = JSON.parse(stdout) as {
+  const customersJson = await fsp.readFile(path.join(deployDir, 'customers.json'), 'utf8');
+  const registry = JSON.parse(customersJson) as {
     customers: Array<{ name: string; domain: string; frontend_port: number; backend_port: number; created: string; status: string }>;
   };
 
@@ -91,7 +99,7 @@ router.post('/subscriptions/sync-filesystem', asyncRoute(async (req, res) => {
     const envPath = path.join(deployDir, 'customers', c.name, '.env');
     let mysqlExposedPort = 33000 + c.frontend_port - 3001;
     try {
-      const { stdout: envOut } = await execAsync(`cat "${envPath}"`);
+      const envOut = await fsp.readFile(envPath, 'utf8');
       for (const line of envOut.split('\n')) {
         if (line.startsWith('MYSQL_EXPOSED_PORT=')) {
           const val = parseInt(line.split('=')[1]);
@@ -145,7 +153,10 @@ router.post('/subscriptions/:id/action', asyncRoute(async (req, res) => {
   if (!['start','stop','restart','suspend','unsuspend','redeploy'].includes(action)) {
     throw new ValidationError('Invalid action');
   }
-  await subscriptionService.adminAction(parseInt(req.params.id), action);
+  const subId = parseInt(req.params.id);
+  await subscriptionService.adminAction(subId, action);
+  await subscriptionService.logAudit(req.user!.userId, `sub_${action}`, 'subscription', subId,
+    `Admin performed ${action} on subscription ID ${subId}`, req.ip);
   res.json({ success: true });
 }));
 
@@ -170,6 +181,8 @@ router.post('/subscriptions/bulk-action', asyncRoute(async (req, res) => {
     throw new ValidationError('Invalid action');
   }
 
+  const succeeded: number[] = [];
+  const failed: { id: number; error: string }[] = [];
   for (const id of ids) {
     try {
       if (action === 'suspend') {
@@ -177,13 +190,25 @@ router.post('/subscriptions/bulk-action', asyncRoute(async (req, res) => {
       } else if (action === 'delete') {
         await subscriptionService.adminRemove(id);
       }
+      succeeded.push(id);
     } catch (err) {
+      const msg = (err as Error).message || 'unknown';
       console.error(`Bulk action ${action} failed for id ${id}:`, err);
+      failed.push({ id, error: msg });
     }
   }
 
-  await subscriptionService.logAudit(req.user!.userId, `bulk_${action}`, 'subscription', undefined, `Admin performed bulk ${action} on ${ids.length} subscriptions`, req.ip);
-  res.json({ success: true });
+  await subscriptionService.logAudit(
+    req.user!.userId, `bulk_${action}`, 'subscription', undefined,
+    `Admin bulk ${action}: ${succeeded.length}/${ids.length} succeeded; failed=${JSON.stringify(failed)}`,
+    req.ip,
+  );
+  // Surface partial failures so the admin UI can show what didn't go through.
+  res.status(failed.length ? 207 : 200).json({
+    success: failed.length === 0,
+    succeeded,
+    failed,
+  });
 }));
 
 router.get('/subscriptions/:id/credentials', asyncRoute(async (req, res) => {
@@ -252,9 +277,16 @@ router.delete('/subscriptions/:id', asyncRoute(async (req, res) => {
 
 // Payments / Slips
 router.get('/slips', asyncRoute(async (req, res) => {
-  const page = parseInt(String(req.query.page)) || 1;
+  const { page, limit } = safePagination(req.query.page, req.query.limit);
   const status = req.query.status as string | undefined;
-  const result = await paymentService.getAllSlips(status, page);
+  const result = await paymentService.getAllSlips(status, page, limit);
+  res.json(result);
+}));
+
+router.get('/slips/:id/image', asyncRoute(async (req, res) => {
+  const slipId = parseInt(req.params.id);
+  if (!slipId) throw new ValidationError('Invalid slip id');
+  const result = await paymentService.getSlipImage(slipId);
   res.json(result);
 }));
 
@@ -277,9 +309,7 @@ router.post('/slips/:id/reject', asyncRoute(async (req, res) => {
 
 // Users
 router.get('/users', asyncRoute(async (req, res) => {
-  const page = parseInt(String(req.query.page)) || 1;
-  const limit = parseInt(String(req.query.limit)) || 50;
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = safePagination(req.query.page, req.query.limit, 50);
   const search = String(req.query.search || '').trim();
   const role = String(req.query.role || '').trim();
 
@@ -299,8 +329,8 @@ router.get('/users', asyncRoute(async (req, res) => {
   const [rows] = await pool.execute<RowDataPacket[]>(
     `SELECT id, email, display_name, phone, wallet_balance, role, avatar_url, created_at
      FROM panel_users ${whereSql}
-     ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`,
-    params
+     ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+    [...params, limit, offset]
   );
   const [count] = await pool.execute<RowDataPacket[]>(
     `SELECT COUNT(*) as total FROM panel_users ${whereSql}`,
@@ -328,14 +358,12 @@ router.get('/users', asyncRoute(async (req, res) => {
 
 router.get('/users/:id/wallet/history', asyncRoute(async (req, res) => {
   const userId = parseInt(req.params.id);
-  const page = parseInt(String(req.query.page)) || 1;
-  const limit = parseInt(String(req.query.limit)) || 10;
-  const offset = (page - 1) * limit;
+  const { limit, offset } = safePagination(req.query.page, req.query.limit, 10);
   const [rows] = await pool.execute<RowDataPacket[]>(
     `SELECT id, type, amount, balance_after, description, reference_id, created_at
      FROM wallet_transactions WHERE user_id = ?
-     ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`,
-    [userId]
+     ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+    [userId, limit, offset]
   );
   const [count] = await pool.execute<RowDataPacket[]>(
     'SELECT COUNT(*) as total FROM wallet_transactions WHERE user_id = ?', [userId]
@@ -393,6 +421,7 @@ router.get('/settings', asyncRoute(async (_req, res) => {
   if (safe['npm_password'])     safe['npm_password']     = '••••••••';
   if (safe['line_notify_token'] && safe['line_notify_token'].length > 8)
     safe['line_notify_token'] = safe['line_notify_token'].slice(0, 4) + '••••••••';
+  if (safe['turnstile_secret']) safe['turnstile_secret'] = '••••••••';
   res.json(safe);
 }));
 
@@ -407,6 +436,7 @@ router.put('/settings', asyncRoute(async (req, res) => {
     'cloudflare_api_key','cloudflare_email','cloudflare_zone_id','server_ip',
     'resend_api_key','email_from','email_from_name','email_reply_to',
     'support_email','support_facebook','support_discord','support_line',
+    'enable_turnstile','turnstile_site_key','turnstile_secret',
   ];
   const prev = await settingsService.getAll();
   const data: Record<string, string> = {};
@@ -416,7 +446,7 @@ router.put('/settings', asyncRoute(async (req, res) => {
   const MASKED = /^•+$/;          // pure bullets (npm_password, smtp_password)
   const SUFFIX_MASK = /^•+.{2,8}$/; // prefix-masked (easyslip_api_key, line_notify_token)
   const isMasked = (v: string) => !v || MASKED.test(v) || SUFFIX_MASK.test(v);
-  const SECRET_KEYS = new Set(['npm_password','smtp_password','easyslip_api_key','line_notify_token','cloudflare_api_key','resend_api_key']);
+  const SECRET_KEYS = new Set(['npm_password','smtp_password','easyslip_api_key','line_notify_token','cloudflare_api_key','resend_api_key','turnstile_secret']);
   for (const key of allowed) {
     if (req.body[key] === undefined) continue;
     const next = String(req.body[key]);

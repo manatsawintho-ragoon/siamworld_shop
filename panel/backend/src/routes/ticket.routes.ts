@@ -6,13 +6,17 @@ import { z } from 'zod';
 const router = Router();
 
 // Zod schemas for validation
+// Caps prevent a malicious or buggy client from flooding the DB. 8k is more than enough
+// for support context; users with longer reports can attach pastes/screenshots.
+const TICKET_MESSAGE_MAX = 8000;
+
 const createTicketSchema = z.object({
   subject: z.string().min(3).max(255),
-  message: z.string().min(1),
+  message: z.string().min(1).max(TICKET_MESSAGE_MAX),
 });
 
 const addMessageSchema = z.object({
-  message: z.string().min(1),
+  message: z.string().min(1).max(TICKET_MESSAGE_MAX),
 });
 
 // -- Customer Routes --

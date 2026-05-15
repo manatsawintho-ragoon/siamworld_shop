@@ -29,23 +29,51 @@ const app = express();
 
 app.set('trust proxy', 1);
 
-// Configure security
+// Configure security — CSP enabled with a narrow policy. OAuth redirects work at the
+// network layer (browser-initiated 302) and are not affected by CSP, so the previous
+// "disable CSP for OAuth" comment was wrong. We allow framing only from same origin and
+// permit Next.js inline JSON-LD via 'unsafe-inline' on script-src.
 app.use(helmet({
-  contentSecurityPolicy: false, // Disable CSP to allow OAuth redirects easily
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      'default-src': ["'self'"],
+      // Cloudflare Turnstile loads its widget script + iframe from challenges.cloudflare.com.
+      'script-src':  ["'self'", "'unsafe-inline'", 'https://challenges.cloudflare.com'],
+      'style-src':   ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      'font-src':    ["'self'", 'https://fonts.gstatic.com', 'data:'],
+      'img-src':     ["'self'", 'data:', 'https:', 'blob:'],
+      'connect-src': ["'self'", 'https:', 'wss:'],
+      'frame-src':   ["'self'", 'https://challenges.cloudflare.com'],
+      'frame-ancestors': ["'none'"],
+      'object-src':  ["'none'"],
+      'base-uri':    ["'self'"],
+      'form-action': ["'self'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // allows third-party assets like avatars
 }));
 
 // Parse comma-separated PANEL_CORS_ORIGIN — e.g. "https://panel.siamsite.shop,http://localhost:3000"
-const allowedPanelOrigins = config.corsOrigin === '*'
-  ? true
-  : config.corsOrigin.split(',').map(o => o.trim()).filter(Boolean);
+// CORS spec forbids '*' together with credentials:true (browser rejects), so guard explicitly.
+if (config.corsOrigin === '*') {
+  throw new Error('PANEL_CORS_ORIGIN="*" is incompatible with credentials:true. Set explicit origins.');
+}
+const allowedPanelOrigins = config.corsOrigin
+  .split(',').map(o => o.trim()).filter(Boolean);
 
 app.use(cors({
   origin: allowedPanelOrigins,
   credentials: true,
 }));
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+// Per-route body limits — auth/profile/ticket payloads are tiny; only slip upload + bridge
+// payloads legitimately need the 10MB allowance. Setting a smaller global default + a
+// dedicated heavy parser on wallet routes prevents register/login from accepting megabytes.
+const smallJson = express.json({ limit: '64kb' });
+const mediumJson = express.json({ limit: '256kb' });
+const largeJson = express.json({ limit: '10mb' });
+app.use(express.urlencoded({ extended: true, limit: '64kb' }));
 
 // CRITICAL: Initialize Passport
 app.use(passport.initialize());
@@ -60,14 +88,14 @@ const authLimiter = rateLimit({
   message: { success: false, error: 'Too many login attempts, please try again in 15 minutes.' },
 });
 
-// Routes
-app.use('/api/auth',          authLimiter, authRoutes);
-app.use('/api/wallet',        walletRoutes);
-app.use('/api/subscriptions', subscriptionRoutes);
-app.use('/api/admin',         adminRoutes);
-app.use('/api/tickets',       ticketRoutes);
-app.use('/api/vouchers',      voucherRoutes);
-app.use('/api/bridge',        bridgeRoutes);
+// Routes — pick a body-size class per surface (slip uploads are the only legit large input).
+app.use('/api/auth',          smallJson,  authLimiter, authRoutes);
+app.use('/api/wallet',        largeJson,  walletRoutes);           // slip upload
+app.use('/api/subscriptions', mediumJson, subscriptionRoutes);
+app.use('/api/admin',         mediumJson, adminRoutes);
+app.use('/api/tickets',       mediumJson, ticketRoutes);
+app.use('/api/vouchers',      smallJson,  voucherRoutes);
+app.use('/api/bridge',        mediumJson, bridgeRoutes);
 
 // Health check — includes DB and Redis liveness
 app.get('/api/health', async (_req, res) => {

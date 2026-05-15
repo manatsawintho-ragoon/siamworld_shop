@@ -7,6 +7,38 @@ import { AuthError, ConflictError, ValidationError } from '../utils/errors';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { createSession, destroySession } from './session.service';
 
+/**
+ * Minimum password policy:
+ *   - 8+ characters
+ *   - At least 3 of: lowercase, uppercase, digit, symbol
+ * Rejects classics like "password", "12345678", and the user's own email prefix.
+ */
+function assertStrongPassword(password: string, email?: string): void {
+  if (password.length < 8) {
+    throw new ValidationError('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร');
+  }
+  if (password.length > 128) {
+    throw new ValidationError('รหัสผ่านยาวเกินไป');
+  }
+  const classes = [
+    /[a-z]/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/,
+  ].reduce((n, re) => n + (re.test(password) ? 1 : 0), 0);
+  if (classes < 3) {
+    throw new ValidationError('รหัสผ่านต้องประกอบด้วยตัวพิมพ์เล็ก ใหญ่ ตัวเลข หรือสัญลักษณ์ อย่างน้อย 3 ใน 4 ประเภท');
+  }
+  const lc = password.toLowerCase();
+  const banned = ['password', '12345678', 'qwerty', 'siamsite', 'siamworld'];
+  if (banned.some(b => lc.includes(b))) {
+    throw new ValidationError('รหัสผ่านอ่อนแอเกินไป กรุณาเลือกใหม่');
+  }
+  if (email) {
+    const localPart = email.split('@')[0].toLowerCase();
+    if (localPart.length >= 3 && lc.includes(localPart)) {
+      throw new ValidationError('รหัสผ่านห้ามมีส่วนของอีเมล');
+    }
+  }
+}
+
 interface PanelUser extends RowDataPacket {
   id: number;
   email: string;
@@ -20,7 +52,7 @@ interface PanelUser extends RowDataPacket {
 
 class AuthService {
   async register(email: string, password: string, displayName: string, phone?: string, signupIp?: string) {
-    if (password.length < 8) throw new ValidationError('Password must be at least 8 characters');
+    assertStrongPassword(password, email);
 
     const [existing] = await pool.execute<PanelUser[]>(
       'SELECT id FROM panel_users WHERE email = ?', [email]
@@ -99,12 +131,12 @@ class AuthService {
   }
 
   async changePassword(userId: number, oldPassword: string, newPassword: string) {
-    if (newPassword.length < 8) throw new ValidationError('Password must be at least 8 characters');
     const [rows] = await pool.execute<PanelUser[]>(
-      'SELECT password_hash FROM panel_users WHERE id = ?', [userId]
+      'SELECT password_hash, email FROM panel_users WHERE id = ?', [userId]
     );
     const user = rows[0];
     if (!user) throw new AuthError();
+    assertStrongPassword(newPassword, user.email);
     const ok = await bcrypt.compare(oldPassword, user.password_hash);
     if (!ok) throw new AuthError('รหัสผ่านเดิมไม่ถูกต้อง');
     const hash = await bcrypt.hash(newPassword, 12);

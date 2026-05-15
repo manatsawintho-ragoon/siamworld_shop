@@ -1,11 +1,18 @@
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import fsp from 'fs/promises';
+import fs from 'fs';
+import path from 'path';
 import { pool } from '../database/connection';
 import { walletService } from './wallet.service';
 import { deployService } from './deploy.service';
 import { settingsService } from './settings.service';
 import { npmService } from './npm.service';
 import { ValidationError, ConflictError, NotFoundError } from '../utils/errors';
-import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { RowDataPacket, ResultSetHeader, PoolConnection } from 'mysql2/promise';
 import { config } from '../config';
+
+const execAsync = promisify(exec);
 
 const PACKAGE_MONTHS: Record<number, string> = { 1: 'price_1month', 3: 'price_3months', 6: 'price_6months' };
 
@@ -71,6 +78,9 @@ class SubscriptionService {
     if (!/^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/.test(shopName)) {
       throw new ValidationError('ชื่อร้านต้องเป็นตัวพิมพ์เล็ก a-z 0-9 ขีด ความยาว 3-30 ตัวอักษร');
     }
+    if (mcIp && !/^(\d{1,3}\.){3}\d{1,3}$/.test(mcIp)) {
+      throw new ValidationError('รูปแบบ IP ไม่ถูกต้อง');
+    }
 
     const settings = await settingsService.getAll();
     const panelDomain = settings['panel_domain'] || 'siamsite.shop';
@@ -96,80 +106,92 @@ class SubscriptionService {
       durationMonths = packageMonths;
     }
 
-    // Eligibility: one trial AND one intro per user (email), plus IP-level cap on both.
-    if (kind === 'trial' || kind === 'intro') {
-      const [userRow] = await pool.execute<RowDataPacket[]>(
-        'SELECT used_trial, used_intro FROM panel_users WHERE id = ?', [userId]
-      );
-      const u = userRow[0];
-      if (!u) throw new NotFoundError('ไม่พบบัญชี');
-      if (kind === 'trial' && u.used_trial) throw new ConflictError('คุณใช้สิทธิ์ทดลองฟรีไปแล้ว');
-      if (kind === 'intro' && u.used_intro) throw new ConflictError('คุณใช้สิทธิ์โปรเดือนแรกไปแล้ว');
-
-      if (clientIp) {
-        const flagCol = kind === 'trial' ? 'used_trial' : 'used_intro';
-        const [ipRows] = await pool.execute<RowDataPacket[]>(
-          `SELECT id FROM panel_users WHERE signup_ip = ? AND ${flagCol} = 1 AND id <> ?`,
-          [clientIp, userId]
-        );
-        if (ipRows.length) {
-          throw new ConflictError(
-            kind === 'trial'
-              ? 'IP นี้เคยใช้สิทธิ์ทดลองฟรีแล้ว'
-              : 'IP นี้เคยใช้สิทธิ์โปรเดือนแรกแล้ว'
-          );
-        }
-      }
-    }
-
-    // Check existing shop name
-    const [existing] = await pool.execute<RowDataPacket[]>(
-      'SELECT id FROM subscriptions WHERE shop_name = ?', [shopName]
-    );
-    if (existing.length) throw new ConflictError('ชื่อร้านนี้ถูกใช้งานแล้ว');
-
-    // Check user already has active sub
-    const [userSubs] = await pool.execute<RowDataPacket[]>(
-      'SELECT id FROM subscriptions WHERE user_id = ? AND status NOT IN ("cancelled","expired")', [userId]
-    );
-    if (userSubs.length) throw new ConflictError('คุณมีแพ็กเกจที่ใช้งานอยู่แล้ว');
-
-    // Debit wallet (skip for free trial)
-    if (price > 0) {
-      const desc = kind === 'intro'
-        ? `โปรเดือนแรก ฿${price} (${domain})`
-        : `สั่งซื้อแพ็กเกจ ${packageMonths} เดือน (${domain})`;
-      await walletService.debit(userId, price, 'purchase', desc);
-    }
-
-    // Calculate expiry
     const expiresAt = new Date();
     if (durationDays > 0) expiresAt.setDate(expiresAt.getDate() + durationDays);
     if (durationMonths > 0) expiresAt.setMonth(expiresAt.getMonth() + durationMonths);
 
-    // Validate mc_ip format if provided
-    if (mcIp && !/^(\d{1,3}\.){3}\d{1,3}$/.test(mcIp)) {
-      throw new ValidationError('รูปแบบ IP ไม่ถูกต้อง');
+    // ── Atomic block: lock user, validate eligibility, debit wallet, insert subscription.
+    // Previously each step had its own transaction so a failure mid-flow could debit the
+    // user without creating the shop. With a single tx, any error rolls everything back.
+    const conn = await pool.getConnection();
+    let subscriptionId: number;
+    try {
+      await conn.beginTransaction();
+
+      // Lock the user row first — also gives us a serialized eligibility check.
+      const [userRows] = await conn.execute<RowDataPacket[]>(
+        'SELECT used_trial, used_intro FROM panel_users WHERE id = ? FOR UPDATE',
+        [userId]
+      );
+      const u = userRows[0];
+      if (!u) throw new NotFoundError('ไม่พบบัญชี');
+
+      if (kind === 'trial' || kind === 'intro') {
+        if (kind === 'trial' && u.used_trial) throw new ConflictError('คุณใช้สิทธิ์ทดลองฟรีไปแล้ว');
+        if (kind === 'intro' && u.used_intro) throw new ConflictError('คุณใช้สิทธิ์โปรเดือนแรกไปแล้ว');
+
+        // IP cap: bucket by CURRENT request IP against past claim IPs (claimed_*_ip),
+        // not the signup_ip — that's what trapped users who registered+claimed from
+        // different IPs. claimed_*_ip is backfilled from signup_ip for existing rows.
+        if (clientIp) {
+          const ipCol = kind === 'trial' ? 'claimed_trial_ip' : 'claimed_intro_ip';
+          const [ipRows] = await conn.execute<RowDataPacket[]>(
+            `SELECT id FROM panel_users WHERE ${ipCol} = ? AND id <> ? LIMIT 1`,
+            [clientIp, userId]
+          );
+          if (ipRows.length) {
+            throw new ConflictError(
+              kind === 'trial'
+                ? 'IP นี้เคยใช้สิทธิ์ทดลองฟรีแล้ว'
+                : 'IP นี้เคยใช้สิทธิ์โปรเดือนแรกแล้ว'
+            );
+          }
+        }
+      }
+
+      // Debit wallet inside the same tx (skip for free trial)
+      if (price > 0) {
+        const desc = kind === 'intro'
+          ? `โปรเดือนแรก ฿${price} (${domain})`
+          : `สั่งซื้อแพ็กเกจ ${packageMonths} เดือน (${domain})`;
+        await walletService.debitWithin(conn, userId, price, 'purchase', desc);
+      }
+
+      // Insert subscription (shop_name UNIQUE — duplicate name throws ER_DUP_ENTRY)
+      const [result] = await conn.execute<ResultSetHeader>(
+        `INSERT INTO subscriptions
+          (user_id, shop_name, domain, frontend_port, backend_port, mysql_exposed_port,
+           package_months, kind, price_paid, expires_at, status, mc_ip)
+         VALUES (?,?,?,0,0,0,?,?,?,?,"pending",?)`,
+        [userId, shopName, domain, durationMonths || 0, kind, price, expiresAt, mcIp || null]
+      );
+      subscriptionId = result.insertId;
+
+      // Mark eligibility as consumed + record the claim IP
+      if (kind === 'trial') {
+        await conn.execute(
+          'UPDATE panel_users SET used_trial = 1, claimed_trial_ip = COALESCE(?, claimed_trial_ip) WHERE id = ?',
+          [clientIp || null, userId]
+        );
+      } else if (kind === 'intro') {
+        await conn.execute(
+          'UPDATE panel_users SET used_intro = 1, claimed_intro_ip = COALESCE(?, claimed_intro_ip) WHERE id = ?',
+          [clientIp || null, userId]
+        );
+      }
+
+      await conn.commit();
+    } catch (err: unknown) {
+      await conn.rollback();
+      if ((err as { code?: string }).code === 'ER_DUP_ENTRY') {
+        throw new ConflictError('ชื่อร้านนี้ถูกใช้งานแล้ว');
+      }
+      throw err;
+    } finally {
+      conn.release();
     }
 
-    const [result] = await pool.execute<ResultSetHeader>(
-      `INSERT INTO subscriptions
-        (user_id, shop_name, domain, frontend_port, backend_port, mysql_exposed_port,
-         package_months, kind, price_paid, expires_at, status, mc_ip)
-       VALUES (?,?,?,0,0,0,?,?,?,?,"pending",?)`,
-      [userId, shopName, domain, durationMonths || 0, kind, price, expiresAt, mcIp || null]
-    );
-
-    // Mark eligibility as consumed
-    if (kind === 'trial') {
-      await pool.execute('UPDATE panel_users SET used_trial = 1 WHERE id = ?', [userId]);
-    } else if (kind === 'intro') {
-      await pool.execute('UPDATE panel_users SET used_intro = 1 WHERE id = ?', [userId]);
-    }
-
-    const subscriptionId = result.insertId;
-
-    // Async deploy
+    // Async deploy — only after the row is committed, so a deploy failure can't strand a debit.
     deployService.deployAsync(subscriptionId, shopName, domain, mcIp);
 
     return {
@@ -184,7 +206,7 @@ class SubscriptionService {
     };
   }
 
-  async renew(userId: number, subscriptionId: number, packageMonths: number) {
+  async renew(userId: number, subscriptionId: number, packageMonths: number, kind: 'regular' | 'intro' = 'regular') {
     const [rows] = await pool.execute<RowDataPacket[]>(
       'SELECT * FROM subscriptions WHERE id = ? AND user_id = ?', [subscriptionId, userId]
     );
@@ -193,20 +215,53 @@ class SubscriptionService {
     if (['cancelled'].includes(sub.status)) throw new ValidationError('ไม่สามารถต่ออายุแพ็กเกจนี้ได้');
 
     const settings = await settingsService.getAll();
-    const priceKey = PACKAGE_MONTHS[packageMonths];
-    if (!priceKey) throw new ValidationError('แพ็กเกจไม่ถูกต้อง');
-    const price = Number(settings[priceKey]);
 
-    await walletService.debit(userId, price, 'renewal', `ต่ออายุ ${packageMonths} เดือน (${sub.domain})`);
+    let price: number;
+    let renewMonths: number;
+    let debitDesc: string;
+
+    if (kind === 'intro') {
+      // Intro renewal: only valid for trial subs by users who have not used intro
+      if (sub.kind !== 'trial') {
+        throw new ValidationError('โปรเดือนแรกใช้ได้กับร้านที่กำลังทดลองเท่านั้น');
+      }
+      if (settings['enable_intro'] === '0') {
+        throw new ValidationError('โปรโมชั่นเดือนแรกปิดให้บริการชั่วคราว');
+      }
+      const [userRow] = await pool.execute<RowDataPacket[]>(
+        'SELECT used_intro FROM panel_users WHERE id = ?', [userId]
+      );
+      if (!userRow[0]) throw new NotFoundError('ไม่พบบัญชี');
+      if (userRow[0].used_intro) throw new ConflictError('คุณใช้สิทธิ์โปรเดือนแรกไปแล้ว');
+
+      price = Number(settings['intro_price'] || 99);
+      renewMonths = 1;
+      debitDesc = `โปรเดือนแรก ฿${price} ต่ออายุ (${sub.domain})`;
+    } else {
+      const priceKey = PACKAGE_MONTHS[packageMonths];
+      if (!priceKey) throw new ValidationError('แพ็กเกจไม่ถูกต้อง');
+      price = Number(settings[priceKey]);
+      renewMonths = packageMonths;
+      debitDesc = `ต่ออายุ ${packageMonths} เดือน (${sub.domain})`;
+    }
+
+    await walletService.debit(userId, price, 'renewal', debitDesc);
 
     // Extend from current expiry or now (whichever is later)
     const base = new Date(sub.expires_at) > new Date() ? new Date(sub.expires_at) : new Date();
-    base.setMonth(base.getMonth() + packageMonths);
+    base.setMonth(base.getMonth() + renewMonths);
+
+    // Upgrade kind off "trial" once paid (so future renewals follow normal pricing rules)
+    const newKind = sub.kind === 'trial' ? (kind === 'intro' ? 'intro' : 'regular') : sub.kind;
 
     await pool.execute(
-      'UPDATE subscriptions SET expires_at=?, status="active", renewed_at=NOW() WHERE id=?',
-      [base, subscriptionId]
+      'UPDATE subscriptions SET expires_at=?, status="active", renewed_at=NOW(), kind=?, package_months=? WHERE id=?',
+      [base, newKind, renewMonths, subscriptionId]
     );
+
+    if (kind === 'intro') {
+      await pool.execute('UPDATE panel_users SET used_intro = 1 WHERE id = ?', [userId]);
+    }
 
     // If was suspended, restart docker
     if (sub.status === 'suspended' || sub.status === 'expired') {
@@ -217,16 +272,33 @@ class SubscriptionService {
     return { expiresAt: base, price };
   }
 
-  async getMySubscriptions(userId: number) {
+  async getMyEligibility(userId: number) {
     const [rows] = await pool.execute<RowDataPacket[]>(
-      'SELECT * FROM subscriptions WHERE user_id = ? ORDER BY created_at DESC', [userId]
+      'SELECT used_trial, used_intro FROM panel_users WHERE id = ?', [userId]
     );
-    // Attach docker status
-    const result = await Promise.all(rows.map(async (sub) => ({
-      ...sub,
-      dockerStatus: sub.status === 'active' ? await deployService.getShopStatus(sub.shop_name) : 'n/a',
-    })));
-    return result;
+    const u = rows[0];
+    return {
+      usedTrial: !!(u?.used_trial),
+      usedIntro: !!(u?.used_intro),
+    };
+  }
+
+  async getMySubscriptions(userId: number) {
+    // Skip heavy columns (deploy_log can be hundreds of KB) and trust DB status —
+    // we used to fork `docker inspect` per row which was O(N) per dashboard load.
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      `SELECT id, user_id, shop_name, domain, frontend_port, backend_port, mysql_exposed_port,
+              package_months, kind, price_paid, starts_at, expires_at, status, mc_ip,
+              created_at, renewed_at, auto_renew
+       FROM subscriptions WHERE user_id = ? ORDER BY created_at DESC`,
+      [userId]
+    );
+    return rows;
+  }
+
+  /** On-demand: real-time docker state for a single shop. Cached so dashboards can poll cheaply. */
+  async getDockerStatus(shopName: string): Promise<string> {
+    return deployService.getShopStatus(shopName);
   }
 
   async getById(subscriptionId: number, userId?: number) {
@@ -243,15 +315,31 @@ class SubscriptionService {
 
   // ── Admin ─────────────────────────────────────────────────
   async getAllAdmin(page = 1, limit = 20, status?: string) {
-    const offset = (page - 1) * limit;
-    const where = status ? `WHERE s.status = ${pool.escape(status)}` : '';
-    const [rows] = await pool.execute<RowDataPacket[]>(`
-      SELECT s.*, pu.email, pu.display_name
-      FROM subscriptions s JOIN panel_users pu ON pu.id = s.user_id
-      ${where} ORDER BY s.created_at DESC LIMIT ${limit} OFFSET ${offset}
-    `);
+    const safeLimit = Math.min(Math.max(limit | 0, 1), 100);
+    const safePage = Math.max(page | 0, 1);
+    const offset = (safePage - 1) * safeLimit;
+    if (status) {
+      const [rows] = await pool.execute<RowDataPacket[]>(
+        `SELECT s.*, pu.email, pu.display_name
+           FROM subscriptions s JOIN panel_users pu ON pu.id = s.user_id
+          WHERE s.status = ?
+          ORDER BY s.created_at DESC LIMIT ? OFFSET ?`,
+        [status, safeLimit, offset]
+      );
+      const [count] = await pool.execute<RowDataPacket[]>(
+        'SELECT COUNT(*) as total FROM subscriptions s WHERE s.status = ?',
+        [status]
+      );
+      return { subscriptions: rows, total: count[0].total };
+    }
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      `SELECT s.*, pu.email, pu.display_name
+         FROM subscriptions s JOIN panel_users pu ON pu.id = s.user_id
+        ORDER BY s.created_at DESC LIMIT ? OFFSET ?`,
+      [safeLimit, offset]
+    );
     const [count] = await pool.execute<RowDataPacket[]>(
-      `SELECT COUNT(*) as total FROM subscriptions s ${where}`
+      'SELECT COUNT(*) as total FROM subscriptions s'
     );
     return { subscriptions: rows, total: count[0].total };
   }
@@ -305,23 +393,17 @@ class SubscriptionService {
       updates.push('domain=?');
       params.push(newDomain);
 
-      const { exec } = await import('child_process');
-      const { promisify } = await import('util');
-      const execAsync = promisify(exec);
-      const fs = await import('fs');
-      const path = await import('path');
-
       const deployDir = config.deployDir;
       const envFile = path.join(deployDir, 'customers', sub.shop_name, '.env');
 
       // 1. Update .env file (NEXT_PUBLIC_API_URL, NEXT_PUBLIC_WS_URL, CORS_ORIGIN)
       if (fs.existsSync(envFile)) {
-        let envContent = fs.readFileSync(envFile, 'utf8');
+        let envContent = await fsp.readFile(envFile, 'utf8');
         envContent = envContent
           .replace(/^NEXT_PUBLIC_API_URL=.*/m, `NEXT_PUBLIC_API_URL=https://${newDomain}/api`)
           .replace(/^NEXT_PUBLIC_WS_URL=.*/m,  `NEXT_PUBLIC_WS_URL=wss://${newDomain}`)
           .replace(/^CORS_ORIGIN=.*/m,          `CORS_ORIGIN=https://${newDomain}`);
-        fs.writeFileSync(envFile, envContent, 'utf8');
+        await fsp.writeFile(envFile, envContent, 'utf8');
       }
 
       // 2. Update customers.json using jq (safe for special chars)
@@ -400,17 +482,20 @@ class SubscriptionService {
   }
 
   async getAuditLogs(page: number = 1, limit: number = 50) {
-    const offset = (page - 1) * limit;
-    const [logs] = await pool.execute<RowDataPacket[]>(`
-      SELECT l.*, u.display_name, u.email 
-      FROM audit_logs l 
-      LEFT JOIN panel_users u ON l.user_id = u.id 
-      ORDER BY l.created_at DESC 
-      LIMIT ${limit} OFFSET ${offset}
-    `);
-    
+    const safeLimit = Math.min(Math.max(limit | 0, 1), 200);
+    const safePage = Math.max(page | 0, 1);
+    const offset = (safePage - 1) * safeLimit;
+    const [logs] = await pool.execute<RowDataPacket[]>(
+      `SELECT l.*, u.display_name, u.email
+       FROM audit_logs l
+       LEFT JOIN panel_users u ON l.user_id = u.id
+       ORDER BY l.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [safeLimit, offset]
+    );
+
     const [total] = await pool.execute<RowDataPacket[]>('SELECT COUNT(*) as count FROM audit_logs');
-    
+
     return { logs, total: total[0].count };
   }
 

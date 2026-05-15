@@ -169,7 +169,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     "@type": "Organization",
     "name": "SIAMSITE STORE",
     "url": "https://panel.siamsite.shop",
-    "logo": "https://panel.siamsite.shop/dashboard-admin.png",
+    "logo": "https://panel.siamsite.shop/images/logosiamsite-256.png",
     "sameAs": ["https://www.facebook.com/siamsitestore"]
   };
 

@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useMemo, Suspense } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import api from '@/lib/api';
@@ -151,15 +152,19 @@ function LandingContent() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    const exchangeToken = searchParams.get('exchange_token');
-    if (!exchangeToken) return;
+    // Newer flow: one-time opaque `?code=` (preferred — JWT never enters the URL).
+    // Older flow: `?exchange_token=` carrying the JWT directly (kept for one release).
+    const code = searchParams.get('code');
+    const legacyToken = searchParams.get('exchange_token');
+    if (!code && !legacyToken) return;
 
     (async () => {
       try {
+        const body = code ? { code } : { token: legacyToken };
         const res = await fetch('/api/auth/exchange', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: exchangeToken }),
+          body: JSON.stringify(body),
           credentials: 'include',
         });
         if (res.ok) {
@@ -613,10 +618,14 @@ function LandingContent() {
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-12">
             <div className="md:col-span-5 space-y-6">
-              <Link href="/" className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-                  <i className="fas fa-gem text-white text-lg" />
-                </div>
+              <Link href="/" className="flex items-center gap-3">
+                <Image
+                  src="/images/logosiamsite-h256.png"
+                  alt="SIAMSITE logo"
+                  width={84}
+                  height={56}
+                  className="h-14 w-auto object-contain"
+                />
                 <div className="flex flex-col">
                   <span className="font-bold text-foreground text-xl tracking-tight leading-none">SIAMSITE</span>
                   <span className="text-[10px] font-bold text-primary tracking-[0.2em] mt-1">MANAGER</span>

@@ -2,11 +2,13 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
 import fs from 'fs';
+import fsp from 'fs/promises';
 import { pool } from '../database/connection';
 import { config } from '../config';
 import { npmService } from './npm.service';
 import { cloudflareService } from './cloudflare.service';
 import { emailService } from './email.service';
+import { withRedisLock } from './cron.service';
 import { RowDataPacket } from 'mysql2';
 
 const execAsync = promisify(exec);
@@ -94,22 +96,29 @@ class DeployService {
 
     let log = '';
     try {
-      // 0. Fix Port Exhaustion: find next truly available ports and update customers.json
+      // 0. Allocate available ports under a Redis lock so two parallel deploys can't claim
+      //    the same pair. The lock spans only the port-resolve + customers.json write.
       log += `[${new Date().toISOString()}] Allocating available ports...\n`;
-      const ports = await this.getAvailablePorts();
       const jsonFile = path.join(deployDir, 'customers.json');
-      if (fs.existsSync(jsonFile)) {
-        const data = JSON.parse(fs.readFileSync(jsonFile, 'utf8'));
-        data.next_frontend_port = ports.frontendPort;
-        data.next_backend_port = ports.backendPort;
-        fs.writeFileSync(jsonFile, JSON.stringify(data, null, 2));
-      } else {
-        fs.writeFileSync(jsonFile, JSON.stringify({
-          next_frontend_port: ports.frontendPort,
-          next_backend_port: ports.backendPort,
-          customers: []
-        }, null, 2));
-      }
+      let ports!: { frontendPort: number; backendPort: number };
+      let lockSucceeded = false;
+      await withRedisLock('panel_deploy_port_alloc', 60, async () => {
+        lockSucceeded = true;
+        ports = await this.getAvailablePorts();
+        if (fs.existsSync(jsonFile)) {
+          const data = JSON.parse(await fsp.readFile(jsonFile, 'utf8'));
+          data.next_frontend_port = ports.frontendPort;
+          data.next_backend_port = ports.backendPort;
+          await fsp.writeFile(jsonFile, JSON.stringify(data, null, 2));
+        } else {
+          await fsp.writeFile(jsonFile, JSON.stringify({
+            next_frontend_port: ports.frontendPort,
+            next_backend_port: ports.backendPort,
+            customers: []
+          }, null, 2));
+        }
+      });
+      if (!lockSucceeded) throw new Error('Port allocation lock unavailable — retry shortly');
 
       // 1. Run shell script
       log += `[${new Date().toISOString()}] Running new-customer.sh...\n`;
@@ -125,8 +134,7 @@ class DeployService {
       log += `\n[${new Date().toISOString()}] Script completed.\n`;
 
       // 2. Read assigned ports from customers.json
-      const { stdout: catOut } = await execAsync(`cat "${deployDir}/customers.json"`);
-      const registry = JSON.parse(catOut);
+      const registry = JSON.parse(await fsp.readFile(jsonFile, 'utf8'));
       const customer = registry.customers.find((c: { name: string }) => c.name === shopName);
       if (!customer) throw new Error('Customer not found in customers.json after deploy');
 
@@ -264,12 +272,14 @@ class DeployService {
         { timeout: 120000 }
       );
     }
-    await execAsync(`rm -rf "${deployDir}/customers/${shopName}"`);
+    // shopName is regex-validated upstream, but use fs.rm to avoid any reliance on shell quoting.
+    await fsp.rm(path.join(deployDir, 'customers', shopName), { recursive: true, force: true });
     // Remove from customers.json
-    const raw = fs.readFileSync(`${deployDir}/customers.json`, 'utf8');
+    const jsonFile = path.join(deployDir, 'customers.json');
+    const raw = await fsp.readFile(jsonFile, 'utf8');
     const reg = JSON.parse(raw);
     reg.customers = reg.customers.filter((c: { name: string }) => c.name !== shopName);
-    fs.writeFileSync(`${deployDir}/customers.json`, JSON.stringify(reg, null, 2));
+    await fsp.writeFile(jsonFile, JSON.stringify(reg, null, 2));
     // Remove NPM proxy
     try { await npmService.deleteProxyHost(domain); } catch { /* non-critical */ }
     // Remove Cloudflare DNS
@@ -316,9 +326,9 @@ class DeployService {
     const deployDir = config.deployDir;
     const envFile = path.join(deployDir, 'customers', shopName, '.env');
     try {
-      const { stdout } = await execAsync(`cat "${envFile}"`);
+      const content = await fsp.readFile(envFile, 'utf8');
       const result: Record<string, string> = {};
-      for (const line of stdout.split('\n')) {
+      for (const line of content.split('\n')) {
         if (line.startsWith('#') || !line.includes('=')) continue;
         const [k, ...v] = line.split('=');
         result[k.trim()] = v.join('=').trim();

@@ -8,7 +8,8 @@ import { asyncRoute } from '../middleware/asyncRoute';
 import { requireAuth } from '../middleware/auth';
 import { type JwtPayload } from '../middleware/auth';
 import { authService } from '../services/auth.service';
-import { validateSession } from '../services/session.service';
+import { validateSession, createOAuthExchangeCode, consumeOAuthExchangeCode } from '../services/session.service';
+import { turnstileService } from '../services/turnstile.service';
 import { ValidationError, AuthError } from '../utils/errors';
 import { config } from '../config';
 
@@ -56,7 +57,9 @@ router.get('/google/callback', passport.authenticate('google', { session: false,
   if (!email) return res.redirect(`${config.urls.frontend}/?error=no_email`);
 
   const result = await authService.handleSocialLogin(email, profile.id, 'google', displayName, avatarUrl, req.ip);
-  res.redirect(`${config.urls.frontend}/?exchange_token=${result.token}`);
+  // Store the JWT under a short-lived opaque code so it never lands in URLs/logs.
+  const code = await createOAuthExchangeCode(result.token);
+  res.redirect(`${config.urls.frontend}/?code=${encodeURIComponent(code)}`);
 }));
 
 // Facebook Login - Initial redirect
@@ -110,24 +113,35 @@ router.get('/facebook/callback', asyncRoute(async (req, res) => {
     const avatarUrl = profile.picture?.data?.url;
 
     const result = await authService.handleSocialLogin(email, profile.id, 'facebook', displayName, avatarUrl, req.ip);
-    res.redirect(`${config.urls.frontend}/?exchange_token=${result.token}`);
+    const exchangeCode = await createOAuthExchangeCode(result.token);
+    res.redirect(`${config.urls.frontend}/?code=${encodeURIComponent(exchangeCode)}`);
   } catch (err: any) {
     console.error('Facebook OAuth Manual Error:', err?.message || err);
     res.redirect(`${config.urls.frontend}/?error=auth_failed`);
   }
 }));
 
+// Frontend reads this on mount to decide whether to render the Turnstile widget and which
+// site key to use. No auth required — site key is public by Cloudflare's design.
+router.get('/config', asyncRoute(async (_req, res) => {
+  const captcha = await turnstileService.getPublicConfig();
+  res.json({ captcha });
+}));
+
 router.post('/register', asyncRoute(async (req, res) => {
-  const { email, password, displayName, phone } = req.body;
+  const { email, password, displayName, phone, captchaToken } = req.body;
   if (!email || !password || !displayName) throw new ValidationError('กรุณากรอกข้อมูลให้ครบ');
+  // Verify CAPTCHA BEFORE creating any DB rows so failed-bot attempts don't bloat panel_users.
+  await turnstileService.verify(captchaToken, req.ip);
   const result = await authService.register(email.trim().toLowerCase(), password, displayName.trim(), phone?.trim(), req.ip);
   res.cookie('panel_auth', result.token, PANEL_COOKIE_OPTS)
      .status(201).json({ success: true, user: result.user });
 }));
 
 router.post('/login', asyncRoute(async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, captchaToken } = req.body;
   if (!email || !password) throw new ValidationError('กรุณากรอกอีเมลและรหัสผ่าน');
+  await turnstileService.verify(captchaToken, req.ip);
   const result = await authService.login(email.trim().toLowerCase(), password);
   res.cookie('panel_auth', result.token, PANEL_COOKIE_OPTS)
      .json({ success: true, user: result.user });
@@ -158,12 +172,21 @@ router.post('/logout', requireAuth, asyncRoute(async (req, res) => {
      .json({ success: true, message: 'Logged out' });
 }));
 
-// Exchange a short-lived OAuth URL token for an httpOnly cookie session.
-// Called by the frontend after a Google/Facebook OAuth redirect.
-// The token is only in the URL briefly (HTTPS-encrypted, never in localStorage).
+// Exchange a one-time OAuth code (preferred) or legacy URL JWT for an httpOnly cookie session.
+// The code variant keeps the JWT out of Referer headers, NPM/Cloudflare logs, and browser history.
 router.post('/exchange', asyncRoute(async (req, res) => {
-  const { token } = req.body;
-  if (!token || typeof token !== 'string') throw new ValidationError('Token required');
+  const { code, token: legacyToken } = req.body as { code?: string; token?: string };
+
+  // Prefer the one-time code; fall back to the legacy JWT-in-body shape during rollout.
+  let token: string | null = null;
+  if (typeof code === 'string' && code.length > 0) {
+    token = await consumeOAuthExchangeCode(code);
+    if (!token) throw new AuthError('Code expired or already used');
+  } else if (typeof legacyToken === 'string' && legacyToken.length > 0) {
+    token = legacyToken;
+  } else {
+    throw new ValidationError('Missing exchange code');
+  }
 
   let decoded: JwtPayload;
   try {
@@ -177,6 +200,7 @@ router.post('/exchange', asyncRoute(async (req, res) => {
   // Verify session still exists in Redis (not kicked/expired)
   const status = await validateSession(decoded.userId, decoded.jti);
   if (status === 'kicked' || status === 'expired') throw new AuthError('Session no longer valid');
+  if (status === 'unavailable') throw new AuthError('Session backend unavailable, please retry');
 
   // Fetch fresh profile
   const profile = await authService.getProfile(decoded.userId);

@@ -20,7 +20,7 @@ interface AuthCtx {
   loading: boolean;
   sessionMessage: string | null;
   clearSessionMessage: () => void;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, captchaToken?: string) => Promise<void>;
   logout: (message?: string) => Promise<void>;
   refreshUser: () => Promise<void>;
   isAdmin: boolean;
@@ -94,8 +94,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── Login ─────────────────────────────────────────────────────────────────
   // Server sets panel_auth httpOnly cookie in Set-Cookie response header
-  const login = async (email: string, password: string) => {
-    const { data } = await api.post('/api/auth/login', { email, password });
+  const login = async (email: string, password: string, captchaToken?: string) => {
+    const { data } = await api.post('/api/auth/login', { email, password, captchaToken });
     setUser(data.user);
     setSessionMessage(null);
     resetInactivityTimer();

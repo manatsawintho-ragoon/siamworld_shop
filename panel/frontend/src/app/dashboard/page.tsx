@@ -19,6 +19,15 @@ interface Sub {
   expires_at: string; package_months: number; price_paid: number;
 }
 
+interface Promo {
+  kind: 'trial' | 'intro';
+  months: number;
+  days?: number;
+  price: number;
+  label: string;
+  regularPrice: number;
+}
+
 const ITEMS_PER_PAGE = 8;
 
 const STATUS_CONFIG: Record<string, string> = {
@@ -69,12 +78,18 @@ function DashboardContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [page, setPage] = useState(1);
+  const [usedTrial, setUsedTrial] = useState(false);
+  const [usedIntro, setUsedIntro] = useState(false);
+  const [promos, setPromos] = useState<Promo[]>([]);
 
   const fetchSubs = useCallback(async () => {
     setLoadingSubs(true);
     try {
       const { data } = await api.get('/api/subscriptions');
       setSubs(data.subscriptions || []);
+      setUsedTrial(!!data.usedTrial);
+      setUsedIntro(!!data.usedIntro);
+      setPromos(data.promos || []);
     } catch { } finally { setLoadingSubs(false); }
   }, []);
 
@@ -106,6 +121,11 @@ function DashboardContent() {
     return d < 7 * 86400000 && d > 0 && s.status !== 'suspended';
   });
 
+  const hasActiveShop = subs.some(s => !['cancelled', 'expired'].includes(s.status));
+  const trialPromo = promos.find(p => p.kind === 'trial');
+  const introPromo = promos.find(p => p.kind === 'intro');
+  const showPromoBanner = !hasActiveShop && (!usedTrial || !usedIntro) && (trialPromo || introPromo);
+
   const FILTER_TABS = [
     { value: 'all', label: 'ทั้งหมด', icon: 'fa-layer-group' },
     { value: 'active', label: 'ออนไลน์', icon: 'fa-circle-check' },
@@ -136,7 +156,7 @@ function DashboardContent() {
             </p>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className="flex flex-wrap gap-4"
@@ -154,13 +174,95 @@ function DashboardContent() {
                 </div>
              </div>
 
-             <Button size="lg" asChild className="h-14 px-8 rounded-2xl font-black gap-3 shadow-lg shadow-primary/20 transition-transform active:scale-95">
-                <Link href="/order">
-                  <i className="fas fa-store-medical" /> สร้างร้านค้าใหม่
-                </Link>
-             </Button>
+             {!hasActiveShop && !usedTrial && trialPromo ? (
+               <Button size="lg" asChild className="h-14 px-8 rounded-2xl font-black gap-3 shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20 transition-transform active:scale-95">
+                 <Link href="/order?kind=trial">
+                   <i className="fas fa-rocket" /> ทดลองฟรี {trialPromo.days} วัน
+                 </Link>
+               </Button>
+             ) : !usedIntro && introPromo ? (
+               <Button size="lg" asChild className="h-14 px-8 rounded-2xl font-black gap-3 shadow-lg shadow-primary/20 transition-transform active:scale-95">
+                 <Link href="/order?kind=intro">
+                   <i className="fas fa-tag" /> เดือนแรก ฿{introPromo.price}
+                 </Link>
+               </Button>
+             ) : (
+               <Button size="lg" asChild className="h-14 px-8 rounded-2xl font-black gap-3 shadow-lg shadow-primary/20 transition-transform active:scale-95">
+                 <Link href="/order">
+                   <i className="fas fa-store-medical" /> สร้างร้านค้าใหม่
+                 </Link>
+               </Button>
+             )}
           </motion.div>
         </div>
+
+        {/* Promo Banner */}
+        {showPromoBanner && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+          >
+            {trialPromo && !usedTrial && (
+              <Link href="/order?kind=trial" className="group block">
+                <div className="flex items-center gap-5 p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 hover:border-emerald-500/60 hover:bg-emerald-500/15 transition-all duration-300">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-500 text-white flex items-center justify-center text-xl flex-shrink-0 shadow-sm shadow-emerald-500/30">
+                    <i className="fas fa-rocket" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-widest mb-0.5">สิทธิ์ที่คุณได้รับ</p>
+                    <p className="text-sm font-black text-foreground">ทดลองฟรี {trialPromo.days} วัน</p>
+                    <p className="text-xs font-semibold text-muted-foreground">ไม่ต้องชำระเงิน · เริ่มได้เลย</p>
+                  </div>
+                  <div className="flex-shrink-0 text-emerald-600 group-hover:translate-x-1 transition-transform">
+                    <i className="fas fa-arrow-right" />
+                  </div>
+                </div>
+              </Link>
+            )}
+            {introPromo && !usedIntro && (
+              <Link href="/order?kind=intro" className="group block">
+                <div className="flex items-center gap-5 p-5 rounded-2xl bg-primary/10 border border-primary/30 hover:border-primary/60 hover:bg-primary/15 transition-all duration-300">
+                  <div className="w-12 h-12 rounded-xl bg-primary text-primary-foreground flex items-center justify-center text-xl flex-shrink-0 shadow-sm shadow-primary/30">
+                    <i className="fas fa-tag" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-0.5">โปรโมชั่นพิเศษ</p>
+                    <p className="text-sm font-black text-foreground">เดือนแรก ฿{introPromo.price} <span className="font-semibold text-muted-foreground line-through text-xs">฿{introPromo.regularPrice}</span></p>
+                    <p className="text-xs font-semibold text-muted-foreground">ประหยัด ฿{introPromo.regularPrice - introPromo.price} · เฉพาะครั้งแรก</p>
+                  </div>
+                  <div className="flex-shrink-0 text-primary group-hover:translate-x-1 transition-transform">
+                    <i className="fas fa-arrow-right" />
+                  </div>
+                </div>
+              </Link>
+            )}
+            {usedTrial && trialPromo && (
+              <div className="flex items-center gap-5 p-5 rounded-2xl bg-secondary border border-border opacity-60">
+                <div className="w-12 h-12 rounded-xl bg-secondary border border-border text-muted-foreground flex items-center justify-center text-xl flex-shrink-0">
+                  <i className="fas fa-check" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-0.5">ใช้สิทธิ์แล้ว</p>
+                  <p className="text-sm font-black text-muted-foreground">ทดลองฟรี {trialPromo.days} วัน</p>
+                  <p className="text-xs font-semibold text-muted-foreground">คุณเคยใช้สิทธิ์นี้ไปแล้ว</p>
+                </div>
+              </div>
+            )}
+            {usedIntro && introPromo && (
+              <div className="flex items-center gap-5 p-5 rounded-2xl bg-secondary border border-border opacity-60">
+                <div className="w-12 h-12 rounded-xl bg-secondary border border-border text-muted-foreground flex items-center justify-center text-xl flex-shrink-0">
+                  <i className="fas fa-check" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-0.5">ใช้สิทธิ์แล้ว</p>
+                  <p className="text-sm font-black text-muted-foreground">เดือนแรกพิเศษ ฿{introPromo.price}</p>
+                  <p className="text-xs font-semibold text-muted-foreground">คุณเคยใช้สิทธิ์นี้ไปแล้ว</p>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
 
         {/* Dynamic Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -386,10 +488,10 @@ function DashboardContent() {
                           action: '/dashboard/topup', actionLabel: 'ไปหน้าเติมเงิน',
                         },
                         {
-                          step: 2, title: 'เลือกซื้อแพ็กเกจ', icon: 'fa-shop',
+                          step: 2, title: 'เปิดร้านค้า', icon: 'fa-shop',
                           desc: 'เลือกชื่อร้านและโดเมนที่ต้องการ ระบบจะทำการติดตั้ง (Deploy) ร้านค้าของคุณให้อัตโนมัติ',
                           done: false,
-                          action: '/order', actionLabel: 'สั่งซื้อแพ็กเกจ',
+                          action: null, actionLabel: null,
                         },
                         {
                           step: 3, title: 'เชื่อมต่อเซิร์ฟเวอร์', icon: 'fa-link',
@@ -408,23 +510,41 @@ function DashboardContent() {
                             </div>
                           </div>
                           <p className="text-sm font-semibold text-muted-foreground leading-relaxed h-12">{s.desc}</p>
-                          <div className="pt-2">
-                            {s.action && !s.done && (
+                          <div className="pt-2 space-y-2">
+                            {s.step === 2 ? (
+                              <>
+                                {trialPromo && !usedTrial && (
+                                  <Button asChild className="rounded-xl w-full h-11 font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm active:scale-95 transition-all">
+                                    <Link href="/order?kind=trial">
+                                      <i className="fas fa-rocket mr-2" /> ทดลองฟรี {trialPromo.days} วัน
+                                    </Link>
+                                  </Button>
+                                )}
+                                {introPromo && !usedIntro && (
+                                  <Button variant={usedTrial || !trialPromo ? 'default' : 'secondary'} asChild className="rounded-xl w-full h-11 font-bold border border-border shadow-sm active:scale-95 transition-all">
+                                    <Link href="/order?kind=intro">
+                                      <i className="fas fa-tag mr-2" /> เดือนแรก ฿{introPromo.price}
+                                    </Link>
+                                  </Button>
+                                )}
+                                <Button variant="secondary" asChild className="rounded-xl w-full h-11 font-bold border border-border shadow-sm active:scale-95 transition-all">
+                                  <Link href="/order">
+                                    <i className="fas fa-store mr-2" /> ซื้อแพ็กเกจปกติ
+                                  </Link>
+                                </Button>
+                              </>
+                            ) : s.action && !s.done ? (
                               <Button variant="secondary" asChild className="rounded-xl w-full h-11 font-bold border border-border shadow-sm active:scale-95 transition-all">
-                                <Link href={s.action}>
-                                  {s.actionLabel}
-                                </Link>
+                                <Link href={s.action}>{s.actionLabel}</Link>
                               </Button>
-                            )}
-                            {s.done && (
+                            ) : s.done ? (
                               <div className="h-11 flex items-center justify-center gap-2 rounded-xl bg-emerald-500/10 text-emerald-600 text-sm font-black border border-emerald-500/20">
                                 <i className="fas fa-check-circle" /> เสร็จสมบูรณ์
                               </div>
-                            )}
-                            {!s.action && !s.done && (
-                               <div className="h-11 flex items-center justify-center gap-2 rounded-xl bg-secondary text-muted-foreground/50 text-xs font-black border border-border border-dashed">
-                                 รอทำขั้นตอนก่อนหน้า
-                               </div>
+                            ) : (
+                              <div className="h-11 flex items-center justify-center gap-2 rounded-xl bg-secondary text-muted-foreground/50 text-xs font-black border border-border border-dashed">
+                                รอทำขั้นตอนก่อนหน้า
+                              </div>
                             )}
                           </div>
                         </div>

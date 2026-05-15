@@ -41,18 +41,27 @@ function OrderContent() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState<'form' | 'confirm' | 'done'>('form');
+  const [usedTrial, setUsedTrial] = useState(false);
+  const [usedIntro, setUsedIntro] = useState(false);
+  const [eligibilityLoaded, setEligibilityLoaded] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.push('/?auth=login');
   }, [user, loading, router]);
 
   useEffect(() => {
-    api.get('/api/subscriptions/packages').then(r => {
-      setPackages(r.data.packages || []);
-      if (r.data.promos) setPromos(r.data.promos);
-      if (typeof r.data.easyslipFee === 'number') setEasyslipFee(r.data.easyslipFee);
-    }).catch(() => {});
-  }, []);
+    if (!user) return;
+    Promise.all([
+      api.get('/api/subscriptions/packages'),
+      api.get('/api/subscriptions'),
+    ]).then(([pkgRes, subRes]) => {
+      setPackages(pkgRes.data.packages || []);
+      if (pkgRes.data.promos) setPromos(pkgRes.data.promos);
+      if (typeof pkgRes.data.easyslipFee === 'number') setEasyslipFee(pkgRes.data.easyslipFee);
+      setUsedTrial(!!subRes.data.usedTrial);
+      setUsedIntro(!!subRes.data.usedIntro);
+    }).catch(() => {}).finally(() => setEligibilityLoaded(true));
+  }, [user]);
 
   const trialPromo = promos.find(p => p.kind === 'trial');
   const introPromo = promos.find(p => p.kind === 'intro');
@@ -108,9 +117,54 @@ function OrderContent() {
     } finally { setSubmitting(false); }
   };
 
-  if (loading) return (
+  if (loading || !eligibilityLoaded) return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <i className="fas fa-spinner fa-spin text-3xl text-primary" />
+    </div>
+  );
+
+  if (orderKind === 'trial' && usedTrial) return (
+    <div className="min-h-screen bg-background transition-colors duration-300">
+      <Navbar />
+      <div className="max-w-lg mx-auto px-6 py-24 text-center">
+        <div className="w-20 h-20 rounded-[2rem] bg-secondary border-2 border-border text-muted-foreground flex items-center justify-center mx-auto text-3xl mb-6">
+          <i className="fas fa-check" />
+        </div>
+        <h2 className="text-2xl font-black text-foreground mb-3 tracking-tight">ใช้สิทธิ์ทดลองฟรีไปแล้ว</h2>
+        <p className="text-sm text-muted-foreground font-semibold mb-8 leading-relaxed">
+          สิทธิ์ทดลองใช้งานฟรีใช้ได้ครั้งเดียวต่อบัญชี<br/>
+          คุณสามารถเลือกซื้อแพ็กเกจปกติได้
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          {introPromo && !usedIntro && (
+            <Button className="rounded-full px-8 h-12 font-bold" onClick={() => setOrderKind('intro')}>
+              <i className="fas fa-tag mr-2" /> เดือนแรก ฿{introPromo.price}
+            </Button>
+          )}
+          <Button variant="secondary" className="rounded-full px-8 h-12 font-bold border border-border" onClick={() => setOrderKind('regular')}>
+            <i className="fas fa-box-open mr-2" /> ซื้อแพ็กเกจปกติ
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (orderKind === 'intro' && usedIntro) return (
+    <div className="min-h-screen bg-background transition-colors duration-300">
+      <Navbar />
+      <div className="max-w-lg mx-auto px-6 py-24 text-center">
+        <div className="w-20 h-20 rounded-[2rem] bg-secondary border-2 border-border text-muted-foreground flex items-center justify-center mx-auto text-3xl mb-6">
+          <i className="fas fa-check" />
+        </div>
+        <h2 className="text-2xl font-black text-foreground mb-3 tracking-tight">ใช้โปรเดือนแรกไปแล้ว</h2>
+        <p className="text-sm text-muted-foreground font-semibold mb-8 leading-relaxed">
+          โปรโมชั่นเดือนแรกใช้ได้ครั้งเดียวต่อบัญชี<br/>
+          คุณสามารถเลือกซื้อแพ็กเกจปกติได้
+        </p>
+        <Button variant="secondary" className="rounded-full px-8 h-12 font-bold border border-border" onClick={() => setOrderKind('regular')}>
+          <i className="fas fa-box-open mr-2" /> ซื้อแพ็กเกจปกติ
+        </Button>
+      </div>
     </div>
   );
 

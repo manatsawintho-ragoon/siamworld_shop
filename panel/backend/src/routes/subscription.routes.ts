@@ -28,8 +28,13 @@ router.get('/public-shops', asyncRoute(async (_req, res) => {
 }));
 
 router.get('/', requireAuth, asyncRoute(async (req, res) => {
-  const subs = await subscriptionService.getMySubscriptions(req.user!.userId);
-  res.json({ subscriptions: subs });
+  const [subs, eligibility, promos, easyslipFee] = await Promise.all([
+    subscriptionService.getMySubscriptions(req.user!.userId),
+    subscriptionService.getMyEligibility(req.user!.userId),
+    subscriptionService.getPromos(),
+    subscriptionService.getEasyslipFee(),
+  ]);
+  res.json({ subscriptions: subs, ...eligibility, promos, easyslipFee });
 }));
 
 router.post('/', requireAuth, asyncRoute(async (req, res) => {
@@ -52,9 +57,11 @@ router.post('/', requireAuth, asyncRoute(async (req, res) => {
 }));
 
 router.post('/:id/renew', requireAuth, asyncRoute(async (req, res) => {
-  const { packageMonths } = req.body;
-  if (!packageMonths) throw new ValidationError('กรุณาเลือกแพ็กเกจ');
-  const result = await subscriptionService.renew(req.user!.userId, parseInt(req.params.id), parseInt(packageMonths));
+  const { packageMonths, kind } = req.body;
+  const renewKind: 'regular' | 'intro' = kind === 'intro' ? 'intro' : 'regular';
+  const months = renewKind === 'intro' ? 1 : parseInt(packageMonths || '');
+  if (renewKind === 'regular' && !months) throw new ValidationError('กรุณาเลือกแพ็กเกจ');
+  const result = await subscriptionService.renew(req.user!.userId, parseInt(req.params.id), months, renewKind);
   res.json(result);
 }));
 

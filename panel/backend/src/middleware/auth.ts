@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config';
-import { AuthError, ForbiddenError, SessionKickedError, SessionExpiredError } from '../utils/errors';
+import { AppError, AuthError, ForbiddenError, SessionKickedError, SessionExpiredError } from '../utils/errors';
 import { pool } from '../database/connection';
 import { RowDataPacket } from 'mysql2';
 import { validateSession, touchSession } from '../services/session.service';
@@ -50,10 +50,11 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
 
     // Single-session + inactivity check
     const status = await validateSession(decoded.userId, decoded.jti);
-    if (status === 'kicked')  return next(new SessionKickedError());
-    if (status === 'expired') return next(new SessionExpiredError());
+    if (status === 'kicked')      return next(new SessionKickedError());
+    if (status === 'expired')     return next(new SessionExpiredError());
+    if (status === 'unavailable') return next(new AppError(503, 'ระบบเซสชันไม่พร้อมใช้งาน กรุณาลองใหม่อีกครู่', 'SESSION_BACKEND_DOWN'));
 
-    // Refresh the 40-min inactivity window (fire-and-forget — never blocks the request)
+    // Refresh the 40-min inactivity window (debounced; never blocks the request)
     touchSession(decoded.userId).catch(() => {});
 
     req.user = {

@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useRef, Suspense } from 'react';
@@ -122,13 +123,18 @@ function NavbarContent() {
       <nav className={`sticky top-0 z-[100] transition-all duration-300 ${scrolled ? 'bg-background/80 backdrop-blur-md shadow-sm border-b border-border py-3' : 'bg-background py-4 border-b border-transparent'}`}>
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-2.5 group cursor-pointer">
-              <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-sm group-hover:opacity-90 transition-opacity">
-                <i className="fas fa-gem text-primary-foreground" />
-              </div>
+            <Link href="/" className="flex items-center gap-3 group cursor-pointer">
+              <Image
+                src="/images/logosiamsite-h256.png"
+                alt="SIAMSITE logo"
+                width={84}
+                height={56}
+                priority
+                className="h-14 w-auto object-contain group-hover:scale-105 transition-transform"
+              />
               <div className="flex flex-col">
-                <span className="font-bold text-foreground text-lg leading-none tracking-tight">SIAMSITE</span>
-                <span className="text-[9px] font-semibold text-primary uppercase tracking-widest mt-0.5">Manager</span>
+                <span className="font-bold text-foreground text-xl leading-none tracking-tight">SIAMSITE</span>
+                <span className="text-[10px] font-semibold text-primary uppercase tracking-widest mt-1">Manager</span>
               </div>
             </Link>
 

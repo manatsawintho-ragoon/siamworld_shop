@@ -219,14 +219,18 @@ class PaymentService {
     }
 
     // ── Layer 7: DB duplicate check + atomic credit ─────────────────────────
-    // Single transaction: lock slip_logs row, insert slip, update wallet balance.
-    // Check ALL statuses — once a transRef appears in our DB it cannot be reused.
+    // The previous version did `SELECT ... FOR UPDATE` before INSERT — but FOR UPDATE on
+    // a non-existent row locks nothing, so two concurrent requests with the same transRef
+    // both fell through and double-credited the wallet. We now rely on the UNIQUE constraint
+    // on payment_slips.easyslip_ref (migration 008) and catch ER_DUP_ENTRY.
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
 
+      // Pre-check still gives us the better error message for already-rejected slips,
+      // but the INSERT below is the actual integrity barrier.
       const [dup] = await conn.execute<RowDataPacket[]>(
-        'SELECT id, status FROM payment_slips WHERE easyslip_ref = ? FOR UPDATE',
+        'SELECT id, status FROM payment_slips WHERE easyslip_ref = ?',
         [transRef]
       );
       if (dup.length) {
@@ -238,10 +242,19 @@ class PaymentService {
         );
       }
 
-      const [slipResult] = await conn.execute<ResultSetHeader>(
-        'INSERT INTO payment_slips (user_id, amount, slip_image_base64, easyslip_ref, easyslip_raw, status, purpose, verified_at) VALUES (?,?,?,?,?,?,?,NOW())',
-        [userId, slipAmount, slipBase64, transRef, JSON.stringify(easyslipData), 'verified', 'topup']
-      );
+      let slipResult: ResultSetHeader;
+      try {
+        const [insRes] = await conn.execute<ResultSetHeader>(
+          'INSERT INTO payment_slips (user_id, amount, slip_image_base64, easyslip_ref, easyslip_raw, status, purpose, verified_at) VALUES (?,?,?,?,?,?,?,NOW())',
+          [userId, slipAmount, slipBase64, transRef, JSON.stringify(easyslipData), 'verified', 'topup']
+        );
+        slipResult = insRes;
+      } catch (e: unknown) {
+        if ((e as { code?: string }).code === 'ER_DUP_ENTRY') {
+          throw new ConflictError('สลิปนี้เคยใช้งานแล้ว');
+        }
+        throw e;
+      }
 
       // Credit wallet using slipAmount (from EasySlip) — not the user-supplied amount
       const [walletRow] = await conn.execute<RowDataPacket[]>(
@@ -276,18 +289,49 @@ class PaymentService {
 
   // ── Admin ─────────────────────────────────────────────────
   async getAllSlips(status?: string, page = 1, limit = 20) {
-    const offset = (page - 1) * limit;
-    const where = status ? `WHERE ps.status = ${pool.escape(status)}` : '';
-    const [rows] = await pool.execute<RowDataPacket[]>(`
-      SELECT ps.*, pu.email, pu.display_name
-      FROM payment_slips ps
-      JOIN panel_users pu ON pu.id = ps.user_id
-      ${where} ORDER BY ps.created_at DESC LIMIT ${limit} OFFSET ${offset}
-    `);
-    const [count] = await pool.execute<RowDataPacket[]>(
-      `SELECT COUNT(*) as total FROM payment_slips ps ${where}`
+    const safeLimit = Math.min(Math.max(limit | 0, 1), 100);
+    const safePage = Math.max(page | 0, 1);
+    const offset = (safePage - 1) * safeLimit;
+    // Skip slip_image_base64 from list view — admins fetch the image lazily by id.
+    const baseFields = `ps.id, ps.user_id, ps.amount, ps.easyslip_ref, ps.status, ps.purpose,
+                        ps.subscription_id, ps.reject_reason, ps.created_at, ps.verified_at,
+                        pu.email, pu.display_name`;
+    let rows: RowDataPacket[];
+    let countRows: RowDataPacket[];
+    if (status) {
+      [rows] = await pool.execute<RowDataPacket[]>(
+        `SELECT ${baseFields}
+           FROM payment_slips ps
+           JOIN panel_users pu ON pu.id = ps.user_id
+          WHERE ps.status = ?
+          ORDER BY ps.created_at DESC LIMIT ? OFFSET ?`,
+        [status, safeLimit, offset]
+      );
+      [countRows] = await pool.execute<RowDataPacket[]>(
+        'SELECT COUNT(*) as total FROM payment_slips ps WHERE ps.status = ?',
+        [status]
+      );
+    } else {
+      [rows] = await pool.execute<RowDataPacket[]>(
+        `SELECT ${baseFields}
+           FROM payment_slips ps
+           JOIN panel_users pu ON pu.id = ps.user_id
+          ORDER BY ps.created_at DESC LIMIT ? OFFSET ?`,
+        [safeLimit, offset]
+      );
+      [countRows] = await pool.execute<RowDataPacket[]>(
+        'SELECT COUNT(*) as total FROM payment_slips ps'
+      );
+    }
+    return { slips: rows, total: countRows[0].total };
+  }
+
+  /** Fetch the slip image lazily — used by admin slip detail view. */
+  async getSlipImage(slipId: number): Promise<{ image: string | null }> {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      'SELECT slip_image_base64 FROM payment_slips WHERE id = ?', [slipId]
     );
-    return { slips: rows, total: count[0].total };
+    return { image: rows[0]?.slip_image_base64 ?? null };
   }
 
   async adminVerifySlip(slipId: number) {
