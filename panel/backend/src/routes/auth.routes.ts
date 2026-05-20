@@ -2,6 +2,7 @@ import { Router } from 'express';
 import passport from 'passport';
 import https from 'https';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { Strategy as FacebookStrategy } from 'passport-facebook';
 import { asyncRoute } from '../middleware/asyncRoute';
@@ -14,6 +15,17 @@ import { ValidationError, AuthError } from '../utils/errors';
 import { config } from '../config';
 
 const router = Router();
+
+// Strict per-IP limiter for brute-force-attractive endpoints. Turnstile gates these at
+// the application layer; this is the network-layer fallback. 20 attempts / 15min is
+// generous for a legitimate user mistyping but stops password-spray.
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many attempts, please try again in 15 minutes.' },
+});
 
 const PANEL_COOKIE_OPTS = {
   httpOnly: true,
@@ -128,7 +140,7 @@ router.get('/config', asyncRoute(async (_req, res) => {
   res.json({ captcha });
 }));
 
-router.post('/register', asyncRoute(async (req, res) => {
+router.post('/register', loginLimiter, asyncRoute(async (req, res) => {
   const { email, password, displayName, phone, captchaToken } = req.body;
   if (!email || !password || !displayName) throw new ValidationError('กรุณากรอกข้อมูลให้ครบ');
   // Verify CAPTCHA BEFORE creating any DB rows so failed-bot attempts don't bloat panel_users.
@@ -138,7 +150,7 @@ router.post('/register', asyncRoute(async (req, res) => {
      .status(201).json({ success: true, user: result.user });
 }));
 
-router.post('/login', asyncRoute(async (req, res) => {
+router.post('/login', loginLimiter, asyncRoute(async (req, res) => {
   const { email, password, captchaToken } = req.body;
   if (!email || !password) throw new ValidationError('กรุณากรอกอีเมลและรหัสผ่าน');
   await turnstileService.verify(captchaToken, req.ip);

@@ -511,10 +511,10 @@ export default function LootBoxOpenPage() {
                   {/* Green top accent bar */}
                   <div className="h-1 bg-gradient-to-r from-green-500 via-green-400 to-emerald-400" />
 
-                  <div className="flex items-center gap-5 px-6 py-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5 px-4 sm:px-6 py-4 sm:py-5">
                     {/* Box image */}
-                    <motion.div 
-                      className="relative flex-shrink-0 group/box"
+                    <motion.div
+                      className="relative flex-shrink-0 group/box self-start"
                       animate={preparing ? {
                         x: [0, -2, 2, -2, 2, 0],
                         y: [0, 2, -2, 2, -2, 0],
@@ -572,7 +572,7 @@ export default function LootBoxOpenPage() {
                     </div>
 
                     {/* Stats */}
-                    <div className="flex-shrink-0 flex flex-col gap-2 items-end">
+                    <div className="flex-shrink-0 flex flex-col gap-2 items-start sm:items-end w-full sm:w-auto">
                       <div className="flex gap-2">
                         <div className="flex flex-col items-center px-3 py-2 rounded-xl bg-white border border-gray-200 shadow-[0_2px_0_#e5e7eb] min-w-[52px]">
                           <span className="text-gray-400 text-[7px] font-black uppercase tracking-widest">ITEMS</span>
@@ -654,7 +654,7 @@ export default function LootBoxOpenPage() {
               <div className={CARD}>
 
                 {/* Reel area */}
-                <div className="relative bg-white px-6" style={{ paddingTop: '22px', paddingBottom: '22px' }}>
+                <div className="relative bg-white px-2 sm:px-6" style={{ paddingTop: '22px', paddingBottom: '22px' }}>
 
                   {/* Outer wrapper — positions arrows OUTSIDE the overflow-hidden frame */}
                   <div className="relative mx-auto" style={{ width: `${containerW}px`, maxWidth: '100%' }}>
@@ -686,10 +686,10 @@ export default function LootBoxOpenPage() {
                       <div className="absolute inset-y-0 left-1/2 -translate-x-px z-30 pointer-events-none"
                         style={{ width: '2px', background: '#f59e0b', boxShadow: '0 0 10px rgba(245,158,11,0.8)' }} />
 
-                      {/* Side fades — match frame bg */}
-                      <div className="absolute inset-y-0 left-0 w-36 z-20 pointer-events-none"
+                      {/* Side fades — match frame bg, scale with width so reel is visible on mobile */}
+                      <div className="absolute inset-y-0 left-0 w-12 sm:w-24 md:w-36 z-20 pointer-events-none"
                         style={{ background: 'linear-gradient(to right, #f3f4f6 0%, transparent 100%)' }} />
-                      <div className="absolute inset-y-0 right-0 w-36 z-20 pointer-events-none"
+                      <div className="absolute inset-y-0 right-0 w-12 sm:w-24 md:w-36 z-20 pointer-events-none"
                         style={{ background: 'linear-gradient(to left, #f3f4f6 0%, transparent 100%)' }} />
 
                       {/* Reel track */}

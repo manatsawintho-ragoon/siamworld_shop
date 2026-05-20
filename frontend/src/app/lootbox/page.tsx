@@ -400,7 +400,7 @@ export default function LootBoxListPage() {
           )}
 
           {/* ── Grid body ── */}
-          <div className="p-3 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 10rem)' }}>
+          <div className="p-3">
             {loading ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2.5">
                 {[...Array(15)].map((_, i) => (

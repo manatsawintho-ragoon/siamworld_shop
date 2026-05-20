@@ -14,7 +14,10 @@ interface Product {
   original_price?: number;
   image_url?: string;
   image?: string;
+  image2?: string;
+  image3?: string;
   category_name?: string;
+  sold_count?: number;
 }
 
 interface Server {
@@ -41,6 +44,13 @@ export default function ProductCard({ product, servers }: { product: Product; se
   }, [servers]);
 
   const imgSrc = product.image_url || product.image;
+  const images = [imgSrc, product.image2, product.image3].filter((u): u is string => typeof u === 'string' && u.length > 0);
+  const [slideIdx, setSlideIdx] = useState(0);
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const t = setInterval(() => setSlideIdx(i => (i + 1) % images.length), 3000);
+    return () => clearInterval(t);
+  }, [images.length]);
   const productPrice = Number(product.price);
   const originalPrice = product.original_price ? Number(product.original_price) : 0;
 
@@ -135,17 +145,39 @@ export default function ProductCard({ product, servers }: { product: Product; se
             </span>
           )}
 
-          {/* Image */}
-          {imgSrc ? (
+          {/* Image / Carousel */}
+          {images.length === 0 ? (
+            <div className="w-full h-full flex items-center justify-center bg-amber-50">
+              <i className="fas fa-cube text-5xl text-amber-200 group-hover:text-amber-300 transition-colors" aria-hidden="true" />
+            </div>
+          ) : images.length === 1 ? (
             <img
-              src={imgSrc}
+              src={images[0]}
               alt={product.name}
               className="w-full h-full object-contain p-2 group-hover:scale-110 transition-transform duration-500 ease-out"
               style={{ imageRendering: 'pixelated' }}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-amber-50">
-              <i className="fas fa-cube text-5xl text-amber-200 group-hover:text-amber-300 transition-colors" aria-hidden="true" />
+            <div className="product-carousel">
+              {images.map((src, i) => (
+                <div
+                  key={`${src}-${i}`}
+                  className={`product-carousel-slide${i === slideIdx ? ' is-active' : ''}`}
+                  aria-hidden={i !== slideIdx}
+                >
+                  <img
+                    src={src}
+                    alt={product.name}
+                    className="w-full h-full object-contain p-2 group-hover:scale-110 transition-transform duration-500 ease-out"
+                    style={{ imageRendering: 'pixelated' }}
+                  />
+                </div>
+              ))}
+              <div className="product-carousel-dots" aria-hidden="true">
+                {images.map((_, i) => (
+                  <span key={i} className={`product-carousel-dot${i === slideIdx ? ' is-active' : ''}`} />
+                ))}
+              </div>
             </div>
           )}
 
@@ -165,6 +197,13 @@ export default function ProductCard({ product, servers }: { product: Product; se
         {/* Info below image — flex-1 so button always pins to bottom */}
         <div className="p-3 flex flex-col flex-1 bg-white relative z-10">
           <p className="text-gray-900 font-bold text-sm leading-tight line-clamp-1 group-hover:text-amber-600 transition-colors">{product.name}</p>
+
+          <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-50 border border-orange-200 w-fit">
+            <i className="fas fa-fire text-orange-500 text-[10px]" />
+            <span className="text-[11px] font-bold text-orange-700">
+              ขายแล้ว <span className="tabular-nums font-black">{(product.sold_count ?? 0).toLocaleString()}</span> ชิ้น
+            </span>
+          </div>
 
           {product.description && (
             <button
@@ -204,11 +243,11 @@ export default function ProductCard({ product, servers }: { product: Product; se
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 8 }}
                 transition={{ duration: 0.15 }}
-                className="theme-card w-full max-w-sm overflow-hidden shadow-2xl"
+                className="theme-card w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden shadow-2xl"
                 onClick={e => e.stopPropagation()}
               >
                 {/* Header */}
-                <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+                <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3 flex-shrink-0">
                   {imgSrc ? (
                     <div className="w-10 h-10 rounded-lg bg-white border border-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
                       <img src={imgSrc} alt={product.name} className="w-9 h-9 object-contain" style={{ imageRendering: 'pixelated' }} />
@@ -233,7 +272,7 @@ export default function ProductCard({ product, servers }: { product: Product; se
                 </div>
 
                 {/* Body */}
-                <div className="p-5">
+                <div className="p-5 overflow-y-auto flex-1 min-h-0">
                   <div className="flex items-center gap-1.5 mb-3">
                     <i className="fas fa-align-left text-[12px]" style={{ color: 'rgb(var(--color-primary))' }} />
                     <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">คำอธิบายสินค้า</span>
@@ -242,7 +281,7 @@ export default function ProductCard({ product, servers }: { product: Product; se
                 </div>
 
                 {/* Footer */}
-                <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/30">
+                <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/30 flex-shrink-0">
                   <button
                     onClick={() => setShowDesc(false)}
                     className="btn-primary w-full py-2.5 text-[13px]"
@@ -275,11 +314,11 @@ export default function ProductCard({ product, servers }: { product: Product; se
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -6, scale: 0.97 }}
                 transition={{ duration: 0.15 }}
-                className="theme-card w-full max-w-sm overflow-hidden shadow-2xl"
+                className="theme-card w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden shadow-2xl"
                 onClick={e => e.stopPropagation()}
               >
                 {/* Header */}
-                <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+                <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3 flex-shrink-0">
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(var(--color-primary), 0.1)', color: 'rgb(var(--color-primary))' }}>
                     <i className="fas fa-shopping-cart text-xs" />
                   </div>
@@ -296,7 +335,7 @@ export default function ProductCard({ product, servers }: { product: Product; se
                 </div>
 
                 {/* Body */}
-                <div className="p-5 space-y-3">
+                <div className="p-5 space-y-3 overflow-y-auto flex-1 min-h-0">
 
                   {/* Product block */}
                   <div className="flex items-start gap-3 bg-gray-50/50 rounded-xl p-3 border border-gray-100">
@@ -503,7 +542,7 @@ export default function ProductCard({ product, servers }: { product: Product; se
                 </div>
 
                 {/* Footer */}
-                <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/30 flex items-center gap-2">
+                <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/30 flex items-center gap-2 flex-shrink-0">
                   <button
                     onClick={() => { if (!buying) resetModal(); }}
                     disabled={buying}

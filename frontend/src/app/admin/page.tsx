@@ -237,14 +237,14 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-5 max-w-[1400px] mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
           <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <i className="fas fa-chart-pie text-[#f97316]"></i> แดชบอร์ด
           </h1>
           <p className="text-xs text-gray-400 mt-0.5">ภาพรวมระบบทั้งหมด</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-shrink-0">
           <LiveBadge lastUpdated={lastUpdated} />
           <button onClick={() => { setLoading(true); fetchStats(); }}
             className="flex items-center gap-1.5 px-3.5 py-2 bg-[#1e2735] text-white rounded-lg text-[11px] font-bold shadow-[0_4px_0_#38404d] hover:brightness-110 transition-all active:shadow-[0_1px_0_#38404d] active:translate-y-[2px]">
@@ -258,16 +258,16 @@ export default function AdminDashboard() {
 
         {/* Chart */}
         <div className="lg:col-span-2 bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden flex flex-col">
-          <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/60 flex items-center justify-between flex-shrink-0">
-            <div className="flex items-center gap-2.5">
+          <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/60 flex items-center justify-between gap-3 flex-wrap flex-shrink-0">
+            <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-chart-line text-orange-500 text-xs"></i>
               </div>
-              <h3 className="font-bold text-gray-900 text-sm">
+              <h3 className="font-bold text-gray-900 text-sm truncate">
                 สถิติระบบ ({chartMode === 'day' ? '30 วันล่าสุด' : chartMode === 'week' ? '8 สัปดาห์ล่าสุด' : '12 เดือนล่าสุด'})
               </h3>
             </div>
-            <div className="flex bg-gray-100 rounded-lg p-0.5">
+            <div className="flex bg-gray-100 rounded-lg p-0.5 flex-shrink-0">
               {([
                 { label: 'รายวัน', mode: 'day' as const },
                 { label: 'สัปดาห์', mode: 'week' as const },

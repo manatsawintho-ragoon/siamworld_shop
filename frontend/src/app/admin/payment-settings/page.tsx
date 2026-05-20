@@ -139,8 +139,8 @@ export default function PaymentSettingsPage() {
     <div className="space-y-4 max-w-[1400px] mx-auto">
 
       {/* ── Page Header ─────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
           <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <i className="fas fa-credit-card text-[#f97316]" /> ระบบรับชำระเงิน
           </h1>

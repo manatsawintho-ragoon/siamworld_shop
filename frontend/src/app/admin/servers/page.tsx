@@ -292,12 +292,12 @@ export default function AdminServers() {
     <div className="space-y-6 max-w-[1200px] mx-auto">
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
           <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <i className="fas fa-server text-[#f97316]" /> จัดการเซิร์ฟเวอร์
           </h1>
-          <div className="flex items-center gap-2 mt-0.5">
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             <p className="text-xs text-gray-400">เชื่อมต่อ RCON จริง · ดูสถานะจริง · จัดการเซิร์ฟเวอร์ Minecraft</p>
             {lastHealthCheck && (
               <span className="text-[10px] text-gray-300">
@@ -306,7 +306,7 @@ export default function AdminServers() {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={checkHealth}
             disabled={healthLoading}
@@ -326,7 +326,7 @@ export default function AdminServers() {
       </div>
 
       {/* ── Stats bar ── */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
           { label: 'เซิร์ฟเวอร์ทั้งหมด', value: servers.length,   icon: 'fa-server',       color: 'text-[#f97316]', bg: 'bg-orange-50', border: 'border-orange-200' },
           { label: 'RCON Online จริง',    value: rconOnlineCount,  icon: 'fa-circle-check', color: 'text-green-600', bg: 'bg-green-50',  border: 'border-green-200' },
@@ -537,10 +537,10 @@ export default function AdminServers() {
           onMouseDown={e => { bdRef.current = e.target === e.currentTarget; }}
           onMouseUp={e => { if (bdRef.current && e.target === e.currentTarget && !saving) setEditing(null); }}
         >
-          <div className="bg-white rounded-2xl shadow-[0_8px_0_#c5cad3,0_12px_48px_rgba(0,0,0,0.2)] w-full max-w-lg overflow-hidden border border-gray-200/80">
+          <div className="bg-white rounded-2xl shadow-[0_8px_0_#c5cad3,0_12px_48px_rgba(0,0,0,0.2)] w-full max-w-lg max-h-[calc(100vh-3rem)] flex flex-col overflow-hidden border border-gray-200/80">
 
-            <div className="h-1 w-full bg-[#f97316]" />
-            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center gap-3">
+            <div className="h-1 w-full bg-[#f97316] flex-shrink-0" />
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center gap-3 flex-shrink-0">
               <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-server text-[#f97316] text-sm" />
               </div>
@@ -556,7 +556,7 @@ export default function AdminServers() {
               </button>
             </div>
 
-            <div className="p-5 space-y-4">
+            <div className="p-5 space-y-4 flex-1 min-h-0 overflow-y-auto">
               {error && (
                 <div className="flex items-center gap-2 text-red-600 text-xs bg-red-50 border border-red-200 px-3 py-2.5 rounded-xl">
                   <i className="fas fa-exclamation-circle flex-shrink-0" /> {error}
@@ -603,7 +603,7 @@ export default function AdminServers() {
 
             </div>
 
-            <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/60 flex gap-2.5">
+            <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/60 flex gap-2.5 flex-shrink-0">
               <button onClick={() => setEditing(null)} className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-[13px] font-bold rounded-xl bg-white border border-gray-200 text-gray-700 shadow-[0_4px_0_#d1d5db] hover:brightness-95 transition-all active:shadow-none active:translate-y-[2px]">
                 <i className="fas fa-times text-[11px]" /> ยกเลิก
               </button>

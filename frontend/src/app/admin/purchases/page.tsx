@@ -237,12 +237,12 @@ export default function AdminAuditLog() {
     <div className="space-y-4 max-w-[1400px] mx-auto">
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
           <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <i className="fas fa-scroll text-[#f97316]" /> Audit Log
           </h1>
-          <div className="flex items-center gap-2 mt-0.5">
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             <p className="text-xs text-gray-400">บันทึกทุกกิจกรรมของเว็บไซต์</p>
             {page === 1 && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-green-50 border border-green-200">
@@ -258,7 +258,7 @@ export default function AdminAuditLog() {
         <button
           onClick={() => load()}
           disabled={loading}
-          className="flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl bg-white border border-gray-200 text-gray-700 shadow-[0_3px_0_#d1d5db] hover:brightness-95 transition-all active:shadow-none active:translate-y-[1px] disabled:opacity-50"
+          className="flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl bg-white border border-gray-200 text-gray-700 shadow-[0_3px_0_#d1d5db] hover:brightness-95 transition-all active:shadow-none active:translate-y-[1px] disabled:opacity-50 flex-shrink-0"
         >
           <i className={`fas fa-sync-alt text-[10px] ${loading ? 'fa-spin' : ''}`} /> รีเฟรช
         </button>

@@ -236,6 +236,19 @@ if [[ $? -ne 0 ]]; then
     exit 1
 fi
 
+# ── Apply DB migrations ────────────────────────────────────────
+# init.sql only seeds baseline tables — incremental schema changes
+# live in migrations/*.sql and must be applied after MySQL is healthy.
+echo ""
+echo "[1.5/2] Applying database migrations..."
+if ! "$DEPLOY_DIR/apply-migrations.sh" --name "$NAME"; then
+    echo ""
+    echo "[ERROR] Migrations failed. The shop containers are running but"
+    echo "        the DB schema is incomplete. Inspect the output above,"
+    echo "        then re-run: ./manage-customer.sh --action migrate --name $NAME"
+    exit 1
+fi
+
 # ── Update registry ────────────────────────────────────────────
 CREATED_AT=$(date '+%Y-%m-%d %H:%M:%S')
 NEW_RECORD=$(jq -n \

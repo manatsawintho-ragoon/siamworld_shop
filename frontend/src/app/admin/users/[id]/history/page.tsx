@@ -66,8 +66,8 @@ export default function UserHistoryPage() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
           <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <i className="fas fa-history text-[#f97316]" /> ประวัติการใช้งาน
           </h1>
@@ -77,7 +77,7 @@ export default function UserHistoryPage() {
         </div>
         <Link
           href={`/admin/users/${id}`}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg bg-[#1e2735] text-white shadow-[0_4px_0_#0d131d] hover:brightness-110 transition-all active:shadow-[0_1px_0_#0d131d] active:translate-y-[2px]"
+          className="flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg bg-[#1e2735] text-white shadow-[0_4px_0_#0d131d] hover:brightness-110 transition-all active:shadow-[0_1px_0_#0d131d] active:translate-y-[2px] flex-shrink-0"
         >
           <i className="fas fa-arrow-left text-xs" /> กลับไปหน้ารายละเอียด
         </Link>
@@ -86,7 +86,7 @@ export default function UserHistoryPage() {
       <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
 
         {/* Tab Bar */}
-        <div className="bg-gray-50/70 px-4 py-3 border-b border-gray-100 flex gap-2">
+        <div className="bg-gray-50/70 px-4 py-3 border-b border-gray-100 flex gap-2 flex-wrap">
           {tabs.map(t => (
             <button
               key={t.key}

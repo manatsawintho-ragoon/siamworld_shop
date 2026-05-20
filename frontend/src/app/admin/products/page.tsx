@@ -42,6 +42,8 @@ interface Product {
   price: number;
   original_price?: number;
   image?: string;
+  image2?: string;
+  image3?: string;
   command: string;
   category_id?: number;
   category_name?: string;
@@ -62,7 +64,7 @@ interface Server { id: number; name: string; }
 
 const emptyProduct = {
   name: '', description: '', price: 0, original_price: 0,
-  image: '', command: '', category_id: 0, featured: false,
+  image: '', image2: '', image3: '', command: '', category_id: 0, featured: false,
   active: true, server_ids: [] as number[],
   stock_limit: null as number | null, sale_start: null as string | null, sale_end: null as string | null,
 };
@@ -153,6 +155,8 @@ export default function AdminProducts() {
         price: Number(editing.price),
         original_price: Number(editing.original_price) || null,
         image: editing.image || null,
+        image2: editing.image2 || null,
+        image3: editing.image3 || null,
         command: editing.command,
         category_id: Number(editing.category_id) || null,
         featured: Boolean(editing.featured),
@@ -360,30 +364,30 @@ export default function AdminProducts() {
     <div className="space-y-4">
 
       {/* ── Page header ──────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
           <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <i className="fas fa-cube text-[#f97316]"></i> จัดการสินค้า
           </h1>
           <p className="text-xs text-gray-400 mt-0.5">เพิ่ม แก้ไข และจัดการสินค้าไอเท็มทั้งหมดในร้าน</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-shrink-0">
           <button onClick={() => { setCatError(''); setCatEditing(null); setCatModalOpen(true); }}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-[13px] font-bold rounded-lg shadow-[0_4px_0_#d1d5db] hover:brightness-95 transition-all">
-            <i className="fas fa-tags text-[12px] text-[#f97316]"></i> จัดการหมวดหมู่
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-[13px] font-bold rounded-lg shadow-[0_4px_0_#d1d5db] hover:brightness-95 transition-all">
+            <i className="fas fa-tags text-[12px] text-[#f97316]"></i> <span className="hidden sm:inline">จัดการ</span>หมวดหมู่
           </button>
           <button onClick={() => setEditing({ ...emptyProduct })}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-[#16a34a] text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#0d6b2e] hover:brightness-110 transition-all active:shadow-[0_2px_0_#0d6b2e] active:translate-y-[2px]">
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 bg-[#16a34a] text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#0d6b2e] hover:brightness-110 transition-all active:shadow-[0_2px_0_#0d6b2e] active:translate-y-[2px]">
             <i className="fas fa-plus text-[12px]"></i> เพิ่มสินค้า
           </button>
         </div>
       </div>
 
       {/* ── Split layout ─────────────────────────────────────────────── */}
-      <div className="flex gap-4 items-start">
+      <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-start">
 
         {/* ─ Left sidebar: category filter ─ */}
-        <div className="w-52 flex-shrink-0 bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
+        <div className="w-full lg:w-52 flex-shrink-0 bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/60">
             <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
               <i className="fas fa-layer-group text-[#f97316]"></i> หมวดหมู่
@@ -651,108 +655,93 @@ export default function AdminProducts() {
 
       {/* ─── Product Edit Modal ──────────────────────────────── */}
       {editing && createPortal((() => { const bd = { current: false }; return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto"
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
           onMouseDown={e => { bd.current = e.target === e.currentTarget; }}
           onMouseUp={e => { if (bd.current && e.target === e.currentTarget && !saving) setEditing(null); }}>
-          <div className="bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-full max-w-4xl my-4 overflow-hidden"
+          <div className="bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-full max-w-5xl max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden"
             onMouseDown={e => e.stopPropagation()}>
             {/* Header */}
-            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
-              <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
+            <div className="px-5 py-2.5 border-b border-gray-100 bg-gray-50/60 flex items-center flex-shrink-0">
+              <div className="w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-cube text-[#f97316] text-xs"></i>
               </div>
               <div className="flex-1 text-center">
-                <h3 className="font-bold text-gray-900 text-base">{editing.id ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่'}</h3>
-                <p className="text-[11px] text-gray-500">{editing.id ? 'แก้ไขรายละเอียดสินค้าที่เลือก' : 'กำหนดรายละเอียดและ RCON commands'}</p>
+                <h3 className="font-bold text-gray-900 text-sm">{editing.id ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่'}</h3>
               </div>
-              <button onClick={() => setEditing(null)} className="w-8 h-8 rounded-lg bg-red-500 border border-red-600 flex items-center justify-center text-white shadow-[0_4px_0_#b91c1c] flex-shrink-0">
-                <i className="fas fa-times text-xs"></i>
+              <button onClick={() => setEditing(null)} className="w-7 h-7 rounded-lg bg-red-500 border border-red-600 flex items-center justify-center text-white shadow-[0_3px_0_#b91c1c] flex-shrink-0">
+                <i className="fas fa-times text-[10px]"></i>
               </button>
             </div>
 
             {/* Body — 2-column: form left, sale settings right */}
-            <div className="p-5">
-              {error && <div className="text-red-500 text-xs bg-red-50 px-3 py-2 rounded-lg border border-red-100 flex items-center gap-1.5 mb-4"><i className="fas fa-exclamation-circle"></i> {error}</div>}
+            <div className="p-4 flex-1 min-h-0 overflow-y-auto">
+              {error && <div className="text-red-500 text-[11px] bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 flex items-center gap-1.5 mb-3"><i className="fas fa-exclamation-circle"></i> {error}</div>}
 
-              <div className="grid grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* ── Left: form fields (2/3 width) ── */}
-                <div className="col-span-2 space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1.5">ชื่อสินค้า *</label>
-                    <input value={editing.name || ''} onChange={e => setEditing({ ...editing, name: e.target.value })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" placeholder="เช่น VIP Rank" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 mb-1.5">ราคา (฿) *</label>
-                      <input type="number" value={editing.price || ''} onChange={e => setEditing({ ...editing, price: Number(e.target.value) })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" min={0} />
+                <div className="md:col-span-2 space-y-2.5">
+                  <div className="grid grid-cols-3 gap-2.5">
+                    <div className="col-span-2">
+                      <label className="block text-[11px] font-bold text-gray-500 mb-1">ชื่อสินค้า *</label>
+                      <input value={editing.name || ''} onChange={e => setEditing({ ...editing, name: e.target.value })} className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" placeholder="เช่น VIP Rank" />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 mb-1.5">ราคาเดิม (฿)</label>
-                      <input type="number" value={editing.original_price || ''} onChange={e => setEditing({ ...editing, original_price: Number(e.target.value) })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" min={0} placeholder="ไม่บังคับ" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 mb-1.5">หมวดหมู่</label>
-                      <select value={editing.category_id || ''} onChange={e => setEditing({ ...editing, category_id: Number(e.target.value) })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20">
+                      <label className="block text-[11px] font-bold text-gray-500 mb-1">หมวดหมู่</label>
+                      <select value={editing.category_id || ''} onChange={e => setEditing({ ...editing, category_id: Number(e.target.value) })} className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20">
                         <option value="">-- เลือก --</option>
                         {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
                     </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2.5">
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 mb-1.5">Image URL</label>
-                      <div className="flex gap-2">
-                        <input value={editing.image || ''} onChange={e => setEditing({ ...editing, image: e.target.value })} className="flex-1 px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" placeholder="https://..." />
-                        {editing.image && (
-                          <div className="w-10 h-10 rounded-lg border border-gray-200 flex-shrink-0 bg-gray-50 overflow-hidden">
-                            <img src={editing.image} alt="" className="w-full h-full object-cover" onError={e => (e.currentTarget.style.display = 'none')} />
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-gray-400 mt-1 flex items-center gap-1.5"><i className="fas fa-image text-[10px]" /> แนะนำขนาด <b className="text-gray-600">600×600 px</b> (อัตราส่วน 1:1) ไฟล์ .png หรือ .jpg ไม่เกิน 500 KB</p>
+                      <label className="block text-[11px] font-bold text-gray-500 mb-1">ราคา (฿) *</label>
+                      <input type="number" value={editing.price || ''} onChange={e => setEditing({ ...editing, price: Number(e.target.value) })} className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" min={0} />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-500 mb-1">ราคาเดิม (฿)</label>
+                      <input type="number" value={editing.original_price || ''} onChange={e => setEditing({ ...editing, original_price: Number(e.target.value) })} className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" min={0} placeholder="ไม่บังคับ" />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1.5">รายละเอียด</label>
-                    <textarea value={editing.description || ''} onChange={e => setEditing({ ...editing, description: e.target.value })} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 h-16 resize-none" placeholder="รายละเอียดสินค้า..." />
+                    <label className="block text-[11px] font-bold text-gray-500 mb-1">Image URL (รูปหลัก · #2 · #3)</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['image', 'image2', 'image3'] as const).map((k, idx) => (
+                        <div key={k} className="flex gap-1.5">
+                          <input value={(editing as any)[k] || ''} onChange={e => setEditing({ ...editing, [k]: e.target.value })}
+                            className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                            placeholder={idx === 0 ? 'https://...' : '#' + (idx + 1)} />
+                          {(editing as any)[k] && (
+                            <div className="w-8 h-8 rounded-md border border-gray-200 flex-shrink-0 bg-gray-50 overflow-hidden">
+                              <img src={(editing as any)[k]} alt="" className="w-full h-full object-cover" onError={e => (e.currentTarget.style.display = 'none')} />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1"><i className="fas fa-image text-[9px]" /> แนะนำ 600×600 px · ใส่ &gt;1 รูป → สไลด์อัตโนมัติ</p>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1.5 flex items-center gap-2">
+                    <label className="block text-[11px] font-bold text-gray-500 mb-1">รายละเอียด</label>
+                    <textarea value={editing.description || ''} onChange={e => setEditing({ ...editing, description: e.target.value })} className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 h-12 resize-none" placeholder="รายละเอียดสินค้า..." />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-500 mb-1 flex items-center gap-2">
                       RCON Commands *
-                      {(() => { const cmds = (editing.command || '').split('\n').map(c => c.trim()).filter(Boolean); return cmds.length > 0 ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold"><i className="fas fa-terminal text-[9px]" /> {cmds.length} คำสั่ง</span> : null; })()}
+                      {(() => { const cmds = (editing.command || '').split('\n').map(c => c.trim()).filter(Boolean); return cmds.length > 0 ? <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[9px] font-bold"><i className="fas fa-terminal text-[8px]" /> {cmds.length}</span> : null; })()}
+                      <span className="text-[10px] font-normal text-gray-400 ml-auto">1 บรรทัด = 1 คำสั่ง · {'{player}'} = ชื่อผู้เล่น</span>
                     </label>
                     <textarea value={editing.command || ''} onChange={e => setEditing({ ...editing, command: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 h-24 resize-y font-mono"
-                      placeholder={"give {player} diamond 1\nsay {player} ได้รับไอเท็ม!\nlp user {player} permission set group.vip"} />
-                    <div className="flex items-start gap-2 mt-1.5">
-                      <p className="text-xs text-gray-400 flex-1">1 บรรทัด = 1 คำสั่ง · ใส่ได้ไม่จำกัด · ใช้ <code className="bg-gray-100 px-1 rounded">{'{player}'}</code> แทนชื่อผู้เล่น</p>
-                    </div>
-                    {(() => {
-                      const cmds = (editing.command || '').split('\n').map(c => c.trim()).filter(Boolean);
-                      if (cmds.length === 0) return null;
-                      return (
-                        <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50 overflow-hidden">
-                          <div className="px-3 py-1.5 bg-blue-100/60 flex items-center gap-1.5">
-                            <i className="fas fa-eye text-blue-500 text-[10px]" />
-                            <span className="text-[10px] font-bold text-blue-600">Preview คำสั่งที่จะ run ({cmds.length})</span>
-                          </div>
-                          <div className="px-3 py-2 space-y-1 max-h-28 overflow-y-auto">
-                            {cmds.map((cmd, i) => (
-                              <div key={i} className="flex items-start gap-2">
-                                <span className="text-[9px] font-bold text-blue-400 w-4 text-right flex-shrink-0 mt-0.5">{i + 1}</span>
-                                <code className="text-[11px] text-blue-800 font-mono break-all">{cmd}</code>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })()}
+                      className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 h-16 resize-y font-mono"
+                      placeholder={"give {player} diamond 1\nsay {player} ได้รับไอเท็ม!"} />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1.5">เซิร์ฟเวอร์ที่ใช้ได้</label>
-                    <div className="flex flex-wrap gap-2">
+                    <label className="block text-[11px] font-bold text-gray-500 mb-1">เซิร์ฟเวอร์ที่ใช้ได้</label>
+                    <div className="flex flex-wrap gap-1.5">
                       {servers.map(s => {
                         const checked = editing.server_ids?.includes(s.id) || false;
                         return (
-                          <label key={s.id} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer border text-sm transition-all ${checked ? 'bg-[#1e2735] text-white border-[#1e2735]' : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'}`}>
+                          <label key={s.id} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg cursor-pointer border text-xs transition-all ${checked ? 'bg-[#1e2735] text-white border-[#1e2735]' : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'}`}>
                             <input type="checkbox" checked={checked} onChange={() => { const ids = editing.server_ids || []; setEditing({ ...editing, server_ids: checked ? ids.filter(id => id !== s.id) : [...ids, s.id] }); }} className="accent-white" />
                             {s.name}
                           </label>
@@ -765,20 +754,17 @@ export default function AdminProducts() {
                 {/* ── Right: ตั้งค่าการขาย (1/3 width) ── */}
                 <div className="flex flex-col">
                   <div className="bg-white rounded-xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden flex flex-col flex-1">
-                    <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/60 flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
-                        <i className="fas fa-bolt text-amber-500 text-xs"></i>
+                    <div className="px-3 py-2 border-b border-gray-100 bg-gray-50/60 flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-md bg-amber-50 flex items-center justify-center flex-shrink-0">
+                        <i className="fas fa-bolt text-amber-500 text-[10px]"></i>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-gray-900 text-sm">กำหนดการขาย</p>
-                        <p className="text-[10px] text-gray-400">สต็อค · เวลา · LIMITED</p>
-                      </div>
+                      <p className="flex-1 min-w-0 font-bold text-gray-900 text-xs">กำหนดการขาย</p>
                       {/* LIMITED badge preview */}
                       {(saleLimitStock || (editing.id && editing.sale_end && new Date(editing.sale_end).getTime() > Date.now())) && (
                         <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-gradient-to-r from-amber-400 to-orange-500 text-white uppercase tracking-wider flex-shrink-0">LIMITED</span>
                       )}
                     </div>
-                    <div className="p-4 space-y-3 flex-1 overflow-y-auto" style={{ maxHeight: '420px' }}>
+                    <div className="p-3 space-y-2 flex-1">
                       {releaseError && (
                         <div className="text-red-600 text-xs bg-red-50 px-3 py-2 rounded-lg border border-red-100 flex items-center gap-1.5">
                           <i className="fas fa-exclamation-circle"></i> {releaseError}
@@ -798,46 +784,46 @@ export default function AdminProducts() {
                         const label = isPaused ? 'หยุดชั่วคราว' : isActive ? 'กำลังขายอยู่' : 'หมดเวลาแล้ว';
                         const labelColor = isPaused ? 'text-orange-700' : isActive ? 'text-green-700' : 'text-gray-500';
                         return (
-                          <div className={`rounded-lg border px-3 py-2.5 ${statusColor}`}>
+                          <div className={`rounded-lg border px-2.5 py-1.5 ${statusColor}`}>
                             <div className="flex items-center justify-between gap-2">
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dotColor}`} />
-                                <span className={`text-[11px] font-black ${labelColor}`}>{label}</span>
+                                <span className={`text-[10px] font-black ${labelColor}`}>{label}</span>
                               </div>
                               <div className="flex items-center gap-1 flex-shrink-0">
                                 {isActive && (
                                   <button type="button" onClick={() => handlePause(true)} disabled={pausing}
-                                    className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-orange-400 text-white shadow-[0_2px_0_#c2410c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50">
-                                    {pausing ? <i className="fas fa-spinner fa-spin text-[9px]"></i> : <i className="fas fa-pause text-[9px]"></i>}
+                                    className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-orange-400 text-white shadow-[0_2px_0_#c2410c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50">
+                                    {pausing ? <i className="fas fa-spinner fa-spin text-[8px]"></i> : <i className="fas fa-pause text-[8px]"></i>}
                                     หยุด
                                   </button>
                                 )}
                                 {isPaused && (
                                   <button type="button" onClick={() => handleResume(true)} disabled={resuming}
-                                    className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-green-500 text-white shadow-[0_2px_0_#15803d] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50">
-                                    {resuming ? <i className="fas fa-spinner fa-spin text-[9px]"></i> : <i className="fas fa-play text-[9px]"></i>}
+                                    className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-green-500 text-white shadow-[0_2px_0_#15803d] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50">
+                                    {resuming ? <i className="fas fa-spinner fa-spin text-[8px]"></i> : <i className="fas fa-play text-[8px]"></i>}
                                     ขายต่อ
                                   </button>
                                 )}
                                 {(isActive || isPaused) && (
                                   <button type="button" onClick={() => handleStop(true)} disabled={stopping}
-                                    className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-red-500 text-white shadow-[0_2px_0_#b91c1c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50">
-                                    {stopping ? <i className="fas fa-spinner fa-spin text-[9px]"></i> : <i className="fas fa-stop text-[9px]"></i>}
+                                    className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-red-500 text-white shadow-[0_2px_0_#b91c1c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50">
+                                    {stopping ? <i className="fas fa-spinner fa-spin text-[8px]"></i> : <i className="fas fa-stop text-[8px]"></i>}
                                     หยุดขาย
                                   </button>
                                 )}
                               </div>
                             </div>
-                            <p className="text-[10px] text-gray-500 mt-1">
+                            <p className="text-[9px] text-gray-500 mt-0.5">
                               สิ้นสุด {new Date(editing.sale_end).toLocaleString('th-TH', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                             </p>
                             {editing.stock_limit != null && (
-                              <div className="mt-1.5">
-                                <div className="flex justify-between text-[10px] mb-0.5">
+                              <div className="mt-1">
+                                <div className="flex justify-between text-[9px] mb-0.5">
                                   <span className="text-gray-500">ขายแล้ว</span>
                                   <span className="font-bold text-gray-700">{editing.sold_count ?? 0} / {editing.stock_limit}</span>
                                 </div>
-                                <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
                                   <div className="h-full bg-amber-400 rounded-full transition-all"
                                     style={{ width: `${Math.min(100, Math.round(((editing.sold_count ?? 0) / (editing.stock_limit as number)) * 100))}%` }} />
                                 </div>
@@ -848,45 +834,45 @@ export default function AdminProducts() {
                       })()}
 
                       {/* Stock toggle */}
-                      <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3 space-y-2">
-                        <div className="flex items-center gap-3">
-                          <span className="flex-1 text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                            <i className="fas fa-box text-gray-400 text-[10px]"></i> จำกัดสต็อค
+                      <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-2 space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="flex-1 text-[11px] font-bold text-gray-700 flex items-center gap-1.5">
+                            <i className="fas fa-box text-gray-400 text-[9px]"></i> จำกัดสต็อค
                           </span>
                           <button type="button" onClick={() => setSaleLimitStock(v => !v)}
-                            className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors duration-200 ${saleLimitStock ? 'bg-[#16a34a]' : 'bg-gray-300'}`}>
-                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${saleLimitStock ? 'translate-x-5' : 'translate-x-0'}`} />
+                            className={`relative flex-shrink-0 w-9 h-5 rounded-full transition-colors duration-200 ${saleLimitStock ? 'bg-[#16a34a]' : 'bg-gray-300'}`}>
+                            <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${saleLimitStock ? 'translate-x-4' : 'translate-x-0'}`} />
                           </button>
                         </div>
                         {saleLimitStock && (
                           <input type="number" min={1} value={saleStockVal ?? ''} onChange={e => setSaleStockVal(e.target.value ? Number(e.target.value) : null)}
                             placeholder="จำนวนสต็อค (ชิ้น)"
-                            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
                           />
                         )}
                       </div>
 
                       {/* Time limit */}
-                      <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-3 space-y-2">
+                      <div className="rounded-lg border border-gray-100 bg-gray-50/50 p-2 space-y-1.5">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                            <i className="fas fa-clock text-gray-400 text-[10px]"></i> กำหนดเวลาขาย
+                          <span className="text-[11px] font-bold text-gray-700 flex items-center gap-1.5">
+                            <i className="fas fa-clock text-gray-400 text-[9px]"></i> กำหนดเวลาขาย
                           </span>
                           <div className="flex gap-1">
                             {(['duration', 'datetime'] as const).map(m => (
                               <button key={m} type="button" onClick={() => setSaleTimeMode(m)}
-                                className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${saleTimeMode === m ? 'bg-[#1e2735] text-white' : 'bg-white border border-gray-200 text-gray-500'}`}>
+                                className={`px-1.5 py-0.5 rounded text-[9px] font-bold transition-all ${saleTimeMode === m ? 'bg-[#1e2735] text-white' : 'bg-white border border-gray-200 text-gray-500'}`}>
                                 {m === 'duration' ? 'ระยะเวลา' : 'วันสิ้นสุด'}
                               </button>
                             ))}
                           </div>
                         </div>
                         {saleTimeMode === 'duration' ? (
-                          <div className="flex gap-2">
+                          <div className="flex gap-1.5">
                             <input type="number" min={1} value={saleDurValue} onChange={e => setSaleDurValue(Math.max(1, Number(e.target.value)))}
-                              className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" />
+                              className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" />
                             <select value={saleDurUnit} onChange={e => setSaleDurUnit(e.target.value as 'minutes' | 'hours' | 'days')}
-                              className="flex-shrink-0 px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20">
+                              className="flex-shrink-0 px-1.5 py-1.5 rounded-lg border border-gray-200 text-xs bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20">
                               <option value="minutes">นาที</option>
                               <option value="hours">ชั่วโมง</option>
                               <option value="days">วัน</option>
@@ -896,38 +882,38 @@ export default function AdminProducts() {
                           <input type="datetime-local" value={saleEndDatetime}
                             min={new Date().toISOString().slice(0, 16)}
                             onChange={e => setSaleEndDatetime(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
                           />
                         )}
-                        <p className="text-[10px] text-gray-400 flex items-center gap-1">
-                          <i className="fas fa-calendar-check text-[9px]"></i>
+                        <p className="text-[9px] text-gray-400 flex items-center gap-1">
+                          <i className="fas fa-calendar-check text-[8px]"></i>
                           สิ้นสุด: {previewEndTime()}
                         </p>
                       </div>
 
                       {/* Release button */}
                       <button type="button" disabled={!editing.id || releasing} onClick={() => handleRelease(true)}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#16a34a] text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#0d6b2e] hover:brightness-110 transition-all active:shadow-[0_1px_0_#0d6b2e] active:translate-y-[2px] disabled:opacity-40 disabled:cursor-not-allowed">
+                        className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[#16a34a] text-white text-xs font-bold rounded-lg shadow-[0_3px_0_#0d6b2e] hover:brightness-110 transition-all active:shadow-[0_1px_0_#0d6b2e] active:translate-y-[2px] disabled:opacity-40 disabled:cursor-not-allowed">
                         {releasing
-                          ? <><i className="fas fa-spinner fa-spin text-xs"></i> กำลังปล่อยขาย...</>
+                          ? <><i className="fas fa-spinner fa-spin text-[10px]"></i> กำลังปล่อยขาย...</>
                           : editing.id && editing.sale_start
-                            ? <><i className="fas fa-redo text-xs"></i> รีเซ็ตและปล่อยขายใหม่</>
-                            : <><i className="fas fa-rocket text-xs"></i> ปล่อยขาย</>
+                            ? <><i className="fas fa-redo text-[10px]"></i> รีเซ็ตและปล่อยขายใหม่</>
+                            : <><i className="fas fa-rocket text-[10px]"></i> ปล่อยขาย</>
                         }
                       </button>
-                      {!editing.id && <p className="text-[10px] text-gray-400 text-center">บันทึกสินค้าก่อนจึงจะปล่อยขายได้</p>}
+                      {!editing.id && <p className="text-[9px] text-gray-400 text-center">บันทึกสินค้าก่อนจึงจะปล่อยขายได้</p>}
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">
-              <button onClick={() => setEditing(null)} className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-800 shadow-[0_4px_0_#d1d5db] hover:brightness-95 transition-all">
-                <i className="fas fa-times text-[12px]"></i> ยกเลิก
+            <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2 flex-shrink-0">
+              <button onClick={() => setEditing(null)} className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-white border border-gray-200 text-gray-800 shadow-[0_3px_0_#d1d5db] hover:brightness-95 transition-all">
+                <i className="fas fa-times text-[11px]"></i> ยกเลิก
               </button>
-              <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-5 py-2.5 bg-[#1e2735] disabled:opacity-50 text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#38404d] hover:brightness-110 transition-all active:shadow-[0_1px_0_#38404d] active:translate-y-[2px]">
-                {saving ? <><i className="fas fa-spinner fa-spin text-[12px]"></i> บันทึก...</> : <><i className="fas fa-save text-[12px]"></i> บันทึก</>}
+              <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-4 py-1.5 bg-[#1e2735] disabled:opacity-50 text-white text-xs font-bold rounded-lg shadow-[0_3px_0_#38404d] hover:brightness-110 transition-all active:shadow-[0_1px_0_#38404d] active:translate-y-[2px]">
+                {saving ? <><i className="fas fa-spinner fa-spin text-[11px]"></i> บันทึก...</> : <><i className="fas fa-save text-[11px]"></i> บันทึก</>}
               </button>
             </div>
           </div>
@@ -1066,8 +1052,8 @@ export default function AdminProducts() {
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm"
           onMouseDown={e => { bd.current = e.target === e.currentTarget; }}
           onMouseUp={e => { if (bd.current && e.target === e.currentTarget && !catSaving) { setCatModalOpen(false); setCatEditing(null); } }}>
-          <div className="bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-full max-w-xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
+          <div className="bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-full max-w-xl max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center flex-shrink-0">
               <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-tags text-[#f97316] text-xs"></i>
               </div>
@@ -1080,7 +1066,7 @@ export default function AdminProducts() {
               </button>
             </div>
 
-            <div className="p-5 space-y-4">
+            <div className="p-5 space-y-4 flex-1 min-h-0 overflow-y-auto">
               {/* Category list */}
               <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
                 {categories.length === 0 && (
@@ -1200,9 +1186,9 @@ export default function AdminProducts() {
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm"
           onMouseDown={e => { bd.current = e.target === e.currentTarget; }}
           onMouseUp={e => { if (bd.current && e.target === e.currentTarget && !releasing) setSaleModal(null); }}>
-          <div className="bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-full max-w-md overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-full max-w-md max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden">
             {/* Header */}
-            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center flex-shrink-0">
               <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-rocket text-green-500 text-xs"></i>
               </div>
@@ -1215,7 +1201,7 @@ export default function AdminProducts() {
               </button>
             </div>
 
-            <div className="p-5 space-y-3">
+            <div className="p-5 space-y-3 flex-1 min-h-0 overflow-y-auto">
               {releaseError && (
                 <div className="flex items-center gap-2 px-3 py-2.5 bg-red-50 border border-red-100 rounded-lg text-red-600 text-xs font-medium">
                   <i className="fas fa-exclamation-circle"></i> {releaseError}

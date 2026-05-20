@@ -92,15 +92,18 @@ class WalletService {
   }
 
   async getTransactions(userId: number, page = 1, limit = 20) {
-    const offset = (page - 1) * limit;
+    const safeLimit = Math.min(Math.max(limit | 0, 1), 100);
+    const safePage = Math.max(page | 0, 1);
+    const offset = (safePage - 1) * safeLimit;
+    // LIMIT/OFFSET inlined — mysql2 execute() rejects integer params there; values are clamped above.
     const [rows] = await pool.execute<RowDataPacket[]>(
-      'SELECT * FROM wallet_transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
-      [userId, limit, offset]
+      `SELECT * FROM wallet_transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT ${safeLimit} OFFSET ${offset}`,
+      [userId]
     );
     const [count] = await pool.execute<RowDataPacket[]>(
       'SELECT COUNT(*) as total FROM wallet_transactions WHERE user_id = ?', [userId]
     );
-    return { transactions: rows, total: count[0].total, page, limit };
+    return { transactions: rows, total: count[0].total, page: safePage, limit: safeLimit };
   }
 }
 

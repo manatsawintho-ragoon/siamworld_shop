@@ -74,9 +74,9 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     // Verity features: #131416 sidebar, #22c55e accent, #f3f4f6 bg.
     // Date timer
     const updateTime = () => {
-      setTime(new Date().toLocaleString('th-TH', { 
-        year: 'numeric', month: '2-digit', day: '2-digit', 
-        hour: '2-digit', minute: '2-digit', second: '2-digit' 
+      setTime(new Date().toLocaleString('th-TH', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
       }));
     };
     updateTime();
@@ -263,11 +263,12 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
       {/* Main Content Wrap */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
         {/* Top Header (White) */}
-        <header className="h-[72px] bg-white border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0 sticky top-0 z-30">
-          <div className="flex items-center gap-4">
+        <header className="h-[72px] bg-white border-b border-gray-200 flex items-center justify-between gap-2 px-4 sm:px-6 flex-shrink-0 sticky top-0 z-30">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden text-gray-500 hover:text-gray-900 transition-colors"
+              aria-label="เปิดเมนู"
+              className="lg:hidden w-10 h-10 rounded-lg flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors flex-shrink-0"
             >
               <i className="fas fa-bars text-xl"></i>
             </button>
@@ -277,12 +278,12 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <NotificationBell />
             <div className="relative">
               <button
                 onClick={() => setUserMenuOpen(v => !v)}
-                className="flex items-center gap-2.5 pl-1.5 pr-3 py-1.5 rounded-xl bg-[#18191c] hover:bg-[#232528] transition-colors cursor-pointer shadow-[0_3px_0_#09090b] active:shadow-none active:translate-y-[2px]"
+                className="flex items-center gap-2 sm:gap-2.5 pl-1.5 pr-2 sm:pr-3 py-1.5 rounded-xl bg-[#18191c] hover:bg-[#232528] transition-colors cursor-pointer shadow-[0_3px_0_#09090b] active:shadow-none active:translate-y-[2px] max-w-[200px] sm:max-w-none"
               >
                 <div className="w-8 h-8 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center shrink-0">
                   <img
@@ -299,11 +300,11 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                   />
                   <i className="fas fa-user-shield text-xs text-white hidden" style={{ display: 'none' }}></i>
                 </div>
-                <div className="flex flex-col items-start leading-none">
+                <div className="hidden sm:flex flex-col items-start leading-none min-w-0">
                   <span className="text-[11px] font-bold text-[#22c55e] uppercase tracking-wider">Admin</span>
-                  <span className="text-sm font-bold text-white mt-0.5">{user.username}</span>
+                  <span className="text-sm font-bold text-white mt-0.5 truncate max-w-[120px]">{user.username}</span>
                 </div>
-                <i className={`fas fa-chevron-down text-[10px] text-gray-400 transition-transform duration-200 ml-1 ${userMenuOpen ? 'rotate-180' : ''}`}></i>
+                <i className={`fas fa-chevron-down text-[10px] text-gray-400 transition-transform duration-200 ml-0.5 sm:ml-1 ${userMenuOpen ? 'rotate-180' : ''}`}></i>
               </button>
 
               {/* Dropdown */}
@@ -392,7 +393,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Content Area */}
-        <main className="flex-1 p-6 md:p-8">
+        <main className="flex-1 p-4 sm:p-6 md:p-8">
           {children}
         </main>
       </div>

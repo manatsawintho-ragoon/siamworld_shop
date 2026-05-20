@@ -15,12 +15,12 @@ const EMPTY_DL: Omit<Download, 'id'> = { filename: '', description: '', file_siz
 /* ── Reusable components ── */
 const SectionCard = ({ icon, title, description, children, actions }: { icon: string; title: string; description: string; children: React.ReactNode; actions?: React.ReactNode }) => (
   <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
-    <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/60 flex items-center justify-between">
-      <div className="flex items-center gap-2.5">
+    <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/60 flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex items-center gap-2.5 min-w-0">
         <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
           <i className={`${icon.includes('fab') ? icon : `fas ${icon}`} text-green-600 text-xs`}></i>
         </div>
-        <div>
+        <div className="min-w-0">
           <h3 className="font-bold text-gray-900 text-sm">{title}</h3>
           <p className="text-[11px] text-gray-500">{description}</p>
         </div>
@@ -580,9 +580,9 @@ export default function AdminSettings() {
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm"
           onMouseDown={e => { slideBackdropDown.current = e.target === e.currentTarget; }}
           onMouseUp={e => { if (slideBackdropDown.current && e.target === e.currentTarget && !slideSaving) setEditingSlide(null); }}>
-          <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-full max-w-lg overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-full max-w-lg max-h-[calc(100vh-3rem)] flex flex-col overflow-hidden">
             {/* Header */}
-            <div className="relative px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
+            <div className="relative px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center flex-shrink-0">
               <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-images text-green-600 text-xs"></i>
               </div>
@@ -595,7 +595,7 @@ export default function AdminSettings() {
               </button>
             </div>
             {/* Body */}
-            <div className="p-5 space-y-4">
+            <div className="p-5 space-y-4 flex-1 min-h-0 overflow-y-auto">
               {slideError && <div className="text-red-500 text-xs bg-red-50 px-3 py-2 rounded-lg border border-red-100 flex items-center gap-1.5"><i className="fas fa-exclamation-circle"></i> {slideError}</div>}
               <div>
                 <label className="block text-xs font-bold text-gray-500 mb-1.5">ชื่อสไลด์</label>
@@ -626,7 +626,7 @@ export default function AdminSettings() {
               </div>
             </div>
             {/* Footer */}
-            <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">
+            <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2 flex-shrink-0">
               <button onClick={() => setEditingSlide(null)}
                 className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-800 shadow-[0_4px_0_#d1d5db]">
                 <i className="fas fa-times text-[12px]"></i> ยกเลิก
@@ -646,9 +646,9 @@ export default function AdminSettings() {
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm"
           onMouseDown={e => { dlBackdropDown.current = e.target === e.currentTarget; }}
           onMouseUp={e => { if (dlBackdropDown.current && e.target === e.currentTarget && !dlSaving) setEditingDl(null); }}>
-          <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-full max-w-lg overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-full max-w-lg max-h-[calc(100vh-3rem)] flex flex-col overflow-hidden">
             {/* Header */}
-            <div className="relative px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
+            <div className="relative px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center flex-shrink-0">
               <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-download text-green-600 text-xs"></i>
               </div>
@@ -661,7 +661,7 @@ export default function AdminSettings() {
               </button>
             </div>
             {/* Body */}
-            <form id="dl-form" onSubmit={handleSaveDl} className="p-5 space-y-4">
+            <form id="dl-form" onSubmit={handleSaveDl} className="p-5 space-y-4 flex-1 min-h-0 overflow-y-auto">
               {dlError && <div className="text-red-500 text-xs bg-red-50 px-3 py-2 rounded-lg border border-red-100 flex items-center gap-1.5"><i className="fas fa-exclamation-circle"></i> {dlError}</div>}
               <div>
                 <label className="block text-xs font-bold text-gray-500 mb-1.5">ชื่อไฟล์ <span className="text-red-400">*</span></label>
@@ -700,7 +700,7 @@ export default function AdminSettings() {
               </label>
             </form>
             {/* Footer */}
-            <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">
+            <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2 flex-shrink-0">
               <button type="button" onClick={() => setEditingDl(null)}
                 className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-800 shadow-[0_4px_0_#d1d5db]">
                 <i className="fas fa-times text-[12px]"></i> ยกเลิก

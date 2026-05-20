@@ -165,10 +165,21 @@ export default function Navbar() {
 function MobileBottomLink({ href, icon, label, active }: { href: string; icon: string; label: string; active: boolean }) {
   return (
     <Link href={href} className="flex flex-col items-center justify-center gap-1 min-w-[64px] transition-all">
-      <div className={`w-10 h-7 rounded-full flex items-center justify-center transition-all ${active ? 'bg-primary text-primary-foreground' : 'text-foreground-subtle'}`}>
-        <i className={`fas ${icon} ${active ? 'text-xs' : 'text-sm'}`} />
+      <div
+        className="w-11 h-8 rounded-full flex items-center justify-center transition-all"
+        style={active
+          ? { backgroundColor: 'rgb(var(--color-primary))', color: 'rgb(var(--color-primary-foreground))', boxShadow: '0 2px 10px rgb(var(--color-primary) / 0.45), 0 1px 0 rgb(var(--color-primary-shadow) / 0.4)' }
+          : { color: 'rgb(var(--color-foreground-muted))' }
+        }
+      >
+        <i className={`fas ${icon} text-sm`} />
       </div>
-      <span className={`text-[9px] font-bold ${active ? 'text-primary' : 'text-foreground-subtle'}`}>{label}</span>
+      <span
+        className="text-[10px] font-black tracking-wide"
+        style={{ color: active ? 'rgb(var(--color-primary))' : 'rgb(var(--color-foreground-muted))' }}
+      >
+        {label}
+      </span>
     </Link>
   );
 }
@@ -176,12 +187,16 @@ function MobileBottomLink({ href, icon, label, active }: { href: string; icon: s
 function NavLink({ href, icon, label, subLabel, pathname }: { href: string; icon: string; label: string; subLabel: string; pathname: string }) {
   const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
   return (
-    <Link href={href} className={`mc-nav-link flex flex-col items-center justify-center min-w-[120px] group ${isActive ? 'active' : ''}`}>
+    <Link
+      href={href}
+      className={`mc-nav-link flex flex-col items-center justify-center min-w-[120px] group ${isActive ? 'active' : ''}`}
+      style={isActive ? { backgroundColor: 'rgb(var(--color-primary) / 0.12)' } : undefined}
+    >
       <div className="flex items-center gap-2 mb-1">
-        <i className={`fas ${icon} text-xs`} />
+        <i className={`fas ${icon} text-sm`} />
         <span className="font-black text-[15px]">{label}</span>
       </div>
-      <span className="text-[10px] font-medium opacity-75">{subLabel}</span>
+      <span className="text-[10px] font-bold opacity-80">{subLabel}</span>
     </Link>
   );
 }

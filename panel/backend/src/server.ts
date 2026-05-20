@@ -78,18 +78,20 @@ app.use(express.urlencoded({ extended: true, limit: '64kb' }));
 // CRITICAL: Initialize Passport
 app.use(passport.initialize());
 
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false }));
-
-const authLimiter = rateLimit({
+// Generous global rate limit — covers normal admin browsing (each page issues several API
+// calls). Brute-force-attractive endpoints get their own tighter per-route limiter inside
+// auth.routes.ts, so 1000/15min here is safe.
+app.use(rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 50, // Relaxed slightly for social logins
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, error: 'Too many login attempts, please try again in 15 minutes.' },
-});
+  // Health check is polled externally; never count it against the limit.
+  skip: (req) => req.path === '/api/health',
+}));
 
 // Routes — pick a body-size class per surface (slip uploads are the only legit large input).
-app.use('/api/auth',          smallJson,  authLimiter, authRoutes);
+app.use('/api/auth',          smallJson,  authRoutes);
 app.use('/api/wallet',        largeJson,  walletRoutes);           // slip upload
 app.use('/api/subscriptions', mediumJson, subscriptionRoutes);
 app.use('/api/admin',         mediumJson, adminRoutes);

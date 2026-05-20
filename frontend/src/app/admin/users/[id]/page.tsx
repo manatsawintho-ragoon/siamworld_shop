@@ -149,10 +149,10 @@ export default function AdminUserDetail() {
   );
 
   return (
-    <div className="flex flex-col gap-4 max-w-[1400px] mx-auto" style={{ height: 'calc(100vh - 136px)' }}>
+    <div className="flex flex-col gap-4 max-w-[1400px] mx-auto lg:h-[calc(100vh-136px)]">
 
       {/* ── Page Header ── */}
-      <div className="flex items-center justify-between flex-shrink-0">
+      <div className="flex items-center justify-between gap-3 flex-wrap flex-shrink-0">
         <div>
           <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <i className="fas fa-user-cog text-[#f97316]" /> จัดการข้อมูลผู้ใช้
@@ -161,7 +161,7 @@ export default function AdminUserDetail() {
         </div>
         <Link
           href="/admin/users"
-          className="flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg bg-[#1e2735] text-white shadow-[0_4px_0_#0d131d] hover:brightness-110 transition-all active:shadow-[0_1px_0_#0d131d] active:translate-y-[2px]"
+          className="flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg bg-[#1e2735] text-white shadow-[0_4px_0_#0d131d] hover:brightness-110 transition-all active:shadow-[0_1px_0_#0d131d] active:translate-y-[2px] flex-shrink-0"
         >
           <i className="fas fa-arrow-left text-xs" /> ย้อนกลับ
         </Link>

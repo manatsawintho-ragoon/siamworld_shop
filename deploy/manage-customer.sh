@@ -35,7 +35,7 @@ while [[ $# -gt 0 ]]; do
         --file)   FILE="$2";   shift 2 ;;
         -h|--help)
             echo "Usage: $0 --action <action> [--name <name>]"
-            echo "Basic:   list, status, start, stop, restart, rebuild, logs, remove"
+            echo "Basic:   list, status, start, stop, restart, rebuild, migrate, logs, remove"
             echo "Migrate: import-sqlite --name <name> --file <authme.db>"
             echo "HA:      migrate-to-replica, setup-replica, connect-replica --host <ip>, check-replica"
             exit 0
@@ -145,7 +145,17 @@ case "$ACTION" in
             up -d --build --no-deps backend
         docker compose --project-name "sw-$NAME" --env-file "$CUSTOMER_ENV" -f "$COMPOSE_FILE" \
             up -d --build --no-deps frontend
+        # Apply any new DB migrations introduced since last rebuild
+        if [[ -x "$DEPLOY_DIR/apply-migrations.sh" ]]; then
+            "$DEPLOY_DIR/apply-migrations.sh" --name "$NAME" || \
+                echo "[WARN] Migrations failed for $NAME — re-run manually with: $0 --action migrate --name $NAME"
+        fi
         echo "Done. Check logs with: $0 --action logs --name $NAME"
+        ;;
+
+    migrate)
+        echo "Applying DB migrations for $NAME..."
+        "$DEPLOY_DIR/apply-migrations.sh" --name "$NAME"
         ;;
 
     logs)
@@ -657,7 +667,7 @@ SQL
 
     *)
         echo "[ERROR] Unknown action: $ACTION"
-        echo "Basic:   list, status, start, stop, restart, rebuild, logs, remove"
+        echo "Basic:   list, status, start, stop, restart, rebuild, migrate, logs, remove"
         echo "Migrate: import-sqlite --file <authme.db>"
         echo "HA:      migrate-to-replica, setup-replica, connect-replica --host <ip>, check-replica"
         exit 1

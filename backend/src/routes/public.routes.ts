@@ -70,15 +70,15 @@ router.get('/products/featured', async (_req: Request, res: Response, next: Next
 router.get('/products/popular', async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const [rows] = await pool.execute(
-      `SELECT p.id, p.name, p.description, p.price, p.original_price, p.image,
+      `SELECT p.id, p.name, p.description, p.price, p.original_price, p.image, p.image2, p.image3,
               c.name as category_name,
-              COUNT(pu.id) AS purchase_count
+              COUNT(pu.id) AS sold_count
        FROM products p
        LEFT JOIN categories c ON p.category_id = c.id
        LEFT JOIN purchases pu ON pu.product_id = p.id AND pu.status = 'delivered'
        WHERE p.active = 1
        GROUP BY p.id
-       ORDER BY purchase_count DESC, p.created_at DESC
+       ORDER BY sold_count DESC, p.created_at DESC
        LIMIT 4`
     );
     res.json({ success: true, products: rows });
@@ -89,8 +89,9 @@ router.get('/products/popular', async (_req: Request, res: Response, next: NextF
 router.get('/products/new-arrivals', async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const [rows] = await pool.execute(
-      `SELECT p.id, p.name, p.description, p.price, p.original_price, p.image,
-              c.name as category_name
+      `SELECT p.id, p.name, p.description, p.price, p.original_price, p.image, p.image2, p.image3,
+              c.name as category_name,
+              (SELECT COUNT(*) FROM purchases pu WHERE pu.product_id = p.id AND pu.status = 'delivered') AS sold_count
        FROM products p
        LEFT JOIN categories c ON p.category_id = c.id
        WHERE p.active = 1

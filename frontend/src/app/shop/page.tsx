@@ -25,6 +25,7 @@ interface Product {
   price: number; original_price?: number;
   image_url?: string; image?: string;
   category_name?: string; category_id?: number;
+  sold_count?: number;
 }
 interface Category { id: number; name: string; icon?: string; }
 interface Server   { id: number; name: string; }

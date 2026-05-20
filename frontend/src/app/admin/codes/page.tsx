@@ -168,8 +168,8 @@ export default function AdminCodeManager() {
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
           <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <i className="fas fa-ticket-alt text-[#f97316]"></i> จัดการโค้ดไอเท็ม
           </h1>
@@ -177,7 +177,7 @@ export default function AdminCodeManager() {
         </div>
         <button
           onClick={() => setEditing({ ...EMPTY_CODE, code: generateCode() })}
-          className="flex items-center gap-1.5 px-4 py-2.5 bg-[#16a34a] text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#0d6b2e] hover:brightness-110 transition-all active:shadow-[0_2px_0_#0d6b2e] active:translate-y-[2px]"
+          className="flex items-center gap-1.5 px-4 py-2.5 bg-[#16a34a] text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#0d6b2e] hover:brightness-110 transition-all active:shadow-[0_2px_0_#0d6b2e] active:translate-y-[2px] flex-shrink-0"
         >
           <i className="fas fa-plus text-[12px]"></i> สร้างโค้ดใหม่
         </button>
@@ -391,10 +391,10 @@ export default function AdminCodeManager() {
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm"
           onMouseDown={e => { backdropDown.current = e.target === e.currentTarget; }}
           onMouseUp={e => { if (backdropDown.current && e.target === e.currentTarget && !saving) setEditing(null); }}>
-          <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_8px_40px_rgba(0,0,0,0.18)] w-full max-w-2xl overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_8px_40px_rgba(0,0,0,0.18)] w-full max-w-2xl max-h-[calc(100vh-3rem)] flex flex-col overflow-hidden">
 
             {/* ── Header ── */}
-            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center gap-3">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center gap-3 flex-shrink-0">
               <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0 border border-orange-100">
                 <i className="fas fa-ticket-alt text-orange-500 text-sm"></i>
               </div>
@@ -408,7 +408,7 @@ export default function AdminCodeManager() {
             </div>
 
             {/* ── Body ── */}
-            <div className="px-6 py-5 space-y-4">
+            <div className="px-6 py-5 space-y-4 flex-1 min-h-0 overflow-y-auto">
               {error && (
                 <div className="text-red-600 text-xs bg-red-50 px-3 py-2.5 rounded-lg border border-red-100 flex items-center gap-2">
                   <i className="fas fa-exclamation-circle"></i> {error}
@@ -636,7 +636,7 @@ export default function AdminCodeManager() {
             </div>
 
             {/* ── Footer ── */}
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2 flex-shrink-0">
               <button
                 onClick={() => setEditing(null)}
                 className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-700 shadow-[0_4px_0_#d1d5db] hover:brightness-95 transition-all active:shadow-[0_1px_0_#d1d5db] active:translate-y-[2px]"

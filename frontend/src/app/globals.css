@@ -36,6 +36,11 @@
     --color-primary-muted: 187 247 208;        /* green-200 — button shadow */
     --color-primary-shadow: 20 83 45;          /* green-900 — deep button shadow */
 
+    /* Accent — for variety alongside primary (default theme uses amber) */
+    --color-accent: 245 158 11;                /* amber-500 */
+    --color-accent-hover: 217 119 6;           /* amber-600 */
+    --color-accent-foreground: 255 255 255;
+
     /* Actions */
     --color-success: 16 185 129;
     --color-success-light: 167 243 208;        /* green-200 */
@@ -130,14 +135,50 @@ body {
   border-radius: 4px;
 }
 
+/* ── Inputs: visible caret + text cursor (neutral, theme-agnostic) ── */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+textarea {
+  caret-color: currentColor;
+  cursor: text;
+}
+input[type="checkbox"],
+input[type="radio"],
+select,
+button {
+  cursor: pointer;
+}
+input[disabled],
+textarea[disabled],
+select[disabled],
+button[disabled] {
+  cursor: not-allowed;
+}
+
+/* ── Form text color default ──
+   Admin modals are portaled to document.body (outside the admin layout),
+   so they inherit body color = --color-foreground which goes light on
+   customer dark themes → invisible text in admin form fields.
+   Force a readable dark default; customer surfaces opt back in below.
+   :where() keeps specificity at 0 so Tailwind utilities (text-white etc.)
+   still win. */
+input:where(:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="submit"]):not([type="reset"]):not([type="button"])),
+textarea,
+select {
+  color: rgb(17 24 39); /* gray-900 */
+}
+:where(.frontend-page, [data-theme-portal]) :is(input, textarea, select) {
+  color: inherit;
+}
+
 /* ── MC Header Menu Styles ── */
 .mc-nav-link {
   @apply relative px-5 py-4 text-sm font-bold tracking-wide uppercase transition-all duration-200;
-  color: rgb(var(--color-foreground-muted)); /* fully readable, adapts to theme */
+  color: rgb(var(--color-foreground) / 0.88); /* readable baseline that adapts to theme (dark or light) */
 }
 .mc-nav-link:hover {
   color: rgb(var(--color-primary));
   text-shadow: 0 0 14px rgb(var(--color-primary-light) / 0.65);
+  transform: translateY(-1px);
 }
 .mc-nav-link.active {
   color: rgb(var(--color-primary));
@@ -155,7 +196,25 @@ body {
   border-radius: 2px 2px 0 0;
 }
 .mc-nav-link:hover::after, .mc-nav-link.active::after {
-  width: 100%;
+  width: 80%;
+}
+.mc-nav-link.active::after {
+  box-shadow: 0 0 8px rgb(var(--color-primary) / 0.5);
+}
+
+/* ── Dark-mode nav link emphasis: bright baseline + glow ── */
+:root[data-site-dark="true"] .mc-nav-link {
+  color: rgb(var(--color-foreground)) !important;
+  text-shadow: 0 0 1px rgba(0,0,0,0.5);
+}
+:root[data-site-dark="true"] .mc-nav-link:hover,
+:root[data-site-dark="true"] .mc-nav-link.active {
+  color: rgb(var(--color-primary-light)) !important;
+  text-shadow: 0 0 18px rgb(var(--color-primary) / 0.7);
+}
+:root[data-site-dark="true"] .mc-nav-link::after {
+  background-color: rgb(var(--color-primary-light));
+  box-shadow: 0 0 12px rgb(var(--color-primary) / 0.55);
 }
 
 /* ── Logo hover glow — themed ── */
@@ -404,6 +463,81 @@ table.data-table tbody tr:hover {
   animation-play-state: paused;
 }
 
+/* ════════════════════════════════════════════════════════════════
+   Muted text contrast boost (light theme only)
+   Tailwind's gray-300/400/500 shades look too pale on white cards.
+   Darken globally, then restore originals inside explicit dark
+   surfaces (admin sidebar, dark cards, code previews) so text on
+   dark backgrounds stays readable.
+   Scoped off when [data-site-dark="true"] is on <html>.
+   ════════════════════════════════════════════════════════════════ */
+
+:root:not([data-site-dark="true"]) .text-gray-300  { color: rgb(107 114 128); }   /* → gray-500 */
+:root:not([data-site-dark="true"]) .text-gray-400  { color: rgb(75 85 99);   }    /* → gray-600 */
+:root:not([data-site-dark="true"]) .text-gray-500  { color: rgb(55 65 81);   }    /* → gray-700 */
+:root:not([data-site-dark="true"]) .text-slate-300 { color: rgb(100 116 139); }   /* → slate-500 */
+:root:not([data-site-dark="true"]) .text-slate-400 { color: rgb(71 85 105);  }    /* → slate-600 */
+:root:not([data-site-dark="true"]) .text-slate-500 { color: rgb(51 65 85);   }    /* → slate-700 */
+:root:not([data-site-dark="true"]) .text-zinc-300  { color: rgb(113 113 122); }   /* → zinc-500 */
+:root:not([data-site-dark="true"]) .text-zinc-400  { color: rgb(82 82 91);   }    /* → zinc-600 */
+:root:not([data-site-dark="true"]) .text-zinc-500  { color: rgb(63 63 70);   }    /* → zinc-700 */
+:root:not([data-site-dark="true"]) .text-neutral-300 { color: rgb(115 115 115); }
+:root:not([data-site-dark="true"]) .text-neutral-400 { color: rgb(82 82 82);   }
+:root:not([data-site-dark="true"]) .text-neutral-500 { color: rgb(64 64 64);   }
+:root:not([data-site-dark="true"]) .text-foreground-subtle { color: rgb(75 85 99); }
+
+/* Restore original light shades inside dark UI surfaces */
+:root:not([data-site-dark="true"]) :is(
+  [class*="bg-[#18191c]"],
+  [class*="bg-[#1e2735]"],
+  [class*="bg-[#232528]"],
+  [class*="bg-gray-700"],
+  [class*="bg-gray-800"],
+  [class*="bg-gray-900"],
+  [class*="bg-slate-700"],
+  [class*="bg-slate-800"],
+  [class*="bg-slate-900"],
+  [class*="bg-zinc-700"],
+  [class*="bg-zinc-800"],
+  [class*="bg-zinc-900"],
+  [class*="bg-neutral-800"],
+  [class*="bg-neutral-900"]
+) :is(.text-gray-300, .text-slate-300, .text-zinc-300, .text-neutral-300) { color: rgb(209 213 219); }
+
+:root:not([data-site-dark="true"]) :is(
+  [class*="bg-[#18191c]"],
+  [class*="bg-[#1e2735]"],
+  [class*="bg-[#232528]"],
+  [class*="bg-gray-700"],
+  [class*="bg-gray-800"],
+  [class*="bg-gray-900"],
+  [class*="bg-slate-700"],
+  [class*="bg-slate-800"],
+  [class*="bg-slate-900"],
+  [class*="bg-zinc-700"],
+  [class*="bg-zinc-800"],
+  [class*="bg-zinc-900"],
+  [class*="bg-neutral-800"],
+  [class*="bg-neutral-900"]
+) :is(.text-gray-400, .text-slate-400, .text-zinc-400, .text-neutral-400) { color: rgb(156 163 175); }
+
+:root:not([data-site-dark="true"]) :is(
+  [class*="bg-[#18191c]"],
+  [class*="bg-[#1e2735]"],
+  [class*="bg-[#232528]"],
+  [class*="bg-gray-700"],
+  [class*="bg-gray-800"],
+  [class*="bg-gray-900"],
+  [class*="bg-slate-700"],
+  [class*="bg-slate-800"],
+  [class*="bg-slate-900"],
+  [class*="bg-zinc-700"],
+  [class*="bg-zinc-800"],
+  [class*="bg-zinc-900"],
+  [class*="bg-neutral-800"],
+  [class*="bg-neutral-900"]
+) :is(.text-gray-500, .text-slate-500, .text-zinc-500, .text-neutral-500) { color: rgb(107 114 128); }
+
 /* ── Theme-aware buy button (ProductCard) ── */
 .btn-buy {
   background: linear-gradient(to bottom, rgb(var(--color-primary-light)), rgb(var(--color-primary)));
@@ -411,6 +545,7 @@ table.data-table tbody tr:hover {
   box-shadow: 0 4px 0 rgb(var(--color-primary-shadow)), inset 0 1px 0 rgba(255,255,255,0.18);
   transition: background 0.15s ease, box-shadow 0.1s ease, transform 0.1s ease;
   letter-spacing: 0.01em;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.25);
 }
 .btn-buy:hover {
   background: linear-gradient(to bottom, rgb(var(--color-primary)), rgb(var(--color-primary-hover)));
@@ -435,6 +570,38 @@ table.data-table tbody tr:hover {
   background: linear-gradient(135deg, rgb(var(--color-primary)), rgb(var(--color-primary-hover)));
   color: rgb(var(--color-primary-foreground));
   box-shadow: 0 2px 10px rgb(var(--color-primary-shadow) / 0.45), inset 0 1px 0 rgba(255,255,255,0.18);
+  text-shadow: 0 1px 0 rgba(255,255,255,0.2);
+}
+
+/* ── Product image carousel (auto-slide) ── */
+.product-carousel { position: relative; width: 100%; height: 100%; }
+.product-carousel-slide {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.product-carousel-slide.is-active { opacity: 1; z-index: 1; }
+.product-carousel-dots {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  z-index: 3;
+}
+.product-carousel-dot {
+  width: 6px; height: 6px;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.45);
+  border: 1px solid rgba(0,0,0,0.25);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.15);
+  transition: background 0.25s ease, transform 0.25s ease;
+}
+.product-carousel-dot.is-active {
+  background: rgb(var(--color-primary));
+  transform: scale(1.25);
 }
 
 /* ── Theme-aware card ── */

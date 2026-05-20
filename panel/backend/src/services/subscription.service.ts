@@ -318,13 +318,14 @@ class SubscriptionService {
     const safeLimit = Math.min(Math.max(limit | 0, 1), 100);
     const safePage = Math.max(page | 0, 1);
     const offset = (safePage - 1) * safeLimit;
+    // LIMIT/OFFSET inlined — see payment.service.ts for rationale.
     if (status) {
       const [rows] = await pool.execute<RowDataPacket[]>(
         `SELECT s.*, pu.email, pu.display_name
            FROM subscriptions s JOIN panel_users pu ON pu.id = s.user_id
           WHERE s.status = ?
-          ORDER BY s.created_at DESC LIMIT ? OFFSET ?`,
-        [status, safeLimit, offset]
+          ORDER BY s.created_at DESC LIMIT ${safeLimit} OFFSET ${offset}`,
+        [status]
       );
       const [count] = await pool.execute<RowDataPacket[]>(
         'SELECT COUNT(*) as total FROM subscriptions s WHERE s.status = ?',
@@ -335,8 +336,7 @@ class SubscriptionService {
     const [rows] = await pool.execute<RowDataPacket[]>(
       `SELECT s.*, pu.email, pu.display_name
          FROM subscriptions s JOIN panel_users pu ON pu.id = s.user_id
-        ORDER BY s.created_at DESC LIMIT ? OFFSET ?`,
-      [safeLimit, offset]
+        ORDER BY s.created_at DESC LIMIT ${safeLimit} OFFSET ${offset}`
     );
     const [count] = await pool.execute<RowDataPacket[]>(
       'SELECT COUNT(*) as total FROM subscriptions s'
@@ -490,8 +490,7 @@ class SubscriptionService {
        FROM audit_logs l
        LEFT JOIN panel_users u ON l.user_id = u.id
        ORDER BY l.created_at DESC
-       LIMIT ? OFFSET ?`,
-      [safeLimit, offset]
+       LIMIT ${safeLimit} OFFSET ${offset}`
     );
 
     const [total] = await pool.execute<RowDataPacket[]>('SELECT COUNT(*) as count FROM audit_logs');

@@ -14,6 +14,7 @@ interface Product {
   id: number; name: string; description: string;
   price: number; original_price?: number;
   image_url?: string; image?: string; category_name?: string;
+  sold_count?: number;
 }
 interface Server  { id: number; name: string; max_players?: number; }
 interface LootBox { id: number; name: string; description?: string; image?: string; price: number; original_price?: number | null; total_opens?: number; category_name?: string; category_color?: string; stock_limit?: number | null; sale_end?: string | null; sale_start?: string | null; sold_count?: number; is_paused?: boolean; }
@@ -40,15 +41,15 @@ function SectionHeader({ icon, iconBg, iconColor, title, count, href, btnLabel, 
   href: string; btnLabel: string; btnColor: string;
 }) {
   return (
-    <div className="flex items-center gap-3 mb-4">
+    <div className="flex items-center gap-2 sm:gap-3 mb-4">
       <div className={`w-8 h-8 rounded-xl ${iconBg} flex items-center justify-center flex-shrink-0`}>
         <i className={`fas ${icon} ${iconColor} text-sm`} />
       </div>
-      <h2 className="font-black text-gray-900 text-base leading-none">{title}</h2>
-      {count !== undefined && <span className="text-gray-400 text-sm font-normal">{count} รายการ</span>}
+      <h2 className="font-black text-gray-900 text-sm sm:text-base leading-tight truncate min-w-0">{title}</h2>
+      {count !== undefined && <span className="hidden sm:inline text-gray-400 text-sm font-normal flex-shrink-0">{count} รายการ</span>}
       <Link href={href}
-        className={`ml-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl ${btnColor} text-white text-[11px] font-bold shadow-[0_3px_0_rgba(0,0,0,0.15)] hover:shadow-[0_1px_0_rgba(0,0,0,0.15)] hover:translate-y-[1px] active:shadow-none active:translate-y-[3px] transition-all`}>
-        {btnLabel} <i className="fas fa-arrow-right text-[9px]" />
+        className={`ml-auto flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl ${btnColor} text-white text-[11px] font-bold shadow-[0_3px_0_rgba(0,0,0,0.15)] hover:shadow-[0_1px_0_rgba(0,0,0,0.15)] hover:translate-y-[1px] active:shadow-none active:translate-y-[3px] transition-all flex-shrink-0`}>
+        <span className="hidden sm:inline">{btnLabel}</span> <i className="fas fa-arrow-right text-[9px]" />
       </Link>
     </div>
   );
@@ -339,7 +340,7 @@ export default function HomePage() {
         </div>
       )}
       {settings.server_ip && (
-        <button className="lg:hidden w-full flex items-center gap-3 px-4 py-3 bg-[#1e2735] rounded-xl border border-[#38404d] shadow-[0_3px_0_#0d1117] mb-1" onClick={() => { navigator.clipboard.writeText(settings.server_ip!).then(() => { setIpCopied(true); setTimeout(() => setIpCopied(false), 2000); }).catch(() => {}); }}>
+        <button className="lg:hidden w-full flex items-center gap-3 px-4 py-3 bg-[#1e2735] rounded-xl border border-[#38404d] shadow-[0_3px_0_#0d1117] mb-4" onClick={() => { navigator.clipboard.writeText(settings.server_ip!).then(() => { setIpCopied(true); setTimeout(() => setIpCopied(false), 2000); }).catch(() => {}); }}>
           <div className="w-7 h-7 rounded-lg bg-green-500/20 border border-green-500/30 flex items-center justify-center flex-shrink-0"><i className="fas fa-server text-green-400 text-[11px]" /></div>
           <span className="flex-1 font-mono text-sm font-bold text-white truncate text-left">{settings.server_ip}</span>
           <div className={`flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg flex-shrink-0 transition-all ${ipCopied ? 'bg-green-500 text-white shadow-[0_2px_0_#15803d]' : 'bg-white/10 text-gray-300 border border-white/20'}`}><i className={`fas ${ipCopied ? 'fa-check' : 'fa-copy'} text-[10px]`} />{ipCopied ? 'Copied!' : 'คัดลอก IP'}</div>
@@ -373,13 +374,13 @@ export default function HomePage() {
           </motion.div>
           {(settings.show_exclusive_gacha ?? '1') === '1' && exclusiveBoxes.length > 0 && (
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5 }} className={CARD_CLS}>
-              <div className="px-4 py-3 border-b border-green-100 flex items-center gap-2.5"><div className="w-8 h-8 rounded-xl bg-violet-100 border border-violet-200 flex items-center justify-center flex-shrink-0"><i className="fas fa-gem text-violet-500 text-sm" /></div><h2 className="font-black text-gray-900 text-sm leading-none">GACHA Exclusive Box</h2><span className="bg-violet-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full tracking-wide flex-shrink-0">LIMITED</span><span className="text-gray-400 text-xs">{exclusiveBoxes.length} กล่อง</span><Link href="/lootbox" className="ml-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#3498DB] text-white text-[11px] font-bold shadow-[0_3px_0_#1a6da5] hover:shadow-[0_1px_0_#1a6da5] hover:translate-y-[1px] active:shadow-none active:translate-y-[3px] transition-all flex-shrink-0">ดูกล่องสุ่มทั้งหมด <i className="fas fa-arrow-right text-[9px]" /></Link></div>
+              <div className="px-3 sm:px-4 py-3 border-b border-green-100 flex items-center gap-2 sm:gap-2.5"><div className="w-8 h-8 rounded-xl bg-violet-100 border border-violet-200 flex items-center justify-center flex-shrink-0"><i className="fas fa-gem text-violet-500 text-sm" /></div><h2 className="font-black text-gray-900 text-sm leading-tight truncate min-w-0">GACHA Exclusive Box</h2><span className="bg-violet-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full tracking-wide flex-shrink-0">LIMITED</span><span className="hidden md:inline text-gray-400 text-xs flex-shrink-0">{exclusiveBoxes.length} กล่อง</span><Link href="/lootbox" className="ml-auto flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl bg-[#3498DB] text-white text-[11px] font-bold shadow-[0_3px_0_#1a6da5] hover:shadow-[0_1px_0_#1a6da5] hover:translate-y-[1px] active:shadow-none active:translate-y-[3px] transition-all flex-shrink-0"><span className="hidden sm:inline">ดูกล่องสุ่มทั้งหมด</span><span className="sm:hidden">ทั้งหมด</span> <i className="fas fa-arrow-right text-[9px]" /></Link></div>
               <div className="p-3"><HomeGachaCarousel boxes={exclusiveBoxes} noDrag /></div>
             </motion.div>
           )}
           {(settings.show_popular_gacha ?? '1') === '1' && popularBoxes.length > 0 && (
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5, delay: 0.1 }} className={CARD_CLS}>
-              <div className="px-4 py-3 border-b border-green-100 flex items-center gap-2.5"><div className="w-8 h-8 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center flex-shrink-0"><i className="fas fa-box-open text-amber-500 text-sm" /></div><h2 className="font-black text-gray-900 text-sm leading-none">GACHA กล่องสุ่ม ยอดนิยม</h2><span className="bg-amber-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full tracking-wide flex-shrink-0">HOT</span><span className="text-gray-400 text-xs">{popularBoxes.length} กล่อง</span><Link href="/lootbox" className="ml-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#3498DB] text-white text-[11px] font-bold shadow-[0_3px_0_#1a6da5] hover:shadow-[0_1px_0_#1a6da5] hover:translate-y-[1px] active:shadow-none active:translate-y-[3px] transition-all flex-shrink-0">ดูกล่องสุ่มทั้งหมด <i className="fas fa-arrow-right text-[9px]" /></Link></div>
+              <div className="px-3 sm:px-4 py-3 border-b border-green-100 flex items-center gap-2 sm:gap-2.5"><div className="w-8 h-8 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center flex-shrink-0"><i className="fas fa-box-open text-amber-500 text-sm" /></div><h2 className="font-black text-gray-900 text-sm leading-tight truncate min-w-0">GACHA กล่องสุ่ม ยอดนิยม</h2><span className="bg-amber-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full tracking-wide flex-shrink-0">HOT</span><span className="hidden md:inline text-gray-400 text-xs flex-shrink-0">{popularBoxes.length} กล่อง</span><Link href="/lootbox" className="ml-auto flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl bg-[#3498DB] text-white text-[11px] font-bold shadow-[0_3px_0_#1a6da5] hover:shadow-[0_1px_0_#1a6da5] hover:translate-y-[1px] active:shadow-none active:translate-y-[3px] transition-all flex-shrink-0"><span className="hidden sm:inline">ดูกล่องสุ่มทั้งหมด</span><span className="sm:hidden">ทั้งหมด</span> <i className="fas fa-arrow-right text-[9px]" /></Link></div>
               <div className="p-3"><HomeGachaCarousel boxes={popularBoxes} /></div>
             </motion.div>
           )}

@@ -208,10 +208,10 @@ export default function InventoryPage() {
         <div className="flex flex-col sm:flex-row gap-2">
 
           {/* Filter Buttons — prominent clickable tabs */}
-          <div className="flex gap-2 flex-shrink-0">
+          <div className="flex gap-2 flex-wrap sm:flex-nowrap sm:flex-shrink-0">
             {filterTabs.map(f => (
               <button key={f.key} onClick={() => setFilter(f.key)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-[13px] font-bold transition-all whitespace-nowrap select-none ${
+                className={`flex-1 sm:flex-initial flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-4 py-2.5 rounded-lg text-[13px] font-bold transition-all whitespace-nowrap select-none ${
                   filter === f.key
                     ? 'bg-[#1e2735] text-white shadow-[0_4px_0_#38404d] active:shadow-[0_1px_0_#38404d] active:translate-y-[3px]'
                     : 'bg-surface border border-border text-foreground-muted shadow-sm hover:brightness-95 active:shadow-sm active:translate-y-[3px]'
@@ -393,8 +393,8 @@ export default function InventoryPage() {
                   onMouseUp={e => { if (backdropRef.current && e.target === e.currentTarget) setRedeemModal(null); }}>
                   <motion.div initial={{ opacity: 0, scale: 0.95, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 8 }} transition={{ type: 'spring', stiffness: 400, damping: 26 }}
-                    className="bg-surface rounded-2xl shadow-sm border border-border/80 w-full max-w-sm overflow-hidden">
-                    <div className="relative px-6 py-4 border-b border-border bg-surface-hover/60 flex items-center">
+                    className="bg-surface rounded-2xl shadow-sm border border-border/80 w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden">
+                    <div className="relative px-6 py-4 border-b border-border bg-surface-hover/60 flex items-center flex-shrink-0">
                       <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
                         <i className="fas fa-gamepad text-green-600 text-xs" />
                       </div>
@@ -407,7 +407,7 @@ export default function InventoryPage() {
                         <i className="fas fa-times text-xs" />
                       </button>
                     </div>
-                    <div className="p-5 space-y-4">
+                    <div className="p-5 space-y-4 overflow-y-auto flex-1 min-h-0">
                       <div className="flex items-center gap-3 p-3 rounded-xl border"
                         style={{ backgroundColor: rar.color + '0d', borderColor: rar.color + '33',
                           borderTopColor: rar.color, borderTopWidth: '3px',
@@ -435,7 +435,7 @@ export default function InventoryPage() {
                         </div>
                       )}
                     </div>
-                    <div className="px-5 py-3.5 border-t border-border bg-surface-hover/60 flex items-center justify-end gap-2">
+                    <div className="px-5 py-3.5 border-t border-border bg-surface-hover/60 flex items-center justify-end gap-2 flex-shrink-0">
                       <button onClick={() => setRedeemModal(null)}
                         className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-surface border border-border text-foreground shadow-sm hover:brightness-95 transition-all active:shadow-sm active:translate-y-[2px]">
                         <i className="fas fa-times text-[12px]" /> ยกเลิก
@@ -464,8 +464,8 @@ export default function InventoryPage() {
                 onMouseUp={e => { if (backdropRef.current && e.target === e.currentTarget && !redeemAllLoading) setRedeemAllModal(false); }}>
                 <motion.div initial={{ opacity: 0, scale: 0.95, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 8 }} transition={{ type: 'spring', stiffness: 400, damping: 26 }}
-                  className="bg-surface rounded-2xl shadow-sm border border-border/80 w-full max-w-sm overflow-hidden">
-                  <div className="relative px-6 py-4 border-b border-border bg-surface-hover/60 flex items-center">
+                  className="bg-surface rounded-2xl shadow-sm border border-border/80 w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden">
+                  <div className="relative px-6 py-4 border-b border-border bg-surface-hover/60 flex items-center flex-shrink-0">
                     <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
                       <i className="fas fa-gamepad text-green-600 text-xs" />
                     </div>
@@ -478,7 +478,7 @@ export default function InventoryPage() {
                       <i className="fas fa-times text-xs" />
                     </button>
                   </div>
-                  <div className="p-5 space-y-4">
+                  <div className="p-5 space-y-4 overflow-y-auto flex-1 min-h-0">
                     <div>
                       <label className="block text-xs font-bold text-foreground-subtle mb-2">เซิร์ฟเวอร์</label>
                       <ServerSelect servers={servers} value={redeemAllServer} onChange={setRedeemAllServer} />
@@ -493,7 +493,7 @@ export default function InventoryPage() {
                       </div>
                     )}
                   </div>
-                  <div className="px-5 py-3.5 border-t border-border bg-surface-hover/60 flex items-center justify-end gap-2">
+                  <div className="px-5 py-3.5 border-t border-border bg-surface-hover/60 flex items-center justify-end gap-2 flex-shrink-0">
                     <button onClick={() => setRedeemAllModal(false)} disabled={redeemAllLoading}
                       className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-surface border border-border text-foreground shadow-sm hover:brightness-95 transition-all active:shadow-sm active:translate-y-[2px] disabled:opacity-50">
                       <i className="fas fa-times text-[12px]" /> ยกเลิก

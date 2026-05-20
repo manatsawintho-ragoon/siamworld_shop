@@ -31,17 +31,17 @@ export default function DownloadPage() {
       <div className="max-w-4xl mx-auto pb-20">
         
         {/* ── Compact Header ── */}
-        <div className="mb-8 border-b-2 border-border/50 pb-6 flex items-center justify-between">
-          <div className="space-y-1">
+        <div className="mb-8 border-b-2 border-border/50 pb-6 flex items-center justify-between gap-3 flex-wrap">
+          <div className="space-y-1 min-w-0">
             <h1 className="text-2xl font-black text-foreground tracking-tight flex items-center gap-3">
-              <div className="w-1.5 h-6 bg-primary rounded-full" />
+              <div className="w-1.5 h-6 bg-primary rounded-full flex-shrink-0" />
               DOWNLOADS
             </h1>
             <p className="text-xs font-medium text-foreground-subtle uppercase tracking-wider">
               ทรัพยากรที่จำเป็นสำหรับเซิร์ฟเวอร์
             </p>
           </div>
-          <div className="px-3 py-1 bg-primary/10 rounded-full border border-primary/20 text-[10px] font-bold text-primary">
+          <div className="px-3 py-1 bg-primary/10 rounded-full border border-primary/20 text-[10px] font-bold text-primary flex-shrink-0">
             {downloads.length} FILES AVAILABLE
           </div>
         </div>

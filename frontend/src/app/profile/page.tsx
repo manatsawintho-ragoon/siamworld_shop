@@ -349,7 +349,7 @@ export default function ProfilePage() {
 
               {/* Pagination */}
               {pagination.totalPages > 1 && (
-                <div className="px-5 py-4 border-t border-border flex items-center justify-between">
+                <div className="px-5 py-4 border-t border-border flex items-center justify-between gap-3 flex-wrap">
                   <p className="text-[11px] text-foreground-subtle">
                     หน้า {pagination.page} จาก {pagination.totalPages}
                   </p>

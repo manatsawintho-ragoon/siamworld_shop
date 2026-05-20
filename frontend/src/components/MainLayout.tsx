@@ -159,11 +159,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     <div className="flex flex-col min-h-screen frontend-page" style={{ backgroundColor: 'rgb(var(--color-background))' }}>
       <Navbar />
 
-      <div className="flex-1 max-w-[1300px] mx-auto w-full px-4 sm:px-6 py-6 flex flex-col lg:flex-row gap-6">
+      <div className="flex-1 max-w-[1300px] mx-auto w-full px-4 sm:px-6 pt-6 pb-24 md:pb-6 flex flex-col lg:flex-row gap-6">
 
         {/* ── Sidebar ── */}
-        <aside className="w-full lg:w-[280px] flex-shrink-0 order-1">
-          <div className="sticky top-4 space-y-5">
+        <aside className="w-full lg:w-[280px] flex-shrink-0 order-last lg:order-first">
+          <div className="lg:sticky lg:top-4 space-y-5">
 
             {/* ── Member Card ── */}
             <div className={CARD}>
@@ -386,7 +386,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 min-w-0 order-2">
+        <main className="flex-1 min-w-0 order-first lg:order-last">
           <PageTransition>
             {children}
           </PageTransition>
@@ -398,19 +398,19 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
       {/* ── Floating Social Icons ───────────────────────────────── */}
       {(discordUrl || facebookUrl) && (
-        <div className="fixed bottom-6 right-5 z-50 flex flex-col gap-3">
+        <div className="fixed bottom-20 md:bottom-6 right-3 md:right-5 z-40 flex flex-col gap-2 md:gap-3">
           {discordUrl && (
             <a href={discordUrl} target="_blank" rel="noopener noreferrer"
-              className="w-16 h-16 rounded-full bg-[#5865F2] flex items-center justify-center shadow-[0_5px_0_#3c45a5] hover:shadow-[0_2px_0_#3c45a5] hover:translate-y-[3px] active:shadow-none active:translate-y-[5px] transition-all"
+              className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-[#5865F2] flex items-center justify-center shadow-[0_4px_0_#3c45a5] md:shadow-[0_5px_0_#3c45a5] hover:shadow-[0_2px_0_#3c45a5] hover:translate-y-[3px] active:shadow-none active:translate-y-[5px] transition-all"
               title="Discord">
-              <i className="fab fa-discord text-white text-2xl" />
+              <i className="fab fa-discord text-white text-xl md:text-2xl" />
             </a>
           )}
           {facebookUrl && (
             <a href={facebookUrl} target="_blank" rel="noopener noreferrer"
-              className="w-16 h-16 rounded-full bg-[#1877F2] flex items-center justify-center shadow-[0_5px_0_#1056b3] hover:shadow-[0_2px_0_#1056b3] hover:translate-y-[3px] active:shadow-none active:translate-y-[5px] transition-all"
+              className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-[#1877F2] flex items-center justify-center shadow-[0_4px_0_#1056b3] md:shadow-[0_5px_0_#1056b3] hover:shadow-[0_2px_0_#1056b3] hover:translate-y-[3px] active:shadow-none active:translate-y-[5px] transition-all"
               title="Facebook">
-              <i className="fab fa-facebook text-white text-2xl" />
+              <i className="fab fa-facebook text-white text-xl md:text-2xl" />
             </a>
           )}
         </div>

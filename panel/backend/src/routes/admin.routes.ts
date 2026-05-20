@@ -326,11 +326,14 @@ router.get('/users', asyncRoute(async (req, res) => {
   }
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
+  // LIMIT/OFFSET are inlined because mysql2's server-side prepared statements (execute)
+  // reject integer parameters for those positions on MySQL 8.x. Values are integers
+  // produced by safePagination(), so interpolation is injection-safe here.
   const [rows] = await pool.execute<RowDataPacket[]>(
     `SELECT id, email, display_name, phone, wallet_balance, role, avatar_url, created_at
      FROM panel_users ${whereSql}
-     ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-    [...params, limit, offset]
+     ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`,
+    params
   );
   const [count] = await pool.execute<RowDataPacket[]>(
     `SELECT COUNT(*) as total FROM panel_users ${whereSql}`,
@@ -362,8 +365,8 @@ router.get('/users/:id/wallet/history', asyncRoute(async (req, res) => {
   const [rows] = await pool.execute<RowDataPacket[]>(
     `SELECT id, type, amount, balance_after, description, reference_id, created_at
      FROM wallet_transactions WHERE user_id = ?
-     ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-    [userId, limit, offset]
+     ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`,
+    [userId]
   );
   const [count] = await pool.execute<RowDataPacket[]>(
     'SELECT COUNT(*) as total FROM wallet_transactions WHERE user_id = ?', [userId]

@@ -298,7 +298,8 @@ class ShopService {
 
   async createProduct(data: {
     name: string; description?: string; price: number; original_price?: number;
-    image?: string; command: string; category_id?: number; featured?: boolean;
+    image?: string; image2?: string; image3?: string;
+    command: string; category_id?: number; featured?: boolean;
     server_ids?: number[];
     stock_limit?: number | null;
     sale_start?: string | null;
@@ -308,10 +309,11 @@ class ShopService {
     try {
       await conn.beginTransaction();
       const [result] = await conn.execute(
-        'INSERT INTO products (name, description, price, original_price, image, command, category_id, featured, stock_limit, sale_start, sale_end) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+        'INSERT INTO products (name, description, price, original_price, image, image2, image3, command, category_id, featured, stock_limit, sale_start, sale_end) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [
           data.name, data.description || null, data.price, data.original_price || null,
-          data.image || null, data.command, data.category_id || null, data.featured ? 1 : 0,
+          data.image || null, data.image2 || null, data.image3 || null,
+          data.command, data.category_id || null, data.featured ? 1 : 0,
           data.stock_limit ?? null, data.sale_start ?? null, data.sale_end ?? null,
         ]
       );
@@ -359,7 +361,7 @@ class ShopService {
     const fields: string[] = [];
     const values: any[] = [];
 
-    for (const key of ['name', 'description', 'price', 'original_price', 'image', 'command', 'category_id', 'sort_order', 'stock_limit']) {
+    for (const key of ['name', 'description', 'price', 'original_price', 'image', 'image2', 'image3', 'command', 'category_id', 'sort_order', 'stock_limit']) {
       if (data[key] !== undefined) { fields.push(`${key} = ?`); values.push(data[key]); }
     }
     if (data.featured !== undefined) { fields.push('featured = ?'); values.push(data.featured ? 1 : 0); }

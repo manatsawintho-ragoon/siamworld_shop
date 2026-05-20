@@ -472,10 +472,10 @@ export default function AdminLootBoxes() {
   };
 
   return (
-    <div className="flex flex-col gap-4" style={{ height: 'calc(100vh - 136px)' }}>
+    <div className="flex flex-col gap-4 lg:h-[calc(100vh-136px)]">
 
       {/* ── Page Header ── */}
-      <div className="flex items-center justify-between flex-shrink-0">
+      <div className="flex items-center justify-between gap-3 flex-wrap flex-shrink-0">
         <div>
           <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <i className="fas fa-box-open text-[#f97316]" /> จัดการกล่องสุ่ม
@@ -503,10 +503,10 @@ export default function AdminLootBoxes() {
       </div>
 
       {/* ── Two-pane ── */}
-      <div className="flex gap-4 flex-1 min-h-0">
+      <div className="flex flex-col lg:flex-row gap-4 lg:flex-1 lg:min-h-0">
 
         {/* ── Left: Box List ─────────────────────────────────────────── */}
-        <div className="w-[300px] flex-shrink-0 flex flex-col rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 bg-white overflow-hidden">
+        <div className="w-full lg:w-[300px] flex-shrink-0 flex flex-col rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 bg-white overflow-hidden lg:max-h-full max-h-[60vh]">
 
           {/* Sidebar header */}
           <div className="px-4 py-3.5 border-b border-gray-100 bg-gray-50/60 flex-shrink-0">
@@ -1137,66 +1137,65 @@ function BoxModal({ box, categories, saving, error, onChange, onSave, onClose, o
       onMouseDown={e => { bdRef.current = e.target === e.currentTarget; }}
       onMouseUp={e => { if (bdRef.current && e.target === e.currentTarget && !saving) onClose(); }}
     >
-      <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_8px_40px_rgba(0,0,0,0.2)] w-full max-w-3xl overflow-hidden" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_8px_40px_rgba(0,0,0,0.2)] w-full max-w-4xl max-h-[calc(100vh-3rem)] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
 
         {/* Header */}
-        <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center">
-          <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center flex-shrink-0">
-            <i className="fas fa-box-open text-orange-500 text-sm" />
+        <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50/60 flex items-center flex-shrink-0">
+          <div className="w-7 h-7 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center flex-shrink-0">
+            <i className="fas fa-box-open text-orange-500 text-xs" />
           </div>
           <div className="flex-1 text-center">
-            <h3 className="font-bold text-gray-900">{box.id ? 'แก้ไขกล่องสุ่ม' : 'สร้างกล่องสุ่มใหม่'}</h3>
-            <p className="text-xs text-gray-400 mt-0.5">{box.id ? 'แก้ไขรายละเอียดและราคา' : 'ตั้งค่าราคาและรายละเอียดกล่อง'}</p>
+            <h3 className="font-bold text-gray-900 text-sm">{box.id ? 'แก้ไขกล่องสุ่ม' : 'สร้างกล่องสุ่มใหม่'}</h3>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg bg-red-500 border border-red-600 flex items-center justify-center text-white shadow-[0_4px_0_#b91c1c] hover:brightness-110 transition-all flex-shrink-0">
-            <i className="fas fa-times text-xs" />
+          <button onClick={onClose} className="w-7 h-7 rounded-lg bg-red-500 border border-red-600 flex items-center justify-center text-white shadow-[0_3px_0_#b91c1c] hover:brightness-110 transition-all flex-shrink-0">
+            <i className="fas fa-times text-[10px]" />
           </button>
         </div>
 
         {/* Body — 2-column: form left, sale settings right */}
-        <div className="p-5">
+        <div className="p-4 flex-1 min-h-0 overflow-y-auto">
           {error && (
-            <div className="text-red-600 text-xs bg-red-50 px-3 py-2.5 rounded-lg border border-red-100 flex items-center gap-1.5 mb-4">
+            <div className="text-red-600 text-[11px] bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 flex items-center gap-1.5 mb-3">
               <i className="fas fa-exclamation-circle" /> {error}
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* ── Left: form fields ── */}
-            <div className="space-y-4">
+            <div className="space-y-2.5">
 
               {/* Name */}
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1.5">ชื่อกล่อง <span className="text-red-400">*</span></label>
+                <label className="block text-[11px] font-bold text-gray-500 mb-1">ชื่อกล่อง <span className="text-red-400">*</span></label>
                 <div className="relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300"><i className="fas fa-box text-sm" /></div>
+                  <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-300"><i className="fas fa-box text-xs" /></div>
                   <input value={box.name || ''} onChange={e => onChange({ ...box, name: e.target.value })}
-                    className="w-full pl-9 pr-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 transition-colors"
+                    className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 transition-colors"
                     placeholder="ชื่อกล่อง..." />
                 </div>
               </div>
 
               {/* Price row */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5">ราคา (฿) <span className="text-red-400">*</span></label>
+                  <label className="block text-[11px] font-bold text-gray-500 mb-1">ราคา (฿) <span className="text-red-400">*</span></label>
                   <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300"><i className="fas fa-coins text-sm" /></div>
+                    <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-300"><i className="fas fa-coins text-xs" /></div>
                     <input type="number" value={box.price ?? ''} onChange={e => onChange({ ...box, price: Number(e.target.value) })}
-                      className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 transition-colors" placeholder="0" />
+                      className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 transition-colors" placeholder="0" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5">ราคาเดิม (฿) <span className="text-[10px] font-normal text-gray-400">(ไม่บังคับ)</span></label>
+                  <label className="block text-[11px] font-bold text-gray-500 mb-1">ราคาเดิม (฿)</label>
                   <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300"><i className="fas fa-tag text-sm" /></div>
+                    <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-300"><i className="fas fa-tag text-xs" /></div>
                     <input type="number" value={box.original_price ?? ''}
                       onChange={e => onChange({ ...box, original_price: e.target.value ? Number(e.target.value) : null })}
-                      className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-orange-200 bg-orange-50/40 text-sm focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20 transition-colors"
-                      placeholder="ราคาก่อนลด" />
+                      className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-orange-200 bg-orange-50/40 text-sm focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20 transition-colors"
+                      placeholder="ก่อนลด" />
                   </div>
                   {box.original_price && Number(box.original_price) > Number(box.price) && (
-                    <p className="text-[10px] text-green-600 font-bold mt-1 flex items-center gap-1">
+                    <p className="text-[9px] text-green-600 font-bold mt-0.5 flex items-center gap-1">
                       <i className="fas fa-check-circle" /> ลด {Math.round((1 - Number(box.price) / Number(box.original_price)) * 100)}%
                     </p>
                   )}
@@ -1205,40 +1204,36 @@ function BoxModal({ box, categories, saving, error, onChange, onSave, onClose, o
 
               {/* Image URL */}
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1.5">URL รูปภาพ</label>
+                <label className="block text-[11px] font-bold text-gray-500 mb-1">URL รูปภาพ <span className="text-[10px] font-normal text-gray-400">· 512×512</span></label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300"><i className="fas fa-image text-sm" /></div>
+                    <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-300"><i className="fas fa-image text-xs" /></div>
                     <input value={box.image || ''} onChange={e => onChange({ ...box, image: e.target.value })}
-                      className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 transition-colors" placeholder="https://..." />
+                      className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 transition-colors" placeholder="https://..." />
                   </div>
                   {box.image && (
-                    <div className="w-10 h-10 rounded-lg border border-gray-200 flex-shrink-0 bg-gray-50 overflow-hidden">
+                    <div className="w-8 h-8 rounded-md border border-gray-200 flex-shrink-0 bg-gray-50 overflow-hidden">
                       <img src={box.image} alt="" className="w-full h-full object-contain p-1" onError={e => (e.currentTarget.style.display = 'none')} />
                     </div>
                   )}
                 </div>
-                <p className="text-[10px] text-blue-500 mt-1 flex items-start gap-1">
-                  <i className="fas fa-circle-info mt-0.5 flex-shrink-0" />
-                  <span>แนะนำ <strong>512×512 px</strong> (1:1) — PNG โปร่งใสได้</span>
-                </p>
               </div>
 
               {/* Category */}
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1.5">หมวดหมู่</label>
-                <div className="flex flex-wrap gap-1.5">
+                <label className="block text-[11px] font-bold text-gray-500 mb-1">หมวดหมู่</label>
+                <div className="flex flex-wrap gap-1">
                   <button type="button" onClick={() => onChange({ ...box, category_id: null })}
-                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-2 text-[11px] font-bold transition-all ${!box.category_id ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}>
-                    <i className="fas fa-inbox text-[9px]" /> ไม่มีหมวดหมู่
+                    className={`flex items-center gap-1 px-2 py-1 rounded-md border text-[10px] font-bold transition-all ${!box.category_id ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}>
+                    <i className="fas fa-inbox text-[8px]" /> ไม่มี
                   </button>
                   {categories.map(cat => (
                     <button key={cat.id} type="button" onClick={() => onChange({ ...box, category_id: cat.id })}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-2 text-[11px] font-bold transition-all text-white"
+                      className="flex items-center gap-1 px-2 py-1 rounded-md border text-[10px] font-bold transition-all text-white"
                       style={box.category_id === cat.id
                         ? { backgroundColor: cat.color, borderColor: cat.color, boxShadow: `0 2px 0 ${cat.color}88` }
                         : { backgroundColor: cat.color + '22', borderColor: cat.color + '66', color: cat.color }}>
-                      <i className="fas fa-layer-group text-[9px]" /> {cat.name}
+                      <i className="fas fa-layer-group text-[8px]" /> {cat.name}
                     </button>
                   ))}
                 </div>
@@ -1246,10 +1241,10 @@ function BoxModal({ box, categories, saving, error, onChange, onSave, onClose, o
 
               {/* Description */}
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1.5">คำอธิบาย</label>
+                <label className="block text-[11px] font-bold text-gray-500 mb-1">คำอธิบาย</label>
                 <textarea value={box.description || ''} onChange={e => onChange({ ...box, description: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 resize-none transition-colors"
-                  rows={3} placeholder="คำอธิบายสั้นๆ..." />
+                  className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 resize-none transition-colors"
+                  rows={2} placeholder="คำอธิบายสั้นๆ..." />
               </div>
 
             </div>
@@ -1257,16 +1252,13 @@ function BoxModal({ box, categories, saving, error, onChange, onSave, onClose, o
             {/* ── Right: ตั้งค่าการขาย ── */}
             <div className="flex flex-col">
               <div className="bg-white rounded-xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden flex flex-col flex-1">
-                <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/60 flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
-                    <i className="fas fa-bolt text-amber-500 text-xs" />
+                <div className="px-3 py-2 border-b border-gray-100 bg-gray-50/60 flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-md bg-amber-50 flex items-center justify-center flex-shrink-0">
+                    <i className="fas fa-bolt text-amber-500 text-[10px]" />
                   </div>
-                  <div>
-                    <p className="font-bold text-gray-900 text-sm">ตั้งค่าการขาย</p>
-                    <p className="text-[10px] text-gray-400">จำกัดสต็อค · กำหนดเวลาขาย</p>
-                  </div>
+                  <p className="font-bold text-gray-900 text-xs">ตั้งค่าการขาย</p>
                 </div>
-                <div className="p-4 space-y-3 flex-1">
+                <div className="p-3 space-y-2 flex-1">
                   {releaseError && (
                     <div className="text-red-600 text-xs bg-red-50 px-3 py-2 rounded-lg border border-red-100 flex items-center gap-1.5">
                       <i className="fas fa-exclamation-circle" /> {releaseError}
@@ -1278,78 +1270,58 @@ function BoxModal({ box, categories, saving, error, onChange, onSave, onClose, o
                     const isPaused   = !!box.is_paused;
                     const isActive   = !isPaused && !!box.sale_end && new Date(box.sale_end).getTime() > Date.now();
                     const isUnlimited = !isPaused && !!box.sale_start && !box.sale_end;
-                    const isExpired  = !isPaused && !!box.sale_end && new Date(box.sale_end).getTime() <= Date.now();
                     const statusColor = isPaused ? 'bg-orange-50 border-orange-200' : isActive || isUnlimited ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200';
                     return (
-                      <div className={`rounded-lg border px-3 py-2.5 ${statusColor}`}>
+                      <div className={`rounded-lg border px-2.5 py-1.5 ${statusColor}`}>
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-1.5 min-w-0">
                             <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isPaused ? 'bg-orange-400' : isActive || isUnlimited ? 'bg-amber-400 animate-pulse' : 'bg-gray-400'}`} />
-                            <span className={`text-[11px] font-black ${isPaused ? 'text-orange-700' : isActive || isUnlimited ? 'text-amber-700' : 'text-gray-500'}`}>
-                              {isPaused ? 'หยุดจำหน่ายชั่วคราว' : isActive ? 'กำลังขายอยู่' : isUnlimited ? 'ขายปกติ ไม่จำกัดเวลา' : 'หมดเวลาแล้ว'}
+                            <span className={`text-[10px] font-black ${isPaused ? 'text-orange-700' : isActive || isUnlimited ? 'text-amber-700' : 'text-gray-500'}`}>
+                              {isPaused ? 'หยุดชั่วคราว' : isActive ? 'กำลังขาย' : isUnlimited ? 'ขายปกติ ไม่จำกัดเวลา' : 'หมดเวลาแล้ว'}
                             </span>
                           </div>
-                          {/* Action buttons */}
                           <div className="flex items-center gap-1 flex-shrink-0">
-                            {/* Pause button (when active/unlimited) */}
                             {(isActive || isUnlimited) && (
                               <button type="button" onClick={handlePause} disabled={stopping || stoppingNow}
-                                className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-orange-500 text-white shadow-[0_2px_0_#c2410c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50">
-                                {stopping ? <i className="fas fa-spinner fa-spin text-[9px]" /> : <i className="fas fa-pause text-[9px]" />}
-                                หยุดชั่วคราว
+                                className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-orange-500 text-white shadow-[0_2px_0_#c2410c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50">
+                                {stopping ? <i className="fas fa-spinner fa-spin text-[8px]" /> : <i className="fas fa-pause text-[8px]" />}
+                                หยุด
                               </button>
                             )}
-                            {/* Stop sale now (when active/unlimited) */}
                             {(isActive || isUnlimited) && (
                               <button type="button" onClick={handleStop} disabled={stopping || stoppingNow}
-                                className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-red-500 text-white shadow-[0_2px_0_#b91c1c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50">
-                                {stoppingNow ? <i className="fas fa-spinner fa-spin text-[9px]" /> : <i className="fas fa-stop text-[9px]" />}
+                                className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-red-500 text-white shadow-[0_2px_0_#b91c1c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50">
+                                {stoppingNow ? <i className="fas fa-spinner fa-spin text-[8px]" /> : <i className="fas fa-stop text-[8px]" />}
                                 หยุดขาย
                               </button>
                             )}
-                            {/* Resume button (when paused) */}
                             {isPaused && (
                               <button type="button" onClick={handleResume} disabled={stopping || stoppingNow}
-                                className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-green-600 text-white shadow-[0_2px_0_#15803d] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50">
-                                {stopping ? <i className="fas fa-spinner fa-spin text-[9px]" /> : <i className="fas fa-play text-[9px]" />}
-                                จำหน่ายต่อ
+                                className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-green-600 text-white shadow-[0_2px_0_#15803d] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50">
+                                {stopping ? <i className="fas fa-spinner fa-spin text-[8px]" /> : <i className="fas fa-play text-[8px]" />}
+                                ต่อ
                               </button>
                             )}
-                            {/* Stop sale (when paused) */}
                             {isPaused && (
                               <button type="button" onClick={handleStop} disabled={stopping || stoppingNow}
-                                className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md bg-red-500 text-white shadow-[0_2px_0_#b91c1c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50">
-                                {stoppingNow ? <i className="fas fa-spinner fa-spin text-[9px]" /> : <i className="fas fa-stop text-[9px]" />}
+                                className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-red-500 text-white shadow-[0_2px_0_#b91c1c] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all disabled:opacity-50">
+                                {stoppingNow ? <i className="fas fa-spinner fa-spin text-[8px]" /> : <i className="fas fa-stop text-[8px]" />}
                                 หยุดขาย
                               </button>
                             )}
                           </div>
                         </div>
-                        {/* End time / remaining info */}
                         {box.sale_end && !isPaused && (
-                          <p className="text-[10px] text-gray-500 mt-1">
+                          <p className="text-[9px] text-gray-500 mt-0.5">
                             สิ้นสุด {new Date(box.sale_end).toLocaleString('th-TH', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                           </p>
                         )}
-                        {isPaused && box.sale_remaining_seconds != null && (
-                          <p className="text-[10px] text-orange-500 mt-1">
-                            <i className="fas fa-clock text-[9px] mr-1" />
-                            เวลาที่เหลืออยู่: {Math.floor(box.sale_remaining_seconds / 3600) > 0
-                              ? `${Math.floor(box.sale_remaining_seconds / 3600)}ช ${Math.floor((box.sale_remaining_seconds % 3600) / 60)}น`
-                              : `${Math.floor(box.sale_remaining_seconds / 60)}น ${box.sale_remaining_seconds % 60}ว`}
-                          </p>
-                        )}
-                        {isPaused && box.sale_remaining_seconds == null && (
-                          <p className="text-[10px] text-orange-400 mt-1"><i className="fas fa-infinity text-[9px] mr-1" />ไม่จำกัดเวลา (หยุดชั่วคราว)</p>
-                        )}
-                        {/* Stock bar */}
                         {box.stock_limit != null && (
-                          <div className="mt-1.5">
-                            <div className="flex justify-between text-[10px] mb-0.5">
-                              <span className="text-gray-500">ขายแล้ว</span>
-                              <span className="font-bold text-gray-700">{box.sold_count ?? 0} / {box.stock_limit}</span>
+                          <div className="mt-1">
+                            <div className="flex justify-between text-[9px] mb-0.5">
+                              <span className="text-gray-500">ขาย {box.sold_count ?? 0}/{box.stock_limit}</span>
                             </div>
-                            <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                            <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
                               <div className={`h-full rounded-full transition-all ${isPaused ? 'bg-orange-400' : 'bg-amber-400'}`}
                                 style={{ width: `${Math.min(100, Math.round(((box.sold_count ?? 0) / box.stock_limit) * 100))}%` }} />
                             </div>
@@ -1360,35 +1332,33 @@ function BoxModal({ box, categories, saving, error, onChange, onSave, onClose, o
                   })()}
 
                   {/* Stock toggle */}
-                  <div className="rounded-xl border border-gray-200 overflow-hidden">
-                    <div className="flex items-center gap-3 px-3 py-2.5 bg-gray-50/40">
-                      <div className="w-6 h-6 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                        <i className="fas fa-cubes text-blue-500 text-[10px]" />
-                      </div>
-                      <span className="flex-1 text-xs font-bold text-gray-700">จำกัดสต็อค</span>
+                  <div className="rounded-lg border border-gray-200 overflow-hidden">
+                    <div className="flex items-center gap-2 px-2.5 py-1.5 bg-gray-50/40">
+                      <i className="fas fa-cubes text-blue-500 text-[10px]" />
+                      <span className="flex-1 text-[11px] font-bold text-gray-700">จำกัดสต็อค</span>
                       <button type="button" onClick={() => setLimitStock(v => !v)}
-                        className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors duration-200 ${limitStock ? 'bg-[#16a34a]' : 'bg-gray-300'}`}>
-                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${limitStock ? 'translate-x-5' : 'translate-x-0'}`} />
+                        className={`relative flex-shrink-0 w-9 h-5 rounded-full transition-colors duration-200 ${limitStock ? 'bg-[#16a34a]' : 'bg-gray-300'}`}>
+                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${limitStock ? 'translate-x-4' : 'translate-x-0'}`} />
                       </button>
                     </div>
                     {limitStock && (
-                      <div className="px-3 pb-3 pt-2 bg-white border-t border-gray-100 space-y-2">
+                      <div className="px-2.5 pb-2 pt-1.5 bg-white border-t border-gray-100 space-y-1.5">
                         <div className="relative">
-                          <i className="fas fa-hashtag absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-300 text-[10px]" />
+                          <i className="fas fa-hashtag absolute left-2 top-1/2 -translate-y-1/2 text-gray-300 text-[9px]" />
                           <input type="number" min={1}
                             value={box.stock_limit ?? ''}
                             onChange={e => onChange({ ...box, stock_limit: e.target.value ? Number(e.target.value) : null })}
                             placeholder="จำนวนสต็อค (ชิ้น)"
-                            className="w-full pl-7 pr-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                            className="w-full pl-6 pr-2.5 py-1.5 rounded-lg border border-gray-200 text-xs bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
                           />
                         </div>
                         {box.id && box.stock_limit != null && (box.sold_count ?? 0) >= 0 && (
                           <div>
-                            <div className="flex justify-between text-[10px] mb-1">
-                              <span className="text-gray-500">ขายแล้ว {box.sold_count ?? 0} ชิ้น</span>
-                              <span className="font-bold text-gray-700">เหลือ {Math.max(0, box.stock_limit - (box.sold_count ?? 0))} / {box.stock_limit}</span>
+                            <div className="flex justify-between text-[9px] mb-0.5">
+                              <span className="text-gray-500">ขาย {box.sold_count ?? 0}</span>
+                              <span className="font-bold text-gray-700">เหลือ {Math.max(0, box.stock_limit - (box.sold_count ?? 0))}/{box.stock_limit}</span>
                             </div>
-                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
                               <div className="h-full rounded-full bg-blue-400 transition-all"
                                 style={{ width: `${Math.min(100, Math.round(((box.sold_count ?? 0) / box.stock_limit) * 100))}%` }} />
                             </div>
@@ -1399,40 +1369,37 @@ function BoxModal({ box, categories, saving, error, onChange, onSave, onClose, o
                   </div>
 
                   {/* Time limit toggle */}
-                  <div className="rounded-xl border border-gray-200 overflow-hidden">
-                    <div className="flex items-center gap-3 px-3 py-2.5 bg-gray-50/40">
-                      <div className="w-6 h-6 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
-                        <i className="fas fa-clock text-amber-500 text-[10px]" />
-                      </div>
-                      <span className="flex-1 text-xs font-bold text-gray-700">จำกัดเวลาขาย</span>
+                  <div className="rounded-lg border border-gray-200 overflow-hidden">
+                    <div className="flex items-center gap-2 px-2.5 py-1.5 bg-gray-50/40">
+                      <i className="fas fa-clock text-amber-500 text-[10px]" />
+                      <span className="flex-1 text-[11px] font-bold text-gray-700">จำกัดเวลาขาย</span>
                       <button type="button" onClick={() => setLimitTime(v => !v)}
-                        className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors duration-200 ${limitTime ? 'bg-[#16a34a]' : 'bg-gray-300'}`}>
-                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${limitTime ? 'translate-x-5' : 'translate-x-0'}`} />
+                        className={`relative flex-shrink-0 w-9 h-5 rounded-full transition-colors duration-200 ${limitTime ? 'bg-[#16a34a]' : 'bg-gray-300'}`}>
+                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${limitTime ? 'translate-x-4' : 'translate-x-0'}`} />
                       </button>
                     </div>
                     {limitTime ? (
-                      <div className="px-3 pb-3 pt-2 bg-white border-t border-gray-100 space-y-2">
-                        {/* Mode tabs: duration vs specific datetime */}
-                        <div className="flex p-0.5 bg-gray-100 rounded-lg gap-0.5">
+                      <div className="px-2.5 pb-2 pt-1.5 bg-white border-t border-gray-100 space-y-1.5">
+                        <div className="flex p-0.5 bg-gray-100 rounded-md gap-0.5">
                           <button type="button" onClick={() => setTimeMode('duration')}
-                            className={`flex-1 py-1 text-[11px] font-bold rounded-md transition-all ${timeMode === 'duration' ? 'bg-white shadow text-gray-800' : 'text-gray-400 hover:text-gray-600'}`}>
-                            <i className="fas fa-hourglass-half text-[9px] mr-1" />ระยะเวลา
+                            className={`flex-1 py-0.5 text-[10px] font-bold rounded transition-all ${timeMode === 'duration' ? 'bg-white shadow text-gray-800' : 'text-gray-400 hover:text-gray-600'}`}>
+                            <i className="fas fa-hourglass-half text-[8px] mr-1" />ระยะเวลา
                           </button>
                           <button type="button" onClick={() => setTimeMode('datetime')}
-                            className={`flex-1 py-1 text-[11px] font-bold rounded-md transition-all ${timeMode === 'datetime' ? 'bg-white shadow text-gray-800' : 'text-gray-400 hover:text-gray-600'}`}>
-                            <i className="fas fa-calendar-alt text-[9px] mr-1" />วันสิ้นสุด
+                            className={`flex-1 py-0.5 text-[10px] font-bold rounded transition-all ${timeMode === 'datetime' ? 'bg-white shadow text-gray-800' : 'text-gray-400 hover:text-gray-600'}`}>
+                            <i className="fas fa-calendar-alt text-[8px] mr-1" />วันสิ้นสุด
                           </button>
                         </div>
                         {timeMode === 'duration' ? (
-                          <div className="flex gap-2">
+                          <div className="flex gap-1.5">
                             <input type="number" min={1} value={durValue}
                               onChange={e => setDurValue(Math.max(1, Number(e.target.value)))}
-                              className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                              className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
                             />
                             <select value={durUnit} onChange={e => setDurUnit(e.target.value as 'minutes' | 'hours' | 'days')}
-                              className="flex-shrink-0 px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20">
+                              className="flex-shrink-0 px-1.5 py-1.5 rounded-lg border border-gray-200 text-xs bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20">
                               <option value="minutes">นาที</option>
-                              <option value="hours">ชั่วโมง</option>
+                              <option value="hours">ชม</option>
                               <option value="days">วัน</option>
                             </select>
                           </div>
@@ -1441,46 +1408,37 @@ function BoxModal({ box, categories, saving, error, onChange, onSave, onClose, o
                             value={endDatetime}
                             min={new Date().toISOString().slice(0, 16)}
                             onChange={e => setEndDatetime(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
                           />
                         )}
-                        <p className="text-[10px] text-amber-600 flex items-center gap-1.5">
-                          <i className="fas fa-calendar-check text-[9px]" />
+                        <p className="text-[9px] text-amber-600 flex items-center gap-1">
+                          <i className="fas fa-calendar-check text-[8px]" />
                           สิ้นสุด: {previewEndTime()}
                         </p>
                       </div>
                     ) : (
-                      <div className="px-3 pb-2.5 pt-1.5 bg-white border-t border-gray-100">
-                        <p className="text-[10px] text-gray-400 flex items-center gap-1">
-                          <i className="fas fa-infinity text-[9px]" /> ขายไม่จำกัดเวลา — จนกว่าจะกด "หยุดขาย"
+                      <div className="px-2.5 pb-1.5 pt-1 bg-white border-t border-gray-100">
+                        <p className="text-[9px] text-gray-400 flex items-center gap-1">
+                          <i className="fas fa-infinity text-[8px]" /> ขายไม่จำกัดเวลา
                         </p>
                       </div>
                     )}
                   </div>
 
-                  {/* LIMITED badge preview */}
-                  {(limitStock || limitTime) && (
-                    <div className="flex items-center gap-2 py-0.5">
-                      <span className="text-[10px] text-gray-500 font-bold">กล่องนี้จะแสดงเป็น:</span>
-                      <span className="inline-flex items-center gap-0.5 bg-violet-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-sm">
-                        <i className="fas fa-gem text-[7px]" /> LIMITED
-                      </span>
-                    </div>
-                  )}
                   {/* Release / re-release button */}
                   <button type="button" disabled={!box.id || releasing} onClick={handleRelease}
-                    className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 text-white text-[13px] font-bold rounded-lg transition-all active:translate-y-[2px] disabled:opacity-40 disabled:cursor-not-allowed ${
+                    className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-white text-xs font-bold rounded-lg transition-all active:translate-y-[2px] disabled:opacity-40 disabled:cursor-not-allowed ${
                       box.sale_start
-                        ? 'bg-amber-500 shadow-[0_4px_0_#b45309] hover:brightness-110 active:shadow-[0_1px_0_#b45309]'
-                        : 'bg-[#16a34a] shadow-[0_4px_0_#0d6b2e] hover:brightness-110 active:shadow-[0_1px_0_#0d6b2e]'
+                        ? 'bg-amber-500 shadow-[0_3px_0_#b45309] hover:brightness-110 active:shadow-[0_1px_0_#b45309]'
+                        : 'bg-[#16a34a] shadow-[0_3px_0_#0d6b2e] hover:brightness-110 active:shadow-[0_1px_0_#0d6b2e]'
                     }`}>
                     {releasing
-                      ? <><i className="fas fa-spinner fa-spin text-xs" /> กำลังดำเนินการ...</>
+                      ? <><i className="fas fa-spinner fa-spin text-[10px]" /> กำลังดำเนินการ...</>
                       : box.sale_start
-                      ? <><i className="fas fa-rotate-right text-xs" /> รีเซ็ตและปล่อยขายใหม่</>
-                      : <><i className="fas fa-rocket text-xs" /> ปล่อยขาย</>}
+                      ? <><i className="fas fa-rotate-right text-[10px]" /> รีเซ็ตและปล่อยขายใหม่</>
+                      : <><i className="fas fa-rocket text-[10px]" /> ปล่อยขาย</>}
                   </button>
-                  {!box.id && <p className="text-[10px] text-gray-400 text-center">บันทึกกล่องก่อนจึงจะปล่อยขายได้</p>}
+                  {!box.id && <p className="text-[9px] text-gray-400 text-center">บันทึกกล่องก่อนจึงจะปล่อยขายได้</p>}
                 </div>
               </div>
             </div>
@@ -1488,14 +1446,14 @@ function BoxModal({ box, categories, saving, error, onChange, onSave, onClose, o
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">
+        <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2 flex-shrink-0">
           <button onClick={onClose} disabled={saving}
-            className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-700 shadow-[0_4px_0_#d1d5db] hover:brightness-95 transition-all">
-            <i className="fas fa-times text-xs" /> ยกเลิก
+            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-white border border-gray-200 text-gray-700 shadow-[0_3px_0_#d1d5db] hover:brightness-95 transition-all">
+            <i className="fas fa-times text-[11px]" /> ยกเลิก
           </button>
           <button onClick={onSave} disabled={saving}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#1e2735] disabled:opacity-50 text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#38404d] hover:brightness-110 transition-all active:shadow-[0_1px_0_#38404d] active:translate-y-[2px]">
-            {saving ? <><i className="fas fa-spinner fa-spin text-xs" /> บันทึก...</> : <><i className="fas fa-save text-xs" /> บันทึก</>}
+            className="flex items-center gap-2 px-4 py-1.5 bg-[#1e2735] disabled:opacity-50 text-white text-xs font-bold rounded-lg shadow-[0_3px_0_#38404d] hover:brightness-110 transition-all active:shadow-[0_1px_0_#38404d] active:translate-y-[2px]">
+            {saving ? <><i className="fas fa-spinner fa-spin text-[11px]" /> บันทึก...</> : <><i className="fas fa-save text-[11px]" /> บันทึก</>}
           </button>
         </div>
       </div>
@@ -1728,75 +1686,73 @@ function ItemModal({ item, saving, error, totalWeight, originalWeight, onChange,
       onMouseDown={e => { bdRef.current = e.target === e.currentTarget; }}
       onMouseUp={e => { if (bdRef.current && e.target === e.currentTarget && !saving) onClose(); }}
     >
-      <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_8px_40px_rgba(0,0,0,0.2)] w-full max-w-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_8px_40px_rgba(0,0,0,0.2)] w-full max-w-3xl max-h-[calc(100vh-3rem)] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
 
         {/* Header */}
-        <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center flex-shrink-0">
-            <i className="fas fa-cube text-orange-500 text-sm" />
+        <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50/60 flex items-center gap-2 flex-shrink-0">
+          <div className="w-7 h-7 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center flex-shrink-0">
+            <i className="fas fa-cube text-orange-500 text-xs" />
           </div>
-          <div className="flex-1">
-            <h3 className="font-bold text-gray-900">{item.id ? 'แก้ไขไอเท็ม' : 'เพิ่มไอเท็มใหม่'}</h3>
-            <p className="text-xs text-gray-400 mt-0.5">กำหนด Rarity · น้ำหนัก · คำสั่ง RCON</p>
+          <div className="flex-1 text-center">
+            <h3 className="font-bold text-gray-900 text-sm">{item.id ? 'แก้ไขไอเท็ม' : 'เพิ่มไอเท็มใหม่'}</h3>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg bg-red-500 border border-red-600 flex items-center justify-center text-white shadow-[0_4px_0_#b91c1c] hover:brightness-110 transition-all flex-shrink-0">
-            <i className="fas fa-times text-xs" />
+          <button onClick={onClose} className="w-7 h-7 rounded-lg bg-red-500 border border-red-600 flex items-center justify-center text-white shadow-[0_3px_0_#b91c1c] hover:brightness-110 transition-all flex-shrink-0">
+            <i className="fas fa-times text-[10px]" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="px-6 py-5">
+        <div className="px-4 py-3 flex-1 min-h-0 overflow-y-auto">
           {error && (
-            <div className="text-red-600 text-xs bg-red-50 px-3 py-2.5 rounded-lg border border-red-100 flex items-center gap-1.5 mb-4">
+            <div className="text-red-600 text-[11px] bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 flex items-center gap-1.5 mb-3">
               <i className="fas fa-exclamation-circle" /> {error}
             </div>
           )}
 
           {/* Item name — full width */}
-          <div className="mb-5">
-            <label className="block text-xs font-bold text-gray-500 mb-1.5">ชื่อไอเท็ม <span className="text-red-400">*</span></label>
+          <div className="mb-3">
+            <label className="block text-[11px] font-bold text-gray-500 mb-1">ชื่อไอเท็ม <span className="text-red-400">*</span></label>
             <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300"><i className="fas fa-tag text-sm" /></div>
+              <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-300"><i className="fas fa-tag text-xs" /></div>
               <input value={item.name || ''} onChange={e => onChange({ ...item, name: e.target.value })}
-                className="w-full pl-9 pr-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 transition-colors"
+                className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 transition-colors"
                 placeholder="ชื่อไอเท็ม..." />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Left: Rarity picker */}
             <div>
-              <label className="block text-xs font-bold text-gray-500 mb-2">
+              <label className="block text-[11px] font-bold text-gray-500 mb-1.5">
                 Rarity
-                <span className="ml-1.5 font-normal text-gray-400">— กดเพื่อตั้งน้ำหนักอัตโนมัติ</span>
+                <span className="ml-1 font-normal text-gray-400 text-[10px]">— กดเพื่อตั้งน้ำหนักอัตโนมัติ</span>
               </label>
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 {RARITY_OPTIONS.map(rOpt => {
                   const cfg    = RARITY_CONFIG[rOpt];
                   const rOpt_w = RARITY_WEIGHTS[rOpt];
                   const isOn   = r === rOpt;
                   return (
                     <button key={rOpt} onClick={() => handleRarityClick(rOpt)}
-                      className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 text-xs font-semibold transition-all text-left hover:scale-[1.01]"
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-all text-left"
                       style={isOn
-                        ? { backgroundColor: cfg.color, borderColor: cfg.color, color: '#fff', boxShadow: `0 3px 0 ${cfg.color}88` }
+                        ? { backgroundColor: cfg.color, borderColor: cfg.color, color: '#fff', boxShadow: `0 2px 0 ${cfg.color}88` }
                         : { borderColor: '#e5e7eb', backgroundColor: '#f9fafb', color: '#6b7280' }
                       }>
-                      <span className="w-3 h-3 rounded-full flex-shrink-0 border-2"
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 border"
                         style={{ backgroundColor: isOn ? '#fff' : cfg.color, borderColor: isOn ? '#ffffff66' : cfg.color + '44' }} />
-                      <span className="flex-1 text-left">
-                        <span className="block font-bold text-[12px]">{cfg.label}</span>
-                        <span className="font-normal text-[10px]" style={{ opacity: isOn ? 0.8 : undefined, color: isOn ? undefined : '#9ca3af' }}>
+                      <span className="flex-1 text-left min-w-0">
+                        <span className="block font-bold text-[11px] truncate">{cfg.label}</span>
+                        <span className="font-normal text-[9px] truncate block" style={{ opacity: isOn ? 0.8 : undefined, color: isOn ? undefined : '#9ca3af' }}>
                           {rOpt_w.hint}
                         </span>
                       </span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg flex-shrink-0"
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded flex-shrink-0"
                         style={isOn
                           ? { backgroundColor: 'rgba(255,255,255,0.25)', color: '#fff' }
                           : { backgroundColor: cfg.color + '18', color: cfg.color }}>
                         W:{rOpt_w.default}
                       </span>
-                      {isOn && <i className="fas fa-check-circle text-[12px] flex-shrink-0" style={{ color: '#fff' }} />}
                     </button>
                   );
                 })}
@@ -1804,45 +1760,41 @@ function ItemModal({ item, saving, error, totalWeight, originalWeight, onChange,
             </div>
 
             {/* Right: Weight + Image + Desc + RCON */}
-            <div className="space-y-4">
+            <div className="space-y-2.5">
 
               {/* Weight */}
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1.5">น้ำหนัก (Weight) <span className="text-red-400">*</span></label>
+                <label className="block text-[11px] font-bold text-gray-500 mb-1">น้ำหนัก (Weight) <span className="text-red-400">*</span></label>
                 <div className="relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300"><i className="fas fa-weight-hanging text-sm" /></div>
+                  <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-300"><i className="fas fa-weight-hanging text-xs" /></div>
                   <input type="number" value={item.weight ?? ''} onChange={e => onChange({ ...item, weight: Number(e.target.value) })}
-                    className="w-full pl-9 pr-3 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 transition-all"
+                    className="w-full pl-8 pr-3 py-1.5 rounded-lg border text-sm focus:outline-none focus:ring-2 transition-all"
                     style={{ borderColor: rc.color + '88' }}
                     onFocus={e  => (e.target.style.boxShadow = `0 0 0 3px ${rc.color}22`)}
                     onBlur={e   => (e.target.style.boxShadow = 'none')}
                     placeholder={String(rw.default)} min={1} />
                 </div>
-                {/* Live probability indicator */}
-                <div className="mt-2 space-y-1.5">
+                <div className="mt-1 space-y-1">
                   {newWeight > 0 ? (
                     <>
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                        <span className="text-[9px] text-gray-400 flex items-center gap-1">
                           <i className="fas fa-chart-pie" style={{ color: pctColor }} />
-                          โอกาสในกล่องนี้
+                          โอกาส
                         </span>
-                        <span className="text-[12px] font-bold tabular-nums" style={{ color: pctColor }}>
+                        <span className="text-[11px] font-bold tabular-nums" style={{ color: pctColor }}>
                           {livePct.toFixed(2)}%
                         </span>
                       </div>
-                      <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
                         <div className="h-full rounded-full transition-all duration-300"
                           style={{ width: `${Math.min(livePct, 100)}%`, backgroundColor: pctColor }} />
                       </div>
-                      <p className="text-[10px] text-gray-400">
-                        แนะนำ {rc.label}: W:{rw.default} — {rw.hint}
-                      </p>
                     </>
                   ) : (
-                    <p className="text-[10px] flex items-center gap-1" style={{ color: rc.color }}>
+                    <p className="text-[9px] flex items-center gap-1" style={{ color: rc.color }}>
                       <i className="fas fa-info-circle" />
-                      แนะนำ {rc.label}: W:{rw.default} — {rw.hint}
+                      แนะนำ {rc.label}: W:{rw.default}
                     </p>
                   )}
                 </div>
@@ -1850,75 +1802,51 @@ function ItemModal({ item, saving, error, totalWeight, originalWeight, onChange,
 
               {/* Image */}
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1.5">URL รูปภาพ</label>
+                <label className="block text-[11px] font-bold text-gray-500 mb-1">URL รูปภาพ <span className="text-[10px] font-normal text-gray-400">· 128×128</span></label>
                 <div className="flex gap-2">
                   <input value={item.image || ''} onChange={e => onChange({ ...item, image: e.target.value })}
-                    className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 transition-colors"
+                    className="flex-1 px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 transition-colors"
                     placeholder="https://..." />
                   {item.image && (
-                    <div className="w-9 h-9 rounded-lg border border-gray-200 flex-shrink-0 bg-gray-50 overflow-hidden">
+                    <div className="w-7 h-7 rounded-md border border-gray-200 flex-shrink-0 bg-gray-50 overflow-hidden">
                       <img src={item.image} alt="" className="w-full h-full object-contain" onError={e => (e.currentTarget.style.display = 'none')} />
                     </div>
                   )}
                 </div>
-                <p className="text-[10px] text-blue-500 mt-1.5 flex items-start gap-1">
-                  <i className="fas fa-circle-info mt-0.5 flex-shrink-0" />
-                  <span>แนะนำขนาด <strong>128×128 px</strong> หรือ <strong>256×256 px</strong> (สัดส่วน 1:1) — แสดงในวงล้อขนาด 64×64 px และ popup ผล PNG โปร่งใสดีที่สุด</span>
-                </p>
               </div>
 
               {/* Description */}
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1.5">คำอธิบาย</label>
+                <label className="block text-[11px] font-bold text-gray-500 mb-1">คำอธิบาย</label>
                 <textarea value={item.description || ''} onChange={e => onChange({ ...item, description: e.target.value })}
-                  className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 resize-none transition-colors"
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 resize-none transition-colors"
                   rows={2} placeholder="รายละเอียดสั้นๆ..." />
               </div>
 
               {/* RCON Command */}
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1.5 flex items-center gap-2">
+                <label className="block text-[11px] font-bold text-gray-500 mb-1 flex items-center gap-2">
                   RCON Commands <span className="text-red-400">*</span>
-                  {(() => { const cmds = (item.command || '').split('\n').map(c => c.trim()).filter(Boolean); return cmds.length > 0 ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold"><i className="fas fa-terminal text-[9px]" /> {cmds.length} คำสั่ง</span> : null; })()}
+                  {(() => { const cmds = (item.command || '').split('\n').map(c => c.trim()).filter(Boolean); return cmds.length > 0 ? <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[9px] font-bold"><i className="fas fa-terminal text-[8px]" /> {cmds.length}</span> : null; })()}
+                  <span className="text-[10px] font-normal text-gray-400 ml-auto">{'{player}'} = ชื่อผู้เล่น</span>
                 </label>
                 <textarea value={item.command || ''} onChange={e => onChange({ ...item, command: e.target.value })}
-                  className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-xs font-mono focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 resize-y bg-gray-50 transition-colors"
-                  rows={3} placeholder={"give {player} diamond 1\nlp user {player} permission set group.vip"} />
-                <p className="text-[11px] text-gray-400 mt-1">1 บรรทัด = 1 คำสั่ง · ใส่ได้ไม่จำกัด · ใช้ <code className="bg-gray-100 px-1 rounded">{'{player}'}</code> แทนชื่อผู้เล่น</p>
-                {(() => {
-                  const cmds = (item.command || '').split('\n').map(c => c.trim()).filter(Boolean);
-                  if (cmds.length === 0) return null;
-                  return (
-                    <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50 overflow-hidden">
-                      <div className="px-3 py-1.5 bg-blue-100/60 flex items-center gap-1.5">
-                        <i className="fas fa-eye text-blue-500 text-[10px]" />
-                        <span className="text-[10px] font-bold text-blue-600">Preview คำสั่งที่จะ run ({cmds.length})</span>
-                      </div>
-                      <div className="px-3 py-2 space-y-1 max-h-24 overflow-y-auto">
-                        {cmds.map((cmd, i) => (
-                          <div key={i} className="flex items-start gap-2">
-                            <span className="text-[9px] font-bold text-blue-400 w-4 text-right flex-shrink-0 mt-0.5">{i + 1}</span>
-                            <code className="text-[11px] text-blue-800 font-mono break-all">{cmd}</code>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })()}
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs font-mono focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 resize-y bg-gray-50 transition-colors"
+                  rows={2} placeholder={"give {player} diamond 1"} />
               </div>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">
+        <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2 flex-shrink-0">
           <button onClick={onClose} disabled={saving}
-            className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-700 shadow-[0_4px_0_#d1d5db] hover:brightness-95 transition-all">
-            <i className="fas fa-times text-xs" /> ยกเลิก
+            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-white border border-gray-200 text-gray-700 shadow-[0_3px_0_#d1d5db] hover:brightness-95 transition-all">
+            <i className="fas fa-times text-[11px]" /> ยกเลิก
           </button>
           <button onClick={onSave} disabled={saving}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#1e2735] disabled:opacity-50 text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#38404d] hover:brightness-110 transition-all active:shadow-[0_1px_0_#38404d] active:translate-y-[2px]">
-            {saving ? <><i className="fas fa-spinner fa-spin text-xs" /> บันทึก...</> : <><i className="fas fa-save text-xs" /> บันทึก</>}
+            className="flex items-center gap-2 px-4 py-1.5 bg-[#1e2735] disabled:opacity-50 text-white text-xs font-bold rounded-lg shadow-[0_3px_0_#38404d] hover:brightness-110 transition-all active:shadow-[0_1px_0_#38404d] active:translate-y-[2px]">
+            {saving ? <><i className="fas fa-spinner fa-spin text-[11px]" /> บันทึก...</> : <><i className="fas fa-save text-[11px]" /> บันทึก</>}
           </button>
         </div>
       </div>

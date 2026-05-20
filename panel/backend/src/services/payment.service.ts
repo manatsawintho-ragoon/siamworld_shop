@@ -1,19 +1,36 @@
 import https from 'https';
+import dns from 'dns';
 import { pool } from '../database/connection';
 import { settingsService } from './settings.service';
 import { walletService } from './wallet.service';
 import { ValidationError, ConflictError } from '../utils/errors';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 
+const EASYSLIP_HOSTNAME = 'api.easyslip.com';
+
+// Force IPv4 resolution — Cloudflare returns AAAA records first, and panel-backend's
+// Docker bridge network has no IPv6 route, so the default lookup times out.
+function resolveIPv4(hostname: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    dns.resolve4(hostname, (err, addresses) => {
+      if (err || !addresses?.length) reject(err ?? new Error('No IPv4 address'));
+      else resolve(addresses[0]);
+    });
+  });
+}
+
 // Use HTTPS (HTTP/1.1) — HTTP/2 POST is blocked by Docker bridge network MTU/filtering
-function easyslipPost(apiKey: string, bodyObj: Record<string, unknown>): Promise<unknown> {
+async function easyslipPost(apiKey: string, bodyObj: Record<string, unknown>): Promise<unknown> {
+  const ipv4 = await resolveIPv4(EASYSLIP_HOSTNAME);
   return new Promise((resolve, reject) => {
     const body = Buffer.from(JSON.stringify(bodyObj));
     const req = https.request({
-      hostname: 'api.easyslip.com',
+      host:     ipv4,
+      servername: EASYSLIP_HOSTNAME,
       path:     '/v2/verify/bank',
       method:   'POST',
       headers: {
+        'Host':           EASYSLIP_HOSTNAME,
         'Content-Type':   'application/json',
         'Content-Length': body.length,
         'Authorization':  `Bearer ${apiKey}`,
@@ -102,8 +119,16 @@ class PaymentService {
     if (amount < 10) throw new ValidationError('ยอดไม่ถูกต้อง');
 
     const settings = await settingsService.getAll();
-    const apiKey = settings['easyslip_api_key'];
+    const apiKey = (settings['easyslip_api_key'] || '').trim();
     if (!apiKey) throw new ValidationError('ยังไม่ได้ตั้งค่า EasySlip API Key');
+    // EasySlip keys are ASCII tokens. If the stored value contains bullets or non-ASCII,
+    // it almost certainly came from the masked admin UI (•••••...db63) and was saved as-is.
+    // Reject early with a clear message instead of letting Node throw ERR_INVALID_CHAR
+    // deep inside the https request, which surfaces to the user as a generic error.
+    if (!/^[\x21-\x7e]+$/.test(apiKey)) {
+      console.error('[EasySlip] API key contains invalid characters — admin likely saved masked value. len=', apiKey.length);
+      throw new ValidationError('EasySlip API Key ในระบบเสียหาย กรุณาแจ้งผู้ดูแลระบบให้ตั้งค่าใหม่');
+    }
 
     // ── Layer 1: Call EasySlip API (HTTP/2 to avoid Cloudflare TLS-fingerprint block) ──
     let easyslipData: Record<string, unknown>;
@@ -298,14 +323,16 @@ class PaymentService {
                         pu.email, pu.display_name`;
     let rows: RowDataPacket[];
     let countRows: RowDataPacket[];
+    // LIMIT/OFFSET are inlined — mysql2 execute() can't take integer params there.
+    // safeLimit/offset are validated integers, so interpolation is safe.
     if (status) {
       [rows] = await pool.execute<RowDataPacket[]>(
         `SELECT ${baseFields}
            FROM payment_slips ps
            JOIN panel_users pu ON pu.id = ps.user_id
           WHERE ps.status = ?
-          ORDER BY ps.created_at DESC LIMIT ? OFFSET ?`,
-        [status, safeLimit, offset]
+          ORDER BY ps.created_at DESC LIMIT ${safeLimit} OFFSET ${offset}`,
+        [status]
       );
       [countRows] = await pool.execute<RowDataPacket[]>(
         'SELECT COUNT(*) as total FROM payment_slips ps WHERE ps.status = ?',
@@ -316,8 +343,7 @@ class PaymentService {
         `SELECT ${baseFields}
            FROM payment_slips ps
            JOIN panel_users pu ON pu.id = ps.user_id
-          ORDER BY ps.created_at DESC LIMIT ? OFFSET ?`,
-        [safeLimit, offset]
+          ORDER BY ps.created_at DESC LIMIT ${safeLimit} OFFSET ${offset}`
       );
       [countRows] = await pool.execute<RowDataPacket[]>(
         'SELECT COUNT(*) as total FROM payment_slips ps'
