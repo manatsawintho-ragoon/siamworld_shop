@@ -18,20 +18,33 @@ set -e
 NAME=""
 DOMAIN=""
 MC_IP=""
+BRIDGE_MODE="false"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         --name)   NAME="$2";   shift 2 ;;
         --domain) DOMAIN="$2"; shift 2 ;;
         --mc-ip)  MC_IP="$2";  shift 2 ;;
+        --bridge) BRIDGE_MODE="true"; shift ;;
         -h|--help)
-            echo "Usage: $0 --name <name> --domain <domain> [--mc-ip <minecraft_server_ip>]"
-            echo "Example: $0 --name craftworld --domain craftworld.siamsite.shop --mc-ip 1.2.3.4"
+            echo "Usage: $0 --name <name> --domain <domain> [--mc-ip <ip>] [--bridge]"
+            echo
+            echo "Options:"
+            echo "  --bridge   ลูกค้าใช้ Bridge plugin → ไม่เปิด MySQL port ออกข้างนอก"
+            echo "             (DDoS protection by default; ลูกค้าตั้ง bridge token บน dashboard)"
+            echo
+            echo "Example:"
+            echo "  $0 --name craftworld --domain craftworld.siamsite.shop --mc-ip 1.2.3.4    # legacy direct AuthMe"
+            echo "  $0 --name craftworld --domain craftworld.siamsite.shop --bridge          # Bridge mode (แนะนำ)"
             exit 0
             ;;
         *) echo "[ERROR] Unknown argument: $1"; exit 1 ;;
     esac
 done
+
+if [[ "$BRIDGE_MODE" == "true" && -n "$MC_IP" ]]; then
+    echo "[WARN] ทั้ง --bridge และ --mc-ip ถูกระบุ — Bridge mode ไม่ใช้ MC_IP (ข้ามการ ACCEPT MySQL port)"
+fi
 
 if [[ -z "$NAME" || -z "$DOMAIN" ]]; then
     echo "[ERROR] --name and --domain are required."
@@ -142,9 +155,20 @@ gen_secret() {
     openssl rand -base64 64 | tr -dc 'a-zA-Z0-9' | head -c "$len"
 }
 
-MYSQL_PASSWORD=$(gen_secret 28)
-JWT_SECRET=$(gen_secret 52)
-ENCRYPTION_KEY=$(gen_secret 52)
+# Idempotent on retry: if a .env from a previous (possibly failed) deploy
+# exists, reuse its secrets. Regenerating MYSQL_PASSWORD would diverge from
+# the password already baked into the existing MySQL data volume, leaving
+# the backend permanently unable to connect.
+PREV_MYSQL_PASSWORD=""; PREV_JWT_SECRET=""; PREV_ENCRYPTION_KEY=""
+if [[ -f "$CUSTOMER_ENV" ]]; then
+    PREV_MYSQL_PASSWORD=$(grep -E '^MYSQL_PASSWORD=' "$CUSTOMER_ENV" | head -1 | cut -d= -f2-)
+    PREV_JWT_SECRET=$(grep -E '^JWT_SECRET=' "$CUSTOMER_ENV" | head -1 | cut -d= -f2-)
+    PREV_ENCRYPTION_KEY=$(grep -E '^ENCRYPTION_KEY=' "$CUSTOMER_ENV" | head -1 | cut -d= -f2-)
+fi
+
+MYSQL_PASSWORD=${PREV_MYSQL_PASSWORD:-$(gen_secret 28)}
+JWT_SECRET=${PREV_JWT_SECRET:-$(gen_secret 52)}
+ENCRYPTION_KEY=${PREV_ENCRYPTION_KEY:-$(gen_secret 52)}
 
 # ── Create customer directory ──────────────────────────────────
 mkdir -p "$CUSTOMER_DIR"
@@ -186,6 +210,12 @@ CORS_ORIGIN=https://$DOMAIN
 
 # Frontend
 FRONTEND_PORT=$FRONTEND_PORT
+
+# Bridge mode — left disabled at deploy time. The panel auto-provisions the 4
+# BRIDGE_*/PANEL_BRIDGE_* vars + rebuilds this shop when the customer (or admin)
+# clicks "Issue Token" on the dashboard. Setting BRIDGE_ENABLED=true here without
+# the other 3 vars would make the shop backend fail zod validation at startup.
+BRIDGE_ENABLED=false
 
 # Rate limiting
 RATE_LIMIT_WINDOW_MS=900000
@@ -279,8 +309,23 @@ else
         > "$CUSTOMERS_JSON"
 fi
 
-# ── UFW Firewall Rule ──────────────────────────────────────────
-if [[ -n "$MC_IP" ]]; then
+# ── Host firewall rules for the MySQL port ─────────────────────
+if [[ "$BRIDGE_MODE" == "true" ]]; then
+    # Bridge customers don't need external MySQL access — block at the host
+    # firewall by default. Inserts DROP right before DOCKER-USER's catch-all
+    # ACCEPT so CF/Docker-subnet ACCEPTs higher up still match first.
+    echo "[UFW] Bridge mode — บล็อก MySQL port $MYSQL_EXPOSED_PORT จาก external (DDoS protection)"
+    CATCH_POS=$(nsenter -t 1 -m -u -i -n -p -- /usr/sbin/iptables -L DOCKER-USER -n --line-numbers -v 2>/dev/null \
+        | awk '$4=="ACCEPT" && $7=="*" && $8=="*" && $9=="0.0.0.0/0" && $10=="0.0.0.0/0" && NF==10 {pos=$1} END{print pos}')
+    if [[ -n "$CATCH_POS" && "$CATCH_POS" =~ ^[0-9]+$ ]]; then
+        nsenter -t 1 -m -u -i -n -p -- /usr/sbin/iptables -I DOCKER-USER "$CATCH_POS" -p tcp --dport "$MYSQL_EXPOSED_PORT" -j DROP 2>/dev/null \
+            && echo "[UFW] DROP ใส่แล้วที่ position $CATCH_POS (ก่อน catch-all)"
+    else
+        nsenter -t 1 -m -u -i -n -p -- /usr/sbin/iptables -A DOCKER-USER -p tcp --dport "$MYSQL_EXPOSED_PORT" -j DROP 2>/dev/null \
+            && echo "[UFW] DROP ใส่แล้วด้วย -A (ไม่พบ catch-all)"
+    fi
+    nsenter -t 1 -m -u -i -n -p -- /usr/sbin/netfilter-persistent save 2>/dev/null || true
+elif [[ -n "$MC_IP" ]]; then
     echo "[UFW] เพิ่ม firewall rule สำหรับ MySQL port $MYSQL_EXPOSED_PORT จาก $MC_IP..."
     nsenter -t 1 -m -u -i -n -p -- /usr/sbin/iptables -I DOCKER-USER 1 -p tcp --dport "$MYSQL_EXPOSED_PORT" -s "$MC_IP" -j ACCEPT 2>/dev/null && \
     nsenter -t 1 -m -u -i -n -p -- /usr/sbin/netfilter-persistent save 2>/dev/null || \
