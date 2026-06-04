@@ -258,10 +258,7 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    const backendUrl = 'https://api-panel.siamsite.shop';
-                    window.location.href = `${backendUrl}/api/auth/google`;
-                  }}
+                  onClick={() => { window.location.href = '/api/auth/google'; }}
                   className="flex items-center justify-center gap-2.5 h-[44px] border border-slate-200 dark:border-slate-700/80 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all font-bold text-[11px] text-slate-600 dark:text-slate-300 shadow-sm hover:shadow-md cursor-pointer"
                 >
                   <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-4 h-4" />
@@ -269,10 +266,7 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    const backendUrl = 'https://api-panel.siamsite.shop';
-                    window.location.href = `${backendUrl}/api/auth/facebook`;
-                  }}
+                  onClick={() => { window.location.href = '/api/auth/facebook'; }}
                   className="flex items-center justify-center gap-2.5 h-[44px] border border-slate-200 dark:border-slate-700/80 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all font-bold text-[11px] text-slate-600 dark:text-slate-300 shadow-sm hover:shadow-md cursor-pointer"
                 >
                   <img src="https://www.svgrepo.com/show/475647/facebook-color.svg" alt="Facebook" className="w-4 h-4" />

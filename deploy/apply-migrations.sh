@@ -44,12 +44,17 @@ if ! [[ "$NAME" =~ ^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$ ]]; then
     exit 2
 fi
 
-# Default migrations dir is sibling of deploy/
+# Resolve the migrations dir.
 if [[ -z "$MIGRATIONS_DIR" ]]; then
-    # Prefer HOST_SOURCE_ROOT-equivalent for in-panel-container invocations,
-    # but the migrations dir is read locally so SOURCE_ROOT (container path) works too.
-    PARENT="$(dirname "$DEPLOY_DIR")"
-    MIGRATIONS_DIR="$PARENT/migrations"
+    # Inside the panel container /deploy and /source are separate bind mounts,
+    # so migrations/ is NOT a sibling of deploy/. Prefer SOURCE_ROOT (the
+    # container path to the repo root, exported by new-customer.sh /
+    # manage-customer.sh) and fall back to the deploy/ sibling on a bare host.
+    if [[ -n "${SOURCE_ROOT:-}" && -d "${SOURCE_ROOT}/migrations" ]]; then
+        MIGRATIONS_DIR="${SOURCE_ROOT}/migrations"
+    else
+        MIGRATIONS_DIR="$(dirname "$DEPLOY_DIR")/migrations"
+    fi
 fi
 
 if [[ ! -d "$MIGRATIONS_DIR" ]]; then

@@ -213,12 +213,14 @@ export class RconManager {
    */
   async checkPlayerOnlineDirect(serverId: number, username: string): Promise<boolean> {
     const sanitized = username.replace(/[^a-zA-Z0-9_]/g, '');
+    const lower = sanitized.toLowerCase();
     try {
       // 'execute if entity @a[name=X,limit=1]' returns "Test passed" if player is online.
-      // The name selector is case-sensitive; on "Test failed" / "no entity" we fall through
-      // to the list-based case-insensitive check below — players whose website-username
-      // case differs from their in-game IGN (AuthMe is case-insensitive) would otherwise
-      // be wrongly reported offline.
+      // This is the ONLY truncation-proof signal: it works regardless of how many players
+      // are online. A "passed" is authoritative. The name selector is case-sensitive, so
+      // a non-"passed" result is NOT a reliable "offline" — the player's website-username
+      // case may differ from their in-game IGN (AuthMe is case-insensitive). In that case
+      // we fall through to the list-based case-insensitive check below.
       const response = await this.sendCommandDirect(
         serverId,
         `execute if entity @a[name=${sanitized},limit=1]`
@@ -227,13 +229,27 @@ export class RconManager {
         return true;
       }
     } catch {
-      // execute command not available (BungeeCord/Velocity) — fall through to the list
+      // execute command not available (BungeeCord/Velocity, 1.8) — fall through to the list
       // path. The list path uses throwOnError=true so verifyPlayerOnline knows to
       // consult the Redis cache when RCON itself is unreachable.
     }
-    const { players } = await this.getOnlinePlayersData(serverId, true);
-    const lower = sanitized.toLowerCase();
-    return players.some((p) => p.toLowerCase() === lower);
+
+    const { players, total } = await this.getOnlinePlayersData(serverId, true);
+    if (players.some((p) => p.toLowerCase() === lower)) return true;
+
+    // Player wasn't in the returned name list. If that list was TRUNCATED (a plugin or
+    // RCON packet limit cut it short — header count > names we parsed), we cannot conclude
+    // the player is offline: the case-sensitive execute check above couldn't confirm them
+    // either. Returning a hard `false` here is exactly what wrongly blocked genuinely-online
+    // players ("works for some players, not others, varies by day" = depends on whether the
+    // player's stored case matches their IGN AND whether they landed inside the truncation
+    // cutoff). Throw instead so verifyPlayerOnline falls back to the independent poll cache.
+    if (total > players.length) {
+      throw new Error(`Online check inconclusive: player list truncated (${players.length}/${total})`);
+    }
+
+    // Complete list, RCON healthy, player genuinely absent → confidently offline.
+    return false;
   }
 
   /** Check if a specific player is online on a server */
@@ -243,13 +259,28 @@ export class RconManager {
     return players.some((p) => p.toLowerCase() === lower);
   }
 
-  /** Poll all servers and update online players cache */
-  async pollAllServers(): Promise<Map<number, { serverName: string; players: string[]; total: number }>> {
-    const result = new Map<number, { serverName: string; players: string[]; total: number }>();
+  /**
+   * Poll all servers and update online players cache.
+   *
+   * `ok` distinguishes a real RCON failure from a genuinely-empty server. This matters:
+   * `getOnlinePlayersData` returns `{players:[], total:0}` for BOTH cases, so without this
+   * flag the PlayerTracker would wipe its Redis cache on a transient RCON timeout and then
+   * report online players as offline — blocking real purchases. On failure we preserve the
+   * last-known player list so the tracker can keep the cache intact for its TTL.
+   */
+  async pollAllServers(): Promise<Map<number, { serverName: string; players: string[]; total: number; ok: boolean }>> {
+    const result = new Map<number, { serverName: string; players: string[]; total: number; ok: boolean }>();
     for (const [id, server] of this.servers) {
-      const data = await this.getOnlinePlayersData(id);
-      this.onlinePlayers.set(id, data.players);
-      result.set(id, { serverName: server.name, players: data.players, total: data.total });
+      try {
+        const data = await this.getOnlinePlayersData(id, true); // throw on RCON failure
+        this.onlinePlayers.set(id, data.players);
+        result.set(id, { serverName: server.name, players: data.players, total: data.total, ok: true });
+      } catch {
+        // RCON unreachable this tick — keep the last-known players so a transient blip
+        // doesn't erase the cache that purchase/redeem checks fall back on.
+        const lastKnown = this.onlinePlayers.get(id) || [];
+        result.set(id, { serverName: server.name, players: lastKnown, total: lastKnown.length, ok: false });
+      }
     }
     return result;
   }

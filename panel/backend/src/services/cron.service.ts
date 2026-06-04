@@ -36,15 +36,17 @@ export function startCronJobs(): void {
     }).catch(err => console.error('[Cron] notify failed:', err));
   });
 
-  // Run daily at 02:00 — suspend shops overdue by grace period
-  cron.schedule('0 2 * * *', () => {
-    withRedisLock('panel_cron_lock:suspend', 30 * 60, async () => {
+  // Run hourly — suspend shops overdue past the (short) grace period. Hourly instead of
+  // once-at-02:00 so an expired shop actually goes down within the hour, not up to a full
+  // day later. The Redis lock keeps multi-replica runs from double-suspending.
+  cron.schedule('0 * * * *', () => {
+    withRedisLock('panel_cron_lock:suspend', 10 * 60, async () => {
       console.log('[Cron] Checking for expired shops to suspend...');
       await notificationService.suspendExpired();
     }).catch(err => console.error('[Cron] suspend failed:', err));
   });
 
-  console.log('[Cron] Jobs scheduled (notify: 09:00, suspend: 02:00)');
+  console.log('[Cron] Jobs scheduled (notify: 09:00 daily, suspend: hourly)');
 }
 
 /** Exposed so other services (deploy port allocation, etc.) can reuse the same primitive. */

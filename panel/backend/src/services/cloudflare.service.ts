@@ -131,6 +131,52 @@ class CloudflareService {
     }
   }
 
+  /**
+   * Flip the existing A record for {@code subdomain} to a different proxy mode.
+   * - {@code mode: 'proxied'} → orange-cloud (CF terminates TLS, hides origin IP).
+   * - {@code mode: 'dns-only'} → grey-cloud (resolves direct to origin, allows
+   *   non-HTTP ports like MySQL).
+   *
+   * Used by the admin "DNS hardening" action so a Bridge-mode subscription can
+   * stop leaking the origin IP without redeploying. No-op if the record is
+   * already in the requested mode. Throws if Cloudflare is not configured or
+   * the record doesn't exist.
+   *
+   * NB: Switching to proxied breaks any external TCP listener on the same
+   * subdomain (Cloudflare only proxies HTTP/HTTPS/WS). The caller must
+   * separately block the customer's exposed MySQL port at the host firewall
+   * before flipping — otherwise the MC plugin still has a path to MySQL via
+   * the origin IP (which is still discoverable from other DNS-only records).
+   * The ops doc covers the firewall step.
+   */
+  async setProxyMode(subdomain: string, mode: 'proxied' | 'dns-only'): Promise<{ changed: boolean; recordId: string }> {
+    const cfg = await this.getConfig();
+    if (!this.isConfigured(cfg)) {
+      throw new Error('Cloudflare not configured (api_key / zone_id / server_ip missing)');
+    }
+    const wantProxied = mode === 'proxied';
+    const base = `https://api.cloudflare.com/client/v4/zones/${cfg.zoneId}/dns_records`;
+    try {
+      const list = await this.request('get', `${base}?type=A&name=${encodeURIComponent(subdomain)}`, cfg);
+      const record = list.data.result?.[0];
+      if (!record) {
+        throw new Error(`No A record found for ${subdomain}`);
+      }
+      if (record.proxied === wantProxied) {
+        return { changed: false, recordId: record.id };
+      }
+      // CF requires TTL=1 (auto) for proxied records; 3600 is fine for DNS-only.
+      await this.request('patch', `${base}/${record.id}`, cfg, {
+        proxied: wantProxied,
+        ttl: wantProxied ? 1 : 3600,
+      });
+      console.log(`[CF] ${subdomain} → ${mode} (record ${record.id})`);
+      return { changed: true, recordId: record.id };
+    } catch (err) {
+      throw new Error(this.extractError(err));
+    }
+  }
+
   /** Delete A record for subdomain. Best-effort (does not throw if CF not configured). */
   async deleteDnsRecord(subdomain: string): Promise<void> {
     const cfg = await this.getConfig();

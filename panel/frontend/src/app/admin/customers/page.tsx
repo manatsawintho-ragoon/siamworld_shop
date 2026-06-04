@@ -148,6 +148,9 @@ function Content() {
         await api.delete(`/api/admin/subscriptions/${id}`);
       } else if (action === 'fix-npm') {
         await api.post(`/api/admin/subscriptions/${id}/fix-npm`);
+      } else if (action === 'dns-harden' || action === 'dns-unharden') {
+        const mode = action === 'dns-harden' ? 'proxied' : 'dns-only';
+        await api.post(`/api/admin/subscriptions/${id}/dns-mode`, { mode });
       } else {
         await api.post(`/api/admin/subscriptions/${id}/action`, { action });
       }
@@ -671,6 +674,28 @@ function ManageModal({
               <ActionTile icon="fa-stop" color="amber" label="หยุดระบบ" disabled={loading} onClick={() => onAction('stop')} />
               <ActionTile icon="fa-wand-magic-sparkles" color="purple" label="ซ่อม NPM" disabled={loading} onClick={() => onAction('fix-npm')} />
               <ActionTile icon="fa-rocket" color="indigo" label="Redeploy" disabled={loading} onClick={() => onAction('redeploy')} />
+              <ActionTile
+                icon="fa-shield-halved" color="cyan" label="กัน DDoS (CF Proxy)"
+                disabled={loading}
+                onClick={() => {
+                  if (confirm(
+                    'เปลี่ยน DNS ของร้านนี้เป็น Cloudflare Proxied?\n\n' +
+                    '✓ ซ่อน origin IP ป้องกัน DDoS attack\n' +
+                    '✗ MySQL port (33XXX) จะใช้ไม่ได้จากภายนอก — ใช้ได้เฉพาะลูกค้าที่ใช้ Bridge\n' +
+                    '⚠ Let\'s Encrypt cert จะ renew ไม่ผ่าน HTTP-01 ในครั้งถัดไป — เปลี่ยน NPM มาใช้ Cloudflare Origin Certificate ก่อนหมดอายุ\n\n' +
+                    'หลังกด ต้องทำต่อ: รัน deploy/harden-mysql-port.sh เพื่อปิด MySQL port ที่ host firewall\n' +
+                    'รายละเอียดทั้งหมดใน deploy/OPERATIONS-DDOS-HARDEN.md\n\n' +
+                    'แนะนำเฉพาะลูกค้า Bridge เท่านั้น'
+                  )) onAction('dns-harden');
+                }}
+              />
+              <ActionTile
+                icon="fa-shield-xmark" color="slate" label="ปลดกัน (DNS-only)"
+                disabled={loading}
+                onClick={() => {
+                  if (confirm('คืน DNS เป็น DNS-only (เปิด MySQL port กลับมา)?\n\nใช้สำหรับลูกค้าที่ยังใช้ AuthMe direct')) onAction('dns-unharden');
+                }}
+              />
               {isSuspended ? (
                 <ActionTile icon="fa-circle-check" color="teal" label="ปลดระงับ" disabled={loading} onClick={() => onAction('unsuspend')} />
               ) : (
@@ -735,6 +760,8 @@ const COLOR_MAP: Record<string, { icon: string; bg: string; hoverBg: string; hov
   red:     { icon: 'text-red-600',     bg: 'bg-red-500/10',     hoverBg: 'hover:bg-red-500/5',      hoverText: 'group-hover:text-red-600' },
   purple:  { icon: 'text-purple-600',  bg: 'bg-purple-500/10',  hoverBg: 'hover:bg-purple-500/5',   hoverText: 'group-hover:text-purple-600' },
   indigo:  { icon: 'text-indigo-600',  bg: 'bg-indigo-500/10',  hoverBg: 'hover:bg-indigo-500/5',   hoverText: 'group-hover:text-indigo-600' },
+  cyan:    { icon: 'text-cyan-600',    bg: 'bg-cyan-500/10',    hoverBg: 'hover:bg-cyan-500/5',     hoverText: 'group-hover:text-cyan-600' },
+  slate:   { icon: 'text-slate-600',   bg: 'bg-slate-500/10',   hoverBg: 'hover:bg-slate-500/5',    hoverText: 'group-hover:text-slate-600' },
 };
 
 export default function CustomersPage() {

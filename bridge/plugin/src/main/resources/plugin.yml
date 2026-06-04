@@ -6,11 +6,11 @@ main: shop.siamsite.bridge.SiamsiteBridgePlugin
 api-version: '1.16'
 author: Siamsite
 website: https://panel.siamsite.shop
-description: Outbound WSS gateway connecting AuthMe to the Siamsite shop panel.
-# Soft-depend on AuthMe so we load *after* it (we read its config file and DB).
-# Listed as soft-depend rather than depend so the plugin still starts in
-# `/status` mode for diagnostics even if AuthMe is missing.
-softdepend: [AuthMe]
+description: Outbound WSS gateway connecting AuthMe or nLogin to the Siamsite shop panel.
+# Soft-depend on both supported auth plugins so we load *after* them (we read
+# their config files + DB). Soft, not hard, so the plugin still starts in
+# `/status` mode for diagnostics even if neither is installed.
+softdepend: [AuthMe, nLogin]
 load: POSTWORLD
 
 commands:

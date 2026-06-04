@@ -1,15 +1,39 @@
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { pool } from '../database/connection';
 import { config } from '../config';
-import { AuthenticationError } from '../utils/errors';
+import { AuthenticationError, ValidationError } from '../utils/errors';
 import { logger } from '../utils/logger';
 import { RowDataPacket } from 'mysql2';
 import { JwtPayload } from '../middleware/auth';
 import { createSession, destroySession } from './session.service';
+import { bridgeClient } from './bridge-client.service';
+
+// AuthMe SHA256: $SHA$<salt>$sha256(sha256(password) + salt)
+function verifyAuthMeSHA256(password: string, storedHash: string): boolean {
+  const parts = storedHash.split('$');
+  if (parts.length !== 4 || parts[1] !== 'SHA') return false;
+  const [, , salt, hash] = parts;
+  const inner = crypto.createHash('sha256').update(password, 'utf8').digest('hex');
+  const computed = crypto.createHash('sha256').update(inner + salt, 'utf8').digest('hex');
+  return computed === hash;
+}
+
+// When bridge mode is on, "user not found in MC AuthMe" and "bridge unreachable"
+// both let us fall back to local authme — the first covers legacy pre-bridge
+// accounts and the second prevents lockouts when the plugin is offline.
+const BRIDGE_FALLBACK_REASONS = new Set(['unknown_user', 'bridge_unreachable', 'bridge_timeout', 'unauthorized']);
 
 class AuthService {
   async register(username: string, password: string, email: string): Promise<{ token: string; user: JwtPayload }> {
+    if (config.bridge.enabled) {
+      // Web register is disabled in bridge mode — MC AuthMe is the source of truth.
+      // The bridge protocol has no register opcode yet (M3 ships verify only), so we'd
+      // otherwise create accounts that exist on the web but not on the MC server.
+      throw new ValidationError('กรุณาสมัครสมาชิกใน Minecraft ก่อนด้วยคำสั่ง /register <รหัสผ่าน> <รหัสผ่าน> แล้วจึงเข้าสู่ระบบในเว็บด้วยชื่อและรหัสเดียวกัน');
+    }
+
     // Hash password before opening transaction (bcrypt is slow — don't hold DB connection)
     const hashedPassword = await bcrypt.hash(password, 10);
     const now = Date.now();
@@ -22,13 +46,13 @@ class AuthService {
       const [existing] = await conn.execute<RowDataPacket[]>(
         'SELECT id FROM authme WHERE LOWER(username) = LOWER(?)', [username]
       );
-      if (existing.length > 0) throw new Error('ชื่อผู้ใช้นี้ถูกใช้ไปแล้ว');
+      if (existing.length > 0) throw new ValidationError('ชื่อผู้ใช้นี้ถูกใช้ไปแล้ว');
 
       // Check email
       const [existingEmail] = await conn.execute<RowDataPacket[]>(
         'SELECT id FROM users WHERE email = ?', [email]
       );
-      if (existingEmail.length > 0) throw new Error('อีเมลล์นี้ถูกใช้ไปแล้ว');
+      if (existingEmail.length > 0) throw new ValidationError('อีเมลล์นี้ถูกใช้ไปแล้ว');
 
       // Insert into authme — include email so AuthMe plugin also shows correct email
       await conn.execute(
@@ -61,28 +85,55 @@ class AuthService {
   }
 
   async login(username: string, password: string): Promise<{ token: string; user: JwtPayload }> {
-    // Check AuthMe table
+    if (config.bridge.enabled) {
+      const bridgeResult = await bridgeClient.verifyAuthme(username, password);
+      if (bridgeResult.ok) {
+        return this.finalizeLogin(username, bridgeResult.email || null);
+      }
+      // `banned` or `bad_password`: MC is authoritative — reject without consulting local.
+      // Anything else (unknown_user / bridge_unreachable / bridge_timeout / unauthorized):
+      // fall through to local authme so legacy web users + bridge-down scenarios both work.
+      if (!bridgeResult.reason || !BRIDGE_FALLBACK_REASONS.has(bridgeResult.reason)) {
+        logger.info('Bridge auth rejected', { username, reason: bridgeResult.reason });
+        throw new AuthenticationError('Invalid username or password');
+      }
+      logger.debug('Bridge fallback to local authme', { username, reason: bridgeResult.reason });
+    }
+
+    return this.loginLocal(username, password);
+  }
+
+  private async loginLocal(username: string, password: string): Promise<{ token: string; user: JwtPayload }> {
     const [authRows] = await pool.execute<RowDataPacket[]>(
       'SELECT * FROM authme WHERE LOWER(username) = LOWER(?)', [username]
     );
     if (authRows.length === 0) throw new AuthenticationError('Invalid username or password');
 
     const authUser = authRows[0];
-    const validPassword = await bcrypt.compare(password, authUser.password);
+    let validPassword: boolean;
+    if (authUser.password?.startsWith('$SHA$')) {
+      validPassword = verifyAuthMeSHA256(password, authUser.password);
+    } else {
+      validPassword = await bcrypt.compare(password, authUser.password);
+    }
     if (!validPassword) throw new AuthenticationError('Invalid username or password');
 
-    // Ensure app user exists and isn't soft-deleted
+    return this.finalizeLogin(authUser.username, null);
+  }
+
+  // Ensures the app-side `users` + `wallets` rows exist and issues the JWT.
+  // Shared by local and bridge login paths so the post-auth flow stays identical.
+  private async finalizeLogin(username: string, emailFromBridge: string | null): Promise<{ token: string; user: JwtPayload }> {
     let appUser: { id: number; username: string; role: string; deleted_at: Date | null } | null =
-      await this.findUser(authUser.username) as any;
+      await this.findUser(username) as any;
     if (!appUser) {
-      appUser = { ...(await this.createUser(authUser.username)), deleted_at: null };
+      appUser = { ...(await this.createUser(username, emailFromBridge || undefined)), deleted_at: null };
     }
     if (appUser.deleted_at) {
       // Soft-deleted users cannot log in. Don't leak why — return the generic error.
       throw new AuthenticationError('Invalid username or password');
     }
 
-    // Create new session — atomically replaces any existing session (single-device enforcement)
     const jti = await createSession(appUser.id);
     const payload: JwtPayload = { userId: appUser.id, username: appUser.username, role: appUser.role, jti };
     const token = jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn as jwt.SignOptions['expiresIn'] });
@@ -107,11 +158,27 @@ class AuthService {
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
-      const [result] = await conn.execute(
-        'INSERT INTO users (username, email, role) VALUES (?, ?, ?)',
-        [username, email || null, 'user']
-      );
-      const userId = (result as any).insertId;
+      let userId: number;
+      try {
+        const [result] = await conn.execute(
+          'INSERT INTO users (username, email, role) VALUES (?, ?, ?)',
+          [username, email || null, 'user']
+        );
+        userId = (result as any).insertId;
+      } catch (err: any) {
+        // Two MC AuthMe accounts can share an email (AuthMe doesn't enforce uniqueness).
+        // Web-side `users.email` is UNIQUE, so retry without email rather than blocking login.
+        if (err?.code === 'ER_DUP_ENTRY' && email) {
+          logger.warn('Duplicate email on user creation, retrying with null', { username, email });
+          const [result] = await conn.execute(
+            'INSERT INTO users (username, email, role) VALUES (?, ?, ?)',
+            [username, null, 'user']
+          );
+          userId = (result as any).insertId;
+        } else {
+          throw err;
+        }
+      }
       await conn.execute('INSERT INTO wallets (user_id, balance) VALUES (?, 0.00)', [userId]);
       await conn.commit();
       return { id: userId, username, role: 'user' };

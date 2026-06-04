@@ -5,6 +5,11 @@ import { logger } from '../utils/logger';
 
 const REDIS_KEY = 'mc:online_players';
 
+// Per-server player-set TTL. Poll runs every ~10s, so this covers several consecutive
+// missed polls — long enough that a short RCON outage doesn't expire the fallback cache
+// that purchase/redeem online-checks rely on, short enough to self-heal if the tracker dies.
+const PLAYER_CACHE_TTL_SEC = 90;
+
 export class PlayerTracker {
   private interval: ReturnType<typeof setInterval> | null = null;
 
@@ -44,6 +49,12 @@ export class PlayerTracker {
         };
         totalOnline += data.total;
 
+        // If RCON was unreachable this tick, DON'T touch the per-server cache. Wiping it
+        // here on a transient timeout is what made purchase/redeem checks wrongly report
+        // an online player as offline. Leave the last good set to age out at its TTL so
+        // verifyPlayerOnline's fallback still works during brief RCON blips.
+        if (!data.ok) continue;
+
         // Store individual server players in Redis SET for fast lookup
         const redisKey = `mc:server:${id}:players`;
         // Store truncation flag so isPlayerOnline can use direct RCON check when needed
@@ -53,8 +64,8 @@ export class PlayerTracker {
         if (data.players.length > 0) {
           multi.sadd(redisKey, ...data.players.map((p) => p.toLowerCase()));
         }
-        multi.set(truncKey, truncated ? '1' : '0', 'EX', 30);
-        multi.expire(redisKey, 30); // TTL 30s, auto-cleanup if tracker stops
+        multi.set(truncKey, truncated ? '1' : '0', 'EX', PLAYER_CACHE_TTL_SEC);
+        multi.expire(redisKey, PLAYER_CACHE_TTL_SEC); // auto-cleanup if tracker stops
         await multi.exec();
       }
 
@@ -94,10 +105,12 @@ export class PlayerTracker {
     try {
       return await this.rconManager.checkPlayerOnlineDirect(serverId, username);
     } catch (err) {
-      // RCON unreachable (cooldown, ECONNRESET, timeout, etc). Trust the polling
-      // cache as a safety net so transient pool failures don't block real users.
-      // Cache TTL is 30s; if the poll just succeeded the player will still be in it.
-      logger.warn('Direct RCON check failed, falling back to cached poll', {
+      // RCON unreachable (cooldown, ECONNRESET, timeout) OR the live read was
+      // inconclusive (player list truncated and the case-sensitive per-player check
+      // couldn't confirm them). Trust the polling cache as a safety net so neither a
+      // transient pool failure nor a truncated list wrongly blocks a real online player.
+      // Cache TTL is 90s; if a recent poll succeeded the player will still be in it.
+      logger.warn('Direct RCON check failed/inconclusive, falling back to cached poll', {
         serverId, username, error: (err as Error).message,
       });
       return this.isPlayerOnline(serverId, username);

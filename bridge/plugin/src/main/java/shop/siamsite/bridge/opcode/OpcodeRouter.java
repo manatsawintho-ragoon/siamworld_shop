@@ -4,8 +4,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import shop.siamsite.bridge.SiamsiteBridgePlugin;
 import shop.siamsite.bridge.auth.PasswordVerifier;
-import shop.siamsite.bridge.db.AuthmeRepository;
-import shop.siamsite.bridge.db.AuthmeUser;
+import shop.siamsite.bridge.db.BridgeUser;
+import shop.siamsite.bridge.db.UserRepository;
 import shop.siamsite.bridge.util.AsyncExecutor;
 import shop.siamsite.bridge.ws.Frame;
 
@@ -18,10 +18,10 @@ import shop.siamsite.bridge.ws.Frame;
 public final class OpcodeRouter {
 
     private final SiamsiteBridgePlugin plugin;
-    private final AuthmeRepository repo;
+    private final UserRepository repo;
     @SuppressWarnings("unused") private final AsyncExecutor executor;
 
-    public OpcodeRouter(SiamsiteBridgePlugin plugin, AuthmeRepository repo, AsyncExecutor executor) {
+    public OpcodeRouter(SiamsiteBridgePlugin plugin, UserRepository repo, AsyncExecutor executor) {
         this.plugin = plugin;
         this.repo = repo;
         this.executor = executor;
@@ -30,7 +30,7 @@ public final class OpcodeRouter {
     public Frame dispatch(Frame in) {
         if (repo == null) {
             return Frame.errorResponse(in.id, in.op, "db_error",
-                    "AuthMe repository not initialized — check plugin startup logs");
+                    "User repository not initialized — check plugin startup logs");
         }
         try {
             switch (in.op) {
@@ -55,8 +55,13 @@ public final class OpcodeRouter {
         if (username == null || password == null) {
             return Frame.errorResponse(in.id, in.op, "bad_request", "username/password required");
         }
-        AuthmeUser u = repo.findByUsername(username);
+        BridgeUser u = repo.findByUsername(username);
         if (u == null) {
+            return Frame.response(in.id, in.op, failResp("unknown_user"));
+        }
+        // nLogin stores NULL password for premium-only / not-yet-registered accounts.
+        // Treat as unknown_user — there's nothing to verify against.
+        if (u.passwordHash == null || u.passwordHash.isEmpty()) {
             return Frame.response(in.id, in.op, failResp("unknown_user"));
         }
         boolean ok;
@@ -64,7 +69,7 @@ public final class OpcodeRouter {
             ok = PasswordVerifier.verify(password, u.passwordHash);
         } catch (PasswordVerifier.UnsupportedAlgorithmException uae) {
             return Frame.errorResponse(in.id, in.op, "unsupported",
-                    "AuthMe hash algorithm '" + uae.algorithm + "' not supported by bridge");
+                    "Password hash algorithm '" + uae.algorithm + "' not supported by bridge");
         }
         if (!ok) return Frame.response(in.id, in.op, failResp("bad_password"));
 
@@ -79,7 +84,7 @@ public final class OpcodeRouter {
         JsonObject d = data(in);
         String username = str(d, "username");
         if (username == null) return Frame.errorResponse(in.id, in.op, "bad_request", "username required");
-        AuthmeUser u = repo.findByUsername(username);
+        BridgeUser u = repo.findByUsername(username);
         JsonObject out = new JsonObject();
         if (u == null) {
             out.addProperty("exists", false);
@@ -114,15 +119,20 @@ public final class OpcodeRouter {
         try {
             long rows = repo.rowCount();
             out.addProperty("dbReachable", true);
+            out.addProperty("tableRows", rows);
+            // Backward-compat alias for older panel builds that read `authmeRows`.
             out.addProperty("authmeRows", rows);
             out.add("lastError", null);
         } catch (Exception e) {
             out.addProperty("dbReachable", false);
+            out.addProperty("tableRows", 0);
             out.addProperty("authmeRows", 0);
             out.addProperty("lastError", e.getMessage());
         }
         out.addProperty("uptimeMs", repo.uptimeMs());
         out.addProperty("pluginVersion", SiamsiteBridgePlugin.PLUGIN_VERSION);
+        out.addProperty("backend", repo.backendName());
+        out.addProperty("table", repo.tableName());
         out.addProperty("mcServer", plugin.getServer().getName() + "-" + plugin.getServer().getBukkitVersion());
         return Frame.response(in.id, in.op, out);
     }

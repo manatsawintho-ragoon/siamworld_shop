@@ -41,13 +41,15 @@ export const config = {
   google: {
     clientId:     optional('GOOGLE_CLIENT_ID', ''),
     clientSecret: optional('GOOGLE_CLIENT_SECRET', ''),
-    callbackUrl:  optional('GOOGLE_CALLBACK_URL', 'https://api-panel.siamsite.shop/api/auth/google/callback'),
+    // Callback routes through the Next.js proxy (FRONTEND_URL/api/...) so it never hits
+    // the api-panel subdomain directly — avoids Cloudflare SSL 525 on that subdomain.
+    callbackUrl:  optional('GOOGLE_CALLBACK_URL', `${optional('FRONTEND_URL', 'https://panel.siamsite.shop')}/api/auth/google/callback`),
   },
 
   facebook: {
     appId:        optional('FACEBOOK_CLIENT_ID', ''),
     appSecret:    optional('FACEBOOK_CLIENT_SECRET', ''),
-    callbackUrl:  optional('FACEBOOK_CALLBACK_URL', 'https://api-panel.siamsite.shop/api/auth/facebook/callback'),
+    callbackUrl:  optional('FACEBOOK_CALLBACK_URL', `${optional('FRONTEND_URL', 'https://panel.siamsite.shop')}/api/auth/facebook/callback`),
   },
 
   urls: {

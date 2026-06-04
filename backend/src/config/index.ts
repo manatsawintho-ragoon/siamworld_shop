@@ -20,7 +20,21 @@ const envSchema = z.object({
   RATE_LIMIT_MAX: z.string().default('2000'),
   LOG_LEVEL: z.string().default('info'),
   EASYSLIP_API_KEY: z.string().optional(),
-});
+  // Bridge: when BRIDGE_ENABLED=true the shop authenticates web logins against
+  // the customer's MC AuthMe DB (via the panel WS bridge) instead of the shop's
+  // own authme table. Falls back to local authme when the bridge says
+  // "unknown_user" or is unreachable, so legacy/pre-bridge web accounts keep working.
+  BRIDGE_ENABLED:         z.string().optional(),
+  BRIDGE_SUBSCRIPTION_ID: z.string().optional(),
+  PANEL_BRIDGE_URL:       z.string().optional(),
+  PANEL_BRIDGE_KEY:       z.string().optional(),
+}).refine(
+  (e) => {
+    if (e.BRIDGE_ENABLED !== 'true') return true;
+    return !!(e.BRIDGE_SUBSCRIPTION_ID && e.PANEL_BRIDGE_URL && e.PANEL_BRIDGE_KEY);
+  },
+  { message: 'BRIDGE_ENABLED=true requires BRIDGE_SUBSCRIPTION_ID, PANEL_BRIDGE_URL, PANEL_BRIDGE_KEY' }
+);
 
 const parsed = envSchema.safeParse(process.env);
 if (!parsed.success) {
@@ -56,4 +70,10 @@ export const config = {
     max: parseInt(env.RATE_LIMIT_MAX, 10),
   },
   easyslipApiKey: env.EASYSLIP_API_KEY || '',
+  bridge: {
+    enabled: env.BRIDGE_ENABLED === 'true',
+    subscriptionId: env.BRIDGE_SUBSCRIPTION_ID ? parseInt(env.BRIDGE_SUBSCRIPTION_ID, 10) : null,
+    url: env.PANEL_BRIDGE_URL || null,
+    key: env.PANEL_BRIDGE_KEY || null,
+  },
 };

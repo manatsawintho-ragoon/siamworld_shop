@@ -18,7 +18,7 @@ import java.util.logging.Logger;
  * MC main thread. AuthMe column names are stable across recent versions:
  * {@code username, realname, password, email, regdate, lastlogin}.
  */
-public final class AuthmeRepository {
+public final class AuthmeRepository implements UserRepository {
 
     private final HikariDataSource ds;
     private final String table;
@@ -42,7 +42,8 @@ public final class AuthmeRepository {
         this.ds = new HikariDataSource(hc);
     }
 
-    public AuthmeUser findByUsername(String username) throws SQLException {
+    @Override
+    public BridgeUser findByUsername(String username) throws SQLException {
         // AuthMe lowercases the lookup name; we match that behavior.
         String key = username == null ? "" : username.toLowerCase();
         String sql = "SELECT id, username, realname, password, email, regdate, lastlogin "
@@ -52,7 +53,7 @@ public final class AuthmeRepository {
             ps.setString(1, key);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) return null;
-                return new AuthmeUser(
+                return new BridgeUser(
                         rs.getInt("id"),
                         rs.getString("realname"),
                         rs.getString("password"),
@@ -63,6 +64,7 @@ public final class AuthmeRepository {
         }
     }
 
+    @Override
     public void updatePassword(String username, String plaintext) throws SQLException {
         String hashed = BCrypt.withDefaults().hashToString(10, plaintext.toCharArray());
         String sql = "UPDATE " + table + " SET password = ? WHERE LOWER(username) = ?";
@@ -78,6 +80,7 @@ public final class AuthmeRepository {
      * Cheap sanity probe used by the {@code health} opcode. Returns the
      * row count of the authme table; throws if the DB is unreachable.
      */
+    @Override
     public long rowCount() throws SQLException {
         try (Connection c = ds.getConnection();
              PreparedStatement ps = c.prepareStatement("SELECT COUNT(*) FROM " + table);
@@ -86,12 +89,20 @@ public final class AuthmeRepository {
         }
     }
 
+    @Override
     public long uptimeMs() { return System.currentTimeMillis() - startedAt; }
 
+    @Override
     public void close() {
         try { ds.close(); }
         catch (Exception e) { logger.log(Level.WARNING, "Closing AuthMe pool failed", e); }
     }
+
+    @Override
+    public String backendName() { return "authme"; }
+
+    @Override
+    public String tableName() { return table; }
 
     /**
      * Only allow word chars in the table name. We interpolate this into SQL

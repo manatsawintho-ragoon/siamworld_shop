@@ -343,7 +343,7 @@ function OrderContent() {
                       <i className="fas fa-link absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
                       <input
                         className="w-full bg-background border border-border rounded-xl pl-10 pr-4 py-3.5 text-base font-bold outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-foreground placeholder:text-muted-foreground lowercase"
-                        placeholder="เช่น: mchanom"
+                        placeholder="เช่น: siamsite"
                         value={shopName}
                         onChange={e => {
                           setShopName(e.target.value.toLowerCase());

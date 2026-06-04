@@ -57,7 +57,9 @@ class NotificationService {
 
   async suspendExpired(): Promise<void> {
     const settings = await settingsService.getAll();
-    const graceDays = parseInt(settings['auto_suspend_days'] || '3');
+    // Short grace by default (1 day): a shop goes down ~a day after it expires, not 3.
+    // Operators can still override per-panel via the auto_suspend_days setting.
+    const graceDays = parseInt(settings['auto_suspend_days'] || '1');
 
     const [subs] = await pool.execute<RowDataPacket[]>(`
       SELECT s.*, pu.line_notify_token

@@ -1,4 +1,3 @@
-import mysql from 'mysql2/promise';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { Rcon } from 'rcon-client';
@@ -9,15 +8,6 @@ import { logger } from '../utils/logger';
 import { RowDataPacket } from 'mysql2';
 import { ValidationError } from '../utils/errors';
 import { createSession } from './session.service';
-
-interface AuthMeConfig {
-  host: string;
-  port: number;
-  user: string;
-  password: string;
-  database: string;
-  table: string;
-}
 
 interface RconConfig {
   host: string;
@@ -42,55 +32,6 @@ class SetupService {
       return process.env.MYSQL_HOST || 'mysql';
     }
     return host;
-  }
-
-  /**
-   * Test an AuthMe MySQL database connection.
-   * Returns true if connection succeeds and the AuthMe table exists.
-   */
-  async testAuthMeConnection(config: AuthMeConfig): Promise<{ success: boolean; message: string; playerCount?: number }> {
-    let conn: mysql.Connection | null = null;
-    try {
-      const resolvedHost = this.resolveHost(config.host);
-      // If resolveHost mapped external hostname to internal container, use internal port (3306)
-      const resolvedPort = (resolvedHost !== config.host)
-        ? parseInt(process.env.MYSQL_PORT || '3306', 10)
-        : config.port;
-      conn = await mysql.createConnection({
-        host: resolvedHost,
-        port: resolvedPort,
-        user: config.user,
-        password: config.password,
-        database: config.database,
-        connectTimeout: 10000,
-      });
-      await conn.execute('SELECT 1');
-
-      // Check if AuthMe table exists
-      // SHOW TABLES LIKE does not support server-side prepared statements in some MySQL versions,
-      // so we inline the sanitized table name instead of using a ? placeholder.
-      const safeTableName = (config.table || 'authme').replace(/[^a-zA-Z0-9_]/g, '');
-      const [tables] = await conn.query<RowDataPacket[]>(
-        `SHOW TABLES LIKE '${safeTableName}'`
-      );
-      if (tables.length === 0) {
-        return { success: false, message: `Table '${config.table || 'authme'}' not found in database '${config.database}'` };
-      }
-
-      // Count players
-      const [rows] = await conn.execute<RowDataPacket[]>(
-        `SELECT COUNT(*) as count FROM \`${(config.table || 'authme').replace(/[^a-zA-Z0-9_]/g, '')}\``
-      );
-      const playerCount = rows[0]?.count || 0;
-
-      return { success: true, message: `Connected! Found ${playerCount} player(s) in AuthMe table.`, playerCount };
-    } catch (err) {
-      const error = err as Error;
-      logger.warn('AuthMe connection test failed', { host: config.host, error: error.message });
-      return { success: false, message: `Connection failed: ${error.message}` };
-    } finally {
-      if (conn) await conn.end().catch(() => {});
-    }
   }
 
   /**
@@ -190,38 +131,6 @@ class SetupService {
       isConfigured: servers[0].count > 0,
       serverCount: servers[0].count,
       hasAdmin: admins[0].count > 0,
-    };
-  }
-
-  /**
-   * Return the shop's MySQL connection info (for AuthMe plugin config) + current authme player count.
-   * Password is included because this is an admin-only endpoint needed for plugin setup.
-   */
-  async getAuthMeInfo(): Promise<{
-    dbHost: string; dbPort: number; dbUser: string;
-    dbPassword: string; dbDatabase: string; playerCount: number;
-  }> {
-    const [rows] = await pool.execute<RowDataPacket[]>('SELECT COUNT(*) as count FROM authme');
-
-    // Use the shop's public domain (from CORS_ORIGIN) as the external MySQL host shown to users.
-    // MYSQL_HOSTNAME is only used internally (resolveHost) to avoid hairpin NAT — not for display.
-    let externalHost: string = config.db.host;
-    try {
-      const origin = config.corsOrigin.replace(/,$/, '').split(',')[0].trim();
-      if (origin && origin.startsWith('http')) {
-        externalHost = new URL(origin).hostname;
-      }
-    } catch { /* keep config.db.host as fallback */ }
-
-    const externalPort = config.db.exposedPort ?? config.db.port;
-
-    return {
-      dbHost: externalHost,
-      dbPort: externalPort,
-      dbUser: config.db.user,
-      dbPassword: config.db.password,
-      dbDatabase: config.db.database,
-      playerCount: rows[0].count,
     };
   }
 

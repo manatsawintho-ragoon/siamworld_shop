@@ -91,6 +91,7 @@ router.get('/facebook/callback', asyncRoute(async (req, res) => {
     const fetchJson = (url: string): Promise<any> => new Promise((resolve, reject) => {
       const options = {
         timeout: 15000,
+        family: 4, // Force IPv4 — avoids happy-eyeballs AggregateError when IPv6 is unreachable
         headers: { 'Accept': 'application/json' }
       };
       https.get(url, options, (res) => {

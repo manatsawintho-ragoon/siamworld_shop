@@ -10,15 +10,6 @@ const router = Router();
 
 // ── Schemas ────────────────────────────────────────────────────
 
-const testAuthMeSchema = z.object({
-  host: z.string().min(1).max(255),
-  port: z.number().int().positive().default(3306),
-  user: z.string().min(1).max(255),
-  password: z.string().min(1).max(255),
-  database: z.string().min(1).max(255),
-  table: z.string().min(1).max(255).default('authme'),
-});
-
 const testRconSchema = z.object({
   host: z.string().min(1).max(255),
   rcon_port: z.number().int().positive(),
@@ -70,19 +61,9 @@ router.post('/init-admin', validate(initAdminSchema), asyncHandler(async (req, r
 
 router.use(authenticate, authorize('admin'));
 
-router.post('/test-db', validate(testAuthMeSchema), asyncHandler(async (req, res) => {
-  const result = await setupService.testAuthMeConnection(req.body);
-  res.json({ ...result });
-}));
-
 router.post('/test-rcon', validate(testRconSchema), asyncHandler(async (req, res) => {
   const result = await setupService.testRconConnection(req.body);
   res.json({ ...result });
-}));
-
-router.get('/authme-info', asyncHandler(async (_req, res) => {
-  const info = await setupService.getAuthMeInfo();
-  res.json({ success: true, ...info });
 }));
 
 router.post('/save-settings', validate(saveSetupSettingsSchema), asyncHandler(async (req, res) => {

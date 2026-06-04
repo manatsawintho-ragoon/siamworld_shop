@@ -106,9 +106,9 @@ class SubscriptionService {
       durationMonths = packageMonths;
     }
 
-    const expiresAt = new Date();
+    let expiresAt = new Date();
     if (durationDays > 0) expiresAt.setDate(expiresAt.getDate() + durationDays);
-    if (durationMonths > 0) expiresAt.setMonth(expiresAt.getMonth() + durationMonths);
+    if (durationMonths > 0) expiresAt = this.addMonths(expiresAt, durationMonths);
 
     // ── Atomic block: lock user, validate eligibility, debit wallet, insert subscription.
     // Previously each step had its own transaction so a failure mid-flow could debit the
@@ -130,20 +130,25 @@ class SubscriptionService {
         if (kind === 'trial' && u.used_trial) throw new ConflictError('คุณใช้สิทธิ์ทดลองฟรีไปแล้ว');
         if (kind === 'intro' && u.used_intro) throw new ConflictError('คุณใช้สิทธิ์โปรเดือนแรกไปแล้ว');
 
-        // IP cap: bucket by CURRENT request IP against past claim IPs (claimed_*_ip),
-        // not the signup_ip — that's what trapped users who registered+claimed from
-        // different IPs. claimed_*_ip is backfilled from signup_ip for existing rows.
+        // IP cap: only blocks if SAME IP claimed the same kind within the last 30 days.
+        // Older claims do NOT block — protects against legit cases where one IP is shared
+        // over time (CGNAT, household, mobile, dorm, prior testing). Anti-abuse against
+        // burst signups stays effective because real abuse happens in minutes/hours.
         if (clientIp) {
           const ipCol = kind === 'trial' ? 'claimed_trial_ip' : 'claimed_intro_ip';
           const [ipRows] = await conn.execute<RowDataPacket[]>(
-            `SELECT id FROM panel_users WHERE ${ipCol} = ? AND id <> ? LIMIT 1`,
-            [clientIp, userId]
+            `SELECT u.id FROM panel_users u
+             INNER JOIN subscriptions s ON s.user_id = u.id AND s.kind = ?
+             WHERE u.${ipCol} = ? AND u.id <> ?
+               AND s.created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)
+             LIMIT 1`,
+            [kind, clientIp, userId]
           );
           if (ipRows.length) {
             throw new ConflictError(
               kind === 'trial'
-                ? 'IP นี้เคยใช้สิทธิ์ทดลองฟรีแล้ว'
-                : 'IP นี้เคยใช้สิทธิ์โปรเดือนแรกแล้ว'
+                ? 'IP นี้เพิ่งใช้สิทธิ์ทดลองฟรีในรอบ 30 วันที่ผ่านมา ลองอีกครั้งภายหลัง'
+                : 'IP นี้เพิ่งใช้สิทธิ์โปรเดือนแรกในรอบ 30 วันที่ผ่านมา ลองอีกครั้งภายหลัง'
             );
           }
         }
@@ -245,31 +250,68 @@ class SubscriptionService {
       debitDesc = `ต่ออายุ ${packageMonths} เดือน (${sub.domain})`;
     }
 
-    await walletService.debit(userId, price, 'renewal', debitDesc);
-
-    // Extend from current expiry or now (whichever is later)
+    // Extend from current expiry or now (whichever is later). Use calendar-safe month
+    // math so e.g. renewing a sub that expires Jan 31 lands on Feb 28, not Mar 3 — the
+    // old `setMonth` overflow is why some customers saw the expiry date computed wrong.
     const base = new Date(sub.expires_at) > new Date() ? new Date(sub.expires_at) : new Date();
-    base.setMonth(base.getMonth() + renewMonths);
+    const newExpiry = this.addMonths(base, renewMonths);
 
     // Upgrade kind off "trial" once paid (so future renewals follow normal pricing rules)
     const newKind = sub.kind === 'trial' ? (kind === 'intro' ? 'intro' : 'regular') : sub.kind;
 
-    await pool.execute(
-      'UPDATE subscriptions SET expires_at=?, status="active", renewed_at=NOW(), kind=?, package_months=? WHERE id=?',
-      [base, newKind, renewMonths, subscriptionId]
-    );
+    // ── Atomic block: debit wallet + extend subscription in ONE transaction.
+    // Previously the debit ran in its own transaction and the UPDATE ran separately, so a
+    // failure (or crash) between them charged the customer without extending the shop —
+    // the "ตัดเงินแต่ไม่ต่อให้" report. Now either both happen or neither does.
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
 
-    if (kind === 'intro') {
-      await pool.execute('UPDATE panel_users SET used_intro = 1 WHERE id = ?', [userId]);
+      await walletService.debitWithin(conn, userId, price, 'renewal', debitDesc);
+
+      await conn.execute(
+        'UPDATE subscriptions SET expires_at=?, status="active", renewed_at=NOW(), kind=?, package_months=? WHERE id=?',
+        [newExpiry, newKind, renewMonths, subscriptionId]
+      );
+
+      if (kind === 'intro') {
+        await conn.execute('UPDATE panel_users SET used_intro = 1 WHERE id = ?', [userId]);
+      }
+
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
     }
 
-    // If was suspended, restart docker
+    // If the shop was stopped (suspended on expiry, or expired), bring it back online.
+    // Docker work runs AFTER commit so it never holds a DB transaction open. `startShop`
+    // resumes existing (stopped) containers; if they were pruned/removed it throws, so we
+    // fall back to a full redeploy — otherwise the customer paid but the site stayed down
+    // (the "ต่อแล้วเว็บยังไม่กลับมา" report).
     if (sub.status === 'suspended' || sub.status === 'expired') {
-      try { await deployService.startShop(sub.shop_name); } catch { /* non-critical */ }
-      await pool.execute('UPDATE subscriptions SET status="active" WHERE id=?', [subscriptionId]);
+      try {
+        await deployService.startShop(sub.shop_name);
+      } catch (err) {
+        console.error(`[renew] startShop failed for ${sub.shop_name}, falling back to redeploy:`, (err as Error).message);
+        deployService.deployAsync(subscriptionId, sub.shop_name, sub.domain, sub.mc_ip || undefined);
+      }
     }
 
-    return { expiresAt: base, price };
+    return { expiresAt: newExpiry, price };
+  }
+
+  /** Add whole months to a date, clamping the day so Jan 31 + 1mo = Feb 28 (not Mar 3). */
+  private addMonths(date: Date, months: number): Date {
+    const d = new Date(date);
+    const targetDay = d.getDate();
+    d.setDate(1);
+    d.setMonth(d.getMonth() + months);
+    const lastDayOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    d.setDate(Math.min(targetDay, lastDayOfMonth));
+    return d;
   }
 
   async getMyEligibility(userId: number) {

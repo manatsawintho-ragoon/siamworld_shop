@@ -50,3 +50,8 @@ easy_slip_plan.png
 # ── Operational / sensitive infra files ───────────────────────
 network_investigation_report.txt
 deploy/customers.json
+deploy/certs/
+
+# nlogin plugin runtime data — live DB credentials, user DB (password hashes),
+# player logs. Never commit.
+plugins_nlogin/

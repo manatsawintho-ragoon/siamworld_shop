@@ -3,6 +3,7 @@ package shop.siamsite.bridge.cmd;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import shop.siamsite.bridge.SiamsiteBridgePlugin;
+import shop.siamsite.bridge.db.UserRepository;
 import shop.siamsite.bridge.ws.BridgeClient;
 import shop.siamsite.bridge.ws.ConnectionState;
 
@@ -34,6 +35,12 @@ public final class BridgeCommand {
                 + " (" + SiamsiteBridgePlugin.PROTOCOL_VERSION + ")");
         send(sender, "  Connection: " + colorState(s) + s.name());
         send(sender, "  Endpoint:   " + plugin.getConfig().getString("panel.url"));
+        UserRepository repo = plugin.getRepository();
+        if (repo != null) {
+            send(sender, "  Backend:    " + repo.backendName() + " (table " + repo.tableName() + ")");
+        } else {
+            send(sender, ChatColor.YELLOW + "  Backend:    not initialized");
+        }
         if (c != null && c.lastErrorMessage() != null) {
             send(sender, ChatColor.RED + "  Last error: " + c.lastErrorMessage());
         }

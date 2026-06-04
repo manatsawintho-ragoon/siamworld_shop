@@ -11,7 +11,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
-const PRESETS = [100, 350, 500, 945, 1000, 1785];
+// Used until live package prices load from the backend.
+const FALLBACK_PRESETS = [100, 350, 500, 945, 1000, 1785];
+type PkgPrice = { months: number; price: number; label: string };
 const STEPS = ['เลือกยอด', 'สแกน QR', 'แนบสลิป', 'สำเร็จ'];
 const STEP_MAP: Record<string, number> = { amount: 0, qr: 1, slip: 2, done: 3 };
 
@@ -30,9 +32,17 @@ export default function TopupPage() {
   const [newBalance, setNewBalance] = useState(0);
   const [voucherCode, setVoucherCode] = useState('');
   const [redeeming, setRedeeming] = useState(false);
+  const [packages, setPackages] = useState<PkgPrice[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { if (!loading && !user) router.push('/?auth=login'); }, [user, loading, router]);
+
+  // Pull live package prices so the quick-select amounts track backend pricing.
+  useEffect(() => {
+    api.get('/api/subscriptions/packages')
+      .then(({ data }) => setPackages(data.packages || []))
+      .catch(() => {});
+  }, []);
 
   const redeemVoucher = async () => {
     if (!voucherCode.trim()) return;
@@ -113,6 +123,12 @@ export default function TopupPage() {
   if (loading) return null;
 
   const currentStepIdx = STEP_MAP[step] ?? 0;
+
+  // Quick-select amounts: round figures interleaved with live package prices.
+  const pkgPrice = (m: number) => packages.find(p => p.months === m)?.price;
+  const presets = packages.length
+    ? [100, pkgPrice(1), 500, pkgPrice(3), 1000, pkgPrice(6)].filter((n): n is number => typeof n === 'number')
+    : FALLBACK_PRESETS;
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
@@ -334,7 +350,7 @@ export default function TopupPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-3 gap-3">
-                    {PRESETS.map(p => (
+                    {presets.map(p => (
                       <button key={p} onClick={() => { setAmount(String(p)); setError(''); }}
                         className={`py-3 rounded-xl border text-sm font-bold transition-all cursor-pointer ${amount === String(p)
                           ? 'bg-primary border-primary text-primary-foreground shadow-sm'
@@ -346,7 +362,10 @@ export default function TopupPage() {
                   <div className="mt-6 p-4 bg-primary/5 border border-primary/20 rounded-xl flex items-start gap-3">
                     <i className="fas fa-info-circle text-primary mt-0.5" />
                     <p className="text-xs text-primary/90 font-semibold leading-relaxed">
-                      ยอดที่ตรงกับแพ็กเกจ: <br/>฿350 (1 เดือน), ฿945 (3 เดือน), ฿1,785 (6 เดือน)
+                      ยอดที่ตรงกับแพ็กเกจ: <br/>
+                      {packages.length
+                        ? packages.map(p => `฿${p.price.toLocaleString()} (${p.label})`).join(' · ')
+                        : '฿350 (1 เดือน), ฿945 (3 เดือน), ฿1,785 (6 เดือน)'}
                     </p>
                   </div>
                 </CardContent>

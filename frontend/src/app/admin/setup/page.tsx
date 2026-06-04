@@ -18,15 +18,7 @@ export default function SetupWizardPage() {
   const [adminForm, setAdminForm] = useState({ username: '', password: '', confirm: '' });
   // Step 2: Shop Settings
   const [shopForm, setShopForm] = useState({ shop_name: '', shop_subtitle: '', currency_symbol: '฿' });
-  // Step 3: AuthMe DB (customer-filled)
-  const [authmeForm, setAuthmeForm] = useState({ host: '', port: 3306, user: '', password: '', database: '', table: 'authme' });
-  const [authmeTestStatus, setAuthmeTestStatus] = useState<TestStatus>('idle');
-  const [authmeTestMsg, setAuthmeTestMsg] = useState('');
-  const [showDbPassword, setShowDbPassword] = useState(false);
-  const [authmePlayerCount, setAuthmePlayerCount] = useState<number | null>(null);
-  const [authmeInfo, setAuthmeInfo] = useState<{ dbHost: string; dbPort: number; dbUser: string; dbPassword: string; dbDatabase: string } | null>(null);
-  const [loadingAuthmeInfo, setLoadingAuthmeInfo] = useState(false);
-  // Steps 4–5: Server Config
+  // Steps 3–4: Server Config (game-info + RCON)
   const [server, setServer] = useState({
     name: '', host: '', port: 25565,
     rcon_port: 25575, rcon_password: '',
@@ -41,28 +33,6 @@ export default function SetupWizardPage() {
       })
       .catch(() => setHasAdmin(false));
   }, []);
-
-  useEffect(() => {
-    if (step !== 3) return;
-    setLoadingAuthmeInfo(true);
-    api('/setup/authme-info', { method: 'GET', token: getToken() || undefined })
-      .then((res: any) => {
-        if (res.success !== false) {
-          setAuthmeInfo(res);
-          // Auto-fill form if fields are empty
-          setAuthmeForm(prev => ({
-            ...prev,
-            host: prev.host || res.dbHost || '',
-            port: (!prev.port || prev.port === 3306) && res.dbPort ? res.dbPort : prev.port,
-            user: prev.user || res.dbUser || '',
-            password: prev.password || res.dbPassword || '',
-            database: prev.database || res.dbDatabase || '',
-          }));
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoadingAuthmeInfo(false));
-  }, [step]);
 
   // ── Handlers ───────────────────────────────────────────────
 
@@ -117,37 +87,6 @@ export default function SetupWizardPage() {
     }
   };
 
-  const testAuthMe = async () => {
-    setAuthmeTestStatus('testing');
-    setAuthmeTestMsg('');
-    setAuthmePlayerCount(null);
-    try {
-      const res = await api('/setup/test-db', {
-        method: 'POST',
-        token: getToken() || undefined,
-        body: {
-          host: authmeForm.host,
-          port: authmeForm.port,
-          user: authmeForm.user,
-          password: authmeForm.password,
-          database: authmeForm.database,
-          table: authmeForm.table,
-        },
-      });
-      if (res.success) {
-        setAuthmeTestStatus('success');
-        setAuthmeTestMsg(res.message || 'Connected');
-        if (typeof res.playerCount === 'number') setAuthmePlayerCount(res.playerCount);
-      } else {
-        setAuthmeTestStatus('error');
-        setAuthmeTestMsg(res.message || 'ไม่สามารถเชื่อมต่อได้');
-      }
-    } catch (err: any) {
-      setAuthmeTestStatus('error');
-      setAuthmeTestMsg(err.message || 'Connection failed');
-    }
-  };
-
   const testRcon = async () => {
     setRconStatus('testing');
     setMessage('');
@@ -175,7 +114,7 @@ export default function SetupWizardPage() {
         body: server,
       });
       if (res.success) {
-        setStep(6);
+        setStep(5);
       } else {
         setMessage(String(res.error || 'Failed to save'));
       }
@@ -190,7 +129,7 @@ export default function SetupWizardPage() {
     setServer({ name: '', host: '', port: 25565, rcon_port: 25575, rcon_password: '', minecraft_version: '1.20.4', max_players: 100 });
     setRconStatus('idle');
     setMessage('');
-    setStep(4);
+    setStep(3);
   };
 
   // ── Loading ─────────────────────────────────────────────────
@@ -224,18 +163,15 @@ export default function SetupWizardPage() {
 
   const isFirstTime = !hasAdmin;
   const steps = isFirstTime
-    ? ['สร้างบัญชี Admin', 'ตั้งค่าร้านค้า', 'ตั้งค่า AuthMe', 'ข้อมูลเซิร์ฟเวอร์', 'ตั้งค่า RCON', 'เสร็จสิ้น']
-    : ['ตั้งค่า AuthMe', 'ข้อมูลเซิร์ฟเวอร์', 'ตั้งค่า RCON', 'เสร็จสิ้น'];
+    ? ['สร้างบัญชี Admin', 'ตั้งค่าร้านค้า', 'ข้อมูลเซิร์ฟเวอร์', 'ตั้งค่า RCON', 'เสร็จสิ้น']
+    : ['ข้อมูลเซิร์ฟเวอร์', 'ตั้งค่า RCON', 'เสร็จสิ้น'];
   const displayStep = isFirstTime ? step : step - 2;
 
   const INPUT = 'w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#22c55e]/30 focus:border-[#22c55e] transition-colors';
-  const FIELD_INPUT = 'w-full pl-9 pr-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 bg-white';
-
-  const canTestAuthMe = !!(authmeForm.host && authmeForm.user && authmeForm.password && authmeForm.database);
 
   return (
     <div className={isFirstTime ? 'min-h-screen bg-[#f4f5f7] flex items-start justify-center pt-10 p-4' : ''}>
-      <div className={`w-full mx-auto ${step === 3 || step === 5 ? 'max-w-4xl' : 'max-w-2xl'}`}>
+      <div className={`w-full mx-auto ${step === 4 ? 'max-w-4xl' : 'max-w-2xl'}`}>
 
         {/* Header */}
         <div className="mb-6">
@@ -244,7 +180,7 @@ export default function SetupWizardPage() {
             Setup Wizard
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            {isFirstTime ? 'ตั้งค่าระบบครั้งแรก — ใช้เวลาเพียงไม่กี่นาที' : 'ตั้งค่า AuthMe + เพิ่มเซิร์ฟเวอร์ Minecraft'}
+            {isFirstTime ? 'ตั้งค่าระบบครั้งแรก — ใช้เวลาเพียงไม่กี่นาที' : 'เพิ่มเซิร์ฟเวอร์ Minecraft'}
           </p>
         </div>
 
@@ -281,13 +217,6 @@ export default function SetupWizardPage() {
             <div>
               <h2 className="text-lg font-bold text-gray-900">สร้างบัญชีผู้ดูแลระบบ</h2>
               <p className="text-sm text-gray-500 mt-0.5">บัญชีนี้จะมีสิทธิ์เข้าถึง Admin Panel ทั้งหมด</p>
-            </div>
-
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex gap-3">
-              <i className="fas fa-triangle-exclamation text-amber-500 mt-0.5 flex-shrink-0"></i>
-              <p className="text-sm text-amber-700">
-                ชื่อผู้ใช้นี้จะถูกสร้างใน <strong>AuthMe</strong> ด้วย — ใช้ชื่อที่ตรงกับ IGN ของคุณบนเซิร์ฟเวอร์ Minecraft หากต้องการ
-              </p>
             </div>
 
             <div className="space-y-3">
@@ -373,299 +302,9 @@ export default function SetupWizardPage() {
           </div>
         )}
 
-        {/* ── Step 3: AuthMe DB — form LEFT, guide RIGHT ────── */}
+
+        {/* ── Step 3: Server Info ────────────────────────────── */}
         {step === 3 && (
-          <div className="grid grid-cols-1 lg:grid-cols-[7fr_5fr] gap-4 items-start">
-
-            {/* ── LEFT: Form Panel ── */}
-            <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
-              {/* Card header */}
-              <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/60 flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
-                  <i className="fas fa-database text-green-600 text-[10px]"></i>
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 text-sm">ข้อมูล AuthMe MySQL</h3>
-                  <p className="text-[11px] text-gray-400">กรอกค่าจาก plugins/AuthMe/config.yml</p>
-                </div>
-              </div>
-
-              {loadingAuthmeInfo && (
-                <div className="px-4 py-2 bg-amber-50 border-b border-amber-100 text-xs text-amber-600 flex items-center gap-1.5">
-                  <i className="fas fa-spinner fa-spin text-[10px]"></i>กำลังโหลดข้อมูลฐานข้อมูล...
-                </div>
-              )}
-
-              {/* Form fields */}
-              <div className="p-4 space-y-3">
-
-                {/* Host + Port */}
-                <div className="grid grid-cols-[1fr_88px] gap-2.5">
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-500 mb-1">
-                      Host <span className="text-red-400">*</span>
-                      <span className="ml-1.5 font-normal text-gray-400">← mySQLHost</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300">
-                        <i className="fas fa-server text-xs"></i>
-                      </div>
-                      <input
-                        type="text"
-                        value={authmeForm.host}
-                        onChange={e => setAuthmeForm(p => ({ ...p, host: e.target.value }))}
-                        className="w-full pl-8 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 bg-white"
-                        placeholder="main.siamsite.shop"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-500 mb-1">Port</label>
-                    <input
-                      type="number"
-                      value={authmeForm.port}
-                      onChange={e => setAuthmeForm(p => ({ ...p, port: parseInt(e.target.value) || 3306 }))}
-                      className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 text-center bg-white"
-                    />
-                  </div>
-                </div>
-
-                {/* Username + Password */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-500 mb-1">
-                      Username <span className="text-red-400">*</span>
-                      <span className="ml-1.5 font-normal text-gray-400">← mySQLUsername</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300">
-                        <i className="fas fa-user text-xs"></i>
-                      </div>
-                      <input
-                        type="text"
-                        value={authmeForm.user}
-                        onChange={e => setAuthmeForm(p => ({ ...p, user: e.target.value }))}
-                        className="w-full pl-8 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 bg-white"
-                        placeholder="root"
-                        autoComplete="username"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-500 mb-1">
-                      Password <span className="text-red-400">*</span>
-                      <span className="ml-1.5 font-normal text-gray-400">← mySQLPassword</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300">
-                        <i className="fas fa-lock text-xs"></i>
-                      </div>
-                      <input
-                        type={showDbPassword ? 'text' : 'password'}
-                        value={authmeForm.password}
-                        onChange={e => setAuthmeForm(p => ({ ...p, password: e.target.value }))}
-                        className="w-full pl-8 pr-9 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 bg-white"
-                        placeholder="••••••••"
-                        autoComplete="current-password"
-                      />
-                      <button type="button" onClick={() => setShowDbPassword(v => !v)}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors">
-                        <i className={`fas ${showDbPassword ? 'fa-eye-slash' : 'fa-eye'} text-xs`}></i>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Database + Table */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-500 mb-1">
-                      Database <span className="text-red-400">*</span>
-                      <span className="ml-1.5 font-normal text-gray-400">← mySQLDatabase</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300">
-                        <i className="fas fa-database text-xs"></i>
-                      </div>
-                      <input
-                        type="text"
-                        value={authmeForm.database}
-                        onChange={e => setAuthmeForm(p => ({ ...p, database: e.target.value }))}
-                        className="w-full pl-8 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 bg-white"
-                        placeholder="minecraft_shop"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-500 mb-1">
-                      Table
-                      <span className="ml-1.5 font-normal text-gray-400">← mySQLTablename</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300">
-                        <i className="fas fa-table text-xs"></i>
-                      </div>
-                      <input
-                        type="text"
-                        value={authmeForm.table}
-                        onChange={e => setAuthmeForm(p => ({ ...p, table: e.target.value }))}
-                        className="w-full pl-8 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 bg-white"
-                        placeholder="authme"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Test result */}
-                {authmeTestMsg && (
-                  <div className={`py-2 px-3 rounded-lg text-xs flex items-center gap-2 border ${
-                    authmeTestStatus === 'success'
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                      : 'bg-red-50 text-red-600 border-red-200'
-                  }`}>
-                    <i className={`fas ${authmeTestStatus === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation'} flex-shrink-0`}></i>
-                    <span className="truncate">{authmeTestMsg}</span>
-                    {authmePlayerCount !== null && authmePlayerCount > 0 && (
-                      <span className="ml-auto flex-shrink-0 flex items-center gap-1 font-bold">
-                        <i className="fas fa-users"></i> {authmePlayerCount} คน
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Card footer */}
-              <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/60 flex items-center justify-between gap-3">
-                <button
-                  onClick={testAuthMe}
-                  disabled={!canTestAuthMe || authmeTestStatus === 'testing'}
-                  className={`flex items-center gap-1.5 px-4 py-2 text-[13px] font-bold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-110 active:translate-y-[2px] ${
-                    authmeTestStatus === 'success'
-                      ? 'bg-emerald-500 text-white shadow-[0_4px_0_#15803d] active:shadow-[0_1px_0_#15803d]'
-                      : authmeTestStatus === 'error'
-                      ? 'bg-red-500 text-white shadow-[0_4px_0_#b91c1c] active:shadow-[0_1px_0_#b91c1c]'
-                      : 'bg-white border border-gray-200 text-gray-800 shadow-[0_4px_0_#d1d5db] active:shadow-[0_1px_0_#d1d5db]'
-                  }`}
-                >
-                  {authmeTestStatus === 'testing'
-                    ? <><i className="fas fa-spinner fa-spin text-[12px]"></i> กำลังทดสอบ...</>
-                    : authmeTestStatus === 'success'
-                    ? <><i className="fas fa-circle-check text-[12px]"></i> เชื่อมต่อสำเร็จ</>
-                    : authmeTestStatus === 'error'
-                    ? <><i className="fas fa-rotate-right text-[12px]"></i> ลองอีกครั้ง</>
-                    : <><i className="fas fa-plug text-[12px]"></i> ทดสอบการเชื่อมต่อ</>}
-                </button>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => setStep(4)}
-                    className="flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-500 shadow-[0_4px_0_#d1d5db] hover:brightness-95 transition-all active:shadow-none active:translate-y-[2px]">
-                    ข้าม <i className="fas fa-forward-step text-[12px]"></i>
-                  </button>
-                  <button onClick={() => setStep(4)}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-[#16a34a] text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#0d6b2e] hover:brightness-110 transition-all active:shadow-[0_1px_0_#0d6b2e] active:translate-y-[2px]">
-                    ถัดไป <i className="fas fa-arrow-right text-[12px]"></i>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* ── RIGHT: Instruction Panel ── */}
-            <div className="bg-[#1e2735] rounded-2xl p-4 shadow-[0_4px_0_#131820] text-white">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-7 h-7 rounded-lg bg-[#22c55e]/20 flex items-center justify-center flex-shrink-0">
-                  <i className="fas fa-book-open text-[#22c55e] text-[10px]"></i>
-                </div>
-                <div>
-                  <h3 className="font-bold text-white text-sm">คู่มือตั้งค่า AuthMe</h3>
-                  <p className="text-[11px] text-white/50">ข้อมูลถูกกรอกอัตโนมัติแล้ว — ตั้งค่า AuthMe ให้ชี้มาที่ VPS</p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {/* Steps */}
-                <div className="space-y-2.5">
-                  {[
-                    {
-                      n: '1',
-                      title: 'ข้อมูลฐานข้อมูลถูกกรอกอัตโนมัติแล้ว',
-                      sub: <span className="text-[10px] text-white/50">ตรวจสอบค่าในฟอร์มซ้ายให้ถูกต้อง</span>,
-                    },
-                    {
-                      n: '2',
-                      title: 'แก้ไฟล์ AuthMe config',
-                      sub: <code className="text-[10px] text-[#22c55e] bg-white/10 px-1.5 py-0.5 rounded">plugins/AuthMe/config.yml</code>,
-                    },
-                    {
-                      n: '3',
-                      title: 'ตั้งค่า DataSource ตามตัวอย่างด้านล่าง',
-                      sub: <span className="text-[10px] text-white/50">ใส่ค่าเดียวกับที่แสดงในฟอร์มซ้าย</span>,
-                    },
-                    {
-                      n: '4',
-                      title: 'Restart Minecraft server',
-                      sub: <span className="text-[10px] text-white/50">AuthMe จะสร้างตาราง authme ให้อัตโนมัติ</span>,
-                    },
-                    {
-                      n: '5',
-                      title: 'กดปุ่ม \'ทดสอบการเชื่อมต่อ\' ด้านซ้าย',
-                      sub: <span className="text-[10px] text-white/50">เพื่อยืนยันว่า AuthMe เชื่อมต่อสำเร็จ</span>,
-                    },
-                  ].map(({ n, title, sub }) => (
-                    <div key={n} className="flex gap-2.5 items-start">
-                      <div className="w-5 h-5 rounded-full bg-[#22c55e] flex items-center justify-center flex-shrink-0 text-[9px] font-black text-white mt-0.5">{n}</div>
-                      <div>
-                        <p className="text-[12px] font-semibold text-white leading-tight">{title}</p>
-                        <div className="mt-0.5">{sub}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* YAML snippet */}
-                <div className="bg-black/40 rounded-xl p-3 font-mono text-[10px] leading-[1.65]">
-                  <span className="text-purple-400">DataSource:</span><br />
-                  {'  '}<span className="text-blue-300">backend:</span> <span className="text-amber-300">MYSQL</span><br />
-                  {'  '}<span className="text-blue-300">mySQLHost:</span> <span className="text-[#22c55e]">{authmeInfo?.dbHost || '<Host จาก env>'}</span><br />
-                  {'  '}<span className="text-blue-300">mySQLPort:</span> <span className="text-amber-300">{authmeInfo?.dbPort || '<Port จาก env>'}</span><br />
-                  {'  '}<span className="text-blue-300">mySQLUsername:</span> <span className="text-[#22c55e]">{authmeInfo?.dbUser || '<Username>'}</span><br />
-                  {'  '}<span className="text-blue-300">mySQLPassword:</span> <span className="text-[#22c55e]">{authmeInfo?.dbPassword || '<Password>'}</span><br />
-                  {'  '}<span className="text-blue-300">mySQLDatabase:</span> <span className="text-[#22c55e]">{authmeInfo?.dbDatabase || '<Database>'}</span><br />
-                  {'  '}<span className="text-blue-300">mySQLTablename:</span> <span className="text-amber-300">authme</span>
-                </div>
-
-                {/* Field mapping */}
-                <div className="bg-white/5 rounded-xl p-3">
-                  <p className="text-[9px] font-bold text-white/30 uppercase tracking-wider mb-2">ช่องฟอร์มซ้าย ↔ key ใน config.yml</p>
-                  <div className="grid grid-cols-2 gap-x-2 gap-y-1.5">
-                    {[
-                      { field: 'Host', key: 'mySQLHost' },
-                      { field: 'Port', key: 'mySQLPort' },
-                      { field: 'Username', key: 'mySQLUsername' },
-                      { field: 'Password', key: 'mySQLPassword' },
-                      { field: 'Database', key: 'mySQLDatabase' },
-                      { field: 'Table', key: 'mySQLTablename' },
-                    ].map(({ field, key }) => (
-                      <div key={field} className="flex items-center justify-between gap-1">
-                        <span className="text-[10px] text-white/60">{field}</span>
-                        <code className="text-[9px] text-[#22c55e] bg-black/30 px-1 py-0.5 rounded">{key}</code>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Warning */}
-                <div className="flex gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl p-2.5">
-                  <i className="fas fa-triangle-exclamation text-amber-400 text-[10px] mt-0.5 flex-shrink-0"></i>
-                  <p className="text-[10px] text-amber-200/80 leading-relaxed">
-                    Port ที่ใช้คือ <strong className="text-amber-300">{authmeInfo?.dbPort ?? '33xxx'}</strong> — ไม่ใช่ 3306 (เป็น port พิเศษของร้านนี้)
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── Step 4: Server Info ────────────────────────────── */}
-        {step === 4 && (
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
             <div>
               <h2 className="text-lg font-bold text-gray-900">ข้อมูลเซิร์ฟเวอร์ Minecraft</h2>
@@ -710,7 +349,7 @@ export default function SetupWizardPage() {
             </div>
 
             <div className="flex justify-end pt-2">
-              <button onClick={() => setStep(5)}
+              <button onClick={() => setStep(4)}
                 disabled={!server.name || !server.host}
                 className="px-6 py-2.5 bg-[#16a34a] hover:bg-[#15803d] text-white font-bold rounded-xl shadow-[0_4px_0_#0d6b2e] active:shadow-none active:translate-y-[3px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
                 ถัดไป <i className="fas fa-arrow-right ml-1.5"></i>
@@ -719,8 +358,8 @@ export default function SetupWizardPage() {
           </div>
         )}
 
-        {/* ── Step 5: RCON Config ────────────────────────────── */}
-        {step === 5 && (
+        {/* ── Step 4: RCON Config ────────────────────────────── */}
+        {step === 4 && (
           <div className={`grid grid-cols-1 lg:grid-cols-[7fr_5fr] gap-4 items-start`}>
             {/* ── LEFT: Form ── */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
@@ -774,7 +413,7 @@ export default function SetupWizardPage() {
               )}
 
               <div className="flex justify-between pt-2">
-                <button onClick={() => { setStep(4); setMessage(''); }}
+                <button onClick={() => { setStep(3); setMessage(''); }}
                   className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-sm transition-colors">
                   <i className="fas fa-arrow-left mr-1.5"></i>ย้อนกลับ
                 </button>
@@ -847,8 +486,8 @@ export default function SetupWizardPage() {
           </div>
         )}
 
-        {/* ── Step 6: Done ───────────────────────────────────── */}
-        {step === 6 && (
+        {/* ── Step 5: Done ───────────────────────────────────── */}
+        {step === 5 && (
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 text-center space-y-4">
             <div className="w-20 h-20 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto shadow-[0_4px_0_#a7f3d0]">
               <i className="fas fa-check text-3xl text-emerald-600"></i>

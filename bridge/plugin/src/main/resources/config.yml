@@ -21,7 +21,33 @@ authme:
   # When auto-detect is on, this is also read from the AuthMe config.
   table: authme
 
+nlogin:
+  # MySQL credentials. Leave `auto: true` to read from plugins/nLogin/config.yml
+  # (recommended). Set `auto: false` to use the explicit values below.
+  # Only used when `bridge.backend` resolves to `nlogin`.
+  auto: true
+  host: 127.0.0.1
+  port: 3306
+  database: nlogin
+  user: nlogin
+  password: ""
+  table: nlogin
+  # nLogin lets operators rename every column. Defaults match a stock install;
+  # override only if your nLogin config.yml renames them and auto-detect is off.
+  columns:
+    id: ai
+    last_name: username
+    password: password
+    email: email
+    creation_date: creation_date
+    last_seen: last_seen
+
 bridge:
+  # Which auth plugin to read from: `auto`, `authme`, or `nlogin`.
+  # `auto` picks whichever plugin folder exists. If both exist the bridge
+  # prefers AuthMe (for backward compatibility) and logs a warning — set
+  # this explicitly to `nlogin` if you're migrating to nLogin.
+  backend: auto
   # Maximum concurrent DB connections used by the bridge. Don't raise this
   # unless a support engineer asks — 4 is enough for hundreds of req/sec.
   connection_pool_size: 4

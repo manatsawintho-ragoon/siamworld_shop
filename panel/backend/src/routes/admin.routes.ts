@@ -20,6 +20,7 @@ import { notificationService } from '../services/notification.service';
 import { emailService } from '../services/email.service';
 import { walletService } from '../services/wallet.service';
 import { npmService } from '../services/npm.service';
+import { cloudflareService } from '../services/cloudflare.service';
 import { pool } from '../database/connection';
 import { config } from '../config/index';
 import { ValidationError } from '../utils/errors';
@@ -139,6 +140,34 @@ router.post('/subscriptions/:id/fix-npm', asyncRoute(async (req, res) => {
       ? JSON.stringify(err.response.data)
       : (err?.message || 'NPM error');
     res.status(500).json({ error: msg });
+  }
+}));
+
+// Flip the customer's subdomain between Cloudflare-proxied and DNS-only.
+// Used to harden a Bridge-mode customer (proxied = CF DDoS protection on)
+// or to revert (dns-only = needed by AuthMe-direct customers that expose MySQL
+// on the same subdomain).
+router.post('/subscriptions/:id/dns-mode', asyncRoute(async (req, res) => {
+  const subId = parseInt(req.params.id);
+  const mode = req.body?.mode;
+  if (mode !== 'proxied' && mode !== 'dns-only') {
+    throw new ValidationError("mode must be 'proxied' or 'dns-only'");
+  }
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    'SELECT domain FROM subscriptions WHERE id = ?', [subId]
+  );
+  const sub = (rows as RowDataPacket[])[0];
+  if (!sub) throw new ValidationError('ไม่พบ subscription');
+  try {
+    const result = await cloudflareService.setProxyMode(sub.domain, mode);
+    await subscriptionService.logAudit(
+      req.user!.userId, `sub_dns_${mode === 'proxied' ? 'harden' : 'unharden'}`,
+      'subscription', subId,
+      `DNS mode → ${mode} for ${sub.domain} (changed=${result.changed})`, req.ip
+    );
+    res.json({ success: true, ...result, domain: sub.domain, mode });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Cloudflare error' });
   }
 }));
 

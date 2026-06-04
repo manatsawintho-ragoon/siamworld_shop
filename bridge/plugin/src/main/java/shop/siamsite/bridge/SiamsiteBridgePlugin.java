@@ -6,8 +6,12 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 import shop.siamsite.bridge.auth.AuthmeConfigReader;
 import shop.siamsite.bridge.auth.AuthmeCredentials;
+import shop.siamsite.bridge.auth.NLoginConfigReader;
+import shop.siamsite.bridge.auth.NLoginCredentials;
 import shop.siamsite.bridge.cmd.BridgeCommand;
 import shop.siamsite.bridge.db.AuthmeRepository;
+import shop.siamsite.bridge.db.NLoginRepository;
+import shop.siamsite.bridge.db.UserRepository;
 import shop.siamsite.bridge.opcode.OpcodeRouter;
 import shop.siamsite.bridge.util.AsyncExecutor;
 import shop.siamsite.bridge.ws.BridgeClient;
@@ -21,7 +25,7 @@ public final class SiamsiteBridgePlugin extends JavaPlugin {
     public static final String PROTOCOL_VERSION = "v1";
 
     private AsyncExecutor executor;
-    private AuthmeRepository repository;
+    private UserRepository repository;
     private BridgeClient client;
     private OpcodeRouter router;
 
@@ -52,8 +56,11 @@ public final class SiamsiteBridgePlugin extends JavaPlugin {
         int workerThreads = Math.max(1, cfg.getInt("bridge.worker_threads", 4));
         executor = new AsyncExecutor(workerThreads, getLogger());
 
-        AuthmeCredentials creds = resolveCredentials(cfg);
-        repository = new AuthmeRepository(creds, poolSize, getLogger());
+        repository = resolveRepository(cfg, poolSize);
+        if (repository == null) {
+            getLogger().severe("No auth backend configured — bridge will stay in /status-only mode.");
+            return;
+        }
         router = new OpcodeRouter(this, repository, executor);
 
         String url = cfg.getString("panel.url", "wss://panel.siamsite.shop/bridge");
@@ -88,10 +95,71 @@ public final class SiamsiteBridgePlugin extends JavaPlugin {
         router = null;
     }
 
-    private AuthmeCredentials resolveCredentials(FileConfiguration cfg) {
+    private UserRepository resolveRepository(FileConfiguration cfg, int poolSize) {
+        String backend = pickBackend(cfg);
+        if ("nlogin".equals(backend)) {
+            NLoginCredentials c = resolveNLoginCredentials(cfg);
+            getLogger().info("Auth backend = nLogin (table " + c.table + " on " + c.host + ":" + c.port + ")");
+            return new NLoginRepository(c, poolSize, getLogger());
+        }
+        if ("authme".equals(backend)) {
+            AuthmeCredentials c = resolveAuthmeCredentials(cfg);
+            getLogger().info("Auth backend = AuthMe (table " + c.table + " on " + c.host + ":" + c.port + ")");
+            return new AuthmeRepository(c, poolSize, getLogger());
+        }
+        return null;
+    }
+
+    /**
+     * Decide which auth plugin to read from. Honors `bridge.backend` if set
+     * explicitly to authme/nlogin; otherwise auto-detects by which plugin
+     * folder exists. If both exist, prefer AuthMe (backward compat) and warn.
+     */
+    private String pickBackend(FileConfiguration cfg) {
+        String configured = cfg.getString("bridge.backend", "auto");
+        if (configured != null) configured = configured.trim().toLowerCase();
+        if ("authme".equals(configured) || "nlogin".equals(configured)) {
+            return configured;
+        }
+        File pluginsDir = getDataFolder().getParentFile();
+        boolean hasAuthme = findPluginDir(pluginsDir, "AuthMe") != null;
+        boolean hasNlogin = findPluginDir(pluginsDir, "nLogin") != null;
+        if (hasAuthme && hasNlogin) {
+            getLogger().warning("Both AuthMe and nLogin plugins detected. Defaulting to AuthMe — "
+                    + "set bridge.backend: nlogin in config.yml to switch.");
+            return "authme";
+        }
+        if (hasNlogin) return "nlogin";
+        if (hasAuthme) return "authme";
+        getLogger().warning("Neither AuthMe nor nLogin plugin folder found. "
+                + "Set bridge.backend explicitly and configure credentials manually.");
+        return "authme"; // fall through so manual authme.* config still works
+    }
+
+    /**
+     * Locate a plugin's data folder case-insensitively. Bukkit creates the
+     * folder from the plugin.yml {@code name:} field — most installs end up
+     * with the canonical case (e.g. "AuthMe", "nLogin") but some operators
+     * end up with lowercase variants ("nlogin") after a manual rename. We
+     * match on equalsIgnoreCase so auto-detect works either way.
+     */
+    private static File findPluginDir(File pluginsDir, String pluginName) {
+        File exact = new File(pluginsDir, pluginName);
+        if (exact.isDirectory()) return exact;
+        File[] children = pluginsDir.listFiles();
+        if (children == null) return null;
+        for (File f : children) {
+            if (f.isDirectory() && f.getName().equalsIgnoreCase(pluginName)) return f;
+        }
+        return null;
+    }
+
+    private AuthmeCredentials resolveAuthmeCredentials(FileConfiguration cfg) {
         boolean auto = cfg.getBoolean("authme.auto", true);
         if (auto) {
-            File authmeFile = new File(getDataFolder().getParentFile(), "AuthMe/config.yml");
+            File pluginDir = findPluginDir(getDataFolder().getParentFile(), "AuthMe");
+            File authmeFile = new File(pluginDir != null ? pluginDir
+                    : new File(getDataFolder().getParentFile(), "AuthMe"), "config.yml");
             AuthmeCredentials detected = AuthmeConfigReader.read(authmeFile, getLogger());
             if (detected != null) {
                 getLogger().info("Loaded AuthMe MySQL credentials from " + authmeFile.getPath());
@@ -109,6 +177,35 @@ public final class SiamsiteBridgePlugin extends JavaPlugin {
         );
     }
 
+    private NLoginCredentials resolveNLoginCredentials(FileConfiguration cfg) {
+        boolean auto = cfg.getBoolean("nlogin.auto", true);
+        if (auto) {
+            File pluginDir = findPluginDir(getDataFolder().getParentFile(), "nLogin");
+            File nloginFile = new File(pluginDir != null ? pluginDir
+                    : new File(getDataFolder().getParentFile(), "nLogin"), "config.yml");
+            NLoginCredentials detected = NLoginConfigReader.read(nloginFile, getLogger());
+            if (detected != null) {
+                getLogger().info("Loaded nLogin MySQL credentials from " + nloginFile.getPath());
+                return detected;
+            }
+            getLogger().warning("Could not auto-detect nLogin config. Falling back to bridge config.yml values.");
+        }
+        return new NLoginCredentials(
+                cfg.getString("nlogin.host", "127.0.0.1"),
+                cfg.getInt("nlogin.port", 3306),
+                cfg.getString("nlogin.database", "nlogin"),
+                cfg.getString("nlogin.user", "nlogin"),
+                cfg.getString("nlogin.password", ""),
+                cfg.getString("nlogin.table", "nlogin"),
+                cfg.getString("nlogin.columns.id", "ai"),
+                cfg.getString("nlogin.columns.last_name", "username"),
+                cfg.getString("nlogin.columns.password", "password"),
+                cfg.getString("nlogin.columns.email", "email"),
+                cfg.getString("nlogin.columns.creation_date", "creation_date"),
+                cfg.getString("nlogin.columns.last_seen", "last_seen")
+        );
+    }
+
     /** Re-entrant restart used by /siamsite-bridge reload. */
     public void restart() {
         shutdownAll();
@@ -116,7 +213,7 @@ public final class SiamsiteBridgePlugin extends JavaPlugin {
     }
 
     public BridgeClient getClient() { return client; }
-    public AuthmeRepository getRepository() { return repository; }
+    public UserRepository getRepository() { return repository; }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {

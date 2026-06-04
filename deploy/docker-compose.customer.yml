@@ -69,6 +69,10 @@ services:
       MYSQL_HOST: mysql
       REDIS_HOST: redis
       NODE_ENV: production
+    # Lets the shop reach panel-backend (host port 5000) for the bridge internal API
+    # without round-tripping through Cloudflare → NPM. Faster + no transient `fetch failed`.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:
