@@ -21,7 +21,7 @@ publicInstallRouter.get('/:subId/dump', asyncRoute(async (req, res) => {
   const key = String(req.query.key || '');
   const v = await installService.validateKey(subId, key);
   if (!v) return res.status(410).type('text/plain').send('setup key invalid or expired');
-  if (v.keyRow.dump_consumed_at) return res.status(410).type('text/plain').send('dump already downloaded for this key — generate a new one from the panel');
+  if (v.keyRow.dump_consumed_at) return res.status(410).type('text/plain').send('dump already downloaded for this key. Generate a new one from the panel');
 
   // Look up the customer's shop name so we can find their MySQL container.
   const sub = await subscriptionService.getById(subId).catch(() => null);

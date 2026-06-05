@@ -186,7 +186,7 @@ export default function AdminProducts() {
       const fe = (err as { fieldErrors?: { field: string; message: string }[] })?.fieldErrors;
       if (Array.isArray(fe) && fe.length > 0) {
         setFieldErrors(fe);
-        setError('กรอกข้อมูลไม่ครบ/ไม่ถูกต้อง — ตรวจรายการด้านล่าง');
+        setError('กรอกข้อมูลไม่ครบหรือไม่ถูกต้อง โปรดตรวจรายการด้านล่าง');
       } else {
         setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
       }
@@ -285,7 +285,7 @@ export default function AdminProducts() {
         ? new Date(saleEndDatetime).getTime()
         : Date.now() + getSaleDurationMinutes() * 60000;
       return new Date(endMs).toLocaleString('th-TH', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    } catch { return '—'; }
+    } catch { return '-'; }
   };
 
   const handleRelease = async (fromEditing = false) => {
@@ -544,7 +544,7 @@ export default function AdminProducts() {
                           {selectedCat === null && (
                             <td className="px-3 py-1.5">
                               <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-600 uppercase tracking-wide">
-                                {p.category_name || '—'}
+                                {p.category_name || '-'}
                               </span>
                             </td>
                           )}
@@ -580,7 +580,7 @@ export default function AdminProducts() {
                                 </span>
                               )}
                               {!p.sale_end && p.stock_limit == null && (
-                                <span className="text-[9px] text-gray-300">—</span>
+                                <span className="text-[9px] text-gray-300">-</span>
                               )}
                             </div>
                           </td>
@@ -699,7 +699,7 @@ export default function AdminProducts() {
                       {fieldErrors.map((fe, i) => (
                         <li key={i} className="flex items-start gap-1.5 pl-0.5">
                           <i className="fas fa-circle text-[4px] mt-1.5 text-red-400"></i>
-                          <span><span className="font-bold">{PRODUCT_FIELD_LABELS[fe.field] || fe.field}</span> — {fe.message}</span>
+                          <span><span className="font-bold">{PRODUCT_FIELD_LABELS[fe.field] || fe.field}</span>: {fe.message}</span>
                         </li>
                       ))}
                     </ul>

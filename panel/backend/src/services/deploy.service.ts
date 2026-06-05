@@ -118,7 +118,7 @@ class DeployService {
           }, null, 2));
         }
       });
-      if (!lockSucceeded) throw new Error('Port allocation lock unavailable — retry shortly');
+      if (!lockSucceeded) throw new Error('Port allocation lock unavailable, retry shortly');
 
       // 1. Run shell script
       log += `[${new Date().toISOString()}] Running new-customer.sh...\n`;
@@ -166,7 +166,7 @@ class DeployService {
         }
       }
       if (!cfOk) {
-        log += `[${new Date().toISOString()}] ⚠️  Cloudflare DNS not created — check panel admin → Settings → Cloudflare. Shop will not be reachable until DNS exists for ${domain}.\n`;
+        log += `[${new Date().toISOString()}] ⚠️  Cloudflare DNS not created: check panel admin → Settings → Cloudflare. Shop will not be reachable until DNS exists for ${domain}.\n`;
       }
 
       // 4c. Add firewall DROP + subnet ACCEPT rules for new frontend/backend ports
@@ -244,7 +244,7 @@ class DeployService {
     const deployDir = config.deployDir;
     const envFile = path.join(deployDir, 'customers', shopName, '.env');
     const composeFile = path.join(deployDir, 'docker-compose.customer.yml');
-    if (!fs.existsSync(envFile)) throw new Error(`ไม่พบไฟล์ .env สำหรับร้าน ${shopName} — กรุณา Deploy ก่อน`);
+    if (!fs.existsSync(envFile)) throw new Error(`ไม่พบไฟล์ .env สำหรับร้าน ${shopName}: กรุณา Deploy ก่อน`);
     await execAsync(
       `docker compose --project-name "sw-${shopName}" --env-file "${envFile}" -f "${composeFile}" start`,
       { timeout: 60000 }

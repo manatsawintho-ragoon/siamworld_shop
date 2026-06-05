@@ -133,12 +133,12 @@ class PaymentService {
       const [uRows2] = await pool.execute<RowDataPacket[]>('SELECT username FROM users WHERE id = ?', [userId]);
       const username2 = uRows2[0]?.username ?? `User#${userId}`;
       notificationService.create('topup_failed',
-        `สลิปซ้ำ — ${username2}`,
+        `สลิปซ้ำ: ${username2}`,
         JSON.stringify({
           username: username2, userId,
           status: 'ปฏิเสธ',
           reason: 'สลิปซ้ำ (EasySlip)',
-          detail: 'isDuplicate = true — สลิปนี้เคยถูกส่งตรวจกับ EasySlip มาก่อนแล้ว',
+          detail: 'isDuplicate = true: สลิปนี้เคยถูกส่งตรวจกับ EasySlip มาก่อนแล้ว',
           trans_ref: raw.transRef ?? '-',
         })
       );
@@ -220,7 +220,7 @@ class PaymentService {
       const [uRowsR] = await pool.execute<RowDataPacket[]>('SELECT username FROM users WHERE id = ?', [userId]);
       const usernameR = uRowsR[0]?.username ?? `User#${userId}`;
       notificationService.create('topup_failed',
-        `บัญชีผู้รับไม่ตรง — ${usernameR}`,
+        `บัญชีผู้รับไม่ตรง: ${usernameR}`,
         JSON.stringify({
           username: usernameR, userId,
           status: 'ปฏิเสธ',
@@ -272,7 +272,7 @@ class PaymentService {
         const [uRowsDB] = await pool.execute<RowDataPacket[]>('SELECT username FROM users WHERE id = ?', [userId]);
         const usernameDB = uRowsDB[0]?.username ?? `User#${userId}`;
         notificationService.create('topup_failed',
-          `สลิปซ้ำใน DB — ${usernameDB}`,
+          `สลิปซ้ำใน DB: ${usernameDB}`,
           JSON.stringify({
             username: usernameDB, userId,
             status: 'ปฏิเสธ',
@@ -333,7 +333,7 @@ class PaymentService {
       const [uRows] = await pool.execute<RowDataPacket[]>('SELECT username FROM users WHERE id = ?', [userId]);
       const username = uRows[0]?.username ?? `User#${userId}`;
       notificationService.create('topup_success',
-        `เติมเงินสำเร็จ — ${username}`,
+        `เติมเงินสำเร็จ: ${username}`,
         JSON.stringify({
           username, userId,
           status: 'สำเร็จ',

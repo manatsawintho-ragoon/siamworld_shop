@@ -185,7 +185,7 @@ Ok "Bridge config written"
 # -- Done --
 Write-Host ""
 Write-Host "════════════════════════════════════════════════════════════════" -ForegroundColor Green
-Write-Host "  ✓ Setup สำเร็จ — $ShopName"                                     -ForegroundColor Green
+Write-Host "  ✓ Setup สำเร็จ: $ShopName"                                     -ForegroundColor Green
 Write-Host "════════════════════════════════════════════════════════════════" -ForegroundColor Green
 Write-Host ""
 Write-Host "  AuthMe MySQL password : $AuthmePass"
@@ -197,7 +197,7 @@ Write-Host "  ขั้นตอนสุดท้าย:"
 Write-Host "    1. รีสตาร์ทเซิร์ฟเวอร์ Minecraft ของคุณ"
 Write-Host "    2. รอ ~5 วินาที แล้วเช็คหน้า Dashboard -> Bridge"
 Write-Host "       สถานะจะเปลี่ยนเป็น `"ออนไลน์`" สีเขียว"
-Write-Host "    3. ลอง /login ในเกมด้วย account เก่า — ต้องผ่าน"
+Write-Host "    3. ลอง /login ในเกมด้วย account เก่า (ต้องผ่าน)"
 Write-Host ""
 Write-Host "  ถ้ามีปัญหา: พิมพ์ /siamsite-bridge status ในคอนโซลเซิร์ฟ"
 Write-Host "  หรือทักแอดมินที่แฟนเพจ facebook.com/siamsitestore"

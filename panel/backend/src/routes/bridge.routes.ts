@@ -49,7 +49,7 @@ router.post('/:subscriptionId/token', requireAuth, asyncRoute(async (req, res) =
   res.status(201).json({
     token: result.token,
     prefix: result.prefix,
-    note: 'Store this token in your plugin config now — it cannot be retrieved later.',
+    note: 'Store this token in your plugin config now, it cannot be retrieved later.',
     hardening: harden,
     provision,
   });

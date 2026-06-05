@@ -681,8 +681,8 @@ function ManageModal({
                   if (confirm(
                     'เปลี่ยน DNS ของร้านนี้เป็น Cloudflare Proxied?\n\n' +
                     '✓ ซ่อน origin IP ป้องกัน DDoS attack\n' +
-                    '✗ MySQL port (33XXX) จะใช้ไม่ได้จากภายนอก — ใช้ได้เฉพาะลูกค้าที่ใช้ Bridge\n' +
-                    '⚠ Let\'s Encrypt cert จะ renew ไม่ผ่าน HTTP-01 ในครั้งถัดไป — เปลี่ยน NPM มาใช้ Cloudflare Origin Certificate ก่อนหมดอายุ\n\n' +
+                    '✗ MySQL port (33XXX) จะใช้ไม่ได้จากภายนอก ใช้ได้เฉพาะลูกค้าที่ใช้ Bridge\n' +
+                    '⚠ Let\'s Encrypt cert จะ renew ไม่ผ่าน HTTP-01 ในครั้งถัดไป เปลี่ยน NPM มาใช้ Cloudflare Origin Certificate ก่อนหมดอายุ\n\n' +
                     'หลังกด ต้องทำต่อ: รัน deploy/harden-mysql-port.sh เพื่อปิด MySQL port ที่ host firewall\n' +
                     'รายละเอียดทั้งหมดใน deploy/OPERATIONS-DDOS-HARDEN.md\n\n' +
                     'แนะนำเฉพาะลูกค้า Bridge เท่านั้น'

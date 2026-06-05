@@ -40,7 +40,7 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
     const decoded = jwt.verify(rawToken, config.jwtSecret) as JwtPayload;
 
     // Reject tokens that pre-date session enforcement (no jti)
-    if (!decoded.jti) return next(new AuthError('Token invalid — please log in again'));
+    if (!decoded.jti) return next(new AuthError('Token invalid, please log in again'));
 
     // Verify user still exists in DB (catches deleted/disabled accounts)
     const [rows] = await pool.execute<RowDataPacket[]>(

@@ -329,8 +329,8 @@ export default function AdminServers() {
                         onClick={() => handleToggle(s)}
                         disabled={isToggling}
                         title={s.is_enabled
-                          ? 'เซิร์ฟเวอร์นี้เปิดในระบบร้าน — คลิกเพื่อปิด (ผู้เล่นจะซื้อ/รับของไม่ได้)'
-                          : 'เซิร์ฟเวอร์นี้ปิดในระบบร้าน — คลิกเพื่อเปิด'}
+                          ? 'เซิร์ฟเวอร์นี้เปิดในระบบร้าน คลิกเพื่อปิด (ผู้เล่นจะซื้อ/รับของไม่ได้)'
+                          : 'เซิร์ฟเวอร์นี้ปิดในระบบร้าน คลิกเพื่อเปิด'}
                         className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold transition-all disabled:opacity-50 active:translate-y-[1px] ${
                           s.is_enabled
                             ? 'bg-green-500 text-white shadow-[0_3px_0_#15803d] hover:bg-green-600'
@@ -390,7 +390,7 @@ export default function AdminServers() {
                     <div className="mb-4 flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200">
                       <i className="fas fa-exclamation-triangle text-amber-500 text-[11px] flex-shrink-0" />
                       <p className="text-[11px] text-amber-700 font-semibold leading-snug">
-                        เซิร์ฟเวอร์นี้<span className="font-black">ปิดอยู่ในระบบร้าน</span> — ผู้เล่นจะ<span className="font-black">ซื้อของ / รับของ</span>ผ่านเซิร์ฟเวอร์นี้ไม่ได้
+                        เซิร์ฟเวอร์นี้<span className="font-black">ปิดอยู่ในระบบร้าน</span> ผู้เล่นจะ<span className="font-black">ซื้อของ / รับของ</span>ผ่านเซิร์ฟเวอร์นี้ไม่ได้
                       </p>
                     </div>
                   )}
@@ -477,7 +477,7 @@ export default function AdminServers() {
                   </label>
                   <input type="password" value={editing.rcon_password || ''} onChange={e => setEditing({ ...editing, rcon_password: e.target.value })} className={INPUT} placeholder={editing.id ? 'เว้นว่างไว้เพื่อใช้รหัสเดิม' : 'รหัส RCON จาก server.properties'} autoComplete="new-password" />
                   {editing.id && (
-                    <p className="text-[10px] text-gray-400 mt-1 leading-snug">กรอกเฉพาะตอนต้องการเปลี่ยนรหัส — แก้ฟิลด์อื่นแล้วบันทึกได้เลย รหัสเดิมจะไม่ถูกแตะต้อง</p>
+                    <p className="text-[10px] text-gray-400 mt-1 leading-snug">กรอกเฉพาะตอนต้องการเปลี่ยนรหัส แก้ฟิลด์อื่นแล้วบันทึกได้เลย รหัสเดิมจะไม่ถูกแตะต้อง</p>
                   )}
                 </div>
               </div>

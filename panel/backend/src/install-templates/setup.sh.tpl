@@ -101,7 +101,7 @@ log "Downloading AuthMe dump from panel"
 TMP_DUMP="$(mktemp /tmp/authme.XXXXXX.sql)"
 trap 'rm -f "$TMP_DUMP"' EXIT
 if ! curl -fsSL --max-time 120 -o "$TMP_DUMP" "$DUMP_URL"; then
-  echo "✗ Dump download failed — your setup key may have expired or already been used."
+  echo "✗ Dump download failed: your setup key may have expired or already been used."
   echo "  Generate a new install command from panel.siamsite.shop dashboard."
   exit 1
 fi
@@ -156,7 +156,7 @@ sec['legacyHashes'] = legacy
 
 with open(path, 'w') as f:
     yaml.dump(data, f)
-print(f"AuthMe config updated — DataSource → 127.0.0.1, passwordHash=BCRYPT, legacyHashes={legacy}")
+print(f"AuthMe config updated: DataSource → 127.0.0.1, passwordHash=BCRYPT, legacyHashes={legacy}")
 PYEOF
 ok "AuthMe config patched"
 
@@ -190,7 +190,7 @@ ok "Bridge config written"
 cat <<DONE
 
 ════════════════════════════════════════════════════════════════
-  ✓ Setup สำเร็จ — $SHOP_NAME
+  ✓ Setup สำเร็จ: $SHOP_NAME
 ════════════════════════════════════════════════════════════════
 
   AuthMe MySQL password : $AUTHME_PASS
@@ -202,7 +202,7 @@ cat <<DONE
     1. รีสตาร์ทเซิร์ฟเวอร์ Minecraft ของคุณ
     2. รอ ~5 วินาที แล้วเช็คหน้า Dashboard → Bridge
        สถานะจะเปลี่ยนเป็น "ออนไลน์" สีเขียว
-    3. ลอง /login ในเกมด้วย account เก่า — ต้องผ่าน
+    3. ลอง /login ในเกมด้วย account เก่า (ต้องผ่าน)
 
   ถ้ามีปัญหา: พิมพ์ /siamsite-bridge status ในคอนโซลเซิร์ฟ
   หรือทักแอดมินที่แฟนเพจ facebook.com/siamsitestore

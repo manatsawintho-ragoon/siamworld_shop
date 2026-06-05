@@ -528,7 +528,7 @@ export default function PaymentSettingsPage() {
                           <div key={a} className="grid grid-cols-3 px-3 py-2.5 hover:bg-gray-50/60 transition-colors">
                             <span className="text-[13px] font-black text-gray-700">฿{a.toLocaleString()}</span>
                             <span className={`text-[12px] font-bold text-center ${bonus > 0 ? 'text-orange-500' : 'text-gray-300'}`}>
-                              {bonus > 0 ? `+฿${bonus.toLocaleString()}` : '—'}
+                              {bonus > 0 ? `+฿${bonus.toLocaleString()}` : '-'}
                             </span>
                             <span className={`text-[13px] font-black text-right ${received > a ? 'text-green-600' : 'text-gray-500'}`}>
                               ฿{received.toLocaleString()}
@@ -540,8 +540,8 @@ export default function PaymentSettingsPage() {
                     <div className={`px-3 py-2 border-t ${bonusEnabled && mult > 1 ? 'bg-orange-50 border-orange-100' : 'bg-gray-50 border-gray-100'}`}>
                       <p className={`text-[10px] font-bold text-center ${bonusEnabled && mult > 1 ? 'text-orange-600' : 'text-gray-400'}`}>
                         {bonusEnabled && mult > 1
-                          ? `โปรโมชั่นใช้งานอยู่ — ผู้เล่นได้รับ x${mult} ทันที`
-                          : 'ยังไม่เปิดโปรโมชั่น — ยอดปกติ x1'}
+                          ? `โปรโมชั่นเปิดอยู่ ผู้เล่นได้รับ x${mult} ทันที`
+                          : 'ยังไม่เปิดโปรโมชั่น (ยอดปกติ x1)'}
                       </p>
                     </div>
                   </div>

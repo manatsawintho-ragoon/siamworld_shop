@@ -89,7 +89,7 @@ class PasswordResetService {
     const html = renderResetEmail(shopName, user.username, otp, this.OTP_TTL_MS / 60_000);
     const sent = await emailService.send(
       user.email,
-      `${shopName} — รหัสรีเซ็ตรหัสผ่าน`,
+      `${shopName}: รหัสรีเซ็ตรหัสผ่าน`,
       html
     );
     return { delivered: sent };

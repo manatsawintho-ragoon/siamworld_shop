@@ -333,7 +333,7 @@ export default function ProfilePage() {
                             </span>
                           </td>
                           <td className="px-5 py-3 hidden sm:table-cell">
-                            <span className="text-foreground-subtle text-[12px] max-w-[220px] truncate block">{tx.description || '—'}</span>
+                            <span className="text-foreground-subtle text-[12px] max-w-[220px] truncate block">{tx.description || '-'}</span>
                           </td>
                           <td className="px-5 py-3 text-right">
                             <span className="text-foreground-subtle text-[11px] tabular-nums whitespace-nowrap">

@@ -43,10 +43,10 @@ class CloudflareService {
     const status = e.response?.status;
     const cfErrs = e.response?.data?.errors;
     if (cfErrs && cfErrs.length) {
-      return `HTTP ${status ?? '?'} — ${cfErrs.map(x => `${x.code ?? '?'}: ${x.message ?? ''}`).join('; ')}`;
+      return `HTTP ${status ?? '?'}: ${cfErrs.map(x => `${x.code ?? '?'}: ${x.message ?? ''}`).join('; ')}`;
     }
-    if (status) return `HTTP ${status} — ${e.message ?? 'unknown'}`;
-    if (e.code) return `${e.code} — ${e.message ?? 'unknown'}`;
+    if (status) return `HTTP ${status}: ${e.message ?? 'unknown'}`;
+    if (e.code) return `${e.code}: ${e.message ?? 'unknown'}`;
     return e.message ?? 'unknown error';
   }
 

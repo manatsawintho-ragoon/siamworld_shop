@@ -145,7 +145,7 @@ function Content() {
                           </td>
                           <td className="px-6 py-4 text-right">
                             <Badge variant="outline" className="font-mono text-[9px] font-bold border-border bg-secondary/30 px-2 py-0.5 rounded-lg text-muted-foreground/80">
-                              {log.ip_address || '—'}
+                              {log.ip_address || '-'}
                             </Badge>
                           </td>
                         </motion.tr>

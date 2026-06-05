@@ -146,7 +146,7 @@ export default function AdminAuditLog() {
   const handlePurge = async () => {
     if (!await adminConfirm({
       title: 'ล้าง Log เก่า',
-      message: 'ลบ Log ทั้งหมด (ทุกประเภท) ที่เก่ากว่า 7 วัน — ยืนยัน?',
+      message: 'ลบ Log ทั้งหมด (ทุกประเภท) ที่เก่ากว่า 7 วัน ยืนยันหรือไม่?',
       type: 'warning', confirmLabel: 'ล้างเลย',
     })) return;
     setPurging(true);

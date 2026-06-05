@@ -34,7 +34,7 @@ function QrCountdown({ expiresAt, onExpired }: { expiresAt: number; onExpired: (
                 'bg-blue-50 border-blue-200 text-blue-700'
     }`}>
       <i className={`fas ${expired ? 'fa-clock text-red-500' : urgent ? 'fa-hourglass-half text-orange-500 animate-pulse' : 'fa-clock text-blue-400'} text-[11px]`} />
-      {expired ? 'QR หมดอายุแล้ว — สร้างใหม่ได้เลย' : (
+      {expired ? 'QR หมดอายุแล้ว สร้างใหม่ได้เลย' : (
         <>QR หมดอายุใน <span className="tabular-nums font-black ml-1">{String(m).padStart(2,'0')}:{String(s).padStart(2,'0')}</span></>
       )}
     </div>
@@ -549,7 +549,7 @@ export default function TopupPage() {
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2.5 max-w-sm">
                   <i className="fas fa-info-circle text-amber-500 mt-0.5 text-xs"></i>
                   <p className="text-[10px] font-bold text-amber-800 leading-relaxed">
-                    แอปธนาคารจะกรอกยอด <b>฿{qrAmount.toLocaleString()}</b> ให้อัตโนมัติและ<b>ไม่สามารถเปลี่ยนแปลงได้</b> — เมื่อโอนสำเร็จกดปุ่มด้านล่างเพื่ออัปโหลดสลิป
+                    แอปธนาคารจะกรอกยอด <b>฿{qrAmount.toLocaleString()}</b> ให้อัตโนมัติและ<b>ไม่สามารถเปลี่ยนแปลงได้</b> เมื่อโอนสำเร็จกดปุ่มด้านล่างเพื่ออัปโหลดสลิป
                   </p>
                 </div>
 
@@ -609,7 +609,7 @@ export default function TopupPage() {
                       <div className="flex items-center justify-between gap-2">
                         <div className="text-sm">
                           <span className="font-black text-primary">{discountInfo.code}</span>
-                          <span className="text-foreground-subtle"> — โบนัส +฿{discountInfo.discountAmount.toFixed(2)}</span>
+                          <span className="text-foreground-subtle"> โบนัส +฿{discountInfo.discountAmount.toFixed(2)}</span>
                         </div>
                         <button type="button" onClick={() => { setDiscountInfo(null); setDiscountCode(''); setDiscountError(''); }}
                           className="text-[11px] font-bold text-red-500 hover:underline">ลบ</button>

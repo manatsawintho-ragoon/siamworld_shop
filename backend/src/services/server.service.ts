@@ -21,21 +21,21 @@ function classifyRconError(err: unknown): { code: RconFailCode; reason: string }
   const msg = (err instanceof Error ? err.message : String(err || '')).toLowerCase();
 
   if (msg.includes('auth')) {
-    return { code: 'auth', reason: 'รหัส RCON ไม่ถูกต้อง — ตรวจ rcon.password ใน server.properties ให้ตรงกับที่ตั้งในร้าน' };
+    return { code: 'auth', reason: 'รหัส RCON ไม่ถูกต้อง: ตรวจ rcon.password ใน server.properties ให้ตรงกับที่ตั้งในร้าน' };
   }
   if (msg.includes('econnrefused') || msg.includes('refused')) {
-    return { code: 'refused', reason: 'เซิร์ฟเวอร์ปฏิเสธการเชื่อมต่อ — RCON ยังไม่เปิด (enable-rcon=true?) หรือ RCON port ผิด' };
+    return { code: 'refused', reason: 'เซิร์ฟเวอร์ปฏิเสธการเชื่อมต่อ: RCON ยังไม่เปิด (enable-rcon=true?) หรือ RCON port ผิด' };
   }
   if (msg.includes('enotfound') || msg.includes('eai_again') || msg.includes('getaddrinfo')) {
-    return { code: 'dns', reason: 'หา host ไม่เจอ — ตรวจ IP/โดเมนของเซิร์ฟเวอร์ให้ถูกต้อง' };
+    return { code: 'dns', reason: 'หา host ไม่เจอ: ตรวจ IP/โดเมนของเซิร์ฟเวอร์ให้ถูกต้อง' };
   }
   if (msg.includes('econnreset')) {
-    return { code: 'reset', reason: 'การเชื่อมต่อถูกตัด — เซิร์ฟเวอร์เพิ่งรีสตาร์ท หรือ RCON ไม่เสถียร' };
+    return { code: 'reset', reason: 'การเชื่อมต่อถูกตัด: เซิร์ฟเวอร์เพิ่งรีสตาร์ท หรือ RCON ไม่เสถียร' };
   }
   if (msg.includes('timeout') || msg.includes('etimedout')) {
-    return { code: 'timeout', reason: 'เชื่อมต่อ RCON ไม่ได้ (timeout) — เซิร์ฟเวอร์อาจปิดอยู่, firewall บล็อก RCON port, หรือ host/port ผิด' };
+    return { code: 'timeout', reason: 'เชื่อมต่อ RCON ไม่ได้ (timeout): เซิร์ฟเวอร์อาจปิดอยู่, firewall บล็อก RCON port, หรือ host/port ผิด' };
   }
-  return { code: 'unknown', reason: 'เชื่อมต่อ RCON ไม่ได้ — ' + (err instanceof Error ? err.message : 'unknown error') };
+  return { code: 'unknown', reason: 'เชื่อมต่อ RCON ไม่ได้: ' + (err instanceof Error ? err.message : 'unknown error') };
 }
 
 function resolveHost(host: string): string {

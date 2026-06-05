@@ -270,7 +270,7 @@ function RenewContent() {
                     )}
                     <div className="flex justify-between items-center pb-3 border-b border-border/50">
                       <span className="text-muted-foreground font-medium">ระยะเวลา</span>
-                      <span className="text-foreground font-bold">{selection?.label || '—'}</span>
+                      <span className="text-foreground font-bold">{selection?.label || '-'}</span>
                     </div>
                     <div className="flex justify-between items-center pb-3 border-b border-border/50">
                       <span className="text-muted-foreground font-medium">ราคาแพ็กเกจ</span>

@@ -168,7 +168,7 @@ export default function AdminSettingsPage() {
       // Save current settings first so the backend sees the latest API key
       await api.put('/api/admin/settings', settings);
       await api.post('/api/admin/settings/test-email', { to });
-      toast.success('ส่งอีเมลทดสอบสำเร็จ', `ส่งไปยัง ${to} แล้ว — ตรวจสอบกล่องจดหมาย`);
+      toast.success('ส่งอีเมลทดสอบสำเร็จ', `ส่งไปยัง ${to} แล้ว ตรวจสอบกล่องจดหมาย`);
     } catch (err: any) {
       toast.error('ส่งไม่สำเร็จ', err.response?.data?.error || 'ตรวจสอบ API Key อีกครั้ง');
     } finally {
@@ -283,7 +283,7 @@ export default function AdminSettingsPage() {
             <Field label="Site Key (Public)" name="turnstile_site_key" value={settings['turnstile_site_key'] || ''} onChange={set}
               placeholder="0x4AAAAAAA..." hint="โชว์ได้ ไม่ลับ ใช้บน frontend" />
             <Field label="Secret Key" name="turnstile_secret" value={settings['turnstile_secret'] || ''} onChange={set}
-              type="password" placeholder="0x4AAAAAAA..." hint="ใช้ตรวจสอบ token บน backend — เก็บเป็นความลับ" />
+              type="password" placeholder="0x4AAAAAAA..." hint="ใช้ตรวจสอบ token บน backend เก็บเป็นความลับ" />
           </Section>
         </div>
 
@@ -368,7 +368,7 @@ export default function AdminSettingsPage() {
           <Section icon="fa-cloud" title="Cloudflare DNS" desc="Automated Record Orchestration" delay={0.6}>
             <InfoBanner variant="info">
               ระบบจะสร้าง DNS A record (DNS-only) อัตโนมัติทุกครั้งเมื่อ deploy ร้านค้าใหม่
-              รองรับทั้ง <b>API Token</b> (แนะนำ — สิทธิ์ Zone:DNS:Edit เฉพาะ zone นี้) และ <b>Global API Key</b>
+              รองรับทั้ง <b>API Token</b> (แนะนำ: สิทธิ์ Zone:DNS:Edit เฉพาะ zone นี้) และ <b>Global API Key</b>
             </InfoBanner>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Field label="Cloudflare Email" name="cloudflare_email" value={settings['cloudflare_email'] || ''} onChange={set} type="email" placeholder="ใส่เฉพาะถ้าใช้ Global API Key" />

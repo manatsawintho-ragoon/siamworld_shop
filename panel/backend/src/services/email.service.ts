@@ -264,7 +264,7 @@ class EmailService {
       const payload: Record<string, unknown> = {
         from: cfg.from,
         to: [user.email],
-        subject: `ติดตั้งร้าน ${sub.shop_name} เสร็จสมบูรณ์ — เริ่มต้นใช้งาน`,
+        subject: `ติดตั้งร้าน ${sub.shop_name} เสร็จสมบูรณ์: เริ่มต้นใช้งาน`,
         html,
         text,
       };
@@ -280,7 +280,7 @@ class EmailService {
   /** Send a test email to verify Resend configuration. Throws on failure (route surfaces the error). */
   async sendTest(toEmail: string): Promise<{ id: string }> {
     const cfg = await this.getClient();
-    if (!cfg) throw new Error('Resend ยังไม่ได้ตั้งค่า — กรุณาใส่ API Key ก่อน');
+    if (!cfg) throw new Error('Resend ยังไม่ได้ตั้งค่า: กรุณาใส่ API Key ก่อน');
 
     const payload: Record<string, unknown> = {
       from: cfg.from,

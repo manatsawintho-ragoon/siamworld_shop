@@ -1062,7 +1062,7 @@ function BoxModal({ box, categories, saving, error, onChange, onSave, onClose, o
         ? new Date(endDatetime).getTime()
         : Date.now() + getDurationMinutes() * 60000;
       return new Date(endMs).toLocaleString('th-TH', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    } catch { return '—'; }
+    } catch { return '-'; }
   };
 
   const handlePause = async () => {
@@ -1725,7 +1725,7 @@ function ItemModal({ item, saving, error, totalWeight, originalWeight, onChange,
             <div>
               <label className="block text-[11px] font-bold text-gray-500 mb-1.5">
                 Rarity
-                <span className="ml-1 font-normal text-gray-400 text-[10px]">— กดเพื่อตั้งน้ำหนักอัตโนมัติ</span>
+                <span className="ml-1 font-normal text-gray-400 text-[10px]">(กดเพื่อตั้งน้ำหนักอัตโนมัติ)</span>
               </label>
               <div className="space-y-1">
                 {RARITY_OPTIONS.map(rOpt => {

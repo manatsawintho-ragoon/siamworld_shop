@@ -220,7 +220,7 @@ function CredContent() {
       const res = await api.post(`/api/bridge/${subId}/token`);
       setBridgeToken({ token: res.data.token, prefix: res.data.prefix });
       await fetchBridgeStatus();
-      toast.success('สร้าง token ใหม่แล้ว — คัดลอกไปใส่ใน config.yml ของปลั๊กอิน');
+      toast.success('สร้าง token ใหม่แล้ว คัดลอกไปใส่ใน config.yml ของปลั๊กอิน');
       if (res.data.provision?.rebuildStarted) {
         toast.success('กำลังตั้งค่าและ rebuild เว็บไซต์ของคุณ (~30 วินาที)');
       }
@@ -390,7 +390,7 @@ function CredContent() {
                       </div>
                       วิธีเชื่อมต่อฐานข้อมูลเกม (AuthMe / nLogin)
                     </CardTitle>
-                    <CardDescription className="mt-1 font-semibold">การเชื่อมต่อเป็น <strong>ทางเลือกเสริม</strong> — Bridge รองรับทั้ง <strong>AuthMe</strong> และ <strong>nLogin</strong> ปลั๊กอินจะตรวจจับให้เอง</CardDescription>
+                    <CardDescription className="mt-1 font-semibold">การเชื่อมต่อเป็น <strong>ทางเลือกเสริม</strong> Bridge รองรับทั้ง <strong>AuthMe</strong> และ <strong>nLogin</strong> ปลั๊กอินจะตรวจจับให้เอง</CardDescription>
                   </div>
                   <Badge variant="outline" className="text-[10px] font-extrabold uppercase tracking-widest bg-emerald-500/10 text-emerald-600 border-emerald-500/20">Optional</Badge>
                 </div>
@@ -438,7 +438,7 @@ function CredContent() {
             </Card>
 
             {/* ══════════════════════════════════════════════
-                MODE A — NO CONNECTION
+                MODE A: NO CONNECTION
             ══════════════════════════════════════════════ */}
             {mode === 'none' && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">

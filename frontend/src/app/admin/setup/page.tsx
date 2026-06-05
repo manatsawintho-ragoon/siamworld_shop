@@ -180,7 +180,7 @@ export default function SetupWizardPage() {
             Setup Wizard
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            {isFirstTime ? 'ตั้งค่าระบบครั้งแรก — ใช้เวลาเพียงไม่กี่นาที' : 'เพิ่มเซิร์ฟเวอร์ Minecraft'}
+            {isFirstTime ? 'ตั้งค่าระบบครั้งแรก ใช้เวลาเพียงไม่กี่นาที' : 'เพิ่มเซิร์ฟเวอร์ Minecraft'}
           </p>
         </div>
 

@@ -53,7 +53,7 @@ export default function TimeRemaining({ date, suspendAt = null, suspended = fals
         return {
           phase: 'grace' as const,
           text: `หมดอายุแล้ว · เกินมา ${fmtDuration(-total)}`,
-          sub: `ระบบจะปิดใน ${fmtDuration(suspendMs)} — ต่ออายุก่อนเพื่อไม่ให้ร้านถูกปิด (ข้อมูลยังอยู่ครบ)`,
+          sub: `ระบบจะปิดใน ${fmtDuration(suspendMs)} ต่ออายุก่อนเพื่อไม่ให้ร้านถูกปิด (ข้อมูลยังอยู่ครบ)`,
           exactDate,
         };
       }
@@ -61,7 +61,7 @@ export default function TimeRemaining({ date, suspendAt = null, suspended = fals
       return {
         phase: 'grace' as const,
         text: `หมดอายุแล้ว · เกินมา ${fmtDuration(-total)}`,
-        sub: 'กำลังจะปิดระบบ — ต่ออายุเพื่อใช้งานต่อ (ข้อมูลยังอยู่ครบ)',
+        sub: 'กำลังจะปิดระบบ ต่ออายุเพื่อใช้งานต่อ (ข้อมูลยังอยู่ครบ)',
         exactDate,
       };
     }

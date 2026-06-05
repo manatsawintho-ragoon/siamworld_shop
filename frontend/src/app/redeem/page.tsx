@@ -276,7 +276,7 @@ export default function RedeemCodePage() {
                 </button>
                 <button onClick={doRedeem}
                   className="px-5 py-2.5 text-[13px] font-bold rounded-lg bg-amber-500 text-white shadow-[0_3px_0_#b45309]">
-                  <i className="fas fa-check mr-1.5" /> ยืนยัน — ออนไลน์อยู่
+                  <i className="fas fa-check mr-1.5" /> ยืนยัน (ออนไลน์อยู่)
                 </button>
               </div>
             </motion.div>

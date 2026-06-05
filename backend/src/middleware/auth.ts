@@ -39,7 +39,7 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
     const decoded = jwt.verify(rawToken, config.jwt.secret) as JwtPayload;
 
     // Reject tokens that pre-date session enforcement (no jti)
-    if (!decoded.jti) return next(new AuthenticationError('Token invalid — please log in again'));
+    if (!decoded.jti) return next(new AuthenticationError('Token invalid, please log in again'));
 
     // Fetch current role from DB to ensure it's up-to-date
     const [rows] = await pool.execute<RowDataPacket[]>(

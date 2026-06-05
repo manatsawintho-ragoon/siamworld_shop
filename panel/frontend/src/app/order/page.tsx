@@ -78,7 +78,7 @@ function OrderContent() {
     ? `ทดลองฟรี ${trialPromo?.days || 7} วัน`
     : orderKind === 'intro'
       ? `เดือนแรกพิเศษ ฿${introPromo?.price || 99}`
-      : (selectedPkg?.label || '—');
+      : (selectedPkg?.label || '-');
 
   const validateName = (v: string) => {
     if (!v) { setNameError('กรุณากรอกชื่อร้าน'); return false; }
@@ -401,7 +401,7 @@ function OrderContent() {
                           <button onClick={() => setHasPublicIp(null)} className="text-xs font-bold text-muted-foreground hover:text-foreground underline cursor-pointer">เปลี่ยนคำตอบ</button>
                         </div>
                         <ul className="space-y-3 text-xs font-medium text-muted-foreground">
-                          <li className="flex gap-3"><i className="fas fa-server text-primary mt-0.5" /><span><b className="text-foreground">เช่า VPS:</b> ย้ายเซิร์ฟเวอร์ไป VPS เพื่อได้ IP สาธารณะถาวร — แนะนำที่สุด</span></li>
+                          <li className="flex gap-3"><i className="fas fa-server text-primary mt-0.5" /><span><b className="text-foreground">เช่า VPS:</b> ย้ายเซิร์ฟเวอร์ไป VPS เพื่อได้ IP สาธารณะถาวร (แนะนำที่สุด)</span></li>
                           <li className="flex gap-3"><i className="fas fa-cloud text-primary mt-0.5" /><span><b className="text-foreground">Cloudflare Tunnel:</b> ติดตั้ง cloudflared บนเครื่อง MC ของคุณ และเปิดเส้น TCP กลับมา</span></li>
                           <li className="flex gap-3"><i className="fas fa-house-signal text-primary mt-0.5" /><span><b className="text-foreground">Port Forwarding:</b> ตั้งค่า router ให้ forward port 25565 + RCON ออกอินเทอร์เน็ต</span></li>
                         </ul>

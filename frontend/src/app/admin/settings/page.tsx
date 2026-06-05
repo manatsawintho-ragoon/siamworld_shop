@@ -347,7 +347,7 @@ export default function AdminSettings() {
                       <button
                         onClick={() => handleToggleSlide(s)}
                         className={`w-8 h-8 rounded-lg border flex items-center justify-center text-white hover:brightness-110 transition-all active:translate-y-[2px] ${s.active ? 'bg-green-500 border-green-600 shadow-[0_3px_0_#15803d] active:shadow-[0_1px_0_#15803d]' : 'bg-gray-400 border-gray-500 shadow-[0_3px_0_#6b7280] active:shadow-[0_1px_0_#6b7280]'}`}
-                        title={s.active ? 'เปิดอยู่ — คลิกเพื่อปิด' : 'ปิดอยู่ — คลิกเพื่อเปิด'}
+                        title={s.active ? 'เปิดอยู่ (คลิกเพื่อปิด)' : 'ปิดอยู่ (คลิกเพื่อเปิด)'}
                       >
                         <i className={`fas ${s.active ? 'fa-eye' : 'fa-eye-slash'} text-[11px]`}></i>
                       </button>
@@ -397,7 +397,7 @@ export default function AdminSettings() {
                       <button
                         onClick={() => handleToggleDl(dl)}
                         className={`w-8 h-8 rounded-lg border flex items-center justify-center text-white hover:brightness-110 transition-all active:translate-y-[2px] ${dl.active ? 'bg-green-500 border-green-600 shadow-[0_3px_0_#15803d] active:shadow-[0_1px_0_#15803d]' : 'bg-gray-400 border-gray-500 shadow-[0_3px_0_#6b7280] active:shadow-[0_1px_0_#6b7280]'}`}
-                        title={dl.active ? 'เปิดอยู่ — คลิกเพื่อปิด' : 'ปิดอยู่ — คลิกเพื่อเปิด'}
+                        title={dl.active ? 'เปิดอยู่ (คลิกเพื่อปิด)' : 'ปิดอยู่ (คลิกเพื่อเปิด)'}
                       >
                         <i className={`fas ${dl.active ? 'fa-eye' : 'fa-eye-slash'} text-[11px]`}></i>
                       </button>
@@ -496,7 +496,7 @@ export default function AdminSettings() {
                 <label className="block text-xs font-bold text-gray-500 mb-1.5">From (อีเมลผู้ส่ง)</label>
                 <input value={settings.smtp_from || ''} onChange={e => set('smtp_from', e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300"
-                  placeholder='เช่น "Shop Name <noreply@yourdomain.com>" — ปล่อยว่างจะใช้ Username แทน' />
+                  placeholder='เช่น "Shop Name <noreply@yourdomain.com>" (ปล่อยว่างจะใช้ Username แทน)' />
               </div>
               <label className="flex items-start gap-3 cursor-pointer sm:col-span-2 mt-1">
                 <div className={`w-10 h-5 rounded-full transition-colors flex-shrink-0 relative mt-0.5 ${settings.smtp_secure === '1' ? 'bg-green-600' : 'bg-gray-200'}`}
@@ -505,7 +505,7 @@ export default function AdminSettings() {
                 </div>
                 <div>
                   <span className="text-sm font-bold text-gray-800">ใช้การเข้ารหัส SSL (สำหรับพอร์ต 465)</span>
-                  <p className="text-[11px] text-gray-500 mt-0.5">เปิด: ใช้กับพอร์ต <b>465</b> (Gmail, Resend, Brevo SSL) · ปิด: ใช้กับพอร์ต <b>587</b> (STARTTLS — Gmail/Mailgun TLS)</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">เปิด: ใช้กับพอร์ต <b>465</b> (Gmail, Resend, Brevo SSL) · ปิด: ใช้กับพอร์ต <b>587</b> (STARTTLS, Gmail/Mailgun TLS)</p>
                 </div>
               </label>
             </div>
@@ -610,7 +610,7 @@ export default function AdminSettings() {
                   placeholder="https://example.com/banner.jpg" />
                 <p className="text-[10px] text-blue-500 mt-1.5 flex items-start gap-1">
                   <i className="fas fa-circle-info mt-0.5 flex-shrink-0" />
-                  <span>แนะนำขนาด <strong>1200×400 px</strong> หรือ <strong>1920×640 px</strong> (สัดส่วน 3:1) — แสดงใน Hero Carousel แบบ object-cover รองรับ JPG, PNG, WebP</span>
+                  <span>แนะนำขนาด <strong>1200×400 px</strong> หรือ <strong>1920×640 px</strong> (สัดส่วน 3:1) แสดงใน Hero Carousel แบบ object-cover รองรับ JPG, PNG, WebP</span>
                 </p>
               </div>
               {editingSlide.image_url && (
@@ -768,7 +768,7 @@ export default function AdminSettings() {
 
                   <div className="border-t border-amber-200 pt-3">
                     <div className="font-semibold text-gray-900">Brevo / SendGrid / Mailgun</div>
-                    <p className="text-xs text-gray-600 mt-0.5">ใช้ Host/Port/User/Password ตามที่ผู้ให้บริการให้มา — ดูจาก dashboard ของผู้ให้บริการ</p>
+                    <p className="text-xs text-gray-600 mt-0.5">ใช้ Host/Port/User/Password ตามที่ผู้ให้บริการให้มา ดูจาก dashboard ของผู้ให้บริการ</p>
                   </div>
                 </div>
               </div>
@@ -778,7 +778,7 @@ export default function AdminSettings() {
                   <i className="fas fa-shield-halved" /> SSL / TLS คืออะไร?
                 </div>
                 <ul className="space-y-1.5 text-xs text-gray-700">
-                  <li>• <b>เปิด SSL (พอร์ต 465):</b> เข้ารหัสตั้งแต่เชื่อมต่อ — ปลอดภัยและรวดเร็วที่สุด <span className="text-gray-500">ใช้กับ Resend, Gmail SSL, Brevo SSL</span></li>
+                  <li>• <b>เปิด SSL (พอร์ต 465):</b> เข้ารหัสตั้งแต่เชื่อมต่อ ปลอดภัยและรวดเร็วที่สุด <span className="text-gray-500">ใช้กับ Resend, Gmail SSL, Brevo SSL</span></li>
                   <li>• <b>ปิด SSL (พอร์ต 587):</b> เชื่อมต่อปกติแล้วเข้ารหัสภายหลัง (STARTTLS) <span className="text-gray-500">ใช้กับ Gmail TLS, Mailgun, SendGrid</span></li>
                   <li>• ถ้าไม่แน่ใจ ดู Port ที่ผู้ให้บริการให้: <b>465 = เปิด</b>, <b>587 = ปิด</b></li>
                 </ul>
