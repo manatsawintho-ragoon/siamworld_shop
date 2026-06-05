@@ -13,6 +13,15 @@ services:
     image: mysql:8.0
     container_name: panel-mysql
     restart: unless-stopped
+    command: >
+      --performance-schema=OFF
+      --innodb-buffer-pool-size=128M
+      --table-open-cache=512
+      --table-definition-cache=512
+      --innodb-log-buffer-size=8M
+      --skip-name-resolve
+      --max_connections=50
+    mem_limit: 512m
     environment:
       MYSQL_ROOT_PASSWORD: ${PANEL_MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: siamworld_panel

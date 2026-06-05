@@ -5,12 +5,23 @@ const IV_LENGTH = 16;
 const TAG_LENGTH = 16;
 const SALT_LENGTH = 32;
 
+// scryptSync is intentionally expensive (~40ms). The derived key only depends
+// on the (immutable-at-runtime) secret + static salt, so derive it once and
+// memoize. Without this, every encrypt/decrypt — including each settings load
+// and every RCON password decrypt on the 10s player-tracker poll — paid the
+// full KDF cost, adding ~80ms to /api/public/settings alone.
+let cachedKey: Buffer | null = null;
+let cachedKeySecret: string | null = null;
+
 function getEncryptionKey(): Buffer {
   const secret = process.env.ENCRYPTION_KEY || process.env.JWT_SECRET;
   if (!secret || secret.length < 32) {
     throw new Error('ENCRYPTION_KEY or JWT_SECRET must be at least 32 characters');
   }
-  return crypto.scryptSync(secret, 'siamworld-salt', 32);
+  if (cachedKey && cachedKeySecret === secret) return cachedKey;
+  cachedKey = crypto.scryptSync(secret, 'siamworld-salt', 32);
+  cachedKeySecret = secret;
+  return cachedKey;
 }
 
 /**

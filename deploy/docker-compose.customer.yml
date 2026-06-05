@@ -26,6 +26,13 @@ services:
       --replicate-do-table=${MYSQL_DATABASE}.authme
       --gtid-mode=ON
       --enforce-gtid-consistency=ON
+      --performance-schema=OFF
+      --innodb-buffer-pool-size=96M
+      --table-open-cache=512
+      --table-definition-cache=512
+      --innodb-log-buffer-size=8M
+      --skip-name-resolve
+    mem_limit: 512m
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-siamsite}
