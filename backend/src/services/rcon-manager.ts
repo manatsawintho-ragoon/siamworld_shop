@@ -54,15 +54,27 @@ export class RconManager {
   }
 
   async reloadServers() {
-    // Disconnect old servers that are no longer enabled
     const oldIds = Array.from(this.servers.keys());
     this.servers.clear();
     await this.initializeFromDB();
     const newIds = new Set(this.servers.keys());
+
+    // Disconnect servers that were removed/disabled.
     for (const id of oldIds) {
       if (!newIds.has(id)) {
         await rconPool.disconnect(id);
       }
+    }
+
+    // For every current server, drop the live pool connection AND the queue's cached
+    // config so any changed host/port/password takes effect on the very next command.
+    // Without this, editing RCON creds in admin had no effect until a backend restart
+    // (the pool kept a stale authenticated socket and the queue kept the old password) —
+    // i.e. "I fixed the password but RCON still won't connect". reloadServers only runs on
+    // admin server CRUD, so forcing a clean reconnect for all is cheap and safe.
+    for (const id of newIds) {
+      await rconPool.disconnect(id);
+      rconQueue.invalidateConfig(id);
     }
   }
 

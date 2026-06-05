@@ -20,6 +20,8 @@ interface HealthEntry {
   id: number;
   healthy: boolean;
   latency_ms: number;
+  code?: 'auth' | 'timeout' | 'refused' | 'dns' | 'reset' | 'unknown' | null;
+  reason?: string | null;
 }
 
 interface PlayerData {
@@ -371,6 +373,18 @@ export default function AdminServers() {
                     </div>
                   </div>
 
+                  {/* RCON failure reason — tells the customer WHY it's offline + how to fix */}
+                  {rconFail && h?.reason && (
+                    <div className={`mb-4 flex items-start gap-2 px-3 py-2 rounded-xl border ${
+                      h.code === 'auth' ? 'bg-orange-50 border-orange-200' : 'bg-red-50 border-red-200'
+                    }`}>
+                      <i className={`fas ${h.code === 'auth' ? 'fa-key text-orange-500' : 'fa-plug-circle-xmark text-red-500'} text-[11px] flex-shrink-0 mt-0.5`} />
+                      <p className={`text-[11px] font-semibold leading-snug ${h.code === 'auth' ? 'text-orange-700' : 'text-red-700'}`}>
+                        {h.reason}
+                      </p>
+                    </div>
+                  )}
+
                   {/* Disabled warning banner */}
                   {!s.is_enabled && (
                     <div className="mb-4 flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200">
@@ -384,7 +398,7 @@ export default function AdminServers() {
                   {/* Actions */}
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => { setError(''); setEditing({ ...s }); }}
+                      onClick={() => { setError(''); setEditing({ ...s, rcon_password: '' }); }}
                       className="flex items-center gap-1.5 px-3 py-2 text-[12px] font-bold rounded-xl bg-white border border-gray-200 text-gray-700 shadow-[0_3px_0_#d1d5db] hover:brightness-95 transition-all active:shadow-none active:translate-y-[2px]"
                     >
                       <i className="fas fa-pen text-[10px]" /> แก้ไข
@@ -458,8 +472,13 @@ export default function AdminServers() {
                   <input type="number" value={editing.rcon_port ?? 25575} onChange={e => setEditing({ ...editing, rcon_port: Number(e.target.value) })} className={INPUT} />
                 </div>
                 <div>
-                  <label className={LABEL}>RCON Password <span className="text-red-400 normal-case">*</span></label>
-                  <input type="password" value={editing.rcon_password || ''} onChange={e => setEditing({ ...editing, rcon_password: e.target.value })} className={INPUT} placeholder="••••••••" />
+                  <label className={LABEL}>
+                    RCON Password {editing.id ? <span className="text-gray-400 normal-case font-medium">(เว้นว่าง = ใช้รหัสเดิม)</span> : <span className="text-red-400 normal-case">*</span>}
+                  </label>
+                  <input type="password" value={editing.rcon_password || ''} onChange={e => setEditing({ ...editing, rcon_password: e.target.value })} className={INPUT} placeholder={editing.id ? 'เว้นว่างไว้เพื่อใช้รหัสเดิม' : 'รหัส RCON จาก server.properties'} autoComplete="new-password" />
+                  {editing.id && (
+                    <p className="text-[10px] text-gray-400 mt-1 leading-snug">กรอกเฉพาะตอนต้องการเปลี่ยนรหัส — แก้ฟิลด์อื่นแล้วบันทึกได้เลย รหัสเดิมจะไม่ถูกแตะต้อง</p>
+                  )}
                 </div>
               </div>
 

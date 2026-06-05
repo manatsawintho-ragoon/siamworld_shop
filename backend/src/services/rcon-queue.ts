@@ -194,6 +194,16 @@ export class RconQueue {
     }
   }
 
+  /**
+   * Drop the cached connection config for a server (or all servers if omitted).
+   * Call this after an admin edits a server's host/port/password so the next
+   * command re-reads the fresh config from the DB instead of reusing stale creds.
+   */
+  invalidateConfig(serverId?: number) {
+    if (serverId === undefined) this.serverConfigs.clear();
+    else this.serverConfigs.delete(serverId);
+  }
+
   /** Get queue status for monitoring */
   getQueueStatus(): Record<number, { queueLength: number; processing: boolean }> {
     const status: Record<number, { queueLength: number; processing: boolean }> = {};

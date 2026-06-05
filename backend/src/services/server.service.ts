@@ -6,6 +6,38 @@ import { Rcon } from 'rcon-client';
 
 const HEALTH_TIMEOUT_MS = 5000;
 
+/** Sentinel returned to clients in place of the real (encrypted) password. */
+const PASSWORD_MASK = '••••••••';
+
+export type RconFailCode = 'auth' | 'timeout' | 'refused' | 'dns' | 'reset' | 'unknown';
+
+/**
+ * Turn a raw RCON/socket error into an actionable code + Thai message so the admin
+ * UI can tell the customer *why* RCON is down (wrong password vs server down vs
+ * firewall) instead of just a red "offline". This is the difference between a
+ * self-served fix and a support ticket.
+ */
+function classifyRconError(err: unknown): { code: RconFailCode; reason: string } {
+  const msg = (err instanceof Error ? err.message : String(err || '')).toLowerCase();
+
+  if (msg.includes('auth')) {
+    return { code: 'auth', reason: 'รหัส RCON ไม่ถูกต้อง — ตรวจ rcon.password ใน server.properties ให้ตรงกับที่ตั้งในร้าน' };
+  }
+  if (msg.includes('econnrefused') || msg.includes('refused')) {
+    return { code: 'refused', reason: 'เซิร์ฟเวอร์ปฏิเสธการเชื่อมต่อ — RCON ยังไม่เปิด (enable-rcon=true?) หรือ RCON port ผิด' };
+  }
+  if (msg.includes('enotfound') || msg.includes('eai_again') || msg.includes('getaddrinfo')) {
+    return { code: 'dns', reason: 'หา host ไม่เจอ — ตรวจ IP/โดเมนของเซิร์ฟเวอร์ให้ถูกต้อง' };
+  }
+  if (msg.includes('econnreset')) {
+    return { code: 'reset', reason: 'การเชื่อมต่อถูกตัด — เซิร์ฟเวอร์เพิ่งรีสตาร์ท หรือ RCON ไม่เสถียร' };
+  }
+  if (msg.includes('timeout') || msg.includes('etimedout')) {
+    return { code: 'timeout', reason: 'เชื่อมต่อ RCON ไม่ได้ (timeout) — เซิร์ฟเวอร์อาจปิดอยู่, firewall บล็อก RCON port, หรือ host/port ผิด' };
+  }
+  return { code: 'unknown', reason: 'เชื่อมต่อ RCON ไม่ได้ — ' + (err instanceof Error ? err.message : 'unknown error') };
+}
+
 function resolveHost(host: string): string {
   if (process.env.DOCKER === 'true') {
     if (host === '127.0.0.1' || host === 'localhost' || host === '0.0.0.0') {
@@ -21,7 +53,7 @@ class ServerService {
       'SELECT id, name, host, port, rcon_port, rcon_password, minecraft_version, max_players, enabled as is_enabled, created_at FROM servers ORDER BY id'
     );
     // Mask encrypted passwords in API responses
-    return rows.map((r: any) => ({ ...r, rcon_password: '••••••••' }));
+    return rows.map((r: any) => ({ ...r, rcon_password: PASSWORD_MASK }));
   }
 
   async getById(id: number) {
@@ -29,7 +61,7 @@ class ServerService {
       'SELECT * FROM servers WHERE id = ?', [id]
     );
     if (rows.length === 0) throw new NotFoundError('Server not found');
-    return { ...rows[0], rcon_password: '••••••••' };
+    return { ...rows[0], rcon_password: PASSWORD_MASK };
   }
 
   async create(data: {
@@ -53,8 +85,17 @@ class ServerService {
     }
     // Resolve host for Docker networking
     if (data.host !== undefined) { fields.push('host = ?'); values.push(resolveHost(data.host)); }
-    // Encrypt password on update
-    if (data.rcon_password !== undefined && data.rcon_password !== '••••••••') {
+    // Encrypt password on update — but ONLY when a real new password was supplied.
+    // The real password never leaves the server (getAll/getById mask it as PASSWORD_MASK),
+    // so an edit that doesn't touch the field must leave the stored password untouched.
+    // Skip the mask, empty, and whitespace-only values; otherwise re-saving the form after
+    // changing some *other* field would overwrite the password with garbage (the mask) or
+    // wipe it (empty string → encrypt('')). This is what corrupted honeyland's stored creds.
+    if (
+      data.rcon_password !== undefined &&
+      data.rcon_password !== PASSWORD_MASK &&
+      String(data.rcon_password).trim() !== ''
+    ) {
       fields.push('rcon_password = ?');
       values.push(encrypt(data.rcon_password));
     }
@@ -70,7 +111,7 @@ class ServerService {
   }
 
   /** Check real RCON connectivity for ALL servers in parallel (enabled or not). */
-  async healthCheckAll(): Promise<{ id: number; healthy: boolean; latency_ms: number }[]> {
+  async healthCheckAll(): Promise<{ id: number; healthy: boolean; latency_ms: number; code: RconFailCode | null; reason: string | null }[]> {
     const [rows] = await pool.execute<RowDataPacket[]>(
       'SELECT id, host, rcon_port, rcon_password FROM servers'
     );
@@ -89,9 +130,12 @@ class ServerService {
             ),
           ]);
           await rcon.send('list');
-          return { id: row.id as number, healthy: true, latency_ms: Date.now() - start };
-        } catch {
-          return { id: row.id as number, healthy: false, latency_ms: Date.now() - start };
+          return { id: row.id as number, healthy: true, latency_ms: Date.now() - start, code: null, reason: null };
+        } catch (err) {
+          // Keep the *reason* — a red dot with no explanation is what turns every RCON
+          // hiccup into a support ticket. The admin UI surfaces this to the customer.
+          const { code, reason } = classifyRconError(err);
+          return { id: row.id as number, healthy: false, latency_ms: Date.now() - start, code, reason };
         } finally {
           if (rcon) rcon.end().catch(() => {});
         }
@@ -99,7 +143,9 @@ class ServerService {
     );
 
     return results.map((r) =>
-      r.status === 'fulfilled' ? r.value : { id: 0, healthy: false, latency_ms: 0 }
+      r.status === 'fulfilled'
+        ? r.value
+        : { id: 0, healthy: false, latency_ms: 0, code: 'unknown' as RconFailCode, reason: 'เชื่อมต่อ RCON ไม่ได้' }
     );
   }
 }
