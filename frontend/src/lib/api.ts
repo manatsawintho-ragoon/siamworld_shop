@@ -40,6 +40,7 @@ interface ApiOptions {
 interface ApiError extends Error {
   status: number;
   code?: string;
+  fieldErrors?: { field: string; message: string }[];
 }
 
 interface ApiResponse<T = unknown> {
@@ -63,9 +64,12 @@ export async function api<T = unknown>(endpoint: string, options: ApiOptions = {
 
   const data = await res.json();
   if (!res.ok) {
-    const err = new Error(data.error || data.message || 'Something went wrong') as ApiError;
+    // Prefer the detailed Thai summary (`message`) over the generic `error`
+    // ("Validation failed") so callers surface *which* field is wrong.
+    const err = new Error(data.message || data.error || 'Something went wrong') as ApiError;
     err.status = res.status;
     err.code = data.code; // e.g. SESSION_KICKED, SESSION_EXPIRED, AUTH_FAILED
+    if (Array.isArray(data.errors)) err.fieldErrors = data.errors; // per-field validation detail
     throw err;
   }
   return data;

@@ -335,7 +335,18 @@ class SubscriptionService {
        FROM subscriptions WHERE user_id = ? ORDER BY created_at DESC`,
       [userId]
     );
-    return rows;
+
+    // Expose the grace deadline (when the cron will actually suspend a shop) so the
+    // dashboard can show "หมดอายุแล้ว เกินมา X ชม. — ปิดระบบใน Y ชม." instead of an
+    // abrupt blackout. Mirrors notificationService.suspendExpired() (expires_at + graceDays).
+    const settings = await settingsService.getAll();
+    const graceDays = parseInt(settings['auto_suspend_days'] || '1', 10) || 1;
+    const graceMs = graceDays * 86400000;
+    return rows.map((r: RowDataPacket) => ({
+      ...r,
+      grace_days: graceDays,
+      suspend_at: r.expires_at ? new Date(new Date(r.expires_at).getTime() + graceMs).toISOString() : null,
+    }));
   }
 
   /** On-demand: real-time docker state for a single shop. Cached so dashboards can poll cheaply. */

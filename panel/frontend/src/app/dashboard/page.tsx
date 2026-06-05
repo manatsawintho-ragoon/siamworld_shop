@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface Sub {
   id: number; shop_name: string; domain: string; status: string;
   expires_at: string; package_months: number; price_paid: number;
+  suspend_at?: string | null; grace_days?: number;
 }
 
 interface Promo {
@@ -404,7 +405,11 @@ function DashboardContent() {
                                 </td>
                                 <td className="px-6 py-6">
                                   <div className="p-3 bg-secondary/50 rounded-2xl border border-border/50 inline-block min-w-[140px]">
-                                    <TimeRemaining date={sub.expires_at} />
+                                    <TimeRemaining
+                                      date={sub.expires_at}
+                                      suspendAt={sub.suspend_at}
+                                      suspended={sub.status === 'suspended'}
+                                    />
                                   </div>
                                 </td>
                                 <td className="px-8 py-6">

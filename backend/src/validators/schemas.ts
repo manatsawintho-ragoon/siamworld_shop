@@ -148,19 +148,22 @@ export const updateLootBoxItemSchema = z.object({
 // ─── Products ────────────────────────────────────────────────
 
 const productBaseFields = {
-  name:          z.string().min(1).max(255),
-  description:   z.string().max(2000).optional().nullable(),
-  price:         z.number().positive(),
-  original_price: z.number().positive().optional().nullable(),
-  image:         z.string().max(500).optional().nullable(),
-  image2:        z.string().max(500).optional().nullable(),
-  image3:        z.string().max(500).optional().nullable(),
-  command:       z.string().min(1).max(5000),
-  category_id:   z.number().int().positive().optional().nullable(),
+  name:          z.string({ required_error: 'กรุณากรอกชื่อสินค้า', invalid_type_error: 'ชื่อสินค้าไม่ถูกต้อง' })
+                  .min(1, 'กรุณากรอกชื่อสินค้า').max(255, 'ชื่อสินค้ายาวเกิน 255 ตัวอักษร'),
+  description:   z.string().max(2000, 'คำอธิบายยาวเกิน 2000 ตัวอักษร').optional().nullable(),
+  price:         z.number({ required_error: 'กรุณากรอกราคา', invalid_type_error: 'ราคาต้องเป็นตัวเลข' })
+                  .positive('ราคาต้องมากกว่า 0'),
+  original_price: z.number({ invalid_type_error: 'ราคาเดิมต้องเป็นตัวเลข' }).positive('ราคาเดิมต้องมากกว่า 0').optional().nullable(),
+  image:         z.string().max(500, 'ลิงก์รูปภาพยาวเกินไป').optional().nullable(),
+  image2:        z.string().max(500, 'ลิงก์รูปภาพยาวเกินไป').optional().nullable(),
+  image3:        z.string().max(500, 'ลิงก์รูปภาพยาวเกินไป').optional().nullable(),
+  command:       z.string({ required_error: 'กรุณากรอกคำสั่ง RCON', invalid_type_error: 'คำสั่ง RCON ไม่ถูกต้อง' })
+                  .min(1, 'กรุณากรอกคำสั่ง RCON ที่จะส่งเมื่อมีคนซื้อ').max(5000, 'คำสั่ง RCON ยาวเกิน 5000 ตัวอักษร'),
+  category_id:   z.number({ invalid_type_error: 'หมวดหมู่ไม่ถูกต้อง' }).int().positive('หมวดหมู่ไม่ถูกต้อง').optional().nullable(),
   featured:      boolFlag.optional(),
   active:        boolFlag.optional(),
-  server_ids:    z.array(z.number().int().positive()).optional(),
-  stock_limit:   z.number().int().min(0).optional().nullable(),
+  server_ids:    z.array(z.number().int().positive(), { invalid_type_error: 'กรุณาเลือกเซิร์ฟเวอร์' }).optional(),
+  stock_limit:   z.number({ invalid_type_error: 'จำนวนสต็อกต้องเป็นตัวเลข' }).int('จำนวนสต็อกต้องเป็นจำนวนเต็ม').min(0, 'จำนวนสต็อกต้องไม่ติดลบ').optional().nullable(),
   sale_start:    z.string().optional().nullable(),
   sale_end:      z.string().optional().nullable(),
 };

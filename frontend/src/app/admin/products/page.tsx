@@ -69,6 +69,14 @@ const emptyProduct = {
   stock_limit: null as number | null, sale_start: null as string | null, sale_end: null as string | null,
 };
 
+// Thai labels for validation-error fields so the admin sees "ราคา" not "price".
+const PRODUCT_FIELD_LABELS: Record<string, string> = {
+  name: 'ชื่อสินค้า', description: 'คำอธิบาย', price: 'ราคา', original_price: 'ราคาเดิม',
+  image: 'รูปภาพ', image2: 'รูปภาพ 2', image3: 'รูปภาพ 3', command: 'คำสั่ง RCON',
+  category_id: 'หมวดหมู่', server_ids: 'เซิร์ฟเวอร์', stock_limit: 'จำนวนสต็อก',
+  sale_start: 'เริ่มลดราคา', sale_end: 'สิ้นสุดลดราคา',
+};
+
 const emptyCategory: Partial<Category> = { name: '', slug: '', icon: '', sort_order: 0 };
 
 export default function AdminProducts() {
@@ -82,6 +90,7 @@ export default function AdminProducts() {
   const [editing, setEditing] = useState<Partial<Product> | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{ field: string; message: string }[]>([]);
 
   // Category management modal
   const [catModalOpen, setCatModalOpen] = useState(false);
@@ -148,6 +157,7 @@ export default function AdminProducts() {
     if (!editing) return;
     setSaving(true);
     setError('');
+    setFieldErrors([]);
     try {
       const body = {
         name: editing.name,
@@ -173,7 +183,13 @@ export default function AdminProducts() {
       adminAlert({ title: editing.id ? 'แก้ไขสินค้าแล้ว' : 'เพิ่มสินค้าแล้ว', type: 'success' });
       load();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
+      const fe = (err as { fieldErrors?: { field: string; message: string }[] })?.fieldErrors;
+      if (Array.isArray(fe) && fe.length > 0) {
+        setFieldErrors(fe);
+        setError('กรอกข้อมูลไม่ครบ/ไม่ถูกต้อง — ตรวจรายการด้านล่าง');
+      } else {
+        setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
+      }
     } finally {
       setSaving(false);
     }
@@ -675,7 +691,21 @@ export default function AdminProducts() {
 
             {/* Body — 2-column: form left, sale settings right */}
             <div className="p-4 flex-1 min-h-0 overflow-y-auto">
-              {error && <div className="text-red-500 text-[11px] bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 flex items-center gap-1.5 mb-3"><i className="fas fa-exclamation-circle"></i> {error}</div>}
+              {error && (
+                <div className="text-red-600 text-[11px] bg-red-50 px-3 py-2 rounded-lg border border-red-100 mb-3">
+                  <div className="flex items-center gap-1.5 font-bold"><i className="fas fa-exclamation-circle"></i> {error}</div>
+                  {fieldErrors.length > 0 && (
+                    <ul className="mt-1.5 space-y-1">
+                      {fieldErrors.map((fe, i) => (
+                        <li key={i} className="flex items-start gap-1.5 pl-0.5">
+                          <i className="fas fa-circle text-[4px] mt-1.5 text-red-400"></i>
+                          <span><span className="font-bold">{PRODUCT_FIELD_LABELS[fe.field] || fe.field}</span> — {fe.message}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* ── Left: form fields (2/3 width) ── */}

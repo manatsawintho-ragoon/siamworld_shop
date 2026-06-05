@@ -205,15 +205,14 @@ export default function ProductCard({ product, servers }: { product: Product; se
             </span>
           </div>
 
-          {product.description && (
-            <button
-              onClick={() => setShowDesc(true)}
-              className="inline-flex items-center gap-1 mt-1.5 mb-1 text-[10px] font-bold transition-colors hover:brightness-110"
-              style={{ color: 'rgb(var(--color-primary))' }}
-            >
-              <i className="fas fa-info-circle text-[9px]" /> ดูคำอธิบายสินค้า
-            </button>
-          )}
+          {/* Always render so every card keeps the same height, with or without a description. */}
+          <button
+            onClick={() => setShowDesc(true)}
+            className="inline-flex items-center gap-1 mt-1.5 mb-1 text-[10px] font-bold transition-colors hover:brightness-110"
+            style={{ color: 'rgb(var(--color-primary))' }}
+          >
+            <i className="fas fa-info-circle text-[9px]" /> ดูคำอธิบายสินค้า
+          </button>
 
           <motion.button
             whileHover={{ scale: 1.02 }}
@@ -277,7 +276,14 @@ export default function ProductCard({ product, servers }: { product: Product; se
                     <i className="fas fa-align-left text-[12px]" style={{ color: 'rgb(var(--color-primary))' }} />
                     <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">คำอธิบายสินค้า</span>
                   </div>
-                  <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{product.description}</p>
+                  {product.description ? (
+                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{product.description}</p>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-center py-6 text-gray-400">
+                      <i className="fas fa-circle-info text-2xl mb-2 opacity-40" />
+                      <p className="text-sm font-medium">ยังไม่มีคำอธิบายเพิ่มเติมสำหรับสินค้านี้</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Footer */}
@@ -353,15 +359,13 @@ export default function ProductCard({ product, servers }: { product: Product; se
                       {product.category_name && (
                         <p className="text-[10px] text-gray-400 mt-0.5">{product.category_name}</p>
                       )}
-                      {product.description && (
-                        <button
-                          onClick={() => setShowDesc(true)}
-                          className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold transition-colors"
-                          style={{ color: 'rgb(var(--color-primary))' }}
-                        >
-                          <i className="fas fa-info-circle text-[9px]" /> ดูคำอธิบายสินค้า
-                        </button>
-                      )}
+                      <button
+                        onClick={() => setShowDesc(true)}
+                        className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold transition-colors"
+                        style={{ color: 'rgb(var(--color-primary))' }}
+                      >
+                        <i className="fas fa-info-circle text-[9px]" /> ดูคำอธิบายสินค้า
+                      </button>
                       <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                         {discount > 0 && product.original_price && (
                           <span className="text-gray-400 text-xs line-through tabular-nums">{product.original_price.toLocaleString()} ฿</span>
