@@ -1,5 +1,11 @@
 import axios, { AxiosRequestConfig } from 'axios';
+import https from 'https';
 import { settingsService } from './settings.service';
+
+// Container has no IPv6 connectivity. axios/node may resolve api.cloudflare.com to an
+// AAAA record and hang until ETIMEDOUT (this silently broke DNS creation on every
+// customer deploy). Pin the socket to IPv4 — same workaround as email.service.ts.
+const ipv4Agent = new https.Agent({ family: 4, keepAlive: true });
 
 type CfConfig = {
   apiKey: string;
@@ -57,6 +63,7 @@ class CloudflareService {
       data,
       headers: this.headers(cfg),
       timeout: 15000,
+      httpsAgent: ipv4Agent,
     });
   }
 
