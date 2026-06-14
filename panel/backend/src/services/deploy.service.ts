@@ -127,7 +127,11 @@ class DeployService {
       const mcIpArg = mcIp ? ` --mc-ip "${mcIp}"` : '';
       const { stdout, stderr } = await execAsync(
         `bash "${script}" --name "${shopName}" --domain "${domain}"${mcIpArg}`,
-        { timeout: 10 * 60 * 1000, cwd: deployDir }
+        // Cold first builds compile both backend + a full Next.js frontend with no Docker
+        // cache. On a busy host this regularly exceeds 10 min and the script gets killed
+        // mid-build, leaving a half-provisioned shop stuck in "deploying" (see cyoriasmp).
+        // 25 min gives an uncached first build comfortable headroom.
+        { timeout: 25 * 60 * 1000, cwd: deployDir }
       );
       log += stdout;
       if (stderr) log += `STDERR: ${stderr}`;
