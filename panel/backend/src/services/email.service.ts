@@ -40,6 +40,15 @@ interface SupportLinks {
   supportDiscord?: string;
 }
 
+/** Minimal shape needed for renewal-reminder / suspension emails. */
+interface ExpiryEmailData {
+  shopName: string;
+  domain: string;
+  expiresAt: Date | string;
+  email: string;
+  displayName: string | null;
+}
+
 class EmailService {
   private async getClient(): Promise<{ apiKey: string; from: string; replyTo?: string } | null> {
     const s = await settingsService.getAll();
@@ -275,6 +284,173 @@ class EmailService {
       const e = err as { response?: { status?: number; data?: unknown }; message?: string };
       console.error('[Email] sendDeployWelcome failed:', e.response?.status ?? '', JSON.stringify(e.response?.data ?? {}) || e.message);
     }
+  }
+
+  /** Compact amber-styled notice email (renewal reminder / suspension). Shared by both flows. */
+  private buildNoticeHtml(
+    data: ExpiryEmailData,
+    opts: { mode: 'reminder' | 'suspend'; daysLeft?: number; support: SupportLinks }
+  ): string {
+    const { supportEmail, supportFacebook, supportDiscord } = opts.support;
+    const rawName = data.displayName || '';
+    const qMarks  = (rawName.match(/\?/g) || []).length;
+    const displayName = (!rawName || qMarks > 3) ? data.email.split('@')[0] : rawName;
+    const panelUrl  = 'https://panel.siamsite.shop';
+    const renewUrl  = `${panelUrl}/dashboard`;
+    const expires   = this.formatExpiry(data.expiresAt);
+
+    const INK   = '#1F1B16';
+    const MUTED = '#8A7F73';
+    const HAIR  = '#F1E9DD';
+    const SOFT  = '#FFFBF2';
+    const AMBER = '#D97706';
+    const RED   = '#DC2626';
+    const FONT_TH = `'Sarabun','Prompt',-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif`;
+
+    const isSuspend = opts.mode === 'suspend';
+    const ACCENT   = isSuspend ? RED : AMBER;
+    const tagText  = isSuspend ? 'ระงับการใช้งาน' : 'แจ้งเตือนหมดอายุ';
+    const headline = isSuspend
+      ? `ร้าน <span style="color:${ACCENT};">${escapeHtml(data.shopName)}</span> ถูกระงับชั่วคราว`
+      : `ร้าน <span style="color:${ACCENT};">${escapeHtml(data.shopName)}</span> ใกล้หมดอายุ`;
+    const intro = isSuspend
+      ? `สวัสดีคุณ ${escapeHtml(displayName)} ร้านของคุณหมดอายุแล้วและถูกระงับการใช้งานชั่วคราว ต่ออายุเพื่อเปิดให้บริการอีกครั้งได้ทันที`
+      : `สวัสดีคุณ ${escapeHtml(displayName)} ร้านของคุณจะหมดอายุในอีก ${opts.daysLeft} วัน ต่ออายุล่วงหน้าเพื่อให้ร้านเปิดต่อเนื่องไม่สะดุด`;
+    const ctaText = isSuspend ? 'ต่ออายุเพื่อกู้คืนร้าน' : 'ต่ออายุร้านค้า';
+
+    return `<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light only">
+<title>${isSuspend ? 'ระงับร้าน' : 'แจ้งเตือนหมดอายุ'} ${escapeHtml(data.shopName)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0;padding:0;background:#FFFBF2;font-family:${FONT_TH};color:${INK};-webkit-font-smoothing:antialiased;">
+<div style="max-width:560px;margin:0 auto;padding:24px 16px;">
+  <div style="background:#FFFFFF;border:1px solid ${HAIR};border-radius:14px;overflow:hidden;">
+
+    <div style="background:${ACCENT};padding:14px 24px;display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-family:'Prompt',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.18em;color:#FFFFFF;text-transform:uppercase;">SIAMSITE STORE</div>
+      <div style="font-family:'Prompt',sans-serif;font-size:11px;font-weight:500;color:#FFFFFF;opacity:0.85;letter-spacing:0.04em;">${tagText}</div>
+    </div>
+
+    <div style="padding:28px 28px 16px;">
+      <h1 style="margin:0;font-size:23px;line-height:1.3;font-weight:700;color:${INK};">${headline}</h1>
+      <p style="margin:10px 0 0;font-size:14px;line-height:1.65;color:${MUTED};">${intro}</p>
+    </div>
+
+    <div style="padding:0 28px 8px;">
+      <div style="background:${SOFT};border:1px solid ${HAIR};border-radius:10px;padding:16px 18px;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          ${miniRow('ร้านค้า', escapeHtml(data.shopName), MUTED, INK)}
+          ${miniRow('โดเมน', `<span style="font-family:'Prompt',monospace;">${escapeHtml(data.domain)}</span>`, MUTED, INK)}
+          ${miniRow(isSuspend ? 'หมดอายุเมื่อ' : 'จะหมดอายุ', escapeHtml(expires), MUTED, ACCENT, true)}
+        </table>
+      </div>
+    </div>
+
+    <div style="padding:16px 28px 24px;">
+      <a href="${escapeHtml(renewUrl)}" style="display:inline-block;background:${ACCENT};color:#FFFFFF;text-decoration:none;padding:13px 26px;border-radius:10px;font-weight:600;font-size:14px;font-family:${FONT_TH};">
+        ${ctaText}
+      </a>
+      <div style="margin-top:10px;font-size:12px;color:${MUTED};font-family:'Prompt',sans-serif;">
+        ต่ออายุที่ <a href="${escapeHtml(renewUrl)}" style="color:${ACCENT};text-decoration:none;">panel.siamsite.shop/dashboard</a>
+      </div>
+    </div>
+
+    <div style="padding:0 28px 24px;">
+      <div style="background:${SOFT};border:1px solid ${HAIR};border-radius:10px;padding:18px 20px;">
+        <div style="font-family:'Prompt',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.18em;color:${ACCENT};text-transform:uppercase;margin-bottom:10px;">ติดต่อช่วยเหลือ</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          ${supportFacebook ? `<tr><td style="padding:6px 0;color:${MUTED};width:90px;font-family:'Prompt',sans-serif;">Facebook</td><td style="padding:6px 0;"><a href="${escapeHtml(supportFacebook)}" style="color:${ACCENT};text-decoration:none;">${escapeHtml(supportFacebook.replace(/^https?:\/\/(www\.)?/, ''))}</a></td></tr>` : ''}
+          ${supportDiscord ? `<tr><td style="padding:6px 0;color:${MUTED};font-family:'Prompt',sans-serif;">Discord</td><td style="padding:6px 0;"><a href="${escapeHtml(supportDiscord)}" style="color:${ACCENT};text-decoration:none;">${escapeHtml(supportDiscord.replace(/^https?:\/\/(www\.)?/, ''))}</a></td></tr>` : ''}
+          ${supportEmail ? `<tr><td style="padding:6px 0;color:${MUTED};font-family:'Prompt',sans-serif;">อีเมล</td><td style="padding:6px 0;"><a href="mailto:${escapeHtml(supportEmail)}" style="color:${ACCENT};text-decoration:none;">${escapeHtml(supportEmail)}</a></td></tr>` : ''}
+          <tr><td style="padding:6px 0;color:${MUTED};font-family:'Prompt',sans-serif;">Panel</td><td style="padding:6px 0;"><a href="${escapeHtml(panelUrl)}" style="color:${ACCENT};text-decoration:none;">panel.siamsite.shop</a></td></tr>
+        </table>
+      </div>
+    </div>
+
+  </div>
+  <div style="padding:16px 8px 0;text-align:center;font-size:11px;color:${MUTED};font-family:'Prompt',sans-serif;letter-spacing:0.04em;">
+    SIAMSITE STORE · © ${new Date().getFullYear()}
+  </div>
+</div>
+</body>
+</html>`;
+  }
+
+  private buildNoticeText(data: ExpiryEmailData, opts: { mode: 'reminder' | 'suspend'; daysLeft?: number }): string {
+    const rawName = data.displayName || '';
+    const qMarks  = (rawName.match(/\?/g) || []).length;
+    const displayName = (!rawName || qMarks > 3) ? data.email.split('@')[0] : rawName;
+    const expires = this.formatExpiry(data.expiresAt);
+    const head = opts.mode === 'suspend'
+      ? `ร้าน "${data.shopName}" ถูกระงับชั่วคราว (หมดอายุแล้ว)`
+      : `ร้าน "${data.shopName}" จะหมดอายุในอีก ${opts.daysLeft} วัน`;
+    return [
+      `สวัสดีคุณ ${displayName}`,
+      ``,
+      head,
+      `โดเมน: ${data.domain}`,
+      `${opts.mode === 'suspend' ? 'หมดอายุเมื่อ' : 'จะหมดอายุ'}: ${expires}`,
+      ``,
+      `ต่ออายุที่: https://panel.siamsite.shop/dashboard`,
+      ``,
+      `SIAMSITE STORE`,
+    ].join('\n');
+  }
+
+  private async sendNotice(
+    data: ExpiryEmailData,
+    opts: { mode: 'reminder' | 'suspend'; daysLeft?: number }
+  ): Promise<void> {
+    const cfg = await this.getClient();
+    if (!cfg) {
+      console.log('[Email] Resend not configured — skipping', opts.mode, 'email for', data.shopName);
+      return;
+    }
+    if (!data.email) {
+      console.log('[Email] No email on file — skipping', opts.mode, 'email for', data.shopName);
+      return;
+    }
+    const s = await settingsService.getAll();
+    const support: SupportLinks = {
+      supportEmail:    s['support_email'] || undefined,
+      supportFacebook: s['support_facebook'] || undefined,
+      supportDiscord:  s['support_discord'] || undefined,
+    };
+    const subject = opts.mode === 'suspend'
+      ? `ร้าน ${data.shopName} ถูกระงับ: ต่ออายุเพื่อเปิดใช้งาน`
+      : `ร้าน ${data.shopName} จะหมดอายุในอีก ${opts.daysLeft} วัน`;
+    try {
+      const payload: Record<string, unknown> = {
+        from: cfg.from,
+        to: [data.email],
+        subject,
+        html: this.buildNoticeHtml(data, { ...opts, support }),
+        text: this.buildNoticeText(data, opts),
+      };
+      if (cfg.replyTo) payload.reply_to = cfg.replyTo;
+      const result = await resendSend(cfg.apiKey, payload);
+      console.log(`[Email] ${opts.mode} email sent to ${data.email} for shop ${data.shopName} (id: ${result.id})`);
+    } catch (err) {
+      const e = err as { response?: { status?: number; data?: unknown }; message?: string };
+      console.error(`[Email] send ${opts.mode} failed:`, e.response?.status ?? '', JSON.stringify(e.response?.data ?? {}) || e.message);
+    }
+  }
+
+  /** Renewal reminder email sent N days before a subscription expires. No-op if Resend not configured. */
+  async sendExpiryReminder(data: ExpiryEmailData, daysLeft: number): Promise<void> {
+    return this.sendNotice(data, { mode: 'reminder', daysLeft });
+  }
+
+  /** Notice sent when a shop is suspended after expiry. No-op if Resend not configured. */
+  async sendSuspensionNotice(data: ExpiryEmailData): Promise<void> {
+    return this.sendNotice(data, { mode: 'suspend' });
   }
 
   /** Send a test email to verify Resend configuration. Throws on failure (route surfaces the error). */

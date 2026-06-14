@@ -8,7 +8,6 @@ interface PanelUser {
   displayName: string;
   role: 'customer' | 'admin';
   walletBalance: number;
-  lineNotifyToken?: string | null;
   phone?: string | null;
   avatarUrl?: string | null;
 }

@@ -1,33 +1,24 @@
 /**
- * LINE Notify integration for expiry notifications
+ * Subscription expiry notifications, delivered by email (Resend).
+ * Replaces the retired LINE Notify integration (LINE shut the Notify API down in 2025).
  */
-import axios from 'axios';
 import { pool } from '../database/connection';
 import { settingsService } from './settings.service';
+import { emailService } from './email.service';
 import { RowDataPacket } from 'mysql2';
 
 class NotificationService {
-  private async sendLine(token: string, message: string): Promise<void> {
-    try {
-      await axios.post('https://notify-api.line.me/api/notify',
-        new URLSearchParams({ message }),
-        { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 10000 }
-      );
-    } catch (err) {
-      console.warn('[LINE Notify]', (err as Error).message);
-    }
-  }
-
+  /** Email customers whose shop expires in exactly 3 or 1 day(s), once per threshold. */
   async sendExpiryNotifications(): Promise<void> {
     const settings = await settingsService.getAll();
-    const adminToken = settings['line_notify_token'];
-    const daysConfig = (settings['notify_days_before'] || '7,3,1').split(',').map(d => parseInt(d.trim())).filter(Boolean);
+    const daysConfig = (settings['notify_days_before'] || '3,1')
+      .split(',').map(d => parseInt(d.trim())).filter(Boolean);
 
     for (const days of daysConfig) {
-      // Find subscriptions expiring in exactly `days` days (not already notified)
+      // Find subscriptions expiring in exactly `days` days (not already notified for this threshold)
       const [subs] = await pool.execute<RowDataPacket[]>(`
         SELECT s.id, s.shop_name, s.domain, s.expires_at,
-               pu.display_name, pu.email, pu.line_notify_token
+               pu.display_name, pu.email
         FROM subscriptions s
         JOIN panel_users pu ON pu.id = s.user_id
         LEFT JOIN expiry_notifications en ON en.subscription_id = s.id AND en.days_before = ?
@@ -37,16 +28,15 @@ class NotificationService {
       `, [days, days]);
 
       for (const sub of subs) {
-        const expiresStr = new Date(sub.expires_at).toLocaleDateString('th-TH');
-        const msg = `\n[Siamsite Store] แจ้งเตือน!\nร้าน: ${sub.shop_name} (${sub.domain})\nจะหมดอายุใน ${days} วัน (${expiresStr})\nกรุณาต่ออายุที่ panel.siamsite.shop`;
+        await emailService.sendExpiryReminder({
+          shopName: sub.shop_name,
+          domain: sub.domain,
+          expiresAt: sub.expires_at,
+          email: sub.email,
+          displayName: sub.display_name,
+        }, days);
 
-        // Send to customer
-        if (sub.line_notify_token) await this.sendLine(sub.line_notify_token, msg);
-
-        // Send to admin
-        if (adminToken) await this.sendLine(adminToken, `\n[Admin] ${sub.display_name} (${sub.email})\n${msg}`);
-
-        // Record sent
+        // Record sent so the next daily run doesn't re-notify for the same threshold
         await pool.execute(
           'INSERT IGNORE INTO expiry_notifications (subscription_id, days_before) VALUES (?,?)',
           [sub.id, days]
@@ -55,6 +45,7 @@ class NotificationService {
     }
   }
 
+  /** Suspend shops past the grace period and email the customer that the shop is down. */
   async suspendExpired(): Promise<void> {
     const settings = await settingsService.getAll();
     // Short grace by default (1 day): a shop goes down ~a day after it expires, not 3.
@@ -62,7 +53,7 @@ class NotificationService {
     const graceDays = parseInt(settings['auto_suspend_days'] || '1');
 
     const [subs] = await pool.execute<RowDataPacket[]>(`
-      SELECT s.*, pu.line_notify_token
+      SELECT s.id, s.shop_name, s.domain, s.expires_at, pu.email, pu.display_name
       FROM subscriptions s JOIN panel_users pu ON pu.id = s.user_id
       WHERE s.status = 'active'
         AND s.expires_at < DATE_SUB(NOW(), INTERVAL ? DAY)
@@ -74,21 +65,17 @@ class NotificationService {
         await deployService.stopShop(sub.shop_name);
         await pool.execute('UPDATE subscriptions SET status="suspended" WHERE id=?', [sub.id]);
 
-        const adminToken = settings['line_notify_token'];
-        const msg = `\n[Siamsite Store] ระงับร้านค้า\nร้าน: ${sub.shop_name} (${sub.domain})\nหมดอายุแล้วและถูกระงับการใช้งาน`;
-        if (sub.line_notify_token) await this.sendLine(sub.line_notify_token, msg);
-        if (adminToken) await this.sendLine(adminToken, msg);
+        await emailService.sendSuspensionNotice({
+          shopName: sub.shop_name,
+          domain: sub.domain,
+          expiresAt: sub.expires_at,
+          email: sub.email,
+          displayName: sub.display_name,
+        });
       } catch (err) {
         console.error('[Suspend]', sub.shop_name, (err as Error).message);
       }
     }
-  }
-
-  async testLineNotify(token: string): Promise<boolean> {
-    try {
-      await this.sendLine(token, '\n[Siamsite Store] ทดสอบการแจ้งเตือน LINE Notify สำเร็จ');
-      return true;
-    } catch { return false; }
   }
 }
 

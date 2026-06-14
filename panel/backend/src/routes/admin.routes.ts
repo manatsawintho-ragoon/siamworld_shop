@@ -451,8 +451,6 @@ router.get('/settings', asyncRoute(async (_req, res) => {
   const safe = { ...settings };
   if (safe['easyslip_api_key']) safe['easyslip_api_key'] = '••••••••' + safe['easyslip_api_key'].slice(-4);
   if (safe['npm_password'])     safe['npm_password']     = '••••••••';
-  if (safe['line_notify_token'] && safe['line_notify_token'].length > 8)
-    safe['line_notify_token'] = safe['line_notify_token'].slice(0, 4) + '••••••••';
   if (safe['turnstile_secret']) safe['turnstile_secret'] = '••••••••';
   res.json(safe);
 }));
@@ -464,7 +462,7 @@ router.put('/settings', asyncRoute(async (req, res) => {
     'easyslip_api_key',
     'price_1month','price_3months','price_6months',
     'npm_url','npm_email','npm_password','npm_forward_host',
-    'line_notify_token','notify_days_before','auto_suspend_days',
+    'notify_days_before','auto_suspend_days',
     'cloudflare_api_key','cloudflare_email','cloudflare_zone_id','server_ip',
     'resend_api_key','email_from','email_from_name','email_reply_to',
     'support_email','support_facebook','support_discord','support_line',
@@ -476,9 +474,9 @@ router.put('/settings', asyncRoute(async (req, res) => {
   // If the admin saves the form without retyping the secret, the masked value would
   // overwrite the real one. Detect masked values and skip them so the prior value is preserved.
   const MASKED = /^•+$/;          // pure bullets (npm_password, smtp_password)
-  const SUFFIX_MASK = /^•+.{2,8}$/; // prefix-masked (easyslip_api_key, line_notify_token)
+  const SUFFIX_MASK = /^•+.{2,8}$/; // prefix-masked (easyslip_api_key)
   const isMasked = (v: string) => !v || MASKED.test(v) || SUFFIX_MASK.test(v);
-  const SECRET_KEYS = new Set(['npm_password','smtp_password','easyslip_api_key','line_notify_token','cloudflare_api_key','resend_api_key','turnstile_secret']);
+  const SECRET_KEYS = new Set(['npm_password','smtp_password','easyslip_api_key','cloudflare_api_key','resend_api_key','turnstile_secret']);
   for (const key of allowed) {
     if (req.body[key] === undefined) continue;
     const next = String(req.body[key]);
@@ -512,13 +510,6 @@ router.post('/settings/fix-panel-npm', asyncRoute(async (req, res) => {
     const msg = err?.response?.data ? JSON.stringify(err.response.data) : (err?.message || 'NPM error');
     res.status(500).json({ error: msg });
   }
-}));
-
-// Test LINE Notify
-router.post('/settings/test-line', asyncRoute(async (req, res) => {
-  const { token } = req.body;
-  const ok = await notificationService.testLineNotify(token || await settingsService.get('line_notify_token'));
-  res.json({ success: ok });
 }));
 
 // Manual trigger notifications

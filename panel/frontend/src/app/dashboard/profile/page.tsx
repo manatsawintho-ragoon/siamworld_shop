@@ -43,7 +43,7 @@ export default function ProfilePage() {
   const { user, loading, refreshUser } = useAuth();
   const router = useRouter();
   const toast = useToast();
-  const [form, setForm] = useState({ displayName: '', phone: '', lineNotifyToken: '' });
+  const [form, setForm] = useState({ displayName: '', phone: '' });
   const [pwForm, setPwForm] = useState({ oldPassword: '', newPassword: '', confirm: '' });
   const [showOld, setShowOld] = useState(false);
   const [showNew, setShowNew] = useState(false);
@@ -52,7 +52,7 @@ export default function ProfilePage() {
 
   useEffect(() => { if (!loading && !user) router.push('/?auth=login'); }, [user, loading, router]);
   useEffect(() => {
-    if (user) setForm({ displayName: user.displayName, phone: user.phone || '', lineNotifyToken: user.lineNotifyToken || '' });
+    if (user) setForm({ displayName: user.displayName, phone: user.phone || '' });
   }, [user]);
 
   const saveProfile = async (e: FormEvent) => {
@@ -153,16 +153,10 @@ export default function ProfilePage() {
                   value={form.phone}
                   onChange={v => setForm(f => ({ ...f, phone: v }))}
                   placeholder="08x-xxx-xxxx" />
-                <div className="space-y-1.5">
-                  <InputField label="LINE Notify Token" icon="fab fa-line"
-                    value={form.lineNotifyToken}
-                    onChange={v => setForm(f => ({ ...f, lineNotifyToken: v }))}
-                    placeholder="สำหรับแจ้งเตือนก่อนหมดอายุ" />
-                  <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 ml-1 font-semibold">
-                    <i className="fas fa-circle-info text-primary" />
-                    รับ Token ได้ที่ notify-bot.line.me
-                  </p>
-                </div>
+                <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 ml-1 font-semibold">
+                  <i className="fas fa-envelope text-primary" />
+                  ระบบจะส่งอีเมลแจ้งเตือนก่อนร้านหมดอายุไปยังอีเมลของคุณอัตโนมัติ
+                </p>
               </CardContent>
               <CardFooter>
                 <Button type="submit" className="w-full rounded-xl font-bold h-11 cursor-pointer shadow-sm hover:shadow-md transition-all" disabled={saving}>

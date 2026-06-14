@@ -46,7 +46,6 @@ interface PanelUser extends RowDataPacket {
   display_name: string;
   phone: string | null;
   wallet_balance: number;
-  line_notify_token: string | null;
   role: 'customer' | 'admin';
 }
 
@@ -91,7 +90,6 @@ class AuthService {
         displayName: user.display_name,
         role: user.role,
         walletBalance: Number(user.wallet_balance),
-        lineNotifyToken: user.line_notify_token,
       }
     };
   }
@@ -102,7 +100,7 @@ class AuthService {
 
   async getProfile(userId: number) {
     const [rows] = await pool.execute<PanelUser[]>(
-      'SELECT id, email, display_name, phone, wallet_balance, line_notify_token, role, created_at FROM panel_users WHERE id = ?',
+      'SELECT id, email, display_name, phone, wallet_balance, role, created_at FROM panel_users WHERE id = ?',
       [userId]
     );
     const u = rows[0];
@@ -113,18 +111,16 @@ class AuthService {
       displayName: u.display_name,
       phone: u.phone,
       walletBalance: Number(u.wallet_balance),
-      lineNotifyToken: u.line_notify_token,
       role: u.role,
       createdAt: u.created_at,
     };
   }
 
-  async updateProfile(userId: number, data: { displayName?: string; phone?: string; lineNotifyToken?: string }) {
+  async updateProfile(userId: number, data: { displayName?: string; phone?: string }) {
     const fields: string[] = [];
     const values: (string | number | null)[] = [];
     if (data.displayName !== undefined) { fields.push('display_name = ?'); values.push(data.displayName); }
     if (data.phone !== undefined)       { fields.push('phone = ?');        values.push(data.phone); }
-    if (data.lineNotifyToken !== undefined) { fields.push('line_notify_token = ?'); values.push(data.lineNotifyToken || null); }
     if (!fields.length) return;
     values.push(userId);
     await pool.execute(`UPDATE panel_users SET ${fields.join(', ')} WHERE id = ?`, values);
@@ -189,7 +185,6 @@ class AuthService {
         displayName: user.display_name,
         role: user.role,
         walletBalance: Number(user.wallet_balance),
-        lineNotifyToken: user.line_notify_token,
         avatarUrl: user.avatar_url
       }
     };

@@ -166,8 +166,8 @@ router.get('/me', requireAuth, asyncRoute(async (req, res) => {
 }));
 
 router.put('/me', requireAuth, asyncRoute(async (req, res) => {
-  const { displayName, phone, lineNotifyToken } = req.body;
-  await authService.updateProfile(req.user!.userId, { displayName, phone, lineNotifyToken });
+  const { displayName, phone } = req.body;
+  await authService.updateProfile(req.user!.userId, { displayName, phone });
   res.json({ success: true });
 }));
 

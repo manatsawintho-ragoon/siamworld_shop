@@ -101,7 +101,6 @@ export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<Settings>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [testingLine, setTestingLine] = useState(false);
   const [fixingNpm, setFixingNpm] = useState(false);
   const [testingEmail, setTestingEmail] = useState(false);
   const [testEmailTo, setTestEmailTo] = useState('');
@@ -132,18 +131,6 @@ export default function AdminSettingsPage() {
       toast.error('บันทึกไม่สำเร็จ', err.response?.data?.error || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const testLine = async () => {
-    setTestingLine(true);
-    try {
-      await api.post('/api/admin/settings/test-line', { token: settings['line_notify_token'] });
-      toast.success('เชื่อมต่อสำเร็จ', 'LINE Notify ส่งข้อความทดสอบแล้ว');
-    } catch {
-      toast.error('เชื่อมต่อล้มเหลว', 'ตรวจสอบ Access Token อีกครั้ง');
-    } finally {
-      setTestingLine(false);
     }
   };
 
@@ -306,17 +293,16 @@ export default function AdminSettingsPage() {
           </Section>
 
           {/* Notifications */}
-          <Section icon="fa-bell" title="การแจ้งเตือน" desc="LINE Notify Webhook Integration" delay={0.5}>
-            <Field label="LINE Notify Token" name="line_notify_token" value={settings['line_notify_token'] || ''} onChange={set} type="password" />
+          <Section icon="fa-bell" title="การแจ้งเตือน" desc="แจ้งเตือนหมดอายุทางอีเมล (Resend)" delay={0.5}>
+            <p className="text-xs text-muted-foreground leading-relaxed mb-1">
+              ระบบจะส่งอีเมลแจ้งลูกค้าก่อนร้านหมดอายุตามจำนวนวันด้านล่าง และส่งอีเมลแจ้งอีกครั้งเมื่อร้านถูกระงับ
+              <span className="block mt-1">ใช้การตั้งค่าอีเมล (Resend) ในหัวข้อด้านล่าง</span>
+            </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Field label="แจ้งล่วงหน้า (วัน)" name="notify_days_before" value={settings['notify_days_before'] || '7,3,1'} onChange={set} placeholder="7,3,1" hint="คั่นด้วยเครื่องหมายคอมม่า ," />
-              <Field label="ระงับหลังหมดอายุ (วัน)" name="auto_suspend_days" value={settings['auto_suspend_days'] || '3'} onChange={set} type="number" />
+              <Field label="แจ้งล่วงหน้า (วัน)" name="notify_days_before" value={settings['notify_days_before'] || '3,1'} onChange={set} placeholder="3,1" hint="คั่นด้วยเครื่องหมายคอมม่า , เช่น 3,1" />
+              <Field label="ระงับหลังหมดอายุ (วัน)" name="auto_suspend_days" value={settings['auto_suspend_days'] || '1'} onChange={set} type="number" />
             </div>
-            <div className="pt-4 border-t border-border/60 flex flex-col sm:flex-row gap-3">
-              <Button type="button" variant="outline" onClick={testLine} disabled={testingLine} className="flex-1 h-12 rounded-xl font-bold text-[10px] uppercase tracking-wider active:scale-95 transition-all gap-2 bg-white border-2">
-                {testingLine ? <i className="fas fa-spinner fa-spin" /> : <i className="fab fa-line text-emerald-500 text-lg" />} 
-                Test Connection
-              </Button>
+            <div className="pt-4 border-t border-border/60 flex">
               <Button type="button" variant="secondary" onClick={runNotify} className="flex-1 h-12 rounded-xl font-bold text-[10px] uppercase tracking-wider active:scale-95 transition-all gap-2 shadow-sm">
                 <i className="fas fa-paper-plane text-primary text-[10px]" /> Send Now
               </Button>
