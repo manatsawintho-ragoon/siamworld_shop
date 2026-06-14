@@ -110,6 +110,54 @@ class CloudflareService {
     }
   }
 
+  /**
+   * Ensure a PROXIED (orange-cloud) A record exists for a customer's WEB subdomain,
+   * creating it or flipping an existing dns-only record to proxied.
+   *
+   * Web traffic must go through Cloudflare: the host firewall (harden-web-ports.sh)
+   * DROPs non-Cloudflare IPs on 80/443, so a dns-only web record is unreachable
+   * ("took too long to respond"). This is the correct record for the shop domain.
+   * MySQL/AuthMe uses the SEPARATE dns-only `db.siamsite.shop` subdomain, so proxying
+   * the web domain never affects the DB connection. Throws on failure.
+   */
+  async ensureWebDnsRecord(subdomain: string): Promise<void> {
+    const cfg = await this.getConfig();
+    if (!this.isConfigured(cfg)) {
+      throw new Error('Cloudflare not configured (api_key / zone_id / server_ip missing in panel_settings)');
+    }
+
+    const base = `https://api.cloudflare.com/client/v4/zones/${cfg.zoneId}/dns_records`;
+    try {
+      const list = await this.request('get', `${base}?type=A&name=${encodeURIComponent(subdomain)}`, cfg);
+      if (list.data.result?.length > 0) {
+        const record = list.data.result[0];
+        if (!record.proxied || record.content !== cfg.serverIp) {
+          // CF requires TTL=1 (auto) for proxied records.
+          await this.request('patch', `${base}/${record.id}`, cfg, {
+            content: cfg.serverIp,
+            proxied: true,
+            ttl: 1,
+          });
+          console.log(`[CF] Updated ${subdomain} → ${cfg.serverIp} (proxied)`);
+        } else {
+          console.log(`[CF] Proxied record for ${subdomain} already exists`);
+        }
+        return;
+      }
+
+      await this.request('post', base, cfg, {
+        type:    'A',
+        name:    subdomain,
+        content: cfg.serverIp,
+        proxied: true,
+        ttl:     1,
+      });
+      console.log(`[CF] Created proxied A record: ${subdomain} → ${cfg.serverIp}`);
+    } catch (err) {
+      throw new Error(this.extractError(err));
+    }
+  }
+
   /** Create proxied A record for subdomain → serverIp. No-op if record exists. Throws on failure. */
   async createDnsRecord(subdomain: string): Promise<void> {
     const cfg = await this.getConfig();

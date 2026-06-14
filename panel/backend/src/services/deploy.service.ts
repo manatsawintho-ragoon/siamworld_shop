@@ -155,13 +155,16 @@ class DeployService {
       await npmService.createProxyHost(domain, customer.frontend_port, customer.backend_port);
       log += `[${new Date().toISOString()}] NPM proxy configured.\n`;
 
-      // 4. Cloudflare DNS — DNS-only (not proxied). Retry once on transient failure
-      //    so a flaky API call doesn't leave a new shop without DNS.
+      // 4. Cloudflare DNS — PROXIED (orange). The web domain MUST go through Cloudflare:
+      //    harden-web-ports.sh DROPs non-CF IPs on 80/443, so a dns-only record is
+      //    unreachable ("took too long to respond"). MySQL/AuthMe uses the separate
+      //    dns-only db.siamsite.shop subdomain, so this never affects the DB connection.
+      //    Retry once on transient failure so a flaky API call doesn't leave a shop without DNS.
       let cfOk = false;
       for (let attempt = 1; attempt <= 2 && !cfOk; attempt++) {
         try {
-          await cloudflareService.ensureDbDnsRecord(domain);
-          log += `[${new Date().toISOString()}] Cloudflare DNS-only A record ready for ${domain}.\n`;
+          await cloudflareService.ensureWebDnsRecord(domain);
+          log += `[${new Date().toISOString()}] Cloudflare proxied A record ready for ${domain}.\n`;
           cfOk = true;
         } catch (cfErr) {
           const msg = (cfErr as Error).message || 'unknown';
