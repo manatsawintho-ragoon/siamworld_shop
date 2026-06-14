@@ -113,6 +113,12 @@ export class RconManager {
     const commands = commandTemplate
       .split('\n')
       .map((c) => c.trim()
+        // RCON/console takes commands WITHOUT a leading slash. If an admin pastes the
+        // in-game form ("/broadcast ...", "/give ..."), strip the slash so it actually runs.
+        // Vanilla commands accidentally survived a leading slash via the minecraft: namespace
+        // retry below, but plugin commands (broadcast, cmi, lp, eco...) never got that retry —
+        // so "/broadcast" silently did nothing. Stripping here fixes all of them uniformly.
+        .replace(/^\/+/, '')
         .replace(/\{username\}/gi, sanitized)
         .replace(/\{player\}/gi, sanitized)
       )
