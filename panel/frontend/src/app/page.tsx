@@ -654,11 +654,14 @@ function LandingContent() {
             </div>
 
             <div className="md:col-span-2 space-y-6">
-              <h4 className="font-bold text-foreground text-lg">ช่วยเหลือ</h4>
+              <h4 className="font-bold text-foreground text-lg">นโยบายและกฎหมาย</h4>
               <ul className="space-y-4 text-muted-foreground font-semibold text-sm">
-                <li><Link href="/terms" className="hover:text-primary transition-colors">เงื่อนไขการใช้งาน</Link></li>
+                <li><Link href="/terms" className="hover:text-primary transition-colors">ข้อกำหนดการใช้บริการ</Link></li>
                 <li><Link href="/privacy" className="hover:text-primary transition-colors">นโยบายความเป็นส่วนตัว</Link></li>
-                <li><a href="https://discord.gg/HysqVHra5n" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">แจ้งปัญหา / ช่วยเหลือ</a></li>
+                <li><Link href="/shop-owner-agreement" className="hover:text-primary transition-colors">ข้อตกลงเจ้าของร้าน</Link></li>
+                <li><Link href="/payment-policy" className="hover:text-primary transition-colors">การชำระเงินและการจ่ายเงิน</Link></li>
+                <li><Link href="/prohibited-content" className="hover:text-primary transition-colors">สินค้าและเนื้อหาต้องห้าม</Link></li>
+                <li><Link href="/contact" className="hover:text-primary transition-colors">ติดต่อเรา</Link></li>
               </ul>
             </div>
 

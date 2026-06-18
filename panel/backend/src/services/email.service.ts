@@ -453,6 +453,98 @@ class EmailService {
     return this.sendNotice(data, { mode: 'suspend' });
   }
 
+  /** Welcome/confirmation email sent right after a panel account is created.
+   *  Confirms signup, acknowledges policy acceptance, and lists contact channels.
+   *  No-op (logged) if Resend isn't configured — must never block registration. */
+  async sendRegistrationWelcome(toEmail: string, displayName?: string): Promise<void> {
+    const cfg = await this.getClient();
+    if (!cfg) {
+      console.log('[Email] Resend not configured — skipping registration welcome for', toEmail);
+      return;
+    }
+    if (!toEmail) return;
+
+    const s = await settingsService.getAll();
+    const supportEmail    = s['support_email'] || 'support@siamsite.shop';
+    const supportFacebook = s['support_facebook'] || 'https://www.facebook.com/siamsitestore';
+    const supportDiscord  = s['support_discord'] || 'https://discord.gg/HysqVHra5n';
+
+    const rawName = displayName || '';
+    const qMarks  = (rawName.match(/\?/g) || []).length;
+    const name    = (!rawName || qMarks > 3) ? toEmail.split('@')[0] : rawName;
+
+    const INK = '#1F1B16', MUTED = '#8A7F73', HAIR = '#F1E9DD', AMBER = '#D97706';
+    const FONT_TH = `'Sarabun','Prompt',-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif`;
+    const panelUrl = 'https://panel.siamsite.shop';
+
+    const html = `<!DOCTYPE html><html lang="th"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=Prompt:wght@500;600;700&display=swap" rel="stylesheet"></head>
+<body style="margin:0;padding:0;background:#FFFBF2;font-family:${FONT_TH};color:${INK};">
+<div style="max-width:520px;margin:32px auto;background:#FFFFFF;border:1px solid ${HAIR};border-radius:16px;overflow:hidden;">
+  <div style="background:${AMBER};padding:22px 28px;">
+    <div style="color:#fff;font-family:'Prompt',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;opacity:0.9;">SIAMSITE STORE</div>
+    <h1 style="margin:6px 0 0;color:#fff;font-family:'Prompt',sans-serif;font-size:22px;font-weight:700;">ยินดีต้อนรับสู่ Siamsite Panel</h1>
+  </div>
+  <div style="padding:26px 28px;">
+    <p style="margin:0 0 14px;font-size:15px;line-height:1.7;">สวัสดีคุณ <b>${escapeHtml(name)}</b>,</p>
+    <p style="margin:0 0 14px;font-size:14px;line-height:1.75;color:${MUTED};">
+      บัญชีของคุณถูกสร้างเรียบร้อยแล้ว และเราได้บันทึกการยอมรับ <b style="color:${INK};">ข้อกำหนดการใช้บริการ</b>,
+      <b style="color:${INK};">นโยบายความเป็นส่วนตัว</b>, <b style="color:${INK};">ข้อตกลงเจ้าของร้าน</b>,
+      <b style="color:${INK};">นโยบายการชำระเงิน</b> และ <b style="color:${INK};">นโยบายสินค้าและเนื้อหาต้องห้าม</b> ของคุณไว้แล้ว
+    </p>
+    <div style="text-align:center;margin:22px 0;">
+      <a href="${panelUrl}/dashboard" style="display:inline-block;background:${AMBER};color:#fff;text-decoration:none;font-family:'Prompt',sans-serif;font-weight:600;font-size:14px;padding:12px 28px;border-radius:10px;">เข้าสู่แดชบอร์ด</a>
+    </div>
+    <div style="border-top:1px solid ${HAIR};margin-top:8px;padding-top:16px;">
+      <div style="font-family:'Prompt',sans-serif;font-size:12px;font-weight:600;color:${INK};margin-bottom:8px;">ช่องทางติดต่อ / ขอความช่วยเหลือ</div>
+      <div style="font-size:13px;line-height:1.9;color:${MUTED};">
+        อีเมล: <a href="mailto:${supportEmail}" style="color:${AMBER};text-decoration:none;">${supportEmail}</a><br>
+        Facebook: <a href="${supportFacebook}" style="color:${AMBER};text-decoration:none;">facebook.com/siamsitestore</a><br>
+        Discord: <a href="${supportDiscord}" style="color:${AMBER};text-decoration:none;">discord.gg</a><br>
+        นโยบายทั้งหมด: <a href="${panelUrl}/terms" style="color:${AMBER};text-decoration:none;">${panelUrl}/terms</a>
+      </div>
+    </div>
+  </div>
+  <div style="padding:14px 28px;background:#FFFBF2;border-top:1px solid ${HAIR};font-family:'Prompt',sans-serif;font-size:11px;color:${MUTED};">
+    หากคุณไม่ได้สมัครบัญชีนี้ โปรดติดต่อเราที่ ${supportEmail} ทันที
+  </div>
+</div></body></html>`;
+
+    const text = [
+      `ยินดีต้อนรับสู่ Siamsite Panel`,
+      ``,
+      `สวัสดีคุณ ${name},`,
+      `บัญชีของคุณถูกสร้างเรียบร้อยแล้ว และเราได้บันทึกการยอมรับข้อกำหนดและนโยบายทั้งหมดของคุณไว้แล้ว`,
+      ``,
+      `เข้าสู่แดชบอร์ด: ${panelUrl}/dashboard`,
+      `นโยบายทั้งหมด: ${panelUrl}/terms`,
+      ``,
+      `ติดต่อช่วยเหลือ:`,
+      `  อีเมล: ${supportEmail}`,
+      `  Facebook: ${supportFacebook}`,
+      `  Discord: ${supportDiscord}`,
+      ``,
+      `หากคุณไม่ได้สมัครบัญชีนี้ โปรดติดต่อเราที่ ${supportEmail} ทันที`,
+    ].join('\n');
+
+    try {
+      const payload: Record<string, unknown> = {
+        from: cfg.from,
+        to: [toEmail],
+        subject: 'ยินดีต้อนรับสู่ Siamsite Panel: ยืนยันการสมัครสมาชิก',
+        html,
+        text,
+      };
+      if (cfg.replyTo) payload.reply_to = cfg.replyTo;
+      const result = await resendSend(cfg.apiKey, payload);
+      console.log(`[Email] Registration welcome sent to ${toEmail} (id: ${result.id})`);
+    } catch (err) {
+      const e = err as { response?: { status?: number; data?: unknown }; message?: string };
+      console.error('[Email] sendRegistrationWelcome failed:', e.response?.status ?? '', JSON.stringify(e.response?.data ?? {}) || e.message);
+    }
+  }
+
   /** Send a test email to verify Resend configuration. Throws on failure (route surfaces the error). */
   async sendTest(toEmail: string): Promise<{ id: string }> {
     const cfg = await this.getClient();

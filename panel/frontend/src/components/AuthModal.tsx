@@ -1,10 +1,12 @@
 'use client';
 import { useState, FormEvent, useEffect, useCallback } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import TurnstileWidget from './TurnstileWidget';
+import { LEGAL_DOCS, LEGAL_VERSION } from '@/lib/legal';
 import { LogIn, UserPlus, X, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
 
 interface AuthModalProps {
@@ -23,6 +25,7 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -50,6 +53,7 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
       setTab(initialTab);
       setError('');
       setCaptchaToken('');
+      setAcceptedTerms(false);
       document.body.style.overflow = 'hidden';
     } else {
       setAnimate(false);
@@ -103,6 +107,7 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
     setError('');
     if (password !== confirm) { setError('รหัสผ่านไม่ตรงกัน'); return; }
     if (password.length < 8) { setError('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร'); return; }
+    if (!acceptedTerms) { setError('กรุณายอมรับข้อกำหนดและนโยบายก่อนสมัครสมาชิก'); return; }
     if (captchaConfig.enabled && !captchaToken) {
       setError('กรุณายืนยันว่าคุณไม่ใช่บอท');
       return;
@@ -112,6 +117,7 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
       await api.post('/api/auth/register', {
         email, password, displayName, phone: phone || undefined,
         captchaToken: captchaToken || undefined,
+        acceptedTerms: true, termsVersion: LEGAL_VERSION,
       });
       onClose();
       window.location.href = '/order';
@@ -199,6 +205,27 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
                     <input type="password" className="input-minimal" placeholder="ยืนยันรหัสผ่าน" value={confirm} onChange={e => setConfirm(e.target.value)} required />
                   </div>
                 </div>
+
+                {/* Legal consent — required before account creation */}
+                <label className="flex items-start gap-2.5 cursor-pointer select-none rounded-xl border border-slate-200 dark:border-slate-700/60 bg-slate-50/60 dark:bg-slate-800/40 p-3">
+                  <input
+                    type="checkbox"
+                    checked={acceptedTerms}
+                    onChange={e => setAcceptedTerms(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 flex-shrink-0 accent-amber-500 cursor-pointer"
+                  />
+                  <span className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-300 font-semibold text-left">
+                    ฉันได้อ่านและยอมรับ
+                    {LEGAL_DOCS.map((d, i) => (
+                      <span key={d.slug}>
+                        {i === 0 ? ' ' : i === LEGAL_DOCS.length - 1 ? ' และ' : ', '}
+                        <Link href={d.href} target="_blank" className="text-amber-500 hover:text-amber-600 underline underline-offset-2">
+                          {d.title}
+                        </Link>
+                      </span>
+                    ))}
+                  </span>
+                </label>
               </div>
             ) : (
               <div className="space-y-4">
@@ -233,8 +260,8 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
             <div className="pt-2">
               <button
                 type="submit"
-                disabled={loading} 
-                className="w-full h-[48px] bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-[14px] transition-all shadow-md shadow-amber-500/20 hover:shadow-lg hover:shadow-amber-500/30 hover:-translate-y-0.5 active:translate-y-[1px] active:shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+                disabled={loading || (tab === 'register' && !acceptedTerms)}
+                className="w-full h-[48px] bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-[14px] transition-all shadow-md shadow-amber-500/20 hover:shadow-lg hover:shadow-amber-500/30 hover:-translate-y-0.5 active:translate-y-[1px] active:shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
               >
                 {loading ? (
                   <Loader2 size={18} className="animate-spin" />

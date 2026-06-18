@@ -6,6 +6,7 @@ import { config } from '../config';
 import { AuthError, ConflictError, ValidationError } from '../utils/errors';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { createSession, destroySession } from './session.service';
+import { emailService } from './email.service';
 
 /**
  * Minimum password policy:
@@ -50,8 +51,21 @@ interface PanelUser extends RowDataPacket {
 }
 
 class AuthService {
-  async register(email: string, password: string, displayName: string, phone?: string, signupIp?: string) {
+  async register(
+    email: string,
+    password: string,
+    displayName: string,
+    phone?: string,
+    signupIp?: string,
+    opts?: { acceptedTerms?: boolean; termsVersion?: string },
+  ) {
     assertStrongPassword(password, email);
+
+    // Legal consent is mandatory — users must accept the policies at signup (PDPA evidence).
+    if (!opts?.acceptedTerms) {
+      throw new ValidationError('กรุณายอมรับข้อกำหนดและนโยบายก่อนสมัครสมาชิก');
+    }
+    const termsVersion = (opts.termsVersion || '').slice(0, 20) || null;
 
     const [existing] = await pool.execute<PanelUser[]>(
       'SELECT id FROM panel_users WHERE email = ?', [email]
@@ -60,9 +74,12 @@ class AuthService {
 
     const passwordHash = await bcrypt.hash(password, 12);
     const [result] = await pool.execute<ResultSetHeader>(
-      'INSERT INTO panel_users (email, password_hash, display_name, phone, signup_ip) VALUES (?,?,?,?,?)',
-      [email, passwordHash, displayName, phone ?? null, signupIp ?? null]
+      'INSERT INTO panel_users (email, password_hash, display_name, phone, signup_ip, terms_accepted_at, terms_version) VALUES (?,?,?,?,?,NOW(),?)',
+      [email, passwordHash, displayName, phone ?? null, signupIp ?? null, termsVersion]
     );
+
+    // Confirmation email — fire-and-forget so signup never blocks/fails on email errors.
+    emailService.sendRegistrationWelcome(email, displayName).catch(() => {});
 
     const jti = await createSession(result.insertId);
     const token = this.signToken(result.insertId, email, 'customer', jti);

@@ -142,11 +142,15 @@ router.get('/config', asyncRoute(async (_req, res) => {
 }));
 
 router.post('/register', loginLimiter, asyncRoute(async (req, res) => {
-  const { email, password, displayName, phone, captchaToken } = req.body;
+  const { email, password, displayName, phone, captchaToken, acceptedTerms, termsVersion } = req.body;
   if (!email || !password || !displayName) throw new ValidationError('กรุณากรอกข้อมูลให้ครบ');
+  if (!acceptedTerms) throw new ValidationError('กรุณายอมรับข้อกำหนดและนโยบายก่อนสมัครสมาชิก');
   // Verify CAPTCHA BEFORE creating any DB rows so failed-bot attempts don't bloat panel_users.
   await turnstileService.verify(captchaToken, req.ip);
-  const result = await authService.register(email.trim().toLowerCase(), password, displayName.trim(), phone?.trim(), req.ip);
+  const result = await authService.register(
+    email.trim().toLowerCase(), password, displayName.trim(), phone?.trim(), req.ip,
+    { acceptedTerms: true, termsVersion: typeof termsVersion === 'string' ? termsVersion : undefined },
+  );
   res.cookie('panel_auth', result.token, PANEL_COOKIE_OPTS)
      .status(201).json({ success: true, user: result.user });
 }));
