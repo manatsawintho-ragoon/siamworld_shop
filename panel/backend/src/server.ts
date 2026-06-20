@@ -24,6 +24,7 @@ import voucherRoutes      from './routes/voucher.routes';
 import bridgeRoutes       from './routes/bridge.routes';
 import internalBridgeRoutes from './routes/internal-bridge.routes';
 import { publicInstallRouter, authedInstallRouter } from './routes/install.routes';
+import announcementRoutes from './routes/announcement.routes';
 import { pool } from './database/connection';
 import { redis } from './database/redis';
 
@@ -104,6 +105,8 @@ app.use('/api/bridge',        mediumJson, bridgeRoutes, authedInstallRouter);
 app.use('/api/internal/bridge', smallJson, internalBridgeRoutes);
 // Public installer endpoints (key-authed via query string, not JWT)
 app.use('/install',           smallJson,  publicInstallRouter);
+// Open read polled by customer shops for the announcements popup (published only)
+app.use('/api/announcements', smallJson,  announcementRoutes);
 
 // Health check — includes DB and Redis liveness
 app.get('/api/health', async (_req, res) => {

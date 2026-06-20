@@ -13,6 +13,7 @@ import { settingsService } from '../services/settings.service';
 import { auditService } from '../services/audit.service';
 import { easySlipService } from '../services/easyslip.service';
 import { notificationService } from '../services/notification.service';
+import { announcementService } from '../services/announcement.service';
 import {
   createProductSchema, updateProductSchema,
   createServerSchema, updateServerSchema,
@@ -1109,6 +1110,23 @@ router.get('/codes/:id/logs', async (req: Request, res: Response, next: NextFunc
       [id]
     );
     res.json({ success: true, logs: rows });
+  } catch (err) { next(err); }
+});
+
+// ─── Operator announcements popup (content served from panel) ───────────────
+router.get('/announcements', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const announcements = await announcementService.listForAdmin(req.user!.userId);
+    res.json({ success: true, announcements });
+  } catch (err) { next(err); }
+});
+
+router.post('/announcements/:id/dismiss', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!id) { res.status(400).json({ success: false, error: 'id ไม่ถูกต้อง' }); return; }
+    await announcementService.dismiss(id, req.user!.userId);
+    res.json({ success: true });
   } catch (err) { next(err); }
 });
 

@@ -20,6 +20,10 @@ const envSchema = z.object({
   RATE_LIMIT_MAX: z.string().default('2000'),
   LOG_LEVEL: z.string().default('info'),
   EASYSLIP_API_KEY: z.string().optional(),
+  // Panel base URL for the operator-announcements popup. All shops run on the
+  // same host as the panel, so this defaults to the host gateway (works without
+  // the optional bridge being configured).
+  PANEL_ANNOUNCE_URL: z.string().optional(),
   // Bridge: when BRIDGE_ENABLED=true the shop authenticates web logins against
   // the customer's MC AuthMe DB (via the panel WS bridge) instead of the shop's
   // own authme table. Falls back to local authme when the bridge says
@@ -70,6 +74,7 @@ export const config = {
     max: parseInt(env.RATE_LIMIT_MAX, 10),
   },
   easyslipApiKey: env.EASYSLIP_API_KEY || '',
+  panelAnnounceUrl: env.PANEL_ANNOUNCE_URL || 'http://host.docker.internal:5000',
   bridge: {
     enabled: env.BRIDGE_ENABLED === 'true',
     subscriptionId: env.BRIDGE_SUBSCRIPTION_ID ? parseInt(env.BRIDGE_SUBSCRIPTION_ID, 10) : null,

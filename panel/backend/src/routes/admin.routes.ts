@@ -21,6 +21,7 @@ import { emailService } from '../services/email.service';
 import { walletService } from '../services/wallet.service';
 import { npmService } from '../services/npm.service';
 import { cloudflareService } from '../services/cloudflare.service';
+import { announcementService } from '../services/announcement.service';
 import { pool } from '../database/connection';
 import { config } from '../config/index';
 import { ValidationError } from '../utils/errors';
@@ -539,6 +540,48 @@ router.get('/notifications/unread', asyncRoute(async (_req, res) => {
     slips: slips[0].count || 0,
     total: (tickets[0].count || 0) + (slips[0].count || 0)
   });
+}));
+
+// ── Announcements (broadcast a "what's new" popup to all shop admins) ──
+router.get('/announcements', asyncRoute(async (_req, res) => {
+  const announcements = await announcementService.listAll();
+  res.json({ success: true, announcements });
+}));
+
+router.post('/announcements', asyncRoute(async (req, res) => {
+  const title = String(req.body?.title || '').trim();
+  const body = String(req.body?.body || '').trim();
+  if (!title) throw new ValidationError('กรุณาระบุหัวข้อ');
+  if (!body) throw new ValidationError('กรุณาระบุเนื้อหา');
+  if (title.length > 200) throw new ValidationError('หัวข้อยาวเกิน 200 ตัวอักษร');
+  const id = await announcementService.create(title, body, req.body?.level);
+  res.json({ success: true, id });
+}));
+
+router.put('/announcements/:id', asyncRoute(async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const title = String(req.body?.title || '').trim();
+  const body = String(req.body?.body || '').trim();
+  if (!id) throw new ValidationError('id ไม่ถูกต้อง');
+  if (!title) throw new ValidationError('กรุณาระบุหัวข้อ');
+  if (!body) throw new ValidationError('กรุณาระบุเนื้อหา');
+  if (title.length > 200) throw new ValidationError('หัวข้อยาวเกิน 200 ตัวอักษร');
+  await announcementService.update(id, title, body, req.body?.level);
+  res.json({ success: true });
+}));
+
+router.post('/announcements/:id/publish', asyncRoute(async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id) throw new ValidationError('id ไม่ถูกต้อง');
+  await announcementService.setPublished(id, req.body?.published !== false);
+  res.json({ success: true });
+}));
+
+router.delete('/announcements/:id', asyncRoute(async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id) throw new ValidationError('id ไม่ถูกต้อง');
+  await announcementService.remove(id);
+  res.json({ success: true });
 }));
 
 export default router;

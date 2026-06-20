@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { AdminAlertProvider } from '@/components/AdminAlert';
 import { motion, AnimatePresence } from 'framer-motion';
 import NotificationBell from '@/components/NotificationBell';
+import AnnouncementPopup from '@/components/AnnouncementPopup';
 
 // Menu Categorization (Verity Style)
 const MENU_CATEGORIES = [
@@ -397,6 +398,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+      <AnnouncementPopup />
     </div>
   );
 }

@@ -7,9 +7,9 @@ import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
 import CommandPalette from '@/components/CommandPalette';
 import { 
-  PieChart, Store, Users, Receipt, Ticket, 
-  LifeBuoy, History, Settings, Sun, Moon, 
-  ChevronDown, LogOut, LayoutDashboard, Menu, X, Loader2 
+  PieChart, Store, Users, Receipt, Ticket,
+  LifeBuoy, History, Settings, Sun, Moon, Megaphone,
+  ChevronDown, LogOut, LayoutDashboard, Menu, X, Loader2
 } from 'lucide-react';
 
 const MENU_CATEGORIES = [
@@ -36,6 +36,7 @@ const MENU_CATEGORIES = [
   {
     title: 'System',
     items: [
+      { href: '/admin/announcements', label: 'ประกาศอัพเดท', icon: Megaphone },
       { href: '/admin/support', label: 'แจ้งปัญหา (Tickets)', icon: LifeBuoy },
       { href: '/admin/audit-logs', label: 'บันทึกเหตุการณ์', icon: History },
       { href: '/admin/settings', label: 'ตั้งค่าระบบ', icon: Settings },
