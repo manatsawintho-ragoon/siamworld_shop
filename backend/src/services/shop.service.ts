@@ -27,7 +27,11 @@ class ShopService {
     idempotencyKey?: string,
     giftToUsername?: string,
     discountCode?: string,
+    quantity: number = 1,
   ) {
+    // One order can buy N units; clamp to the same 1-99 range the UI/validator enforce.
+    const qty = Math.max(1, Math.min(99, Math.floor(Number(quantity) || 1)));
+
     // Determine the recipient (gift or self)
     const recipient = giftToUsername && giftToUsername.trim() ? giftToUsername.trim() : username;
     const isGift = recipient !== username;
@@ -66,24 +70,30 @@ class ShopService {
       throw new AppError('สินค้านี้หยุดขายชั่วคราว', 400);
     }
 
-    // Check stock limit
+    // Check stock limit (counted in units, not orders)
     if (product.stock_limit != null) {
       const [countRows] = await pool.execute<RowDataPacket[]>(
-        `SELECT COUNT(*) AS sold FROM purchases WHERE product_id = ? AND status = 'delivered'`,
+        `SELECT COALESCE(SUM(quantity),0) AS sold FROM purchases WHERE product_id = ? AND status = 'delivered'`,
         [productId]
       );
       const sold = Number((countRows[0] as any).sold);
-      if (sold >= Number(product.stock_limit)) {
+      const remaining = Math.max(0, Number(product.stock_limit) - sold);
+      if (remaining <= 0) {
         throw new AppError('สินค้าหมดแล้ว', 400);
+      }
+      if (qty > remaining) {
+        throw new AppError(`สินค้าเหลือไม่พอ (เหลือ ${remaining} ชิ้น)`, 400);
       }
     }
 
-    // Compute effective price (discount code can reduce it; floor 0).
+    // Compute effective TOTAL for the whole order (unit price × qty, discount applied once to
+    // the subtotal; floor 0). effectivePrice is the order total stored on the purchase row.
     const listPrice = parseFloat(product.price);
-    let effectivePrice = listPrice;
+    const subtotal = listPrice * qty;
+    let effectivePrice = subtotal;
     let discountRow: { id: number; code: string; amount: number } | null = null;
     if (discountCode && discountCode.trim()) {
-      const preview = await discountService.preview(discountCode.trim(), 'purchase', listPrice, userId);
+      const preview = await discountService.preview(discountCode.trim(), 'purchase', subtotal, userId);
       effectivePrice = preview.effectiveAmount;
       discountRow = { id: preview.codeRow.id, code: preview.codeRow.code, amount: preview.discountAmount };
     }
@@ -106,15 +116,16 @@ class ShopService {
       // Deduct effective (post-discount) balance.
       await conn.execute('UPDATE wallets SET balance = balance - ? WHERE user_id = ?', [effectivePrice, userId]);
 
-      // Create purchase record using effective price so refund + history match.
+      // Create purchase record using effective TOTAL price so refund + history match.
       const [purchaseResult] = await conn.execute(
-        'INSERT INTO purchases (user_id, product_id, server_id, price, status, idempotency_key) VALUES (?,?,?,?,?,?)',
-        [userId, productId, serverId, effectivePrice, 'pending', idemKey]
+        'INSERT INTO purchases (user_id, product_id, server_id, quantity, price, status, idempotency_key) VALUES (?,?,?,?,?,?,?)',
+        [userId, productId, serverId, qty, effectivePrice, 'pending', idemKey]
       );
       purchaseId = (purchaseResult as any).insertId;
 
-      // Record transaction
-      const baseDesc = isGift ? `ส่งของขวัญ ${product.name} ให้ ${recipient}` : `ซื้อ ${product.name}`;
+      // Record transaction (show ×N so multi-item orders read clearly in logs/history)
+      const qtySuffix = qty > 1 ? ` ×${qty}` : '';
+      const baseDesc = isGift ? `ส่งของขวัญ ${product.name}${qtySuffix} ให้ ${recipient}` : `ซื้อ ${product.name}${qtySuffix}`;
       const txDesc = discountRow
         ? `${baseDesc} (โค้ด ${discountRow.code} -฿${discountRow.amount.toFixed(2)})`
         : baseDesc;
@@ -154,19 +165,87 @@ class ShopService {
       }
     }
 
-    // 6. Execute RCON commands
+    // 6. Execute RCON commands — run the command set once per unit. Delivery is unit-by-unit
+    //    so we can reconcile exactly: charge for what landed, refund the rest, drop nothing.
+    let delivery: { deliveredUnits: number; totalUnits: number; results: string[]; error?: string };
     try {
-      const results = await rconManager.executeProductCommands(serverId, product.command, recipient);
+      delivery = await rconManager.executeProductCommands(serverId, product.command, recipient, qty);
+    } catch (err) {
+      // Unexpected throw (the method normally returns counts) → treat as total failure + refund.
+      logger.error('RCON delivery failed', { purchaseId, error: (err as Error).message });
+      await this.refundPurchase(purchaseId, userId, effectivePrice, product.name, 'RCON delivery failed');
+      throw new RconError('การส่งไอเท็มล้มเหลว - ได้คืนเงินแล้ว');
+    }
+
+    const { deliveredUnits, results } = delivery;
+
+    // Nothing landed → full refund, behave like the old all-or-nothing path.
+    if (deliveredUnits <= 0) {
+      logger.error('RCON delivery failed (0 units)', { purchaseId, qty, error: delivery.error });
+      await this.refundPurchase(purchaseId, userId, effectivePrice, product.name, 'RCON delivery failed');
+      throw new RconError('การส่งไอเท็มล้มเหลว - ได้คืนเงินแล้ว');
+    }
+
+    // Everything landed → full delivery.
+    if (deliveredUnits >= qty) {
       await pool.execute(
         'UPDATE purchases SET status = ?, rcon_response = ? WHERE id = ?',
         ['delivered', JSON.stringify(results), purchaseId]
       );
-      logger.info('Purchase delivered', { purchaseId, userId, productId, serverId });
-      return { purchaseId, status: 'delivered', rconResponse: results };
+      logger.info('Purchase delivered', { purchaseId, userId, productId, serverId, quantity: qty });
+      return { purchaseId, status: 'delivered', quantity: qty, rconResponse: results };
+    }
+
+    // Partial delivery → keep the delivered units, refund only the undelivered remainder.
+    // Pro-rate at the effective per-unit price so any discount is split evenly across units.
+    const deliveredTotal = Math.round((effectivePrice * deliveredUnits / qty) * 100) / 100;
+    const refundAmount = Math.round((effectivePrice - deliveredTotal) * 100) / 100;
+    await this.reconcilePartial(
+      purchaseId, userId, deliveredUnits, deliveredTotal, refundAmount,
+      product.name, results, qty,
+    );
+    logger.warn('Purchase partially delivered', { purchaseId, userId, productId, deliveredUnits, requested: qty, refundAmount });
+    return {
+      purchaseId,
+      status: 'partial',
+      deliveredUnits,
+      requestedUnits: qty,
+      refunded: refundAmount,
+      rconResponse: results,
+    };
+  }
+
+  /**
+   * Reconcile a partially-delivered multi-item order: mark it delivered for the units that
+   * actually landed, adjust the stored price to the delivered total, and refund the rest in one
+   * transaction. Counting delivered units only keeps stock/sold-count honest.
+   */
+  private async reconcilePartial(
+    purchaseId: number, userId: number, deliveredUnits: number, deliveredTotal: number,
+    refundAmount: number, productName: string, results: string[], requested: number,
+  ) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.execute(
+        'UPDATE purchases SET status = ?, quantity = ?, price = ?, rcon_response = ? WHERE id = ?',
+        ['delivered', deliveredUnits, deliveredTotal, JSON.stringify(results), purchaseId]
+      );
+      if (refundAmount > 0) {
+        await conn.execute('UPDATE wallets SET balance = balance + ? WHERE user_id = ?', [refundAmount, userId]);
+        await conn.execute(
+          'INSERT INTO transactions (user_id, amount, type, method, status, reference, description) VALUES (?,?,?,?,?,?,?)',
+          [userId, refundAmount, 'refund', 'system', 'success', `purchase:${purchaseId}`,
+            `คืนเงินบางส่วน ${productName} (ส่งได้ ${deliveredUnits}/${requested} ชิ้น)`]
+        );
+      }
+      await conn.commit();
     } catch (err) {
-      logger.error('RCON delivery failed', { purchaseId, error: (err as Error).message });
-      await this.refundPurchase(purchaseId, userId, effectivePrice, product.name, 'RCON delivery failed');
-      throw new RconError('การส่งไอเท็มล้มเหลว - ได้คืนเงินแล้ว');
+      await conn.rollback();
+      logger.error('CRITICAL: Partial reconcile failed!', { purchaseId, userId, refundAmount, error: (err as Error).message });
+      throw err;
+    } finally {
+      conn.release();
     }
   }
 
@@ -203,14 +282,26 @@ class ShopService {
     const online = await playerTracker.verifyPlayerOnline(purchase.server_id, purchase.username);
     if (!online) throw new PlayerOfflineError('Player must be online for retry delivery');
 
+    const qty = Math.max(1, Number(purchase.quantity) || 1);
     try {
-      const results = await rconManager.executeProductCommands(purchase.server_id, purchase.command, purchase.username);
+      const { deliveredUnits, results, error } = await rconManager.executeProductCommands(
+        purchase.server_id, purchase.command, purchase.username, qty,
+      );
+      if (deliveredUnits >= qty) {
+        await pool.execute(
+          'UPDATE purchases SET status = ?, rcon_response = ? WHERE id = ?',
+          ['delivered', JSON.stringify(results), purchaseId]
+        );
+        return { status: 'delivered', quantity: qty, rconResponse: results };
+      }
+      // Did not fully deliver on retry — leave it failed for the admin to handle.
       await pool.execute(
         'UPDATE purchases SET status = ?, rcon_response = ? WHERE id = ?',
-        ['delivered', JSON.stringify(results), purchaseId]
+        ['failed', JSON.stringify({ deliveredUnits, requested: qty, error }), purchaseId]
       );
-      return { status: 'delivered', rconResponse: results };
+      throw new RconError(`Retry delivered ${deliveredUnits}/${qty} units`);
     } catch (err) {
+      if (err instanceof RconError) throw err;
       await pool.execute(
         'UPDATE purchases SET status = ?, rcon_response = ? WHERE id = ?',
         ['failed', (err as Error).message, purchaseId]
@@ -224,7 +315,7 @@ class ShopService {
   async getProducts(serverId?: number) {
     let query = `SELECT p.*,
                    c.name as category_name, c.slug as category_slug, c.icon as category_icon,
-                   (SELECT COUNT(*) FROM purchases pu WHERE pu.product_id = p.id AND pu.status = 'delivered') AS sold_count
+                   (SELECT COALESCE(SUM(pu.quantity),0) FROM purchases pu WHERE pu.product_id = p.id AND pu.status = 'delivered') AS sold_count
                  FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.active = 1`;
     const params: (string | number)[] = [];
 
@@ -250,7 +341,7 @@ class ShopService {
   async getProduct(productId: number) {
     const [rows] = await pool.execute<RowDataPacket[]>(
       `SELECT p.*, c.name as category_name,
-         (SELECT COUNT(*) FROM purchases pu WHERE pu.product_id = p.id AND pu.status = 'delivered') AS sold_count
+         (SELECT COALESCE(SUM(pu.quantity),0) FROM purchases pu WHERE pu.product_id = p.id AND pu.status = 'delivered') AS sold_count
        FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.id = ?`,
       [productId]
     );
@@ -284,7 +375,7 @@ class ShopService {
   async getAllProducts() {
     const [rows] = await pool.execute<RowDataPacket[]>(
       `SELECT p.*, c.name as category_name,
-         (SELECT COUNT(*) FROM purchases pu WHERE pu.product_id = p.id AND pu.status = 'delivered') AS sold_count
+         (SELECT COALESCE(SUM(pu.quantity),0) FROM purchases pu WHERE pu.product_id = p.id AND pu.status = 'delivered') AS sold_count
        FROM products p LEFT JOIN categories c ON p.category_id = c.id ORDER BY p.sort_order ASC, p.id DESC`
     );
     for (const p of rows) {

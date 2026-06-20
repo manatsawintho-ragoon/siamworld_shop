@@ -77,29 +77,30 @@ export default function ProductCard({ product, servers }: { product: Product; se
     }
     setBuying(true);
     setResult(null);
-    const errors: string[] = [];
-    let successCount = 0;
     try {
-      for (let i = 0; i < quantity; i++) {
-        try {
-          await api('/shop/buy', {
-            method: 'POST',
-            token: getToken()!,
-            body: {
-              productId: product.id,
-              serverId: selectedServer,
-              idempotencyKey: crypto.randomUUID(),
-              ...(isGift && giftUsername.trim() ? { giftToUsername: giftUsername.trim() } : {}),
-            },
-          });
-          successCount++;
-        } catch (err: unknown) {
-          errors.push(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
-          break; // stop on first error (e.g. insufficient balance)
-        }
-      }
+      // One order delivers the whole quantity in a single request (no per-item cooldown wait).
+      const res = await api('/shop/buy', {
+        method: 'POST',
+        token: getToken()!,
+        body: {
+          productId: product.id,
+          serverId: selectedServer,
+          quantity,
+          idempotencyKey: crypto.randomUUID(),
+          ...(isGift && giftUsername.trim() ? { giftToUsername: giftUsername.trim() } : {}),
+        },
+      });
       await refresh();
-      if (successCount === quantity) {
+
+      if (res?.status === 'partial') {
+        // Some units couldn't be delivered; the undelivered remainder was already refunded.
+        const delivered = res.deliveredUnits ?? 0;
+        const requested = res.requestedUnits ?? quantity;
+        setResult({
+          success: false,
+          message: `ส่งได้ ${delivered}/${requested} ชิ้น คืนเงินส่วนที่เหลือแล้ว (กรุณาออนไลน์แล้วลองอีกครั้ง)`,
+        });
+      } else {
         const msg = isGift
           ? `ส่งของขวัญให้ ${giftUsername} สำเร็จ! (${quantity} ชิ้น)`
           : quantity > 1
@@ -107,11 +108,9 @@ export default function ProductCard({ product, servers }: { product: Product; se
             : 'ไอเท็มถูกส่งเข้าเกมแล้ว';
         toast({ type: 'success', title: isGift ? 'ส่งของขวัญสำเร็จ!' : 'ซื้อสำเร็จ!', message: msg });
         resetModal();
-      } else if (successCount > 0) {
-        setResult({ success: false, message: `ซื้อสำเร็จ ${successCount}/${quantity} ชิ้น: ${errors[0]}` });
-      } else {
-        setResult({ success: false, message: errors[0] || 'เกิดข้อผิดพลาด' });
       }
+    } catch (err: unknown) {
+      setResult({ success: false, message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด' });
     } finally {
       setBuying(false);
     }

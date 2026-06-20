@@ -180,8 +180,12 @@ router.post('/redeem-code', authenticate, validate(redeemCodeSchema), async (req
       try {
         // Use executeProductCommands so multi-line commands work (one RCON call per line)
         // and so {player}/{username} placeholders get the same case-insensitive sanitised
-        // replacement that shop purchases use.
-        await rconManager.executeProductCommands(serverId, redeemCode.command, username);
+        // replacement that shop purchases use. It returns delivery counts instead of throwing,
+        // so treat an incomplete delivery as a failure to trigger the compensation below.
+        const delivery = await rconManager.executeProductCommands(serverId, redeemCode.command, username);
+        if (delivery.deliveredUnits < delivery.totalUnits) {
+          throw new Error(delivery.error || 'RCON delivery failed');
+        }
         res.json({ success: true, message: 'ใช้โค้ดสำเร็จ! ไอเท็มถูกส่งไปยังตัวละครของคุณแล้ว' });
       } catch (rconErr) {
         // RCON failed after we already committed the redeem. Compensate by

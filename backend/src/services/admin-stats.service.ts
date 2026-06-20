@@ -9,8 +9,8 @@ class AdminStatsService {
       lootboxRevenue: "SELECT COALESCE(SUM(ABS(amount)),0) as v FROM transactions WHERE type='purchase' AND status='success' AND description LIKE 'เปิดกล่อง%'",
       users: 'SELECT COUNT(*) as v FROM users',
       activeProducts: 'SELECT COUNT(*) as v FROM products WHERE active=1',
-      totalPurchases: "SELECT COUNT(*) as v FROM purchases WHERE status='delivered'",
-      delivered: "SELECT COUNT(*) as v FROM purchases WHERE status='delivered'",
+      totalPurchases: "SELECT COALESCE(SUM(quantity),0) as v FROM purchases WHERE status='delivered'",
+      delivered: "SELECT COALESCE(SUM(quantity),0) as v FROM purchases WHERE status='delivered'",
       failed: "SELECT COUNT(*) as v FROM purchases WHERE status='failed'",
       pending: "SELECT COUNT(*) as v FROM purchases WHERE status='pending'",
       refunded: "SELECT COUNT(*) as v FROM purchases WHERE status='refunded'",
@@ -21,7 +21,7 @@ class AdminStatsService {
       totalLootboxOpened: 'SELECT COUNT(*) as v FROM web_inventory',
       totalRedeemUsed: 'SELECT COUNT(*) as v FROM redeem_logs',
       activeRedeemCodes: "SELECT COUNT(*) as v FROM redeem_codes WHERE active=1",
-      todayPurchases: "SELECT COUNT(*) as v FROM purchases WHERE status='delivered' AND DATE(created_at)=CURDATE()",
+      todayPurchases: "SELECT COALESCE(SUM(quantity),0) as v FROM purchases WHERE status='delivered' AND DATE(created_at)=CURDATE()",
       monthRevenue: "SELECT COALESCE(SUM(price),0) as v FROM purchases WHERE status='delivered' AND MONTH(created_at)=MONTH(CURDATE()) AND YEAR(created_at)=YEAR(CURDATE())",
       monthTopups: "SELECT COALESCE(SUM(amount),0) as v FROM transactions WHERE type='topup' AND status='success' AND MONTH(created_at)=MONTH(CURDATE()) AND YEAR(created_at)=YEAR(CURDATE())",
     };
@@ -34,7 +34,7 @@ class AdminStatsService {
 
     // Top products
     const [topProducts] = await pool.execute<RowDataPacket[]>(
-      `SELECT pr.name, pr.image, COUNT(*) as purchase_count, SUM(p.price) as total_revenue
+      `SELECT pr.name, pr.image, COALESCE(SUM(p.quantity),0) as purchase_count, SUM(p.price) as total_revenue
        FROM purchases p LEFT JOIN products pr ON p.product_id = pr.id WHERE p.status='delivered' AND pr.id IS NOT NULL
        GROUP BY pr.id, pr.name, pr.image ORDER BY purchase_count DESC LIMIT 5`
     );
@@ -48,7 +48,7 @@ class AdminStatsService {
 
     // Recent purchases (shop only)
     const [recentPurchases] = await pool.execute<RowDataPacket[]>(
-      `SELECT p.id, p.price, p.status, p.created_at, u.username, COALESCE(pr.name, '(ลบแล้ว)') as product_name, s.name as server_name
+      `SELECT p.id, p.price, p.quantity, p.status, p.created_at, u.username, COALESCE(pr.name, '(ลบแล้ว)') as product_name, s.name as server_name
        FROM purchases p JOIN users u ON p.user_id = u.id LEFT JOIN products pr ON p.product_id = pr.id
        JOIN servers s ON p.server_id = s.id ORDER BY p.created_at DESC LIMIT 10`
     );

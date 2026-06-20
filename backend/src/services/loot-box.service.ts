@@ -242,11 +242,14 @@ class LootBoxService {
     const item = rows[0];
 
     try {
-      await rconManager.executeProductCommands(
+      const delivery = await rconManager.executeProductCommands(
         serverId,
         item.item_command as string,
         username
       );
+      if (delivery.deliveredUnits < delivery.totalUnits) {
+        throw new Error(delivery.error || 'RCON delivery failed');
+      }
 
       await pool.execute(
         'UPDATE web_inventory SET status = ?, redeemed_at = NOW() WHERE id = ?',
@@ -292,7 +295,10 @@ class LootBoxService {
 
     for (const item of rows) {
       try {
-        await rconManager.executeProductCommands(serverId, item.item_command as string, username);
+        const delivery = await rconManager.executeProductCommands(serverId, item.item_command as string, username);
+        if (delivery.deliveredUnits < delivery.totalUnits) {
+          throw new Error(delivery.error || 'RCON delivery failed');
+        }
         await pool.execute(
           'UPDATE web_inventory SET status = ?, redeemed_at = NOW() WHERE id = ?',
           ['REDEEMED', item.id]

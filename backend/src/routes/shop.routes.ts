@@ -53,6 +53,7 @@ router.post('/buy', authenticate, purchaseCooldown(3), validate(buyProductSchema
       req.body.idempotencyKey,
       req.body.giftToUsername,
       req.body.discountCode,
+      req.body.quantity,
     );
     res.json({ success: true, ...result });
   } catch (err) { next(err); }

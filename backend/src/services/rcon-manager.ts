@@ -107,59 +107,116 @@ export class RconManager {
     return rconPool.send(serverId, this.getRconConfig(server), command);
   }
 
-  /** Execute product commands (multi-line) with {username}/{player} replacement via queue */
-  async executeProductCommands(serverId: number, commandTemplate: string, username: string): Promise<string[]> {
+  /**
+   * Execute product commands (multi-line) for an order of `times` units, with {username}/{player}
+   * replacement via the queue. Two delivery strategies:
+   *
+   *  - SINGLE-SHOT (preferred, fast): if the template contains a quantity placeholder
+   *    ({amount}/{qty}/{quantity}), it is substituted with the order quantity and the command set
+   *    runs ONCE — e.g. "give {player} diamond {amount}" buying 4 → "give Steve diamond 4".
+   *    One RCON round-trip regardless of quantity. All-or-nothing: success delivers every unit.
+   *
+   *  - REPEAT (fallback): no placeholder → run the command set once per unit. Used for commands
+   *    that can't take a count (ranks/permissions). Delivery is unit-by-unit and STOPS at the
+   *    first failed unit so the caller refunds only the undelivered remainder (never drops a paid
+   *    unit, never overcharges for one that never landed).
+   *
+   * In both modes dedup keys are UNIQUE per execution (`:u{n}:cmd{i}`): the queue blocks duplicate
+   * keys for 30s, which would otherwise silently drop repeated "give ..." commands of one order.
+   * A command "fails" only when the queue rejects after its retries (real connection/auth failure);
+   * an empty RCON response is treated as success (plugins often return empty on a successful give).
+   */
+  async executeProductCommands(
+    serverId: number,
+    commandTemplate: string,
+    username: string,
+    times: number = 1,
+  ): Promise<{ deliveredUnits: number; totalUnits: number; results: string[]; error?: string }> {
     const sanitized = username.replace(/[^a-zA-Z0-9_]/g, '');
-    const commands = commandTemplate
-      .split('\n')
-      .map((c) => c.trim()
-        // RCON/console takes commands WITHOUT a leading slash. If an admin pastes the
-        // in-game form ("/broadcast ...", "/give ..."), strip the slash so it actually runs.
-        // Vanilla commands accidentally survived a leading slash via the minecraft: namespace
-        // retry below, but plugin commands (broadcast, cmi, lp, eco...) never got that retry —
-        // so "/broadcast" silently did nothing. Stripping here fixes all of them uniformly.
-        .replace(/^\/+/, '')
-        .replace(/\{username\}/gi, sanitized)
-        .replace(/\{player\}/gi, sanitized)
-      )
-      .filter(Boolean);
+    const totalUnits = Math.max(1, Math.floor(times));
+    const AMOUNT_PLACEHOLDER = /\{(amount|qty|quantity)\}/i;
+    const singleShot = AMOUNT_PLACEHOLDER.test(commandTemplate);
+
+    // Parse the template into runnable commands. `amount` (when non-null) is substituted into the
+    // quantity placeholder so a single execution can deliver the whole order.
+    const buildCommands = (amount: number | null): string[] =>
+      commandTemplate
+        .split('\n')
+        .map((c) => {
+          let s = c.trim()
+            // RCON/console takes commands WITHOUT a leading slash. If an admin pastes the in-game
+            // form ("/broadcast ...", "/give ..."), strip the slash so it actually runs.
+            .replace(/^\/+/, '')
+            .replace(/\{username\}/gi, sanitized)
+            .replace(/\{player\}/gi, sanitized);
+          if (amount !== null) s = s.replace(/\{(amount|qty|quantity)\}/gi, String(amount));
+          return s;
+        })
+        .filter(Boolean);
 
     const baseKey = `product:${serverId}:${sanitized}:${Date.now()}`;
     const results: string[] = [];
+    let deliveredUnits = 0;
+    let error: string | undefined;
 
-    for (let i = 0; i < commands.length; i++) {
-      const cmd = commands[i];
-      const key = `${baseKey}:cmd${i}`;
-      let response = await rconQueue.enqueue(serverId, cmd, key);
+    // Run one full command set with unique dedup keys. Throws on the first failed command.
+    const runSet = async (commands: string[], tag: string): Promise<void> => {
+      for (let i = 0; i < commands.length; i++) {
+        const cmd = commands[i];
+        const key = `${baseKey}:${tag}:cmd${i}`;
+        let response = await rconQueue.enqueue(serverId, cmd, key);
 
-      // If response is empty AND the command is a vanilla Minecraft command (not a plugin
-      // command like cmi/lp/eco/essentials), retry with 'minecraft:' namespace to bypass
-      // plugin overrides that intercept vanilla commands and return empty.
-      // Plugin commands (cmi, lp, eco, essentials, etc.) must NOT get this prefix —
-      // they work without it when CMI/plugin returns empty on success.
-      const firstWord = cmd.split(/\s+/)[0].toLowerCase().replace(/^\//, '');
-      if (response.trim() === '' && VANILLA_RCON_COMMANDS.has(firstWord)) {
-        try {
-          const mcCmd = `minecraft:${cmd.startsWith('/') ? cmd.slice(1) : cmd}`;
-          const mcResponse = await rconQueue.enqueue(serverId, mcCmd, `${key}:mc`);
-          if (
-            mcResponse &&
-            mcResponse.trim() !== '' &&
-            !mcResponse.toLowerCase().includes('unknown') &&
-            !mcResponse.toLowerCase().includes('invalid')
-          ) {
-            response = mcResponse;
-            logger.info('RCON vanilla command succeeded via minecraft: namespace', { serverId, cmd, response });
+        // If response is empty AND the command is a vanilla Minecraft command (not a plugin
+        // command like cmi/lp/eco/essentials), retry with 'minecraft:' namespace to bypass
+        // plugin overrides that intercept vanilla commands and return empty.
+        const firstWord = cmd.split(/\s+/)[0].toLowerCase().replace(/^\//, '');
+        if (response.trim() === '' && VANILLA_RCON_COMMANDS.has(firstWord)) {
+          try {
+            const mcCmd = `minecraft:${cmd.startsWith('/') ? cmd.slice(1) : cmd}`;
+            const mcResponse = await rconQueue.enqueue(serverId, mcCmd, `${key}:mc`);
+            if (
+              mcResponse &&
+              mcResponse.trim() !== '' &&
+              !mcResponse.toLowerCase().includes('unknown') &&
+              !mcResponse.toLowerCase().includes('invalid')
+            ) {
+              response = mcResponse;
+              logger.info('RCON vanilla command succeeded via minecraft: namespace', { serverId, cmd, response });
+            }
+          } catch {
+            // Fallback also failed — keep original empty response
           }
-        } catch {
-          // Fallback also failed — keep original empty response
+        }
+
+        results.push(response);
+      }
+    };
+
+    if (singleShot) {
+      // One execution delivers all units (placeholder substituted with the order quantity).
+      try {
+        await runSet(buildCommands(totalUnits), 'all');
+        deliveredUnits = totalUnits;
+      } catch (err) {
+        error = (err as Error).message;
+        logger.error('RCON single-shot delivery failed', { serverId, totalUnits, error });
+      }
+    } else {
+      // Repeat the command set once per unit; stop at the first failed unit.
+      const commands = buildCommands(null);
+      for (let unit = 0; unit < totalUnits; unit++) {
+        try {
+          await runSet(commands, `u${unit}`);
+          deliveredUnits++;
+        } catch (err) {
+          error = (err as Error).message;
+          logger.error('RCON product unit delivery failed', { serverId, unit, totalUnits, deliveredUnits, error });
+          break; // stop so the caller refunds only the undelivered remainder
         }
       }
-
-      results.push(response);
     }
 
-    return results;
+    return { deliveredUnits, totalUnits, results, error };
   }
 
   /**

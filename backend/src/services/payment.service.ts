@@ -314,10 +314,14 @@ class PaymentService {
          VALUES (?, 'credit', ?, ?, ?, 'slip', ?, ?)`,
         [userId, creditAmount, balanceBefore, balanceAfter, transRef, slipDesc]
       );
+      // Ledger records the REAL money paid (`amount`), NOT the bonus-inflated
+      // creditAmount. Toprank + dashboard accounting SUM transactions.amount, so
+      // they must reflect actual revenue. The bonus only inflates the wallet
+      // balance / wallet_logs above (the player's spendable points).
       await conn.execute(
         `INSERT INTO transactions (user_id, amount, type, method, status, reference, description)
          VALUES (?, ?, 'topup', 'slip', 'success', ?, ?)`,
-        [userId, creditAmount, transRef, slipDesc]
+        [userId, amount, transRef, slipDesc]
       );
 
       // Consume discount code inside the credit tx so a payment rollback also

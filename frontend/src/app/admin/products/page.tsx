@@ -759,11 +759,11 @@ export default function AdminProducts() {
                     <label className="block text-[11px] font-bold text-gray-500 mb-1 flex items-center gap-2">
                       RCON Commands *
                       {(() => { const cmds = (editing.command || '').split('\n').map(c => c.trim()).filter(Boolean); return cmds.length > 0 ? <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[9px] font-bold"><i className="fas fa-terminal text-[8px]" /> {cmds.length}</span> : null; })()}
-                      <span className="text-[10px] font-normal text-gray-400 ml-auto">1 บรรทัด = 1 คำสั่ง · {'{player}'} = ชื่อผู้เล่น</span>
+                      <span className="text-[10px] font-normal text-gray-400 ml-auto">1 บรรทัด = 1 คำสั่ง · {'{player}'} = ชื่อผู้เล่น · {'{amount}'} = จำนวนที่ซื้อ</span>
                     </label>
                     <textarea value={editing.command || ''} onChange={e => setEditing({ ...editing, command: e.target.value })}
                       className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 h-16 resize-y font-mono"
-                      placeholder={"give {player} diamond 1\nsay {player} ได้รับไอเท็ม!"} />
+                      placeholder={"give {player} diamond {amount}\nsay {player} ได้รับไอเท็ม!"} />
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-gray-500 mb-1">เซิร์ฟเวอร์ที่ใช้ได้</label>
@@ -1071,7 +1071,7 @@ export default function AdminProducts() {
                   </div>
                 );
               })()}
-              <p className="text-[10px] text-gray-400">ใช้ <code className="bg-gray-100 px-1 rounded">{'{player}'}</code> แทนชื่อผู้เล่น · คำสั่งจะรันตามลำดับเมื่อผู้เล่นซื้อ</p>
+              <p className="text-[10px] text-gray-400">ใช้ <code className="bg-gray-100 px-1 rounded">{'{player}'}</code> แทนชื่อผู้เล่น · <code className="bg-gray-100 px-1 rounded">{'{amount}'}</code> แทนจำนวนที่ซื้อ (รันคำสั่งเดียวได้เลย เช่น <code className="bg-gray-100 px-1 rounded">give {'{player}'} diamond {'{amount}'}</code>) · ถ้าไม่ใส่ จะรันซ้ำตามจำนวน</p>
             </div>
           </div>
         </div>

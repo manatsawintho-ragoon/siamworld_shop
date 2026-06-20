@@ -67,6 +67,7 @@ export const discountPreviewSchema = z.object({
 export const buyProductSchema = z.object({
   productId: z.number().int().positive(),
   serverId:  z.number().int().positive(),
+  quantity:  z.number().int().min(1).max(99).optional(),
   idempotencyKey: z.string().max(64).optional(),
   giftToUsername: z.string().max(64).optional(),
   discountCode:   z.string().min(1).max(100).optional(),
