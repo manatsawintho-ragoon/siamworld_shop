@@ -1,7 +1,7 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import api from '@/lib/api';
-import { Megaphone, Plus, Pencil, Trash2, Eye, EyeOff, Loader2, X } from 'lucide-react';
+import { Megaphone, Plus, Pencil, Trash2, Eye, EyeOff, Loader2, X, List, Wand2 } from 'lucide-react';
 
 interface Announcement {
   id: number;
@@ -13,14 +13,61 @@ interface Announcement {
   created_at: string;
 }
 
-const LEVELS: { value: Announcement['level']; label: string; cls: string }[] = [
-  { value: 'info',      label: 'ข้อมูล',  cls: 'bg-blue-100 text-blue-700' },
-  { value: 'update',    label: 'อัพเดท',  cls: 'bg-orange-100 text-orange-700' },
-  { value: 'important', label: 'สำคัญ',   cls: 'bg-red-100 text-red-700' },
-];
+const LEVELS = [
+  { value: 'info',      label: 'ข้อมูล',      cls: 'bg-blue-100 text-blue-700',     bar: 'bg-blue-500',   dot: 'bg-blue-500' },
+  { value: 'update',    label: 'อัพเดทใหม่',  cls: 'bg-orange-100 text-orange-700', bar: 'bg-orange-500', dot: 'bg-orange-500' },
+  { value: 'important', label: 'สำคัญ',       cls: 'bg-red-100 text-red-700',       bar: 'bg-red-500',    dot: 'bg-red-500' },
+] as const;
 const levelMeta = (l: string) => LEVELS.find(x => x.value === l) || LEVELS[1];
 
 const blank = { id: 0, title: '', body: '', level: 'update' as Announcement['level'] };
+
+/** Normalize spacing/indent: trim trailing spaces, unify bullets to "• ", collapse
+ *  3+ blank lines to one, drop leading/trailing blank lines. */
+function tidy(text: string): string {
+  const lines = text.split('\n')
+    .map(l => l.replace(/\s+$/, ''))
+    .map(l => l.replace(/^(\s*)[-*•]\s+/, '$1• '));
+  const out: string[] = [];
+  let blanks = 0;
+  for (const l of lines) {
+    if (l.trim() === '') { blanks++; if (blanks <= 1) out.push(''); }
+    else { blanks = 0; out.push(l); }
+  }
+  while (out.length && out[0] === '') out.shift();
+  while (out.length && out[out.length - 1] === '') out.pop();
+  return out.join('\n');
+}
+
+/** Live preview that mirrors the shop-side AnnouncementPopup. */
+function PreviewCard({ title, body, level }: { title: string; body: string; level: string }) {
+  const lv = levelMeta(level);
+  return (
+    <div className="bg-white rounded-2xl overflow-hidden shadow-xl border border-gray-200 w-full max-w-sm">
+      <div className={`h-1.5 ${lv.bar}`} />
+      <div className="p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full ${lv.cls}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${lv.dot}`} /> {lv.label}
+          </span>
+          <span className="text-[11px] text-gray-400">
+            {new Date().toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' })}
+          </span>
+        </div>
+        <h2 className="text-lg font-black text-gray-800 mb-2 break-words">{title || 'หัวข้อประกาศ'}</h2>
+        <p className="text-sm text-gray-600 whitespace-pre-line leading-relaxed break-words min-h-[44px]">
+          {body || 'เนื้อหาประกาศจะแสดงตรงนี้…'}
+        </p>
+        <div className="mt-5 flex items-center justify-between gap-3">
+          <span className="flex items-center gap-2 text-xs text-gray-400">
+            <span className="w-4 h-4 rounded border border-gray-300" /> ไม่แสดงอีก
+          </span>
+          <span className="px-5 py-2 bg-[#1e2735] text-white rounded-lg text-sm font-bold">รับทราบ</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function AnnouncementsPage() {
   const [items, setItems] = useState<Announcement[]>([]);
@@ -28,6 +75,10 @@ export default function AnnouncementsPage() {
   const [editing, setEditing] = useState<typeof blank | null>(null);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
+
+  const taRef = useRef<HTMLTextAreaElement>(null);
+  const caretRef = useRef<number | null>(null);     // caret to restore after a controlled-value edit
+  const downOnBackdrop = useRef(false);             // distinguishes a real backdrop click from drag-select
 
   const load = useCallback(async () => {
     try {
@@ -38,6 +89,72 @@ export default function AnnouncementsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Restore caret after we programmatically rewrite the textarea value.
+  useEffect(() => {
+    if (caretRef.current != null && taRef.current) {
+      taRef.current.setSelectionRange(caretRef.current, caretRef.current);
+      caretRef.current = null;
+    }
+  }, [editing?.body]);
+
+  const setBody = (v: string) => setEditing(e => (e ? { ...e, body: v } : e));
+
+  // Smart editor: Tab indent, Enter auto-continues "• " bullets.
+  const onBodyKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const ta = e.currentTarget;
+    const { selectionStart, selectionEnd, value } = ta;
+
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const lineStart = value.lastIndexOf('\n', selectionStart - 1) + 1;
+      if (e.shiftKey) {
+        const line = value.slice(lineStart);
+        const remove = line.startsWith('  ') ? 2 : line.startsWith(' ') ? 1 : 0;
+        if (remove) {
+          caretRef.current = Math.max(lineStart, selectionStart - remove);
+          setBody(value.slice(0, lineStart) + value.slice(lineStart + remove));
+        }
+      } else {
+        caretRef.current = selectionStart + 2;
+        setBody(value.slice(0, lineStart) + '  ' + value.slice(lineStart));
+      }
+      return;
+    }
+
+    if (e.key === 'Enter' && !e.shiftKey) {
+      const lineStart = value.lastIndexOf('\n', selectionStart - 1) + 1;
+      const line = value.slice(lineStart, selectionStart);
+      const m = line.match(/^(\s*)([•\-*])\s+/);
+      if (m) {
+        e.preventDefault();
+        const rest = line.slice(m[0].length);
+        if (rest.trim() === '') {
+          // empty bullet → exit the list
+          caretRef.current = lineStart;
+          setBody(value.slice(0, lineStart) + value.slice(selectionEnd));
+        } else {
+          const insert = '\n' + m[1] + '• ';
+          caretRef.current = selectionStart + insert.length;
+          setBody(value.slice(0, selectionStart) + insert + value.slice(selectionEnd));
+        }
+      }
+    }
+  };
+
+  const addBullet = () => {
+    const ta = taRef.current;
+    if (!ta || !editing) return;
+    const { selectionStart, value } = ta;
+    const lineStart = value.lastIndexOf('\n', selectionStart - 1) + 1;
+    const atLineStart = value.slice(lineStart, selectionStart).trim() === '';
+    const prefix = atLineStart ? '• ' : '\n• ';
+    caretRef.current = selectionStart + prefix.length;
+    setBody(value.slice(0, selectionStart) + prefix + value.slice(selectionStart));
+    ta.focus();
+  };
+
+  const runTidy = () => { if (editing) setBody(tidy(editing.body)); };
+
   const save = async () => {
     if (!editing) return;
     setErr('');
@@ -45,11 +162,9 @@ export default function AnnouncementsPage() {
     if (!editing.body.trim())  { setErr('กรุณาระบุเนื้อหา'); return; }
     setSaving(true);
     try {
-      if (editing.id) {
-        await api.put(`/api/admin/announcements/${editing.id}`, editing);
-      } else {
-        await api.post('/api/admin/announcements', editing);
-      }
+      const payload = { ...editing, body: tidy(editing.body) };   // tidy on save so stored text is clean
+      if (editing.id) await api.put(`/api/admin/announcements/${editing.id}`, payload);
+      else            await api.post('/api/admin/announcements', payload);
       setEditing(null);
       await load();
     } catch (e: unknown) {
@@ -126,42 +241,79 @@ export default function AnnouncementsPage() {
       )}
 
       {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditing(null)}>
-          <div className="bg-card rounded-2xl w-full max-w-lg p-5 space-y-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onMouseDown={e => { downOnBackdrop.current = e.target === e.currentTarget; }}
+          onClick={e => { if (downOnBackdrop.current && e.target === e.currentTarget) setEditing(null); }}
+        >
+          <div className="bg-card rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-5">
+            <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold">{editing.id ? 'แก้ไขประกาศ' : 'สร้างประกาศ'}</h2>
               <button onClick={() => setEditing(null)} className="p-1 text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
             </div>
-            {err && <div className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{err}</div>}
-            <div>
-              <label className="text-xs font-bold text-muted-foreground">หัวข้อ</label>
-              <input value={editing.title} maxLength={200} onChange={e => setEditing({ ...editing, title: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" placeholder="เช่น อัพเดทแดชบอร์ดใหม่" />
-            </div>
-            <div>
-              <label className="text-xs font-bold text-muted-foreground">เนื้อหา (ขึ้นบรรทัดใหม่ได้)</label>
-              <textarea value={editing.body} rows={6} onChange={e => setEditing({ ...editing, body: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm resize-y" placeholder={'- เพิ่มฟีเจอร์ A\n- แก้บั๊ก B'} />
-            </div>
-            <div>
-              <label className="text-xs font-bold text-muted-foreground">ระดับ</label>
-              <div className="mt-1 flex gap-2">
-                {LEVELS.map(l => (
-                  <button key={l.value} onClick={() => setEditing({ ...editing, level: l.value })}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${editing.level === l.value ? l.cls + ' border-transparent' : 'border-border text-muted-foreground'}`}>
-                    {l.label}
-                  </button>
-                ))}
+            {err && <div className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-3">{err}</div>}
+
+            <div className="grid md:grid-cols-2 gap-5">
+              {/* ── Form ── */}
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-muted-foreground">หัวข้อ</label>
+                  <input value={editing.title} maxLength={200} onChange={e => setEditing({ ...editing, title: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" placeholder="เช่น อัพเดทแดชบอร์ดใหม่" />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-muted-foreground">เนื้อหา</label>
+                    <div className="flex items-center gap-1">
+                      <button type="button" onClick={addBullet}
+                        className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-md border border-border text-muted-foreground hover:bg-secondary">
+                        <List className="w-3.5 h-3.5" /> หัวข้อย่อย
+                      </button>
+                      <button type="button" onClick={runTidy}
+                        className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-md border border-border text-muted-foreground hover:bg-secondary">
+                        <Wand2 className="w-3.5 h-3.5" /> จัดระเบียบ
+                      </button>
+                    </div>
+                  </div>
+                  <textarea ref={taRef} value={editing.body} rows={9}
+                    onKeyDown={onBodyKeyDown}
+                    onChange={e => setEditing({ ...editing, body: e.target.value })}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm resize-y font-mono leading-relaxed"
+                    placeholder={'พิมพ์เนื้อหา…\nEnter หลัง "• " จะขึ้น bullet ใหม่อัตโนมัติ\nกด Tab เพื่อเยื้อง'} />
+                  <p className="text-[11px] text-muted-foreground mt-1">Enter ต่อ bullet อัตโนมัติ · Tab = เยื้อง · ปุ่มจัดระเบียบช่วยจัด spacing ให้</p>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-muted-foreground">ระดับ</label>
+                  <div className="mt-1 flex gap-2">
+                    {LEVELS.map(l => (
+                      <button key={l.value} type="button" onClick={() => setEditing({ ...editing, level: l.value })}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${editing.level === l.value ? l.cls + ' border-transparent' : 'border-border text-muted-foreground'}`}>
+                        {l.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Live preview ── */}
+              <div>
+                <label className="text-xs font-bold text-muted-foreground">ตัวอย่างที่ร้านจะเห็น (realtime)</label>
+                <div className="mt-1 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 p-5 flex items-start justify-center min-h-[280px]">
+                  <PreviewCard title={editing.title} body={editing.body} level={editing.level} />
+                </div>
               </div>
             </div>
-            <div className="flex justify-end gap-2 pt-1">
-              <button onClick={() => setEditing(null)} className="px-4 py-2 rounded-lg text-sm font-bold text-muted-foreground hover:bg-secondary">ยกเลิก</button>
-              <button onClick={save} disabled={saving}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-bold hover:brightness-110 disabled:opacity-60">
-                {saving && <Loader2 className="w-4 h-4 animate-spin" />} บันทึก
-              </button>
+
+            <div className="flex items-center justify-between gap-2 pt-4 mt-1">
+              <p className="text-[11px] text-muted-foreground">บันทึกแล้วยังเป็นฉบับร่าง กดปุ่มรูปตา (เผยแพร่) เพื่อส่งให้ทุกร้าน</p>
+              <div className="flex gap-2">
+                <button onClick={() => setEditing(null)} className="px-4 py-2 rounded-lg text-sm font-bold text-muted-foreground hover:bg-secondary">ยกเลิก</button>
+                <button onClick={save} disabled={saving}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-bold hover:brightness-110 disabled:opacity-60">
+                  {saving && <Loader2 className="w-4 h-4 animate-spin" />} บันทึก
+                </button>
+              </div>
             </div>
-            <p className="text-[11px] text-muted-foreground">บันทึกแล้วยังเป็นฉบับร่าง กดปุ่มรูปตา (เผยแพร่) เพื่อส่งให้ทุกร้าน</p>
           </div>
         </div>
       )}

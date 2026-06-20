@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAnnouncements } from '@/hooks/useAnnouncements';
 
 const LEVEL = {
@@ -17,6 +17,7 @@ export default function AnnouncementPopup() {
   const { announcements, dismiss } = useAnnouncements();
   const [snoozed, setSnoozed] = useState<Set<number>>(new Set());
   const [dontShow, setDontShow] = useState(false);
+  const downOnBackdrop = useRef(false);   // a real backdrop click, not a drag-select that ended on it
 
   const current = announcements.find(a => !snoozed.has(a.id));
   if (!current) return null;
@@ -29,8 +30,10 @@ export default function AnnouncementPopup() {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={close}>
-      <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      onMouseDown={e => { downOnBackdrop.current = e.target === e.currentTarget; }}
+      onClick={e => { if (downOnBackdrop.current && e.target === e.currentTarget) close(); }}>
+      <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
         <div className={`h-1.5 ${lv.bar}`} />
         <div className="p-6">
           <div className="flex items-center gap-2 mb-3">
