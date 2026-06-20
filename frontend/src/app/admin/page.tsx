@@ -12,6 +12,9 @@ interface ChartEntry { month_key: string; month_label: string; new_users: number
 interface LootBoxEntry { name: string; image?: string; open_count: number; total_revenue: number }
 interface TopProductEntry { name: string; image?: string; purchase_count: number; total_revenue: number }
 
+interface CompareMetric { thisMonth: number; lastMonth: number; delta: number; pct: number }
+type ComparisonKey = 'topups' | 'itemRevenue' | 'gachaRevenue' | 'newUsers' | 'itemsSold' | 'lootboxOpened' | 'redeemUsed' | 'spent';
+
 interface Stats {
   totalRevenue: number;
   totalTopups: number;
@@ -41,6 +44,7 @@ interface Stats {
   topupRankMonth: RankEntry[];
   topupRankToday: RankEntry[];
   activityFeed: ActivityEntry[];
+  comparison: Record<ComparisonKey, CompareMetric>;
 }
 
 /* ─── Mini SVG line chart with tooltip ─── */
@@ -183,6 +187,38 @@ const LiveBadge = ({ lastUpdated }: { lastUpdated: Date | null }) => (
   </div>
 );
 
+const fmtNum = (n: number) => n.toLocaleString('th-TH', { maximumFractionDigits: 2 });
+
+/* Month-over-month delta: arrow + up/down color + amount + %, with last-month baseline.
+   `tone="dark"` switches to light text for use on the coloured (green) headline card. */
+function DeltaBadge({ m, unit, tone = 'light' }: { m?: CompareMetric; unit: 'baht' | 'count'; tone?: 'light' | 'dark' }) {
+  if (!m) return null;
+  const suffix = unit === 'baht' ? ' ฿' : '';
+  const up = m.delta > 0, down = m.delta < 0;
+  const icon = up ? 'fa-arrow-up' : down ? 'fa-arrow-down' : 'fa-minus';
+  const sign = up ? '+' : '';                       // down delta/pct already carry '-'
+  const noBase = m.lastMonth === 0;
+  const mainColor = tone === 'dark'
+    ? (up ? 'text-emerald-200' : down ? 'text-red-200' : 'text-white/70')
+    : (up ? 'text-green-600'  : down ? 'text-red-500'  : 'text-gray-400');
+  const subColor   = tone === 'dark' ? 'text-white/60' : 'text-gray-400';
+  const subStrong  = tone === 'dark' ? 'text-white/90' : 'text-gray-500';
+  const labelColor = tone === 'dark' ? 'text-white/50' : 'text-gray-400';
+  return (
+    <div className="mt-3 space-y-0.5">
+      <p className={`text-[10px] font-bold flex items-center gap-1 flex-wrap ${mainColor}`}>
+        <i className={`fas ${icon} text-[9px]`}></i>
+        <span>{sign}{fmtNum(m.delta)}{suffix}</span>
+        <span className="opacity-80">({sign}{fmtNum(m.pct)}%)</span>
+        <span className={`font-medium ${labelColor}`}>เทียบเดือนก่อน</span>
+      </p>
+      <p className={`text-[10px] ${subColor}`}>
+        {noBase ? 'ไม่มีข้อมูลเดือนก่อน' : <>เดือนที่แล้ว <span className={`font-semibold ${subStrong}`}>{fmtNum(m.lastMonth)}{suffix}</span></>}
+      </p>
+    </div>
+  );
+}
+
 interface FinancialSummary { totalOutstanding: number; totalSpent: number; }
 
 export default function AdminDashboard() {
@@ -245,6 +281,10 @@ export default function AdminDashboard() {
           <p className="text-xs text-gray-400 mt-0.5">ภาพรวมระบบทั้งหมด</p>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-50 text-[#f97316] text-[10px] font-bold border border-orange-100">
+            <i className="fas fa-calendar-day text-[9px]"></i>
+            ข้อมูลเดือน {new Date().toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })}
+          </span>
           <LiveBadge lastUpdated={lastUpdated} />
           <button onClick={() => { setLoading(true); fetchStats(); }}
             className="flex items-center gap-1.5 px-3.5 py-2 bg-[#1e2735] text-white rounded-lg text-[11px] font-bold shadow-[0_4px_0_#38404d] hover:brightness-110 transition-all active:shadow-[0_1px_0_#38404d] active:translate-y-[2px]">
@@ -306,17 +346,15 @@ export default function AdminDashboard() {
             <div className="absolute right-16 bottom-0 w-20 h-20 bg-white/5 rounded-full blur-xl pointer-events-none"></div>
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-white text-[11px] font-bold mb-1 tracking-wide uppercase opacity-70">ยอดเติมรวม</p>
-                <h2 className="text-4xl font-black leading-tight tracking-tight text-white">{fmt2(s?.totalTopups || 0)} <span className="text-base font-medium text-white/60">บาท</span></h2>
+                <p className="text-white text-[11px] font-bold mb-1 tracking-wide uppercase opacity-70">ยอดเติมเดือนนี้</p>
+                <h2 className="text-4xl font-black leading-tight tracking-tight text-white">{fmt2(s?.comparison?.topups.thisMonth || 0)} <span className="text-base font-medium text-white/60">บาท</span></h2>
+                <p className="text-[10px] text-white/60 mt-1">สะสมทั้งหมด <span className="font-bold text-white/90">{fmt2(s?.totalTopups || 0)} ฿</span></p>
               </div>
               <div className="w-11 h-11 bg-black/15 border border-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-wallet text-white text-sm"></i>
               </div>
             </div>
-            <p className="text-[10px] text-white/70 mt-3 flex items-center gap-1">
-              {(s?.monthTopups || 0) > 0 && <i className="fas fa-arrow-up text-white text-[9px]"></i>}
-              <span>ยอดเดือนนี้ <span className="text-white font-bold">+{(s?.monthTopups || 0).toLocaleString()} ฿</span></span>
-            </p>
+            <DeltaBadge m={s?.comparison?.topups} unit="baht" tone="dark" />
           </div>
 
           {/* รายได้ Item + รายได้ Gacha side-by-side */}
@@ -326,34 +364,30 @@ export default function AdminDashboard() {
             <div className="bg-white rounded-2xl p-5 shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-gray-500 text-[11px] font-bold mb-2 uppercase tracking-wide">รายได้ Item</p>
-                  <h2 className="text-2xl font-black text-gray-800 leading-tight">{fmt2(s?.totalRevenue || 0)} <span className="text-xs font-medium text-gray-400">บาท</span></h2>
+                  <p className="text-gray-500 text-[11px] font-bold mb-2 uppercase tracking-wide">รายได้ Item เดือนนี้</p>
+                  <h2 className="text-2xl font-black text-gray-800 leading-tight">{fmt2(s?.comparison?.itemRevenue.thisMonth || 0)} <span className="text-xs font-medium text-gray-400">บาท</span></h2>
+                  <p className="text-[10px] text-gray-400 mt-1">สะสม <span className="font-bold text-gray-600">{fmt2(s?.totalRevenue || 0)} ฿</span> · {s?.totalPurchases || 0} ชิ้น</p>
                 </div>
                 <div className="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center flex-shrink-0">
                   <i className="fas fa-shopping-cart text-sm"></i>
                 </div>
               </div>
-              <p className="text-[10px] text-gray-400 mt-3 flex items-center gap-1">
-                <i className="fas fa-box text-gray-300 text-[9px]"></i>
-                ขายได้ <span className="font-bold text-gray-600">{s?.totalPurchases || 0}</span> ชิ้น
-              </p>
+              <DeltaBadge m={s?.comparison?.itemRevenue} unit="baht" />
             </div>
 
             {/* รายได้ Gacha */}
             <div className="bg-white rounded-2xl p-5 shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-gray-500 text-[11px] font-bold mb-2 uppercase tracking-wide">รายได้ Gacha</p>
-                  <h2 className="text-2xl font-black text-gray-800 leading-tight">{fmt2(s?.totalLootboxRevenue || 0)} <span className="text-xs font-medium text-gray-400">บาท</span></h2>
+                  <p className="text-gray-500 text-[11px] font-bold mb-2 uppercase tracking-wide">รายได้ Gacha เดือนนี้</p>
+                  <h2 className="text-2xl font-black text-gray-800 leading-tight">{fmt2(s?.comparison?.gachaRevenue.thisMonth || 0)} <span className="text-xs font-medium text-gray-400">บาท</span></h2>
+                  <p className="text-[10px] text-gray-400 mt-1">สะสม <span className="font-bold text-gray-600">{fmt2(s?.totalLootboxRevenue || 0)} ฿</span> · {s?.totalLootboxOpened || 0} ครั้ง</p>
                 </div>
                 <div className="w-10 h-10 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center flex-shrink-0">
                   <i className="fas fa-dice text-sm"></i>
                 </div>
               </div>
-              <p className="text-[10px] text-gray-400 mt-3 flex items-center gap-1">
-                <i className="fas fa-box-open text-gray-300 text-[9px]"></i>
-                เปิดกล่องแล้ว <span className="font-bold text-gray-600">{s?.totalLootboxOpened || 0}</span> ครั้ง
-              </p>
+              <DeltaBadge m={s?.comparison?.gachaRevenue} unit="baht" />
             </div>
 
           </div>
@@ -391,10 +425,7 @@ export default function AdminDashboard() {
               <i className="fas fa-receipt text-sm"></i>
             </div>
           </div>
-          <p className="text-[10px] text-gray-400 mt-3 flex items-center gap-1">
-            <i className="fas fa-shopping-bag text-gray-300 text-[9px]"></i>
-            รวม Item + Gacha (ไม่รวม Admin)
-          </p>
+          <DeltaBadge m={s?.comparison?.spent} unit="baht" />
         </div>
 
         {/* สมาชิกทั้งหมด */}
@@ -408,10 +439,7 @@ export default function AdminDashboard() {
               <i className="fas fa-users text-sm"></i>
             </div>
           </div>
-          <p className="text-[10px] text-gray-400 mt-3 flex items-center gap-1">
-            {(s?.monthNewUsers || 0) > 0 && <i className="fas fa-arrow-up text-green-500 text-[9px]"></i>}
-            สมาชิกใหม่ <span className="font-bold text-gray-600">{s?.monthNewUsers || 0}</span> คนเดือนนี้
-          </p>
+          <DeltaBadge m={s?.comparison?.newUsers} unit="count" />
         </div>
 
         {/* สินค้าทั้งหมด */}

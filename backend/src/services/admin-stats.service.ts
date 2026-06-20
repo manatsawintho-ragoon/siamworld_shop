@@ -181,6 +181,61 @@ class AdminStatsService {
        ORDER BY w.week_start ASC`
     );
 
+    // ── Month-over-month comparison (this calendar month vs all of last month) ──
+    // Each metric returns { thisMonth, lastMonth, delta, pct }. Scan is bounded to
+    // created_at >= last-month-start so it stays index-friendly. pct guards against
+    // divide-by-zero: no baseline + activity => +100%, no baseline + nothing => 0%.
+    const TS = "DATE_FORMAT(CURDATE(),'%Y-%m-01')";                       // this-month start
+    const LS = "DATE_FORMAT(CURDATE() - INTERVAL 1 MONTH,'%Y-%m-01')";    // last-month start
+    const cmpSql = (table: string, expr: string, where: string, dateCol = 'created_at') => `
+      SELECT
+        COALESCE(SUM(CASE WHEN ${dateCol} >= ${TS} THEN ${expr} END),0) AS this_month,
+        COALESCE(SUM(CASE WHEN ${dateCol} >= ${LS} AND ${dateCol} < ${TS} THEN ${expr} END),0) AS last_month
+      FROM ${table}
+      WHERE ${where ? where + ' AND ' : ''}${dateCol} >= ${LS}`;
+
+    const compareDefs: Record<string, string> = {
+      topups:        cmpSql('transactions', 'amount',      "type='topup' AND status='success'"),
+      itemRevenue:   cmpSql('purchases',    'price',       "status='delivered'"),
+      gachaRevenue:  cmpSql('transactions', 'ABS(amount)', "type='purchase' AND status='success' AND description LIKE 'เปิดกล่อง%'"),
+      newUsers:      cmpSql('users',        '1',           ''),
+      itemsSold:     cmpSql('purchases',    'quantity',    "status='delivered'"),
+      lootboxOpened: cmpSql('web_inventory','1',           '', 'won_at'),
+      redeemUsed:    cmpSql('redeem_logs',  '1',           '', 'redeemed_at'),
+    };
+
+    // Spent = item + gacha, excluding admins (mirrors getFinancialSummary scope).
+    const spentSql = `
+      SELECT
+        COALESCE(SUM(CASE WHEN x.dt >= ${TS} THEN x.amt END),0) AS this_month,
+        COALESCE(SUM(CASE WHEN x.dt >= ${LS} AND x.dt < ${TS} THEN x.amt END),0) AS last_month
+      FROM (
+        SELECT p.price AS amt, p.created_at AS dt
+          FROM purchases p JOIN users u ON u.id = p.user_id
+          WHERE p.status='delivered' AND u.role!='admin' AND p.created_at >= ${LS}
+        UNION ALL
+        SELECT ABS(t.amount) AS amt, t.created_at AS dt
+          FROM transactions t JOIN users u ON u.id = t.user_id
+          WHERE t.type='purchase' AND t.status='success' AND t.description LIKE 'เปิดกล่อง%'
+            AND u.role!='admin' AND t.created_at >= ${LS}
+      ) x`;
+
+    const buildCmp = (thisRaw: unknown, lastRaw: unknown) => {
+      const t = Number(thisRaw) || 0;
+      const l = Number(lastRaw) || 0;
+      const delta = Math.round((t - l) * 100) / 100;
+      const pct = l > 0 ? Math.round((delta / l) * 1000) / 10 : (t > 0 ? 100 : 0);
+      return { thisMonth: t, lastMonth: l, delta, pct };
+    };
+
+    const comparison: Record<string, ReturnType<typeof buildCmp>> = {};
+    for (const [key, sql] of Object.entries(compareDefs)) {
+      const [rows] = await pool.execute<RowDataPacket[]>(sql);
+      comparison[key] = buildCmp(rows[0].this_month, rows[0].last_month);
+    }
+    const [spentRows] = await pool.execute<RowDataPacket[]>(spentSql);
+    comparison.spent = buildCmp(spentRows[0].this_month, spentRows[0].last_month);
+
     // Activity feed (union of recent activities)
     const [activityFeed] = await pool.execute<RowDataPacket[]>(
       `(SELECT 'purchase' as activity_type, u.username, COALESCE(pr.name, '(ลบแล้ว)') as detail, p.price as amount, p.created_at
@@ -236,6 +291,7 @@ class AdminStatsService {
       topupRankMonth,
       topupRankToday,
       activityFeed,
+      comparison,
     };
   }
 
