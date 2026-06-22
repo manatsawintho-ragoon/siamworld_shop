@@ -1,5 +1,9 @@
 # syntax=docker/dockerfile:1
-FROM node:20-alpine AS builder
+# node:22 required: TrueMoney's gift endpoint (Cloudflare bot management) blocks
+# Node 20's TLS fingerprint with HTTP 403. Node 22's newer OpenSSL fingerprint is
+# allowed. Verify with: scripts/test-truemoney.js --connectivity (expect HTTP 400,
+# not 403). EasySlip is unaffected (its Cloudflare config is more permissive).
+FROM node:22-alpine AS builder
 
 RUN apk add --no-cache ca-certificates
 
@@ -10,7 +14,7 @@ RUN --mount=type=cache,target=/root/.npm \
 COPY . .
 RUN npm run build
 
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 RUN apk add --no-cache ca-certificates
 
