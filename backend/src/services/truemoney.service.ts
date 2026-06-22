@@ -1,3 +1,7 @@
+import http2 from 'http2';
+import dns from 'dns';
+import { logger } from '../utils/logger';
+
 // ── Custom error class ───────────────────────────────────────────────────────
 export class TrueMoneyApiError extends Error {
   constructor(
@@ -47,3 +51,93 @@ const STATUS_THAI: Record<string, string> = {
 export function statusToThaiMessage(code: string): string {
   return STATUS_THAI[code] ?? 'แลกซองของขวัญไม่สำเร็จ กรุณาตรวจสอบลิงก์อีกครั้ง';
 }
+
+const TRUEMONEY_HOSTNAME = 'gift.truemoney.com';
+
+// ── Response parsing (pure) ──────────────────────────────────────────────────
+export function parseRedeemResponse(
+  httpStatus: number,
+  json: any,
+): { amount: number; ownerName: string | null } {
+  const code: string | undefined = json?.status?.code;
+  if (code !== 'SUCCESS') {
+    if (code) throw new TrueMoneyApiError(code, statusToThaiMessage(code), 400);
+    throw new TrueMoneyApiError(
+      'HTTP_ERROR_UNKNOWN',
+      'แลกซองของขวัญไม่สำเร็จ กรุณาลองใหม่อีกครั้ง',
+      httpStatus >= 500 ? 503 : 400,
+    );
+  }
+  const rawAmount = json?.data?.my_ticket?.amount_baht ?? json?.data?.voucher?.redeemed_amount_baht;
+  const amount = parseFloat(rawAmount);
+  if (!isFinite(amount) || amount <= 0) {
+    throw new TrueMoneyApiError('INVALID_AMOUNT', 'ไม่สามารถอ่านยอดเงินจากซองของขวัญได้', 400);
+  }
+  const ownerName: string | null = json?.data?.owner_profile?.full_name ?? null;
+  return { amount, ownerName };
+}
+
+// ── Hardened HTTP/2 transport (mirrors easyslip.service.ts) ──────────────────
+function resolveIPv4(hostname: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    dns.resolve4(hostname, (err, addresses) => {
+      if (err || !addresses?.length) reject(err ?? new Error('No IPv4 address'));
+      else resolve(addresses[0]);
+    });
+  });
+}
+
+async function http2Post(path: string, body: string): Promise<{ status: number; json: any }> {
+  const ipv4 = await resolveIPv4(TRUEMONEY_HOSTNAME);
+  return new Promise((resolve, reject) => {
+    const session = http2.connect(`https://${ipv4}`, { servername: TRUEMONEY_HOSTNAME });
+    const timer = setTimeout(() => { session.destroy(); reject(new Error('Request timeout')); }, 30000);
+    session.on('error', (e) => { clearTimeout(timer); session.destroy(); reject(e); });
+
+    const bodyBuf = Buffer.from(body);
+    const req = session.request({
+      ':method': 'POST',
+      ':path': path,
+      'content-type': 'application/json',
+      'accept': 'application/json',
+      'user-agent': 'Mozilla/5.0 (compatible; SiamsiteShop/1.0)',
+      'content-length': String(bodyBuf.length),
+    });
+    req.on('error', (e) => { clearTimeout(timer); session.destroy(); reject(e); });
+
+    let status = 0;
+    req.on('response', (headers) => { status = headers[':status'] as number; });
+    let raw = '';
+    req.setEncoding('utf8');
+    req.on('data', (chunk) => { raw += chunk; });
+    req.on('end', () => {
+      clearTimeout(timer);
+      session.destroy();
+      try { resolve({ status, json: JSON.parse(raw) }); }
+      catch { reject(new Error('Invalid JSON response')); }
+    });
+    req.write(bodyBuf);
+    req.end();
+  });
+}
+
+// ── Service ──────────────────────────────────────────────────────────────────
+class TrueMoneyService {
+  async redeem(phone: string, voucherHash: string): Promise<{ amount: number; ownerName: string | null }> {
+    const path = `/campaign/vouchers/${encodeURIComponent(voucherHash)}/redeem`;
+    const payload = JSON.stringify({ mobile: phone, voucher_hash: voucherHash });
+    let status: number;
+    let json: any;
+    try {
+      const res = await http2Post(path, payload);
+      status = res.status;
+      json = res.json;
+    } catch (err: any) {
+      logger.warn('TrueMoney connection error', { error: err.message, code: err.code });
+      throw new TrueMoneyApiError('NETWORK_ERROR', 'ไม่สามารถเชื่อมต่อระบบ TrueMoney ได้ กรุณาลองใหม่อีกครั้ง', 503);
+    }
+    return parseRedeemResponse(status, json);
+  }
+}
+
+export const truemoneyService = new TrueMoneyService();
