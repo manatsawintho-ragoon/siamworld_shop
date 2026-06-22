@@ -35,6 +35,11 @@ export default function PaymentSettingsPage() {
   const [bonusMult,     setBonusMult]     = useState('1');
   const [savingBonus,   setSavingBonus]   = useState(false);
 
+  // TrueMoney Wallet state
+  const [tmnEnabled, setTmnEnabled] = useState(false);
+  const [tmnPhone,   setTmnPhone]   = useState('');
+  const [savingTmn,  setSavingTmn]  = useState(false);
+
   const load = useCallback(async () => {
     try {
       const [settingsRes, statusRes] = await Promise.all([
@@ -51,6 +56,8 @@ export default function PaymentSettingsPage() {
       setPpLastname(s.promptpay_lastname  || '');
       setBonusEnabled(s.topup_bonus_enabled === 'true');
       setBonusMult(s.topup_bonus_multiplier || '1');
+      setTmnEnabled(s.truemoney_enabled === 'true');
+      setTmnPhone(s.truemoney_phone || '');
       setEsStatus(statusRes as EasySlipStatus);
     } catch {
       adminAlert({ type: 'error', title: 'โหลดการตั้งค่าไม่สำเร็จ' });
@@ -125,6 +132,26 @@ export default function PaymentSettingsPage() {
       adminAlert({ type: 'success', title: 'บันทึกข้อมูลแล้ว' });
     } catch { adminAlert({ type: 'error', title: 'บันทึกไม่สำเร็จ' }); }
     finally  { setSavingBonus(false); }
+  };
+
+  const handleSaveTmn = async () => {
+    const phone = tmnPhone.replace(/\D/g, '');
+    if (tmnEnabled && !/^0[689]\d{8}$/.test(phone)) {
+      adminAlert({ type: 'error', title: 'เบอร์ TrueMoney ไม่ถูกต้อง', message: 'กรอกเบอร์ 10 หลัก (เช่น 0812345678) ก่อนเปิดใช้งาน' });
+      return;
+    }
+    setSavingTmn(true);
+    try {
+      await api('/admin/settings', {
+        method: 'PUT', token: getToken()!,
+        body: { settings: [
+          { key: 'truemoney_enabled', value: String(tmnEnabled) },
+          { key: 'truemoney_phone',   value: phone },
+        ]},
+      });
+      adminAlert({ type: 'success', title: 'บันทึกข้อมูลแล้ว' });
+    } catch { adminAlert({ type: 'error', title: 'บันทึกไม่สำเร็จ' }); }
+    finally  { setSavingTmn(false); }
   };
 
   if (loading) {
@@ -554,6 +581,87 @@ export default function PaymentSettingsPage() {
               <p className="text-[10px] font-bold text-amber-800 leading-relaxed">
                 โบนัสจะถูกคำนวณโดยอัตโนมัติเมื่อผู้เล่นยืนยันสลิป
                 ยอดที่ credit เข้า Wallet คือ <span className="text-orange-600">ยอดจากสลิป × ตัวคูณ</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── TrueMoney Wallet Card ────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/60 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
+              <i className="fas fa-gift text-[#ed1c24] text-xs" />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900 text-sm">TrueMoney Wallet (ซองของขวัญ)</h3>
+              <p className="text-[11px] text-gray-400">รับเติมเงินผ่านซองของขวัญ TrueMoney</p>
+            </div>
+          </div>
+          {tmnEnabled && /^0[689]\d{8}$/.test(tmnPhone.replace(/\D/g, '')) && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#ed1c24] text-white text-[11px] font-black">
+              <i className="fas fa-circle-check text-[10px]" /> เปิดใช้งานอยู่
+            </span>
+          )}
+        </div>
+
+        <div className="p-5 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            {/* Enable toggle */}
+            <div className={`relative flex items-center justify-between px-4 py-3.5 rounded-xl border-2 shadow-[0_4px_0_rgba(0,0,0,0.08),0_2px_12px_rgba(0,0,0,0.07)] transition-all ${tmnEnabled ? 'border-red-300 bg-gradient-to-r from-red-50 to-rose-50' : 'border-gray-200 bg-gray-50'}`}>
+              <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-xl ${tmnEnabled ? 'bg-[#ed1c24]' : 'bg-gray-300'}`} />
+              <div className="flex items-center gap-3 pl-1">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm ${tmnEnabled ? 'bg-[#ed1c24]' : 'bg-gray-300'}`}>
+                  <i className="fas fa-wallet text-white text-sm" />
+                </div>
+                <div>
+                  <p className={`text-sm font-black ${tmnEnabled ? 'text-red-800' : 'text-gray-600'}`}>
+                    {tmnEnabled ? 'เปิดรับซองของขวัญ' : 'ปิดรับซองของขวัญ'}
+                  </p>
+                  <p className={`text-[11px] font-medium mt-0.5 ${tmnEnabled ? 'text-red-600' : 'text-gray-400'}`}>
+                    {tmnEnabled ? 'ผู้เล่นเติมผ่านซองของขวัญได้' : 'ผู้เล่นยังเติมผ่านซองไม่ได้'}
+                  </p>
+                </div>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer flex-shrink-0">
+                <div className="relative">
+                  <input type="checkbox" className="sr-only" checked={tmnEnabled} onChange={e => setTmnEnabled(e.target.checked)} />
+                  <div className={`w-14 h-7 rounded-full transition-colors ${tmnEnabled ? 'bg-[#ed1c24]' : 'bg-gray-300'}`} />
+                  <div className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-md transition-transform ${tmnEnabled ? 'translate-x-7' : ''}`} />
+                </div>
+              </label>
+            </div>
+
+            {/* Phone input */}
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1.5">
+                เบอร์ TrueMoney Wallet ของร้าน <span className="text-red-400">*</span>
+              </label>
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300">
+                  <i className="fas fa-mobile-alt text-sm" />
+                </div>
+                <input type="text" value={tmnPhone} onChange={e => setTmnPhone(e.target.value)}
+                  placeholder="0812345678"
+                  className="w-full pl-9 pr-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 font-mono tracking-wider" />
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1">ซองของขวัญจะถูกแลกเข้ากระเป๋านี้โดยอัตโนมัติ</p>
+            </div>
+
+            <button onClick={handleSaveTmn} disabled={savingTmn}
+              className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#ed1c24] text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#991b1b] hover:brightness-110 transition-all active:shadow-[0_1px_0_#991b1b] active:translate-y-[2px] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
+              {savingTmn ? <><i className="fas fa-spinner fa-spin text-[12px]" /> กำลังบันทึก...</> : <><i className="fas fa-save text-[12px]" /> บันทึก TrueMoney</>}
+            </button>
+          </div>
+
+          {/* RIGHT — note */}
+          <div className="space-y-3">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+              <i className="fas fa-shield-halved text-[#ed1c24] text-xs mt-0.5 flex-shrink-0" />
+              <p className="text-[10px] font-bold text-red-800 leading-relaxed">
+                ระบบจะแลกซองของขวัญเข้ากระเป๋าร้านโดยตรง ยอดที่ TrueMoney แจ้งคือยอดจริงที่ credit เข้า Wallet ผู้เล่น
+                (ป้องกันซองซ้ำด้วยรหัสซองที่ไม่ซ้ำกัน) โบนัสเติมเงินใช้กับซองของขวัญด้วย
               </p>
             </div>
           </div>
