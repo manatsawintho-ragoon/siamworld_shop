@@ -22,10 +22,14 @@ router.post('/promptpay/confirm', authenticate, async (req: Request, res: Respon
   } catch (err) { next(err); }
 });
 
-router.post('/truemoney/redeem', authenticate, validate(trueMoneyRedeemSchema), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/truemoney/redeem', authenticate, purchaseCooldown(30, 'truemoney'), validate(trueMoneyRedeemSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await paymentService.redeemTrueMoney(req.user!.userId, req.body.giftLink);
-    res.json({ success: true });
+    const result = await paymentService.redeemTrueMoney(req.user!.userId, req.body.giftLink);
+    res.json({
+      success: true,
+      message: `เติมเงินสำเร็จ ฿${result.amount} จาก TrueMoney Wallet`,
+      ...result,
+    });
   } catch (err) { next(err); }
 });
 
