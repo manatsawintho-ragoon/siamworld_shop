@@ -6,6 +6,7 @@ import { easySlipService, EasySlipApiError } from './easyslip.service';
 import { settingsService } from './settings.service';
 import { notificationService } from './notification.service';
 import { discountService } from './discount.service';
+import { truemoneyService, extractVoucherHash, TrueMoneyApiError } from './truemoney.service';
 
 // ── PromptPay EMVCo QR payload generator ─────────────────────────────────────
 
@@ -45,6 +46,19 @@ function generatePromptPayPayload(promptpayId: string, amount: number): string {
   return body + ppCrc16(body);
 }
 
+// Shared top-up bonus math. Bonus only inflates the credited (spendable) amount;
+// the ledger records real money elsewhere.
+export function computeTopupCredit(
+  amount: number,
+  multiplierSetting: string,
+  enabled: boolean,
+): { creditAmount: number; multiplier: number } {
+  const raw = parseFloat(multiplierSetting || '1');
+  const multiplier = (enabled && raw > 1) ? raw : 1;
+  const creditAmount = parseFloat((amount * multiplier).toFixed(2));
+  return { creditAmount, multiplier };
+}
+
 class PaymentService {
   async createPromptPay(userId: number, amount: number) {
     if (amount < 10 || amount > 100000) throw new ValidationError('ยอดขั้นต่ำ 10 บาท');
@@ -78,10 +92,140 @@ class PaymentService {
     throw new ValidationError('ฟังก์ชันนี้ถูกปิดใช้งานแล้ว กรุณาอัปโหลดสลิปการโอนเงินแทน');
   }
 
-  async redeemTrueMoney(_userId: number, _giftLink: string) {
-    // TrueMoney integration is not yet available. Disabled to prevent the simulated
-    // random-amount payout from being exploited.
-    throw new ValidationError('ระบบ TrueMoney ยังไม่พร้อมใช้งาน กรุณาติดต่อผู้ดูแลระบบ');
+  async redeemTrueMoney(userId: number, giftLink: string) {
+    // ── L0: Config ───────────────────────────────────────────────────────────
+    const settings = await settingsService.getAll();
+    if (settings['truemoney_enabled'] !== 'true') {
+      throw new ValidationError('ระบบ TrueMoney Wallet ยังไม่เปิดใช้งาน กรุณาแจ้งผู้ดูแลระบบ');
+    }
+    const shopPhone = (settings['truemoney_phone'] || '').replace(/\D/g, '');
+    if (!/^0[689]\d{8}$/.test(shopPhone)) {
+      throw new ValidationError('ยังไม่ได้ตั้งค่าเบอร์ TrueMoney Wallet ของร้าน กรุณาแจ้งผู้ดูแลระบบ');
+    }
+
+    // ── L1: Parse voucher hash ───────────────────────────────────────────────
+    let voucherHash: string;
+    try {
+      voucherHash = extractVoucherHash(giftLink);
+    } catch {
+      throw new ValidationError('ลิงก์ซองของขวัญไม่ถูกต้อง');
+    }
+
+    // ── L1b: Pre-dedup (cheap reject before the external call) ────────────────
+    const [pre] = await pool.execute<RowDataPacket[]>(
+      'SELECT id FROM truemoney_logs WHERE voucher_hash = ?', [voucherHash]
+    );
+    if (pre.length > 0) {
+      throw new ConflictError('ซองของขวัญนี้ถูกใช้ไปแล้ว');
+    }
+
+    // ── L2: Redeem into the shop wallet (TrueMoney is the source of truth) ────
+    let amount: number;
+    let ownerName: string | null;
+    try {
+      const r = await truemoneyService.redeem(shopPhone, voucherHash);
+      amount = r.amount;
+      ownerName = r.ownerName;
+    } catch (err) {
+      if (err instanceof TrueMoneyApiError) throw new ValidationError(err.message);
+      throw err;
+    }
+
+    // ── L3: Sanity ───────────────────────────────────────────────────────────
+    if (!(amount > 0)) throw new ValidationError('ยอดเงินในซองของขวัญไม่ถูกต้อง');
+
+    // ── L4: Bonus + atomic credit ────────────────────────────────────────────
+    const bonusEnabled = settings['topup_bonus_enabled'] === 'true';
+    const { creditAmount, multiplier } = computeTopupCredit(
+      amount, settings['topup_bonus_multiplier'] || '1', bonusEnabled,
+    );
+    const desc = multiplier > 1
+      ? `ซองของขวัญ TrueMoney ฿${amount} (โบนัส x${multiplier} = ฿${creditAmount})`
+      : `ซองของขวัญ TrueMoney ฿${amount}`;
+
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      // UNIQUE(voucher_hash) is the authoritative retry/race guard.
+      try {
+        await conn.execute(
+          'INSERT INTO truemoney_logs (user_id, voucher_hash, amount, owner_name) VALUES (?, ?, ?, ?)',
+          [userId, voucherHash, amount, ownerName]
+        );
+      } catch (e: any) {
+        if (e?.code === 'ER_DUP_ENTRY') {
+          await conn.rollback();
+          throw new ConflictError('ซองของขวัญนี้ถูกใช้ไปแล้ว');
+        }
+        throw e;
+      }
+
+      const [walletRows] = await conn.execute<RowDataPacket[]>(
+        'SELECT balance FROM wallets WHERE user_id = ? FOR UPDATE', [userId]
+      );
+      if (walletRows.length === 0) throw new NotFoundError('Wallet not found');
+
+      const balanceBefore = parseFloat(walletRows[0].balance);
+      const balanceAfter  = balanceBefore + creditAmount;
+
+      await conn.execute('UPDATE wallets SET balance = ? WHERE user_id = ?', [balanceAfter, userId]);
+      await conn.execute(
+        `INSERT INTO wallet_logs (user_id, action, amount, balance_before, balance_after, source, reference_id, description)
+         VALUES (?, 'credit', ?, ?, ?, 'truemoney', ?, ?)`,
+        [userId, creditAmount, balanceBefore, balanceAfter, voucherHash, desc]
+      );
+      // Ledger records REAL money (`amount`), not the bonus-inflated creditAmount.
+      await conn.execute(
+        `INSERT INTO transactions (user_id, amount, type, method, status, reference, description)
+         VALUES (?, ?, 'topup', 'truemoney', 'success', ?, ?)`,
+        [userId, amount, voucherHash, desc]
+      );
+
+      await conn.commit();
+
+      logger.info('TrueMoney redeemed', { userId, paidAmount: amount, creditAmount, multiplier, voucherHash });
+
+      const [uRows] = await pool.execute<RowDataPacket[]>('SELECT username FROM users WHERE id = ?', [userId]);
+      const username = uRows[0]?.username ?? `User#${userId}`;
+      notificationService.create('topup_success',
+        `เติมเงินสำเร็จ (TrueMoney): ${username}`,
+        JSON.stringify({
+          username, userId,
+          status: 'สำเร็จ',
+          method: 'TrueMoney Wallet',
+          amount_paid: `฿${amount}`,
+          credit: multiplier > 1 ? `฿${creditAmount} (โบนัส x${multiplier})` : `฿${creditAmount}`,
+          sender_name: ownerName ?? '-',
+          voucher_hash: voucherHash,
+          balance_after: `฿${balanceAfter.toLocaleString()}`,
+        })
+      );
+
+      return { amount: creditAmount, paid_amount: amount, multiplier, voucherHash, balanceAfter, ownerName };
+    } catch (err) {
+      await conn.rollback();
+      // Reconciliation safety: the money is already in the shop wallet, but the
+      // DB credit failed. Alert loudly so an admin can credit manually.
+      if (!(err instanceof ConflictError)) {
+        const [uRows] = await pool.execute<RowDataPacket[]>('SELECT username FROM users WHERE id = ?', [userId]);
+        const username = uRows[0]?.username ?? `User#${userId}`;
+        notificationService.create('topup_failed',
+          `TrueMoney credit ค้าง: ${username}`,
+          JSON.stringify({
+            username, userId,
+            status: 'ต้องตรวจสอบ',
+            reason: 'แลกซองสำเร็จแต่ลงบัญชีไม่สำเร็จ',
+            detail: 'เงินเข้ากระเป๋าร้านแล้ว แต่ยังไม่ได้เติมให้ผู้เล่น กรุณาเติมมือ',
+            voucher_hash: voucherHash,
+            amount: `฿${amount}`,
+          })
+        );
+      }
+      throw err;
+    } finally {
+      conn.release();
+    }
   }
 
   // ── EasySlip slip verification ────────────────────────────────────────────

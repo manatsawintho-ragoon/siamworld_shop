@@ -88,6 +88,8 @@ export default function TopupPage() {
   const bonusEnabled = settings['topup_bonus_enabled'] === 'true';
   const bonusMult    = parseFloat(settings['topup_bonus_multiplier'] || '1') || 1;
   const hasBonus     = bonusEnabled && bonusMult > 1;
+  const ppEnabled    = settings['promptpay_enabled'] !== 'false'; // default on if unset
+  const tmnEnabled   = settings['truemoney_enabled'] === 'true';  // default off until configured
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -102,7 +104,13 @@ export default function TopupPage() {
 
   // Handlers
   const handleSelectMethod = (m: Method) => {
-    if (m === 'truemoney') return; // Disable selection
+    if (m === 'truemoney') {
+      if (!tmnEnabled) return;
+      setMethod(m);
+      setStep('truemoney');
+      return;
+    }
+    if (!ppEnabled) return;
     setMethod(m);
     setStep('amount');
   };
@@ -183,6 +191,8 @@ export default function TopupPage() {
         body: { giftLink },
       }) as any;
       setSuccessAmount(d.amount);
+      setSuccessPaid(d.paid_amount ?? d.amount);
+      setSuccessMultiplier(d.multiplier ?? 1);
       await refresh();
       setStep('success');
     } catch (err: any) {
@@ -343,31 +353,36 @@ export default function TopupPage() {
                   </div>
                 </button>
 
-                {/* TrueMoney Card (Disabled Version) */}
-                <div className="group relative bg-surface-hover rounded-2xl border-2 border-border overflow-hidden flex flex-col shadow-sm grayscale opacity-70 text-center h-[280px] cursor-not-allowed">
-                  <div className="absolute top-0 right-0 p-4 opacity-5">
-                    <i className="fas fa-wallet text-7xl text-foreground-subtle"></i>
+                {/* TrueMoney Card */}
+                <button
+                  onClick={() => handleSelectMethod('truemoney')}
+                  disabled={!tmnEnabled}
+                  className={`group relative bg-surface rounded-2xl border-2 overflow-hidden flex flex-col shadow-theme-sm transition-all duration-300 text-center h-[280px] ${
+                    tmnEnabled ? 'border-green-200 hover:border-[#ed1c24] hover:shadow-lg' : 'border-border grayscale opacity-70 cursor-not-allowed'
+                  }`}
+                >
+                  <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                    <i className="fas fa-wallet text-7xl text-[#ed1c24]"></i>
                   </div>
-
                   <div className="flex-1 flex flex-col items-center justify-center p-6 gap-4 relative z-10">
-                    <img 
-                      src="/images/truemoney_wallet.png" 
-                      alt="TrueMoney" 
-                      className="relative h-16 w-auto object-contain" 
-                    />
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-[#ed1c24]/5 rounded-full blur-2xl group-hover:scale-125 transition-transform duration-500" />
+                      <img src="/images/truemoney_wallet.png" alt="TrueMoney" className="relative h-16 w-auto object-contain transform group-hover:scale-105 transition-transform duration-300" />
+                    </div>
                     <div className="space-y-1">
-                      <h3 className="text-xl font-black text-foreground-subtle">TrueMoney Wallet</h3>
+                      <h3 className="text-xl font-black text-[#ed1c24]">TrueMoney Wallet</h3>
                       <p className="text-xs font-bold text-foreground-subtle leading-tight">
                         เติมผ่านซองของขวัญ<br/>
-                        <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest">ยังไม่เปิดใช้งาน (เร็วๆ นี้)</span>
+                        <span className="text-[9px] uppercase tracking-wider opacity-60">
+                          {tmnEnabled ? 'วางลิงก์ซองของขวัญ' : 'ยังไม่เปิดใช้งาน'}
+                        </span>
                       </p>
                     </div>
                   </div>
-                  
-                  <div className="bg-gray-300 py-3.5 text-white font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2">
-                    ไม่พร้อมใช้งาน
+                  <div className={`py-3.5 text-white font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 transition-colors ${tmnEnabled ? 'bg-[#ed1c24] group-hover:bg-[#c81118]' : 'bg-gray-300'}`}>
+                    {tmnEnabled ? <>เลือกช่องทางนี้ <i className="fas fa-chevron-right text-[9px] group-hover:translate-x-1 transition-transform"></i></> : 'ไม่พร้อมใช้งาน'}
                   </div>
-                </div>
+                </button>
               </motion.div>
             )}
 
@@ -403,22 +418,36 @@ export default function TopupPage() {
                   </div>
 
                   <div className="bg-red-50/50 border border-dashed border-red-200 rounded-xl p-4">
-                    <h4 className="text-[11px] font-black text-[#ed1c24] mb-2 flex items-center gap-2">
-                      <i className="fas fa-info-circle"></i>
-                      วิธีเติมเงินผ่านซองของขวัญ
+                    <h4 className="text-[12px] font-black text-[#ed1c24] mb-3 flex items-center gap-2">
+                      <i className="fas fa-circle-info"></i> ขั้นตอนการสร้างซอง
                     </h4>
-                    <ol className="text-[10px] font-bold text-foreground-subtle space-y-1 list-decimal ml-4 leading-relaxed">
-                      <li>เข้าแอป TrueMoney Wallet</li>
-                      <li>ไปที่เมนู <span className="text-foreground">"ส่งซองของขวัญ"</span></li>
-                      <li>สร้างซอง <span className="text-foreground">"แบ่งจำนวนเงินเท่ากัน"</span> และเลือกผู้รับ <span className="text-foreground">1 คน</span></li>
-                      <li>คัดลอกลิงก์ซองของขวัญมาวางในช่องด้านบน</li>
-                    </ol>
+                    <div className="grid grid-cols-5 gap-2">
+                      {[
+                        { n: 1, t: 'เข้าแอป TrueMoney Wallet เลือก "ส่งซองของขวัญ"' },
+                        { n: 2, t: 'ระบุจำนวนเงินที่ต้องการเติม' },
+                        { n: 3, t: 'เลือก "แบ่งจำนวนเงินเท่ากัน"' },
+                        { n: 4, t: 'ระบุจำนวนคนรับซอง "1 คน"' },
+                        { n: 5, t: 'กดยืนยัน คัดลอกลิงก์มาวางในช่องด้านบน' },
+                      ].map(s => (
+                        <div key={s.n} className="flex flex-col items-center text-center gap-1.5">
+                          <div className="relative w-full aspect-[3/5] rounded-lg overflow-hidden border border-red-100 bg-white">
+                            <img
+                              src={`/images/truemoney-sendgift-icon-20240521-how-to-create-${s.n}.png`}
+                              alt={`ขั้นตอนที่ ${s.n}`}
+                              className="w-full h-full object-contain"
+                            />
+                            <span className="absolute top-1 left-1 w-4 h-4 rounded-full bg-[#ed1c24] text-white text-[9px] font-black flex items-center justify-center">{s.n}</span>
+                          </div>
+                          <p className="text-[9px] font-bold text-foreground-subtle leading-tight">{s.t}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
                 <button
                   onClick={handleRedeemTrueMoney}
-                  disabled={loading || !giftLink.includes('truemoney.com')}
+                  disabled={loading || giftLink.trim().length < 6}
                   className="btn w-full py-4 rounded-lg bg-[#ed1c24] text-white font-black text-sm shadow-[0_4px_0_#991b1b] hover:shadow-[0_2px_0_#991b1b] hover:translate-y-[2px] active:shadow-none active:translate-y-[4px] transition-all disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none"
                 >
                   {loading ? <i className="fas fa-circle-notch fa-spin mr-2"></i> : <i className="fas fa-check-circle mr-2"></i>}

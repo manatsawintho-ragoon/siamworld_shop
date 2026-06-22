@@ -41,8 +41,10 @@ export const topupSchema = z.object({
   description: z.string().max(500).optional(),
 });
 
+// Accepts a TrueMoney gift URL OR a raw voucher hash. The redeem service is the
+// single source of truth for parsing (extractVoucherHash); here we just bound size.
 export const trueMoneyRedeemSchema = z.object({
-  giftLink: z.string().url().min(1),
+  giftLink: z.string().min(1).max(2048),
 });
 
 // Accepts one of: base64 image, public URL, or QR payload string
