@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { resolveWsUrl } from '@/lib/wsUrl';
 
 interface ServerPlayers {
   serverId: number;
@@ -52,15 +53,10 @@ export function useOnlinePlayers() {
 
   // ── WebSocket for live updates every 10s ──
   useEffect(() => {
-    const configuredUrl = process.env.NEXT_PUBLIC_WS_URL;
-    const isLocalhost = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-    const urlPointsToLocalhost = configuredUrl && (configuredUrl.includes('://localhost') || configuredUrl.includes('://127.0.0.1'));
-    const wsUrl =
-      (configuredUrl && !(urlPointsToLocalhost && isLocalhost))
-        ? configuredUrl
-        : (typeof window !== 'undefined'
-          ? `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:4000`
-          : 'ws://localhost:4000');
+    const wsUrl = resolveWsUrl(
+      typeof window !== 'undefined' ? window.location : undefined,
+      process.env.NEXT_PUBLIC_WS_URL
+    );
 
     const socket = io(wsUrl, { transports: ['websocket', 'polling'] });
     socketRef.current = socket;
