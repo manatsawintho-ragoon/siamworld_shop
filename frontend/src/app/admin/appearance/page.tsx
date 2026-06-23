@@ -2,14 +2,17 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { useSettings } from '@/context/SettingsContext';
-import { useTheme, THEMES, DEFAULT_THEME_ID, ThemeConfig, injectTheme } from '@/context/ThemeContext';
+import { THEMES, DEFAULT_THEME_ID, ThemeConfig, injectTheme, themeSwatch } from '@/context/ThemeContext';
 import { useAdminAlert } from '@/components/AdminAlert';
 
-/* ── Theme Card ── */
+/* ── Theme Card ──
+   Renders entirely from themeSwatch() (the theme's REAL CSS vars) so the
+   thumbnail matches exactly what the live site shows for that theme. */
 function ThemeCard({ theme, isActive, isHovered, isSaved, onHover, onSelect }: {
   theme: ThemeConfig; isActive: boolean; isHovered: boolean; isSaved: boolean;
   onHover: () => void; onSelect: () => void;
 }) {
+  const s = themeSwatch(theme);
   return (
     <button
       onClick={onSelect}
@@ -23,17 +26,17 @@ function ThemeCard({ theme, isActive, isHovered, isSaved, onHover, onSelect }: {
       }`}
       aria-pressed={isActive}
     >
-      {/* Banner */}
+      {/* Banner — real banner gradient */}
       <div className="h-16 w-full relative overflow-hidden"
-        style={{ background: `linear-gradient(135deg, ${theme.preview.from}, ${theme.preview.to})` }}>
+        style={{ background: `linear-gradient(135deg, ${s.bannerFrom}, ${s.bannerTo})` }}>
         <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-1.5 pb-1.5">
           {[1,2,3,4].map(i => (
-            <div key={i} className="h-1.5 rounded-full opacity-60"
-              style={{ width: i===2?'22px':'14px', backgroundColor: i===2?theme.preview.accent:'rgba(255,255,255,0.5)' }} />
+            <div key={i} className="h-1.5 rounded-full opacity-70"
+              style={{ width: i===2?'22px':'14px', backgroundColor: i===2 ? s.accent : 'rgba(255,255,255,0.5)' }} />
           ))}
         </div>
         <div className="absolute top-2 right-2 w-4 h-4 rounded-full border border-white/40 shadow"
-          style={{ backgroundColor: theme.preview.accent }} />
+          style={{ backgroundColor: s.accent }} />
         {theme.isDark && (
           <div className="absolute top-1.5 left-1.5 bg-black/50 backdrop-blur-sm text-white text-[7px] font-black px-1 py-0.5 rounded tracking-wide">
             DARK
@@ -41,31 +44,29 @@ function ThemeCard({ theme, isActive, isHovered, isSaved, onHover, onSelect }: {
         )}
       </div>
 
-      {/* Body */}
-      <div className="flex-1 px-2.5 py-2 flex flex-col gap-1.5" style={{ backgroundColor: theme.preview.bg }}>
-        {/* Mini card */}
+      {/* Body — real page background */}
+      <div className="flex-1 px-2.5 py-2 flex flex-col gap-1.5" style={{ backgroundColor: s.background }}>
+        {/* Mini card — real surface + border + text hierarchy */}
         <div className="rounded-md p-1.5 border flex items-center gap-1.5"
-          style={{ borderColor: theme.preview.accent+'40', backgroundColor: theme.isDark?'rgba(255,255,255,0.05)':'rgba(255,255,255,0.85)' }}>
+          style={{ borderColor: s.border, backgroundColor: s.surface }}>
           <div className="w-5 h-5 rounded flex-shrink-0 flex items-center justify-center"
-            style={{ backgroundColor: theme.preview.accent+'25' }}>
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: theme.preview.accent }} />
+            style={{ backgroundColor: s.primary }}>
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.primaryFg }} />
           </div>
           <div className="flex-1 space-y-0.5">
-            <div className="h-1 rounded-full w-3/4" style={{ backgroundColor: theme.isDark?'rgba(255,255,255,0.25)':'#374151' }} />
-            <div className="h-0.5 rounded-full w-1/2" style={{ backgroundColor: theme.isDark?'rgba(255,255,255,0.12)':'#9ca3af' }} />
+            <div className="h-1 rounded-full w-3/4" style={{ backgroundColor: s.foreground }} />
+            <div className="h-0.5 rounded-full w-1/2" style={{ backgroundColor: s.foregroundSubtle }} />
           </div>
         </div>
-        {/* Mini button */}
+        {/* Mini button — real PRIMARY action colour */}
         <div className="w-full h-5 rounded-md flex items-center justify-center"
-          style={{ backgroundColor: theme.preview.accent }}>
-          <div className="h-1 w-8 rounded-full bg-white/60" />
+          style={{ backgroundColor: s.primary }}>
+          <div className="h-1 w-8 rounded-full" style={{ backgroundColor: s.primaryFg, opacity: 0.7 }} />
         </div>
         {/* Name */}
         <div className="pt-0.5">
-          <p className="font-black text-[11px] leading-tight truncate"
-            style={{ color: theme.isDark?'#f1f5f9':'#111827' }}>{theme.name}</p>
-          <p className="text-[9px] leading-tight mt-0.5 truncate"
-            style={{ color: theme.isDark?'#94a3b8':'#6b7280' }}>{theme.nameTh}</p>
+          <p className="font-black text-[11px] leading-tight truncate" style={{ color: s.foreground }}>{theme.name}</p>
+          <p className="text-[9px] leading-tight mt-0.5 truncate" style={{ color: s.foregroundSubtle }}>{theme.nameTh}</p>
         </div>
       </div>
 
@@ -86,11 +87,12 @@ function ThemeCard({ theme, isActive, isHovered, isSaved, onHover, onSelect }: {
 }
 
 /* ── Swatch ── */
-function Swatch({ color }: { color: string }) {
+function Swatch({ color, label, border }: { color: string; label: string; border?: boolean }) {
   return (
-    <div className="flex flex-col items-center gap-1">
-      <div className="w-7 h-7 rounded-lg shadow-[0_2px_0_rgba(0,0,0,0.12)]" style={{ backgroundColor: color }} />
-      <span className="text-[8px] text-gray-400 font-mono leading-none">{color.toUpperCase()}</span>
+    <div className="flex flex-col items-center gap-1 min-w-0">
+      <div className="w-7 h-7 rounded-lg shadow-[0_2px_0_rgba(0,0,0,0.12)]"
+        style={{ backgroundColor: color, border: border ? '1px solid rgba(0,0,0,0.1)' : undefined }} />
+      <span className="text-[8px] text-gray-400 font-bold leading-none truncate max-w-[42px]">{label}</span>
     </div>
   );
 }
@@ -98,7 +100,6 @@ function Swatch({ color }: { color: string }) {
 /* ── Main Page ── */
 export default function AppearancePage() {
   const { settings, refreshSettings } = useSettings();
-  const { currentThemeId } = useTheme();
   const { alert: showAlert } = useAdminAlert();
 
   const [savedThemeId,   setSavedThemeId]   = useState('');
@@ -116,6 +117,8 @@ export default function AppearancePage() {
   const previewTheme  = THEMES.find(t => t.id === previewThemeId) ?? THEMES[0];
   const savedTheme    = THEMES.find(t => t.id === savedThemeId)   ?? THEMES[0];
   const displayTheme  = (hoverThemeId ? THEMES.find(t => t.id === hoverThemeId) : null) ?? previewTheme;
+  const s             = themeSwatch(displayTheme);
+  const savedSwatch   = themeSwatch(savedTheme);
 
   // Hover: only update admin mockup, no CSS injection to real page
   const handleHover    = (id: string) => setHoverThemeId(id);
@@ -167,7 +170,7 @@ export default function AppearancePage() {
         </div>
         {/* Saved pill */}
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-50 border border-gray-200 text-xs self-start sm:self-center">
-          <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: savedTheme.preview.accent }} />
+          <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: savedSwatch.primary }} />
           <span className="text-gray-500">ใช้งาน:</span>
           <span className="text-gray-900 font-bold">{savedTheme.name}</span>
         </div>
@@ -189,13 +192,13 @@ export default function AppearancePage() {
                   <i className="fas fa-eye text-violet-500 text-[10px]" />
                 </div>
                 <span className="text-sm font-bold text-gray-900">Preview</span>
+                <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-green-100 text-green-600 uppercase tracking-wide">สีจริง</span>
               </div>
               <div className="flex items-center gap-1.5">
                 {hoverThemeId && hoverThemeId !== previewThemeId && (
                   <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-600">HOVER</span>
                 )}
-                <div className="w-3.5 h-3.5 rounded-full border border-white shadow-sm"
-                  style={{ backgroundColor: displayTheme.preview.accent }} />
+                <div className="w-3.5 h-3.5 rounded-full border border-white shadow-sm" style={{ backgroundColor: s.primary }} />
                 <span className="text-xs font-black text-gray-900">{displayTheme.name}</span>
                 {displayTheme.isDark && (
                   <span className="bg-gray-800 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full">DARK</span>
@@ -203,70 +206,72 @@ export default function AppearancePage() {
               </div>
             </div>
 
-            {/* Mockup */}
-            <div className="p-4 space-y-2.5" style={{ backgroundColor: displayTheme.preview.bg }}>
+            {/* Mockup — every colour comes from themeSwatch (the live CSS vars) */}
+            <div className="p-4 space-y-2.5" style={{ backgroundColor: s.background }}>
 
               {/* Banner */}
               <div className="h-12 rounded-lg overflow-hidden relative"
-                style={{ background: `linear-gradient(to bottom, ${displayTheme.preview.from}, ${displayTheme.preview.to})` }}>
+                style={{ background: `linear-gradient(to bottom, ${s.bannerFrom}, ${s.bannerTo})` }}>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <p className="font-black text-white text-sm tracking-tight drop-shadow">SIAMSITE STORE</p>
-                  <p className="text-[8px] font-medium tracking-widest uppercase mt-0.5"
-                    style={{ color: displayTheme.preview.accent }}>ระบบร้านค้ามายคราฟ</p>
+                  <p className="text-[8px] font-medium tracking-widest uppercase mt-0.5" style={{ color: s.accent }}>ระบบร้านค้ามายคราฟ</p>
                 </div>
               </div>
 
-              {/* Nav bar — surface bg, themed text */}
+              {/* Nav bar — surface bg, primary active link, muted inactive */}
               <div className="h-8 rounded-lg flex items-center justify-center gap-4 px-3 border"
-                style={{
-                  backgroundColor: displayTheme.isDark ? 'rgba(255,255,255,0.05)' : '#ffffff',
-                  borderColor: displayTheme.preview.accent + '30',
-                }}>
+                style={{ backgroundColor: s.surface, borderColor: s.border }}>
                 {['Home','Shop','Gacha','Topup'].map((item, i) => (
                   <span key={item} className="text-[10px] font-bold"
                     style={{
-                      color: i===0 ? displayTheme.preview.accent : (displayTheme.isDark?'rgba(255,255,255,0.5)':'#6b7280'),
-                      borderBottom: i===0?`2px solid ${displayTheme.preview.accent}`:'none',
-                      paddingBottom: i===0?'1px':'0',
+                      color: i===0 ? s.primary : s.foregroundMuted,
+                      borderBottom: i===0 ? `2px solid ${s.primary}` : 'none',
+                      paddingBottom: i===0 ? '1px' : '0',
                     }}>{item}</span>
                 ))}
               </div>
 
               {/* Cards row */}
               <div className="grid grid-cols-2 gap-2">
-                {/* Wallet */}
+                {/* Wallet — real wallet gradient */}
                 <div className="rounded-lg p-2.5 text-white"
-                  style={{ background: `linear-gradient(135deg, ${displayTheme.preview.to}, ${displayTheme.preview.from})` }}>
+                  style={{ background: `linear-gradient(135deg, ${s.walletFrom}, ${s.walletTo})` }}>
                   <p className="text-[7px] font-black uppercase tracking-widest opacity-70">ยอดเงิน</p>
                   <p className="text-base font-black mt-0.5">1,500 <span className="text-[10px] opacity-70">฿</span></p>
                 </div>
-                {/* Buttons */}
+                {/* Buttons — primary fill + primary outline (matches real CTAs) */}
                 <div className="rounded-lg p-2 border flex flex-col gap-1.5"
-                  style={{ backgroundColor: displayTheme.isDark?displayTheme.preview.bg:'#fff', borderColor: displayTheme.preview.accent+'40' }}>
-                  <div className="w-full h-5 rounded-md flex items-center justify-center text-white text-[9px] font-bold"
-                    style={{ backgroundColor: displayTheme.preview.accent }}>ซื้อสินค้า</div>
+                  style={{ backgroundColor: s.surface, borderColor: s.border }}>
+                  <div className="w-full h-5 rounded-md flex items-center justify-center text-[9px] font-bold"
+                    style={{ backgroundColor: s.primary, color: s.primaryFg }}>ซื้อสินค้า</div>
                   <div className="w-full h-5 rounded-md flex items-center justify-center text-[9px] font-bold border"
-                    style={{ color: displayTheme.preview.accent, borderColor: displayTheme.preview.accent+'40', backgroundColor: displayTheme.preview.accent+'10' }}>ดูสินค้า</div>
+                    style={{ color: s.primary, borderColor: s.primary, backgroundColor: 'transparent' }}>ดูสินค้า</div>
                 </div>
               </div>
 
-              {/* Palette */}
-              <div className="rounded-lg p-2.5 border"
-                style={{ backgroundColor: displayTheme.isDark?displayTheme.preview.bg:'#fff', borderColor: displayTheme.preview.accent+'25' }}>
-                <p className="text-[8px] font-bold uppercase tracking-wider mb-2"
-                  style={{ color: displayTheme.isDark?'#94a3b8':'#9ca3af' }}>Color Palette</p>
-                <div className="flex items-center gap-2">
-                  <Swatch color={displayTheme.preview.from} />
-                  <Swatch color={displayTheme.preview.accent} />
-                  <Swatch color={displayTheme.preview.to} />
-                  <Swatch color={displayTheme.preview.bg} />
+              {/* Text hierarchy + price sample */}
+              <div className="rounded-lg p-2.5 border space-y-1" style={{ backgroundColor: s.surface, borderColor: s.border }}>
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-black" style={{ color: s.foreground }}>หัวข้อสินค้า</p>
+                  <span className="text-[11px] font-black" style={{ color: s.price }}>99 ฿</span>
+                </div>
+                <p className="text-[9px] font-medium" style={{ color: s.foregroundMuted }}>ข้อความรอง อ่านชัดเจน</p>
+                <p className="text-[8px]" style={{ color: s.foregroundSubtle }}>ข้อความจาง (hint)</p>
+              </div>
+
+              {/* Palette — real tokens */}
+              <div className="rounded-lg p-2.5 border" style={{ backgroundColor: s.surface, borderColor: s.border }}>
+                <p className="text-[8px] font-bold uppercase tracking-wider mb-2" style={{ color: s.foregroundSubtle }}>Color Tokens</p>
+                <div className="flex items-center gap-2.5">
+                  <Swatch color={s.primary} label="Primary" />
+                  <Swatch color={s.accent} label="Accent" />
+                  <Swatch color={s.background} label="BG" border />
+                  <Swatch color={s.surface} label="Surface" border />
+                  <Swatch color={s.border} label="Border" border />
                   <div className="flex-1 text-right">
                     <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full"
-                      style={{
-                        backgroundColor: displayTheme.isDark?'rgba(255,255,255,0.08)':'#f3f4f6',
-                        color: displayTheme.isDark?'#94a3b8':'#6b7280',
-                      }}>
-                      {displayTheme.isDark?'Dark':'Light'}
+                      style={{ backgroundColor: s.surfaceHover, color: s.foregroundMuted }}>
+                      {displayTheme.isDark ? 'Dark' : 'Light'}
                     </span>
                   </div>
                 </div>
@@ -322,8 +327,8 @@ export default function AppearancePage() {
           <div className="space-y-2">
             {[
               { icon: 'fa-bolt', bg: 'bg-blue-50', color: 'text-blue-500', title: 'อัพเดททันที', desc: 'ผู้ใช้เห็นผลทันทีหลังบันทึก ไม่ต้อง refresh' },
+              { icon: 'fa-eye', bg: 'bg-green-50', color: 'text-green-500', title: 'พรีวิว = สีจริง', desc: 'สีในพรีวิวคือสีที่แสดงจริงบนหน้าเว็บ' },
               { icon: 'fa-display', bg: 'bg-purple-50', color: 'text-purple-500', title: 'หน้าบ้านเท่านั้น', desc: 'ไม่กระทบ Admin Panel' },
-              { icon: 'fa-leaf', bg: 'bg-green-50', color: 'text-green-500', title: 'ธีมเริ่มต้น', desc: 'Minecraft Green' },
             ].map(item => (
               <div key={item.title} className="flex items-center gap-3 px-3 py-2.5 bg-white rounded-xl border border-gray-100 shadow-sm">
                 <div className={`w-7 h-7 rounded-lg ${item.bg} flex items-center justify-center flex-shrink-0`}>

@@ -59,14 +59,14 @@ function BoxCard({ box }: { box: LootBox }) {
   const isHotBox     = !isPaused && !box.sale_end && box.stock_limit == null && (box.sold_count ?? 0) > 0;
 
   return (
-    <div className={`group relative flex flex-col bg-white border rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md ${
+    <div className={`group relative flex flex-col bg-surface border rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md ${
       isPaused ? 'border-orange-200 opacity-80' :
-      soldOut || expired ? 'border-gray-200 opacity-60' :
-      'border-gray-200 hover:border-amber-300'
+      soldOut || expired ? 'border-border opacity-60' :
+      'border-border hover:border-accent/50'
     }`}>
 
       {/* Image area */}
-      <div className="relative aspect-[3/4] bg-amber-50 overflow-hidden">
+      <div className="relative aspect-[3/4] bg-accent/10 overflow-hidden">
 
         {/* Type badge — top left (priority: LIMITED > HOT > category) */}
         {isLimitedBox && (
@@ -128,7 +128,7 @@ function BoxCard({ box }: { box: LootBox }) {
           <img src={box.image} alt={box.name} className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-300" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <i className="fas fa-box text-5xl text-amber-200 group-hover:text-amber-300 transition-colors" />
+            <i className="fas fa-box text-5xl text-accent/30 group-hover:text-accent/50 transition-colors" />
           </div>
         )}
 
@@ -139,7 +139,7 @@ function BoxCard({ box }: { box: LootBox }) {
               {parseFloat(String(box.original_price)).toLocaleString()} ฿
             </span>
           ) : <span />}
-          <span className="bg-amber-500 text-white text-xs font-black px-2 py-1 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.3)] tabular-nums leading-none flex-shrink-0">
+          <span className="bg-accent text-accent-foreground text-xs font-black px-2 py-1 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.3)] tabular-nums leading-none flex-shrink-0">
             {parseFloat(String(box.price)).toLocaleString()} ฿
           </span>
         </div>
@@ -147,13 +147,13 @@ function BoxCard({ box }: { box: LootBox }) {
 
       {/* Sale info bar */}
       {(isPaused || active || unlimited || (remaining !== null && box.stock_limit! > 0)) && (
-        <div className={`px-2.5 py-1.5 border-t text-[10px] ${isPaused ? 'bg-orange-50 border-orange-100' : soldOut ? 'bg-red-50 border-red-100' : expired ? 'bg-gray-50 border-gray-100' : 'bg-amber-50 border-amber-100'}`}>
+        <div className={`px-2.5 py-1.5 border-t text-[10px] ${isPaused ? 'bg-orange-50 border-orange-100' : soldOut ? 'bg-red-50 border-red-100' : expired ? 'bg-gray-50 border-gray-100' : 'bg-accent/10 border-accent/20'}`}>
           {isPaused && <span className="flex items-center gap-1 font-bold text-orange-600"><i className="fas fa-pause text-[9px]" /> หยุดจำหน่าย</span>}
           {/* Timer + stock on same row when both present */}
           {(active || unlimited) && (
             <div className="flex items-center justify-between gap-1">
               {active && (
-                <span className="bg-amber-500 text-white font-black px-1.5 py-0.5 rounded tabular-nums shadow-[0_1px_0_#b45309] flex items-center gap-1 flex-shrink-0">
+                <span className="bg-accent text-accent-foreground font-black px-1.5 py-0.5 rounded tabular-nums shadow-[0_1px_0_rgb(var(--color-accent-hover))] flex items-center gap-1 flex-shrink-0">
                   <i className="fas fa-hourglass-half text-[8px]" />
                   <Countdown endTime={box.sale_end!} />
                 </span>
@@ -191,16 +191,16 @@ function BoxCard({ box }: { box: LootBox }) {
 
       {/* Info */}
       <div className="px-2.5 pt-2 pb-2.5 flex flex-col flex-1">
-        <p className="text-gray-900 font-bold text-xs leading-tight line-clamp-1">{box.name}</p>
-        {box.description && <p className="text-gray-400 text-[9px] line-clamp-1 mt-0.5">{box.description}</p>}
+        <p className="text-foreground font-bold text-xs leading-tight line-clamp-1">{box.name}</p>
+        {box.description && <p className="text-foreground-muted text-[9px] line-clamp-1 mt-0.5">{box.description}</p>}
         <div className="mt-2.5" />
         <Link href={`/lootbox/${box.id}`}
-          className={`w-full mt-auto pt-2 pb-2 text-[11px] font-bold rounded-lg text-white transition-all flex items-center justify-center gap-1.5 min-h-[34px] ${
+          className={`w-full mt-auto pt-2 pb-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 min-h-[34px] ${
             isPaused
-              ? 'bg-orange-400 shadow-[0_3px_0_#c2410c] cursor-not-allowed pointer-events-none'
+              ? 'bg-orange-400 text-white shadow-[0_3px_0_#c2410c] cursor-not-allowed pointer-events-none'
               : soldOut || expired
-              ? 'bg-gray-400 shadow-[0_3px_0_#9ca3af] cursor-not-allowed'
-              : 'bg-amber-500 hover:bg-amber-400 shadow-[0_3px_0_#b45309] hover:shadow-[0_1px_0_#b45309] hover:translate-y-[2px] active:shadow-none active:translate-y-[3px]'
+              ? 'bg-gray-400 text-white shadow-[0_3px_0_#9ca3af] cursor-not-allowed'
+              : 'bg-accent text-accent-foreground hover:brightness-105 shadow-[0_3px_0_rgb(var(--color-accent-hover))] hover:shadow-[0_1px_0_rgb(var(--color-accent-hover))] hover:translate-y-[2px] active:shadow-none active:translate-y-[3px]'
           }`}>
           <i className={`fas ${isPaused ? 'fa-pause' : soldOut || expired ? 'fa-info-circle' : 'fa-box-open'} text-[10px]`} />
           {isPaused ? 'หยุดจำหน่าย' : soldOut || expired ? 'ดูรายละเอียด' : 'เปิดกล่อง'}
@@ -294,18 +294,18 @@ export default function LootBoxListPage() {
 
         {/* Page header */}
         <div>
-          <h1 className="text-xl font-black text-gray-900 flex items-center gap-2">
-            <i className="fas fa-box-open text-amber-500 text-lg" />
+          <h1 className="text-xl font-black text-foreground flex items-center gap-2">
+            <i className="fas fa-box-open text-accent text-lg" />
             GACHA กล่องสุ่ม
           </h1>
-          <p className="text-gray-400 text-xs mt-0.5">สุ่มไอเท็มและรับของเข้าเกมทันที</p>
+          <p className="text-foreground-subtle text-xs mt-0.5">สุ่มไอเท็มและรับของเข้าเกมทันที</p>
         </div>
 
         {/* ── Main card ── */}
-        <div className="bg-white rounded-2xl shadow-[0_4px_0_#d1d5db,0_2px_20px_rgba(0,0,0,0.06)] border border-gray-100 overflow-hidden">
+        <div className="bg-surface rounded-2xl shadow-[0_4px_0_#d1d5db,0_2px_20px_rgba(0,0,0,0.06)] border border-border overflow-hidden">
 
           {/* ── Row 1: Type filters ── */}
-          <div className="px-4 py-2.5 border-b border-gray-100 flex items-center gap-2 flex-wrap">
+          <div className="px-4 py-2.5 border-b border-border flex items-center gap-2 flex-wrap">
             {TYPE_FILTERS.map(f => (
               <button
                 key={f.key}

@@ -32,6 +32,11 @@ module.exports = {
           foreground: 'rgb(var(--color-primary-foreground) / <alpha-value>)',
           muted: 'rgb(var(--color-primary-muted) / <alpha-value>)',
         },
+        accent: {
+          DEFAULT: 'rgb(var(--color-accent) / <alpha-value>)',
+          hover: 'rgb(var(--color-accent-hover) / <alpha-value>)',
+          foreground: 'rgb(var(--color-accent-foreground) / <alpha-value>)',
+        },
         success: {
           DEFAULT: 'rgb(var(--color-success) / <alpha-value>)',
           light: 'rgb(var(--color-success-light) / <alpha-value>)',
