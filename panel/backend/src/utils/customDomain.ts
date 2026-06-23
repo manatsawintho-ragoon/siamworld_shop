@@ -21,3 +21,27 @@ export function validateCustomHostname(
   }
   return { ok: true, value };
 }
+
+export type CustomDomainStatus = 'pending_dns' | 'pending_ssl' | 'active' | 'failed';
+
+/**
+ * Map a Cloudflare custom-hostname API response to our 4-state machine.
+ * - failed: terminal/blocked states.
+ * - active: both hostname and edge cert are live.
+ * - pending_dns: waiting for the customer's CNAME / DCV validation.
+ * - pending_ssl: cert is issuing or deploying (default for unknown in-progress states).
+ */
+export function mapCfHostnameStatus(cf: { status?: string; ssl?: { status?: string } }): CustomDomainStatus {
+  const hostStatus = cf.status ?? '';
+  const sslStatus = cf.ssl?.status ?? '';
+
+  if (['blocked', 'moved', 'deleted', 'pending_deletion'].includes(hostStatus)) return 'failed';
+  if (['deleted', 'pending_deletion'].includes(sslStatus)) return 'failed';
+
+  if (hostStatus === 'active' && sslStatus === 'active') return 'active';
+
+  if (['initializing', 'pending_validation'].includes(sslStatus)) return 'pending_dns';
+  if (['pending_issuance', 'pending_deployment', 'pending_cleanup'].includes(sslStatus)) return 'pending_ssl';
+
+  return 'pending_ssl';
+}
