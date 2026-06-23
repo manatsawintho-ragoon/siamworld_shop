@@ -415,6 +415,11 @@ function DashboardContent() {
                                 <td className="px-8 py-6">
                                   <div className="flex justify-end items-center gap-3">
                                     <Button variant="outline" size="sm" asChild className="h-10 px-5 rounded-xl font-bold border-border shadow-sm hover:border-primary/40 hover:bg-white cursor-pointer transition-all">
+                                      <Link href={`/dashboard/domain?id=${sub.id}`}>
+                                        <i className="fas fa-globe mr-2 opacity-60" /> โดเมน
+                                      </Link>
+                                    </Button>
+                                    <Button variant="outline" size="sm" asChild className="h-10 px-5 rounded-xl font-bold border-border shadow-sm hover:border-primary/40 hover:bg-white cursor-pointer transition-all">
                                       <Link href={`/dashboard/credentials?id=${sub.id}`}>
                                         จัดการ <i className="fas fa-angle-right ml-2 opacity-50" />
                                       </Link>
