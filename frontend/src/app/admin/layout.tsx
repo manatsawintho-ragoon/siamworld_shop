@@ -48,8 +48,8 @@ const MENU_CATEGORIES = [
         icon: 'fa-money-bill-wave',
         label: 'ระบบเติมเงิน',
         subItems: [
-          { href: '/admin/payment-settings', icon: 'fa-qrcode', label: 'PromptPay', desc: 'พร้อมเพย์ / QR Code' },
-          { href: '/admin/payment-settings#truemoney', icon: 'fa-gift', label: 'TrueMoney Wallet', desc: 'ซองของขวัญ / Angpao' },
+          { href: '/admin/payment-settings/promptpay', icon: 'fa-qrcode', label: 'PromptPay', desc: 'พร้อมเพย์ / QR Code' },
+          { href: '/admin/payment-settings/truemoney', icon: 'fa-gift', label: 'TrueMoney Wallet', desc: 'ซองของขวัญ / Angpao' },
         ]
       },
       { href: '/admin/purchases', icon: 'fa-wallet', label: 'Audit log' },

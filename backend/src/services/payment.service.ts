@@ -59,11 +59,29 @@ export function computeTopupCredit(
   return { creditAmount, multiplier };
 }
 
+// Per-method top-up bonus resolver. Each payment channel (promptpay / truemoney)
+// has its own enable flag + multiplier. Falls back to the legacy shared keys
+// (topup_bonus_enabled / topup_bonus_multiplier) so shops that haven't re-saved
+// their settings keep their existing promotion until they configure per-method.
+export function resolveTopupBonus(
+  settings: Record<string, string>,
+  method: 'promptpay' | 'truemoney',
+): { enabled: boolean; multiplier: string } {
+  const enabledKey = `topup_bonus_${method}_enabled`;
+  const multKey    = `topup_bonus_${method}_multiplier`;
+  const enabled = (settings[enabledKey] ?? settings['topup_bonus_enabled']) === 'true';
+  const multiplier = settings[multKey] ?? settings['topup_bonus_multiplier'] ?? '1';
+  return { enabled, multiplier };
+}
+
 class PaymentService {
   async createPromptPay(userId: number, amount: number) {
     if (amount < 10 || amount > 100000) throw new ValidationError('ยอดขั้นต่ำ 10 บาท');
 
     const settings = await settingsService.getAll();
+    if (settings['promptpay_enabled'] === 'false') {
+      throw new ValidationError('ระบบ PromptPay ปิดรับชำระเงินอยู่ กรุณาแจ้งผู้ดูแลระบบ');
+    }
     const promptpayId   = settings['promptpay_id']        || '';
     const promptpayName = [settings['promptpay_firstname'], settings['promptpay_lastname']]
       .filter(Boolean).join(' ') || settings['promptpay_name'] || '';
@@ -135,9 +153,9 @@ class PaymentService {
     if (!(amount > 0)) throw new ValidationError('ยอดเงินในซองของขวัญไม่ถูกต้อง');
 
     // ── L4: Bonus + atomic credit ────────────────────────────────────────────
-    const bonusEnabled = settings['topup_bonus_enabled'] === 'true';
+    const tmnBonus = resolveTopupBonus(settings, 'truemoney');
     const { creditAmount, multiplier } = computeTopupCredit(
-      amount, settings['topup_bonus_multiplier'] || '1', bonusEnabled,
+      amount, tmnBonus.multiplier || '1', tmnBonus.enabled,
     );
     const desc = multiplier > 1
       ? `ซองของขวัญ TrueMoney ฿${amount} (โบนัส x${multiplier} = ฿${creditAmount})`
@@ -329,6 +347,9 @@ class PaymentService {
     // Each shop configures their own promptpay_id in Admin → Payment Settings.
     // This is the primary receiver check for SaaS — no EasySlip portal registration needed.
     const allSettings = await settingsService.getAll();
+    if (allSettings['promptpay_enabled'] === 'false') {
+      throw new ValidationError('ระบบ PromptPay ปิดรับชำระเงินอยู่ กรุณาแจ้งผู้ดูแลระบบ');
+    }
     const configuredId = (allSettings['promptpay_id'] || '').replace(/[-\s]/g, '');
     if (!configuredId) {
       throw new ValidationError('ยังไม่ได้ตั้งค่าบัญชีรับเงิน กรุณาแจ้งผู้ดูแลระบบ');
@@ -379,9 +400,9 @@ class PaymentService {
     }
 
     // ── Layer 6: Bonus calculation ────────────────────────────────────────────
-    const bonusActive = allSettings['topup_bonus_enabled'] === 'true';
-    const rawMult = parseFloat(allSettings['topup_bonus_multiplier'] || '1');
-    const multiplier = (bonusActive && rawMult > 1) ? rawMult : 1;
+    const ppBonus = resolveTopupBonus(allSettings, 'promptpay');
+    const rawMult = parseFloat(ppBonus.multiplier || '1');
+    const multiplier = (ppBonus.enabled && rawMult > 1) ? rawMult : 1;
     let creditAmount = parseFloat((amount * multiplier).toFixed(2));
     let slipDesc = multiplier > 1
       ? `สลิป ฿${amount} (โบนัส x${multiplier} = ฿${creditAmount}, ${raw.sender?.bank?.short ?? 'Bank'})`
