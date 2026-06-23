@@ -588,7 +588,7 @@ export default function PaymentSettingsPage() {
       </div>
 
       {/* ── TrueMoney Wallet Card ────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
+      <div id="truemoney" className="scroll-mt-24 bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
         <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/60 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">

@@ -49,7 +49,7 @@ const MENU_CATEGORIES = [
         label: 'ระบบเติมเงิน',
         subItems: [
           { href: '/admin/payment-settings', icon: 'fa-qrcode', label: 'PromptPay', desc: 'พร้อมเพย์ / QR Code' },
-          { href: '#', icon: 'fa-gift', label: 'TrueMoney Wallet', desc: 'เร็วๆ นี้', disabled: true },
+          { href: '/admin/payment-settings#truemoney', icon: 'fa-gift', label: 'TrueMoney Wallet', desc: 'ซองของขวัญ / Angpao' },
         ]
       },
       { href: '/admin/purchases', icon: 'fa-wallet', label: 'Audit log' },
