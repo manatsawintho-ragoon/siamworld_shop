@@ -17,6 +17,8 @@ export default function TrueMoneyTopupPage() {
   const { settings } = useSettings();
 
   const tmnEnabled = settings['truemoney_enabled'] === 'true';
+  const tmnPhone   = (settings['truemoney_phone'] || '').replace(/\D/g, '');
+  const tmnPhoneFmt = tmnPhone.length === 10 ? `${tmnPhone.slice(0, 3)}-${tmnPhone.slice(3, 6)}-${tmnPhone.slice(6)}` : tmnPhone;
   const bonusEnabled = (settings['topup_bonus_truemoney_enabled'] ?? settings['topup_bonus_enabled']) === 'true';
   const bonusMult    = parseFloat(settings['topup_bonus_truemoney_multiplier'] ?? settings['topup_bonus_multiplier'] ?? '1') || 1;
   const hasBonus     = bonusEnabled && bonusMult > 1;
@@ -24,6 +26,15 @@ export default function TrueMoneyTopupPage() {
   const [step, setStep] = useState<Step>('input');
   const [giftLink, setGiftLink] = useState('');
   const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const copyPhone = () => {
+    if (!tmnPhone) return;
+    navigator.clipboard?.writeText(tmnPhone).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }).catch(() => {});
+  };
 
   const [successAmount,     setSuccessAmount]     = useState(0);
   const [successPaid,       setSuccessPaid]       = useState(0);
@@ -135,6 +146,25 @@ export default function TrueMoneyTopupPage() {
                     <p className="text-[10px] font-bold text-foreground-subtle uppercase tracking-widest mt-1">วางลิงก์ซองของขวัญที่นี่</p>
                   </div>
                 </div>
+
+                {/* ── Destination wallet (who the gift goes to) ── */}
+                {tmnPhone && (
+                  <div className="bg-red-50 border-2 border-[#ed1c24]/30 rounded-xl p-4 flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-[#ed1c24] flex items-center justify-center flex-shrink-0 shadow-sm">
+                      <i className="fas fa-mobile-alt text-white text-lg" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-black text-[#ed1c24] uppercase tracking-widest">ส่งซองของขวัญมาที่เบอร์นี้</p>
+                      <p className="text-xl font-black text-foreground font-mono tracking-wider leading-tight mt-0.5">{tmnPhoneFmt}</p>
+                      <p className="text-[10px] font-bold text-foreground-subtle mt-0.5">กระเป๋า TrueMoney ของร้าน (ระบบแลกซองเข้าให้อัตโนมัติ)</p>
+                    </div>
+                    <button type="button" onClick={copyPhone}
+                      className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border-2 border-[#ed1c24]/30 text-[#ed1c24] text-[11px] font-black hover:bg-red-50 transition-all">
+                      <i className={`fas ${copied ? 'fa-check' : 'fa-copy'}`} />
+                      {copied ? 'คัดลอกแล้ว' : 'คัดลอก'}
+                    </button>
+                  </div>
+                )}
 
                 <div className="space-y-3">
                   <div className="relative group">

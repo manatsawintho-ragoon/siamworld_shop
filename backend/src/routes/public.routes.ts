@@ -17,7 +17,7 @@ router.get('/settings', async (_req: Request, res: Response, next: NextFunction)
     const publicKeys = ['shop_name', 'shop_subtitle', 'shop_description', 'welcome_message', 'currency', 'currency_symbol', 'maintenance_mode', 'logo_url', 'favicon_url', 'banner_url', 'facebook_url', 'discord_invite', 'website_bg_url', 'server_ip', 'topup_bonus_enabled', 'topup_bonus_multiplier',
       'topup_bonus_promptpay_enabled', 'topup_bonus_promptpay_multiplier',
       'topup_bonus_truemoney_enabled', 'topup_bonus_truemoney_multiplier',
-      'promptpay_enabled', 'truemoney_enabled', 'theme_name', 'website_logo_url',
+      'promptpay_enabled', 'truemoney_enabled', 'truemoney_phone', 'theme_name', 'website_logo_url',
       // New appearance toggles (1 = visible, 0 = hidden).
       'show_lootbox_nav', 'show_download_nav', 'show_topup_rank_widget', 'show_topup_daily_widget', 'show_live_shop_widget', 'show_popular_widget',
       'show_welcome_marquee', 'show_server_status_widget', 'show_gacha_live_widget', 'show_exclusive_gacha', 'show_popular_gacha', 'show_new_arrivals',
