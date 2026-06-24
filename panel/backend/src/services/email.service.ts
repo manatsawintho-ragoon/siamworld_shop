@@ -289,7 +289,7 @@ class EmailService {
   /** Compact amber-styled notice email (renewal reminder / suspension). Shared by both flows. */
   private buildNoticeHtml(
     data: ExpiryEmailData,
-    opts: { mode: 'reminder' | 'suspend'; daysLeft?: number; support: SupportLinks }
+    opts: { mode: 'reminder' | 'suspend' | 'delete'; daysLeft?: number; deleteAt?: Date; support: SupportLinks }
   ): string {
     const { supportEmail, supportFacebook, supportDiscord } = opts.support;
     const rawName = data.displayName || '';
@@ -298,6 +298,7 @@ class EmailService {
     const panelUrl  = 'https://panel.siamsite.shop';
     const renewUrl  = `${panelUrl}/dashboard`;
     const expires   = this.formatExpiry(data.expiresAt);
+    const deleteOn  = opts.deleteAt ? this.formatExpiry(opts.deleteAt) : '';
 
     const INK   = '#1F1B16';
     const MUTED = '#8A7F73';
@@ -308,15 +309,23 @@ class EmailService {
     const FONT_TH = `'Sarabun','Prompt',-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif`;
 
     const isSuspend = opts.mode === 'suspend';
-    const ACCENT   = isSuspend ? RED : AMBER;
-    const tagText  = isSuspend ? 'ระงับการใช้งาน' : 'แจ้งเตือนหมดอายุ';
-    const headline = isSuspend
+    const isDelete  = opts.mode === 'delete';
+    const ACCENT   = (isSuspend || isDelete) ? RED : AMBER;
+    const tagText  = isDelete ? 'ลบร้านถาวร' : isSuspend ? 'ระงับการใช้งาน' : 'แจ้งเตือนหมดอายุ';
+    const headline = isDelete
+      ? `ร้าน <span style="color:${ACCENT};">${escapeHtml(data.shopName)}</span> ถูกลบถาวรแล้ว`
+      : isSuspend
       ? `ร้าน <span style="color:${ACCENT};">${escapeHtml(data.shopName)}</span> ถูกระงับชั่วคราว`
       : `ร้าน <span style="color:${ACCENT};">${escapeHtml(data.shopName)}</span> ใกล้หมดอายุ`;
-    const intro = isSuspend
-      ? `สวัสดีคุณ ${escapeHtml(displayName)} ร้านของคุณหมดอายุแล้วและถูกระงับการใช้งานชั่วคราว ต่ออายุเพื่อเปิดให้บริการอีกครั้งได้ทันที`
+    const suspendIntro = deleteOn
+      ? `สวัสดีคุณ ${escapeHtml(displayName)} ร้านของคุณหมดอายุแล้วและถูกระงับการใช้งานชั่วคราว หากไม่ต่ออายุภายในวันที่ ${escapeHtml(deleteOn)} ร้านและข้อมูลทั้งหมดจะถูกลบถาวรและกู้คืนไม่ได้`
+      : `สวัสดีคุณ ${escapeHtml(displayName)} ร้านของคุณหมดอายุแล้วและถูกระงับการใช้งานชั่วคราว ต่ออายุเพื่อเปิดให้บริการอีกครั้งได้ทันที`;
+    const intro = isDelete
+      ? `สวัสดีคุณ ${escapeHtml(displayName)} ร้านของคุณถูกลบออกจากระบบถาวรแล้วเนื่องจากไม่ได้ต่ออายุ ข้อมูลทั้งหมด (รวมฐานข้อมูลและโดเมน) ถูกลบและไม่สามารถกู้คืนได้ หากต้องการเปิดร้านใหม่ สามารถสมัครได้ที่หน้าแพแนล`
+      : isSuspend
+      ? suspendIntro
       : `สวัสดีคุณ ${escapeHtml(displayName)} ร้านของคุณจะหมดอายุในอีก ${opts.daysLeft} วัน ต่ออายุล่วงหน้าเพื่อให้ร้านเปิดต่อเนื่องไม่สะดุด`;
-    const ctaText = isSuspend ? 'ต่ออายุเพื่อกู้คืนร้าน' : 'ต่ออายุร้านค้า';
+    const ctaText = isDelete ? 'เปิดร้านใหม่' : isSuspend ? 'ต่ออายุเพื่อกู้คืนร้าน' : 'ต่ออายุร้านค้า';
 
     return `<!DOCTYPE html>
 <html lang="th">
@@ -348,7 +357,7 @@ class EmailService {
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           ${miniRow('ร้านค้า', escapeHtml(data.shopName), MUTED, INK)}
           ${miniRow('โดเมน', `<span style="font-family:'Prompt',monospace;">${escapeHtml(data.domain)}</span>`, MUTED, INK)}
-          ${miniRow(isSuspend ? 'หมดอายุเมื่อ' : 'จะหมดอายุ', escapeHtml(expires), MUTED, ACCENT, true)}
+          ${miniRow((isSuspend || isDelete) ? 'หมดอายุเมื่อ' : 'จะหมดอายุ', escapeHtml(expires), MUTED, ACCENT, true)}
         </table>
       </div>
     </div>
@@ -383,30 +392,37 @@ class EmailService {
 </html>`;
   }
 
-  private buildNoticeText(data: ExpiryEmailData, opts: { mode: 'reminder' | 'suspend'; daysLeft?: number }): string {
+  private buildNoticeText(data: ExpiryEmailData, opts: { mode: 'reminder' | 'suspend' | 'delete'; daysLeft?: number; deleteAt?: Date }): string {
     const rawName = data.displayName || '';
     const qMarks  = (rawName.match(/\?/g) || []).length;
     const displayName = (!rawName || qMarks > 3) ? data.email.split('@')[0] : rawName;
     const expires = this.formatExpiry(data.expiresAt);
-    const head = opts.mode === 'suspend'
+    const deleteOn = opts.deleteAt ? this.formatExpiry(opts.deleteAt) : '';
+    const head = opts.mode === 'delete'
+      ? `ร้าน "${data.shopName}" ถูกลบถาวรแล้ว (ไม่ได้ต่ออายุ)`
+      : opts.mode === 'suspend'
       ? `ร้าน "${data.shopName}" ถูกระงับชั่วคราว (หมดอายุแล้ว)`
       : `ร้าน "${data.shopName}" จะหมดอายุในอีก ${opts.daysLeft} วัน`;
-    return [
+    const lines = [
       `สวัสดีคุณ ${displayName}`,
       ``,
       head,
       `โดเมน: ${data.domain}`,
-      `${opts.mode === 'suspend' ? 'หมดอายุเมื่อ' : 'จะหมดอายุ'}: ${expires}`,
-      ``,
-      `ต่ออายุที่: https://panel.siamsite.shop/dashboard`,
-      ``,
-      `SIAMSITE STORE`,
-    ].join('\n');
+      `${opts.mode === 'reminder' ? 'จะหมดอายุ' : 'หมดอายุเมื่อ'}: ${expires}`,
+    ];
+    if (opts.mode === 'suspend' && deleteOn) {
+      lines.push(`หากไม่ต่ออายุภายใน ${deleteOn} ร้านและข้อมูลทั้งหมดจะถูกลบถาวร`);
+    }
+    if (opts.mode === 'delete') {
+      lines.push(`ข้อมูลทั้งหมด (ฐานข้อมูลและโดเมน) ถูกลบถาวรและกู้คืนไม่ได้`);
+    }
+    lines.push(``, `${opts.mode === 'delete' ? 'เปิดร้านใหม่ที่' : 'ต่ออายุที่'}: https://panel.siamsite.shop/dashboard`, ``, `SIAMSITE STORE`);
+    return lines.join('\n');
   }
 
   private async sendNotice(
     data: ExpiryEmailData,
-    opts: { mode: 'reminder' | 'suspend'; daysLeft?: number }
+    opts: { mode: 'reminder' | 'suspend' | 'delete'; daysLeft?: number; deleteAt?: Date }
   ): Promise<void> {
     const cfg = await this.getClient();
     if (!cfg) {
@@ -423,7 +439,9 @@ class EmailService {
       supportFacebook: s['support_facebook'] || undefined,
       supportDiscord:  s['support_discord'] || undefined,
     };
-    const subject = opts.mode === 'suspend'
+    const subject = opts.mode === 'delete'
+      ? `ร้าน ${data.shopName} ถูกลบถาวรแล้ว`
+      : opts.mode === 'suspend'
       ? `ร้าน ${data.shopName} ถูกระงับ: ต่ออายุเพื่อเปิดใช้งาน`
       : `ร้าน ${data.shopName} จะหมดอายุในอีก ${opts.daysLeft} วัน`;
     try {
@@ -448,9 +466,15 @@ class EmailService {
     return this.sendNotice(data, { mode: 'reminder', daysLeft });
   }
 
-  /** Notice sent when a shop is suspended after expiry. No-op if Resend not configured. */
-  async sendSuspensionNotice(data: ExpiryEmailData): Promise<void> {
-    return this.sendNotice(data, { mode: 'suspend' });
+  /** Notice sent when a shop is suspended after expiry. `deleteAt` (when given) warns the
+   *  customer of the permanent-deletion date. No-op if Resend not configured. */
+  async sendSuspensionNotice(data: ExpiryEmailData, deleteAt?: Date): Promise<void> {
+    return this.sendNotice(data, { mode: 'suspend', deleteAt });
+  }
+
+  /** Final notice sent when a shop is permanently deleted. No-op if Resend not configured. */
+  async sendDeletionNotice(data: ExpiryEmailData): Promise<void> {
+    return this.sendNotice(data, { mode: 'delete' });
   }
 
   /** Welcome/confirmation email sent right after a panel account is created.

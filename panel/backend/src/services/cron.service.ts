@@ -46,7 +46,16 @@ export function startCronJobs(): void {
     }).catch(err => console.error('[Cron] suspend failed:', err));
   });
 
-  console.log('[Cron] Jobs scheduled (notify: 09:00 daily, suspend: hourly)');
+  // Run daily at 03:00 — permanently delete shops suspended and unrenewed past the
+  // delete threshold (default 7 days). DESTRUCTIVE; guarded to status='suspended' only.
+  cron.schedule('0 3 * * *', () => {
+    withRedisLock('panel_cron_lock:delete', 30 * 60, async () => {
+      console.log('[Cron] Checking for long-suspended shops to permanently delete...');
+      await notificationService.deleteExpired();
+    }).catch(err => console.error('[Cron] delete failed:', err));
+  });
+
+  console.log('[Cron] Jobs scheduled (notify: 09:00 daily, suspend: hourly, delete: 03:00 daily)');
 }
 
 /** Exposed so other services (deploy port allocation, etc.) can reuse the same primitive. */

@@ -8,6 +8,7 @@ import { Server as SocketIO } from 'socket.io';
 import { config } from './config';
 import { logger } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
+import { isWsOriginAllowed } from './utils/wsOrigin';
 import { pool } from './database/connection';
 import { redis } from './database/redis';
 import { RconManager } from './services/rcon-manager';
@@ -37,8 +38,15 @@ const allowedOrigins = config.corsOrigin === '*'
   : config.corsOrigin.split(',').map(o => o.trim()).filter(Boolean);
 
 // Socket.IO
+// cors.origin: true reflects the request origin so the browser never sees a CORS
+// error; allowRequest is the real gate (same-origin custom domains + configured
+// origins). The players namespace only broadcasts public online counts.
 const io = new SocketIO(server, {
-  cors: { origin: allowedOrigins, methods: ['GET', 'POST'] },
+  cors: { origin: true, methods: ['GET', 'POST'], credentials: true },
+  allowRequest: (req, cb) => {
+    const ok = isWsOriginAllowed(req.headers.origin, req.headers.host, allowedOrigins);
+    cb(ok ? null : 'origin_not_allowed', ok);
+  },
   pingInterval: 25000,
   pingTimeout: 60000,
 });

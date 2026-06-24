@@ -248,6 +248,87 @@ class CloudflareService {
       console.warn(`[CF] deleteDnsRecord(${subdomain}) failed:`, this.extractError(err));
     }
   }
+
+  /**
+   * One-time: create the proxied fallback-origin record (custom.siamsite.shop -> origin)
+   * and register it as the zone's Cloudflare-for-SaaS fallback origin. Idempotent.
+   * Cloudflare sends this hostname as the SNI to our origin, so NPM can serve the
+   * existing *.siamsite.shop cert for the TLS handshake while routing by Host header.
+   */
+  async ensureFallbackOrigin(fallbackHost: string): Promise<void> {
+    const cfg = await this.getConfig();
+    if (!this.isConfigured(cfg)) {
+      throw new Error('Cloudflare not configured (api_key / zone_id / server_ip missing)');
+    }
+    // 1. Proxied A record for the fallback host.
+    const dnsBase = `https://api.cloudflare.com/client/v4/zones/${cfg.zoneId}/dns_records`;
+    try {
+      const list = await this.request('get', `${dnsBase}?type=A&name=${encodeURIComponent(fallbackHost)}`, cfg);
+      if (!(list.data.result?.length > 0)) {
+        await this.request('post', dnsBase, cfg, {
+          type: 'A', name: fallbackHost, content: cfg.serverIp, proxied: true, ttl: 1,
+        });
+      }
+      // 2. Register the fallback origin for custom hostnames.
+      await this.request(
+        'put',
+        `https://api.cloudflare.com/client/v4/zones/${cfg.zoneId}/custom_hostnames/fallback_origin`,
+        cfg,
+        { origin: fallbackHost }
+      );
+      console.log(`[CF] Fallback origin ensured: ${fallbackHost}`);
+    } catch (err) {
+      throw new Error(this.extractError(err));
+    }
+  }
+
+  /**
+   * Create a Cloudflare custom hostname with HTTP DCV (no extra TXT record needed -
+   * the single CNAME is enough). Cloudflare auto-issues the edge cert.
+   */
+  async createCustomHostname(hostname: string): Promise<{ id: string; status: string; ssl: { status: string } }> {
+    const cfg = await this.getConfig();
+    if (!this.isConfigured(cfg)) {
+      throw new Error('Cloudflare not configured (api_key / zone_id / server_ip missing)');
+    }
+    const base = `https://api.cloudflare.com/client/v4/zones/${cfg.zoneId}/custom_hostnames`;
+    try {
+      const resp = await this.request('post', base, cfg, {
+        hostname,
+        ssl: { method: 'http', type: 'dv', settings: { min_tls_version: '1.2' } },
+      });
+      const r = resp.data.result;
+      return { id: r.id, status: r.status, ssl: { status: r.ssl?.status ?? 'initializing' } };
+    } catch (err) {
+      throw new Error(this.extractError(err));
+    }
+  }
+
+  /** Read a custom hostname's status for polling. */
+  async getCustomHostname(id: string): Promise<{ status: string; ssl: { status: string } }> {
+    const cfg = await this.getConfig();
+    const base = `https://api.cloudflare.com/client/v4/zones/${cfg.zoneId}/custom_hostnames/${id}`;
+    try {
+      const resp = await this.request('get', base, cfg);
+      const r = resp.data.result;
+      return { status: r.status, ssl: { status: r.ssl?.status ?? '' } };
+    } catch (err) {
+      throw new Error(this.extractError(err));
+    }
+  }
+
+  /** Delete a custom hostname (detach). Best-effort: tolerates "not found". */
+  async deleteCustomHostname(id: string): Promise<void> {
+    const cfg = await this.getConfig();
+    if (!this.isConfigured(cfg)) return;
+    const base = `https://api.cloudflare.com/client/v4/zones/${cfg.zoneId}/custom_hostnames/${id}`;
+    try {
+      await this.request('delete', base, cfg);
+      console.log(`[CF] Deleted custom hostname ${id}`);
+    } catch (err) {
+      console.warn(`[CF] deleteCustomHostname(${id}) failed:`, this.extractError(err));
+    }
+  }
 }
 
 export const cloudflareService = new CloudflareService();

@@ -206,6 +206,74 @@ class NpmService {
     });
   }
 
+  /**
+   * Attach a custom domain to an existing shop proxy host by adding it to domain_names.
+   * NPM routes by Host header, so the shop is served for both its siamsite subdomain
+   * and the custom domain. No new origin cert: Cloudflare terminates the edge cert and
+   * connects to origin with SNI = the fallback origin (covered by *.siamsite.shop).
+   */
+  async addDomainToProxyHost(shopDomain: string, customDomain: string): Promise<void> {
+    const hosts = await this.api('get', '/nginx/proxy-hosts');
+    const existing = (hosts as {
+      domain_names: string[]; id: number; forward_scheme: string; forward_host: string;
+      forward_port: number; access_list_id: number; certificate_id: number; ssl_forced: boolean;
+      http2_support: boolean; block_exploits: boolean; caching_enabled: boolean;
+      allow_websocket_upgrade: boolean; advanced_config: string;
+    }[]).find(h => h.domain_names.includes(shopDomain));
+    if (!existing) throw new Error(`ไม่พบ proxy host สำหรับ ${shopDomain} ใน NPM`);
+
+    if (existing.domain_names.includes(customDomain)) return;
+
+    await this.api('put', `/nginx/proxy-hosts/${existing.id}`, {
+      domain_names: [...existing.domain_names, customDomain],
+      forward_scheme: existing.forward_scheme,
+      forward_host: existing.forward_host,
+      forward_port: existing.forward_port,
+      access_list_id: existing.access_list_id,
+      certificate_id: existing.certificate_id,
+      ssl_forced: existing.ssl_forced,
+      http2_support: existing.http2_support,
+      block_exploits: existing.block_exploits,
+      caching_enabled: existing.caching_enabled,
+      allow_websocket_upgrade: existing.allow_websocket_upgrade,
+      advanced_config: existing.advanced_config,
+      locations: [],
+      enabled: true,
+    });
+    console.log(`[NPM] Attached ${customDomain} to proxy host ${existing.id} (${shopDomain})`);
+  }
+
+  /** Detach a custom domain from a shop proxy host. No-op if absent. */
+  async removeDomainFromProxyHost(shopDomain: string, customDomain: string): Promise<void> {
+    const hosts = await this.api('get', '/nginx/proxy-hosts');
+    const existing = (hosts as {
+      domain_names: string[]; id: number; forward_scheme: string; forward_host: string;
+      forward_port: number; access_list_id: number; certificate_id: number; ssl_forced: boolean;
+      http2_support: boolean; block_exploits: boolean; caching_enabled: boolean;
+      allow_websocket_upgrade: boolean; advanced_config: string;
+    }[]).find(h => h.domain_names.includes(shopDomain));
+    if (!existing) return;
+    if (!existing.domain_names.includes(customDomain)) return;
+
+    await this.api('put', `/nginx/proxy-hosts/${existing.id}`, {
+      domain_names: existing.domain_names.filter(d => d !== customDomain),
+      forward_scheme: existing.forward_scheme,
+      forward_host: existing.forward_host,
+      forward_port: existing.forward_port,
+      access_list_id: existing.access_list_id,
+      certificate_id: existing.certificate_id,
+      ssl_forced: existing.ssl_forced,
+      http2_support: existing.http2_support,
+      block_exploits: existing.block_exploits,
+      caching_enabled: existing.caching_enabled,
+      allow_websocket_upgrade: existing.allow_websocket_upgrade,
+      advanced_config: existing.advanced_config,
+      locations: [],
+      enabled: true,
+    });
+    console.log(`[NPM] Detached ${customDomain} from proxy host ${existing.id} (${shopDomain})`);
+  }
+
   async deleteProxyHost(domain: string): Promise<void> {
     const hosts = await this.api('get', '/nginx/proxy-hosts');
     const host = (hosts as { domain_names: string[]; id: number }[])

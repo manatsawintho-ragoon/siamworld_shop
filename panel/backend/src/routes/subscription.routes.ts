@@ -3,6 +3,7 @@ import { asyncRoute } from '../middleware/asyncRoute';
 import { requireAuth } from '../middleware/auth';
 import { subscriptionService } from '../services/subscription.service';
 import { deployService } from '../services/deploy.service';
+import { customDomainService } from '../services/custom-domain.service';
 import { ValidationError } from '../utils/errors';
 import { pool } from '../database/connection';
 
@@ -130,6 +131,35 @@ router.get('/:id/credentials', requireAuth, asyncRoute(async (req, res) => {
     setupUrl: `https://${sub.domain}/admin/setup`,
     mcIp: sub.mc_ip || null,
   });
+}));
+
+// ── Custom domain (BYOD) ──────────────────────────────────────────────────────
+// Ownership is enforced by subscriptionService.getById(id, userId) (throws if not
+// the owner), same guard as every other /:id route.
+
+router.get('/:id/custom-domain', requireAuth, asyncRoute(async (req, res) => {
+  const sub = await subscriptionService.getById(parseInt(req.params.id), req.user!.userId);
+  const data = await customDomainService.getCustomDomain(sub.id);
+  res.json({ success: true, data });
+}));
+
+router.post('/:id/custom-domain', requireAuth, asyncRoute(async (req, res) => {
+  const sub = await subscriptionService.getById(parseInt(req.params.id), req.user!.userId);
+  const { hostname } = req.body as { hostname?: string };
+  const data = await customDomainService.requestCustomDomain(sub.id, hostname ?? '');
+  res.json({ success: true, data });
+}));
+
+router.post('/:id/custom-domain/verify', requireAuth, asyncRoute(async (req, res) => {
+  const sub = await subscriptionService.getById(parseInt(req.params.id), req.user!.userId);
+  const data = await customDomainService.pollCustomDomain(sub.id);
+  res.json({ success: true, data });
+}));
+
+router.delete('/:id/custom-domain', requireAuth, asyncRoute(async (req, res) => {
+  const sub = await subscriptionService.getById(parseInt(req.params.id), req.user!.userId);
+  await customDomainService.removeCustomDomain(sub.id);
+  res.json({ success: true });
 }));
 
 export default router;
