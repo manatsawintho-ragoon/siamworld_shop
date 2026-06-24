@@ -8,6 +8,7 @@ import { walletService } from './wallet.service';
 import { deployService } from './deploy.service';
 import { settingsService } from './settings.service';
 import { npmService } from './npm.service';
+import { customDomainService } from './custom-domain.service';
 import { ValidationError, ConflictError, NotFoundError } from '../utils/errors';
 import { RowDataPacket, ResultSetHeader, PoolConnection } from 'mysql2/promise';
 import { config } from '../config';
@@ -294,6 +295,8 @@ class SubscriptionService {
     if (sub.status === 'suspended' || sub.status === 'expired') {
       try {
         await deployService.startShop(sub.shop_name);
+        // Restore the custom domain that was detached from NPM on suspend.
+        await customDomainService.onResume(sub.domain, sub.custom_domain, sub.custom_domain_status);
       } catch (err) {
         console.error(`[renew] startShop failed for ${sub.shop_name}, falling back to redeploy:`, (err as Error).message);
         deployService.deployAsync(subscriptionId, sub.shop_name, sub.domain, sub.mc_ip || undefined);
@@ -416,6 +419,7 @@ class SubscriptionService {
       case 'suspend':
         await deployService.stopShop(sub.shop_name);
         await pool.execute('UPDATE subscriptions SET status="suspended" WHERE id=?', [subscriptionId]);
+        await customDomainService.onSuspend(sub.domain, sub.custom_domain, sub.custom_domain_status);
         break;
       case 'restart':
         await deployService.restartShop(sub.shop_name);
@@ -423,6 +427,7 @@ class SubscriptionService {
       case 'unsuspend':
         await deployService.startShop(sub.shop_name);
         await pool.execute('UPDATE subscriptions SET status="active" WHERE id=?', [subscriptionId]);
+        await customDomainService.onResume(sub.domain, sub.custom_domain, sub.custom_domain_status);
         break;
     }
   }
@@ -430,6 +435,8 @@ class SubscriptionService {
   async adminRemove(subscriptionId: number) {
     const sub = await this.getById(subscriptionId);
     await deployService.removeShop(sub.shop_name, sub.domain, sub.mc_ip || undefined, sub.mysql_exposed_port || undefined);
+    // Stop the Cloudflare custom hostname from lingering (and consuming for-SaaS quota).
+    await customDomainService.onTeardown(sub.custom_hostname_id);
     await pool.execute('DELETE FROM subscriptions WHERE id=?', [subscriptionId]);
   }
 

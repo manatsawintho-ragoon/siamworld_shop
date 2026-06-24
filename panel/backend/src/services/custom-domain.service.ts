@@ -71,6 +71,48 @@ class CustomDomainService {
     return { status };
   }
 
+  /**
+   * Shop suspended: take the custom domain offline by detaching it from the NPM proxy
+   * host, but KEEP the Cloudflare custom hostname and DB fields so a renew/unsuspend can
+   * restore it without the customer re-doing DNS. Best-effort (never throws).
+   */
+  async onSuspend(shopDomain: string, customDomain: string | null, status: string | null): Promise<void> {
+    if (!customDomain || status !== 'active') return;
+    try {
+      await npmService.removeDomainFromProxyHost(shopDomain, customDomain);
+    } catch (err) {
+      console.warn('[CustomDomain] onSuspend detach failed:', (err as Error).message);
+    }
+  }
+
+  /**
+   * Shop resumed (unsuspend/renew): re-attach the custom domain to the NPM proxy host.
+   * Only when it was active. Best-effort (never throws). addDomainToProxyHost is idempotent.
+   */
+  async onResume(shopDomain: string, customDomain: string | null, status: string | null): Promise<void> {
+    if (!customDomain || status !== 'active') return;
+    try {
+      await npmService.addDomainToProxyHost(shopDomain, customDomain);
+    } catch (err) {
+      console.warn('[CustomDomain] onResume reattach failed:', (err as Error).message);
+    }
+  }
+
+  /**
+   * Shop being torn down (manual delete or auto-delete after grace): delete the Cloudflare
+   * custom hostname so it stops consuming the for-SaaS hostname quota/billing. The NPM proxy
+   * host itself is removed by deployService.removeShop, so no NPM detach is needed here.
+   * Best-effort (never throws).
+   */
+  async onTeardown(customHostnameId: string | null): Promise<void> {
+    if (!customHostnameId) return;
+    try {
+      await cloudflareService.deleteCustomHostname(customHostnameId);
+    } catch (err) {
+      console.warn('[CustomDomain] onTeardown CF delete failed:', (err as Error).message);
+    }
+  }
+
   async removeCustomDomain(subscriptionId: number) {
     const sub = await this.loadSub(subscriptionId);
     if (!sub.custom_domain) return;
