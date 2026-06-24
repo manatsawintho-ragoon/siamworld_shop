@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
+import DomainModal from '@/components/domain/DomainModal';
 
 interface Sub {
   id: number; shop_name: string; domain: string; status: string;
@@ -82,6 +83,7 @@ function DashboardContent() {
   const [usedTrial, setUsedTrial] = useState(false);
   const [usedIntro, setUsedIntro] = useState(false);
   const [promos, setPromos] = useState<Promo[]>([]);
+  const [domainSubId, setDomainSubId] = useState<number | null>(null);
 
   const fetchSubs = useCallback(async () => {
     setLoadingSubs(true);
@@ -414,10 +416,8 @@ function DashboardContent() {
                                 </td>
                                 <td className="px-8 py-6">
                                   <div className="flex justify-end items-center gap-3">
-                                    <Button variant="outline" size="sm" asChild className="h-10 px-5 rounded-xl font-bold border-border shadow-sm hover:border-primary/40 hover:bg-white cursor-pointer transition-all">
-                                      <Link href={`/dashboard/domain?id=${sub.id}`}>
-                                        <i className="fas fa-globe mr-2 opacity-60" /> โดเมน
-                                      </Link>
+                                    <Button variant="outline" size="sm" onClick={() => setDomainSubId(sub.id)} className="h-10 px-5 rounded-xl font-bold border-border shadow-sm hover:border-primary/40 hover:bg-white cursor-pointer transition-all">
+                                      <i className="fas fa-globe mr-2 opacity-60" /> โดเมน
                                     </Button>
                                     <Button variant="outline" size="sm" asChild className="h-10 px-5 rounded-xl font-bold border-border shadow-sm hover:border-primary/40 hover:bg-white cursor-pointer transition-all">
                                       <Link href={`/dashboard/credentials?id=${sub.id}`}>
@@ -566,6 +566,8 @@ function DashboardContent() {
            )}
         </div>
       </div>
+
+      <DomainModal subId={domainSubId} isOpen={domainSubId !== null} onClose={() => setDomainSubId(null)} />
     </div>
   );
 }
