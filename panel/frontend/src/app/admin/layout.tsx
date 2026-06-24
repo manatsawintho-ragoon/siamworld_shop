@@ -9,7 +9,8 @@ import CommandPalette from '@/components/CommandPalette';
 import { 
   PieChart, Store, Users, Receipt, Ticket,
   LifeBuoy, History, Settings, Sun, Moon, Megaphone,
-  ChevronDown, LogOut, LayoutDashboard, Menu, X, Loader2
+  ChevronDown, LogOut, LayoutDashboard, Menu, X, Loader2,
+  GalleryHorizontalEnd
 } from 'lucide-react';
 
 const MENU_CATEGORIES = [
@@ -37,6 +38,7 @@ const MENU_CATEGORIES = [
     title: 'System',
     items: [
       { href: '/admin/announcements', label: 'ประกาศอัพเดท', icon: Megaphone },
+      { href: '/admin/showcase', label: 'ตัวอย่างฟีเจอร์', icon: GalleryHorizontalEnd },
       { href: '/admin/support', label: 'แจ้งปัญหา (Tickets)', icon: LifeBuoy },
       { href: '/admin/audit-logs', label: 'บันทึกเหตุการณ์', icon: History },
       { href: '/admin/settings', label: 'ตั้งค่าระบบ', icon: Settings },

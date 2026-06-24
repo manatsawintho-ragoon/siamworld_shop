@@ -40,7 +40,7 @@ const FEATURES = [
   {
     icon: 'fa-qrcode',
     title: 'รับเงิน 24 ชม.',
-    desc: 'PromptPay + ตรวจสลิปอัตโนมัติ เงินเข้าทันทีแม้คุณนอน'
+    desc: 'PromptPay + TrueMoney อั่งเปา (ฟรี ไม่มีค่าธรรมเนียม) เงินเข้าทันทีแม้คุณนอน'
   },
   {
     icon: 'fa-box-open',
@@ -54,12 +54,15 @@ const FEATURES = [
   },
 ];
 
-const SHOWCASE_IMAGES = [
+interface ShowcaseSlide { src: string; title: string; desc: string }
+
+// Fallback slides shown when the admin hasn't configured any in the panel yet.
+const DEFAULT_SHOWCASE: ShowcaseSlide[] = [
   { src: '/images/homepage.png', title: 'หน้าแรกที่ทันสมัย', desc: 'ดึงดูดผู้เล่นด้วยดีไซน์ที่สวยงามและใช้งานง่าย' },
   { src: '/images/items_shop.png', title: 'ร้านค้าไอเท็ม', desc: 'จัดการหมวดหมู่และสินค้าได้ง่ายดายผ่านระบบหลังบ้าน' },
   { src: '/images/gacha_system.jpg', title: 'ระบบกล่องสุ่ม Gacha', desc: 'เพิ่มความตื่นเต้นด้วยการสุ่มไอเท็มพร้อมแอนิเมชั่นระดับพรีเมียม' },
   { src: '/images/inventory_system.jpg', title: 'ระบบคลังเว็บ', desc: 'เก็บไอเท็มที่สุ่มได้ไว้ในคลังเว็บ เลือกรับเข้าตัวได้ทุกเมื่อ' },
-  { src: '/images/topup_system.jpg', title: 'ระบบเติมเงินอัตโนมัติ', desc: 'รองรับ PromptPay QR Code ตรวจสอบยอดเงินทันที 24 ชม.' },
+  { src: '/images/topup_system.jpg', title: 'ระบบเติมเงินอัตโนมัติ', desc: 'รองรับ PromptPay และ TrueMoney อั่งเปา ตรวจสอบยอดเงินทันที 24 ชม.' },
   { src: '/images/theme_change.png', title: 'ปรับแต่งธีมได้อิสระ', desc: 'เปลี่ยนสีและรูปแบบของร้านค้าให้เข้ากับเซิร์ฟเวอร์ของคุณ' },
 ];
 
@@ -102,6 +105,13 @@ function PackageCard({ pkg, isPromo = false, isTrial = false, onShowEasySlip }: 
             <li className={`flex items-center gap-2.5 text-[13px] font-medium ${isTrial ? 'text-muted-foreground/40' : 'text-muted-foreground'}`}>
               <i className={`fas ${isTrial ? 'fa-circle-xmark text-destructive/30' : 'fa-qrcode text-primary/50'} text-[10px]`} /> ตรวจสลิป PromptPay อัตโนมัติ 24 ชม.
             </li>
+            <li className="flex items-center gap-2.5 text-[13px] font-bold text-emerald-600">
+              <i className="fas fa-wallet text-emerald-500 text-[10px]" />
+              <span className="flex items-center gap-1.5 flex-wrap">
+                เติมผ่าน TrueMoney อั่งเปา ฟรี ไม่มีค่าธรรมเนียม
+                <span className="text-[8px] font-black uppercase tracking-wider bg-emerald-500 text-white px-1.5 py-0.5 rounded-full leading-none">ใหม่</span>
+              </span>
+            </li>
             <li className="flex items-center gap-2.5 text-[13px] font-medium text-muted-foreground">
               <i className="fas fa-shield-halved text-primary/50 text-[10px]" /> ระบบความปลอดภัย Docker Isolation
             </li>
@@ -110,8 +120,8 @@ function PackageCard({ pkg, isPromo = false, isTrial = false, onShowEasySlip }: 
           {!isTrial && (
             <div className="text-[10px] text-muted-foreground/80 leading-relaxed bg-secondary/30 p-3 rounded-2xl border border-border/50 font-medium">
               <div className="flex flex-col gap-2">
-                <span>* ไม่รวมค่าธรรมเนียม API ตรวจสลิป 0.359 บาท/สลิป (EasySlip)</span>
-                <button 
+                <span>* เฉพาะการตรวจสลิป PromptPay มีค่าธรรมเนียม API 0.359 บาท/สลิป (EasySlip) ส่วน TrueMoney อั่งเปา ใช้ฟรี ไม่มีค่าธรรมเนียม</span>
+                <button
                   onClick={onShowEasySlip}
                   className="w-fit text-[9px] font-black text-primary hover:text-primary/80 flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
@@ -149,6 +159,7 @@ function LandingContent() {
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
   const [showEasySlipPlan, setShowEasySlipPlan] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [showcase, setShowcase] = useState<ShowcaseSlide[]>(DEFAULT_SHOWCASE);
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -189,6 +200,11 @@ function LandingContent() {
       setStatsData(r.data);
     }).catch(() => {});
     api.get('/api/subscriptions/public-shops').then(r => { if (r.data.shops?.length) setShops(r.data.shops); }).catch(() => {});
+    // Admin-managed feature showcase; keep the built-in defaults if none configured.
+    api.get('/api/showcase').then(r => {
+      const items = (r.data.items || []) as { title: string; description: string; image_data: string }[];
+      if (items.length) setShowcase(items.map(i => ({ src: i.image_data, title: i.title, desc: i.description })));
+    }).catch(() => {});
   }, []);
 
   const segments = useMemo(() => [
@@ -230,11 +246,11 @@ function LandingContent() {
   }, [charIndex, segments]);
 
   const nextImage = () => {
-    setCurrentIndex((prev) => (prev + 1) % SHOWCASE_IMAGES.length);
+    setCurrentIndex((prev) => (prev + 1) % showcase.length);
   };
 
   const prevImage = () => {
-    setCurrentIndex((prev) => (prev - 1 + SHOWCASE_IMAGES.length) % SHOWCASE_IMAGES.length);
+    setCurrentIndex((prev) => (prev - 1 + showcase.length) % showcase.length);
   };
 
   useEffect(() => {
@@ -427,8 +443,8 @@ function LandingContent() {
                   <div className="lg:col-span-7 relative group cursor-pointer" onClick={() => setSelectedImage(currentIndex)}>
                     <div className="overflow-hidden rounded-[2rem] border border-border bg-secondary/30 shadow-xl relative h-[300px] md:h-[500px] flex items-center justify-center">
                       <motion.img 
-                        src={SHOWCASE_IMAGES[currentIndex].src} 
-                        alt={SHOWCASE_IMAGES[currentIndex].title}
+                        src={showcase[currentIndex].src} 
+                        alt={showcase[currentIndex].title}
                         className="max-w-full max-h-full object-contain p-4"
                         initial={{ scale: 0.95 }}
                         animate={{ scale: 1 }}
@@ -455,15 +471,15 @@ function LandingContent() {
                         ตัวอย่างฟีเจอร์
                       </Badge>
                       <h3 className="text-4xl md:text-5xl font-bold text-foreground leading-tight">
-                        {SHOWCASE_IMAGES[currentIndex].title}
+                        {showcase[currentIndex].title}
                       </h3>
                       <p className="text-xl text-muted-foreground leading-relaxed">
-                        {SHOWCASE_IMAGES[currentIndex].desc}
+                        {showcase[currentIndex].desc}
                       </p>
                     </motion.div>
                     
                     <div className="flex gap-3 pt-4">
-                      {SHOWCASE_IMAGES.map((_, i) => (
+                      {showcase.map((_, i) => (
                         <button
                           key={i}
                           onClick={() => setCurrentIndex(i)}
@@ -499,8 +515,8 @@ function LandingContent() {
                 onClick={(e) => e.stopPropagation()}
               >
                 <img 
-                  src={SHOWCASE_IMAGES[selectedImage].src} 
-                  alt={SHOWCASE_IMAGES[selectedImage].title}
+                  src={showcase[selectedImage].src} 
+                  alt={showcase[selectedImage].title}
                   className="max-w-full max-h-full object-contain rounded-xl shadow-2xl border border-border"
                 />
                 <Button
@@ -512,8 +528,8 @@ function LandingContent() {
                   <i className="fas fa-times text-2xl" />
                 </Button>
                 <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background to-transparent text-center">
-                   <h4 className="text-xl font-bold text-foreground">{SHOWCASE_IMAGES[selectedImage].title}</h4>
-                   <p className="text-muted-foreground">{SHOWCASE_IMAGES[selectedImage].desc}</p>
+                   <h4 className="text-xl font-bold text-foreground">{showcase[selectedImage].title}</h4>
+                   <p className="text-muted-foreground">{showcase[selectedImage].desc}</p>
                 </div>
               </motion.div>
             </motion.div>
@@ -529,6 +545,11 @@ function LandingContent() {
             <p className="text-muted-foreground text-lg font-medium leading-relaxed">
               ทุกแพ็กเกจได้รับฟีเจอร์ระดับพรีเมียมครบทุกอย่าง พร้อมระบบอัปเดตเวอร์ชันล่าสุดให้อัตโนมัติ ฟรีตลอดการใช้งาน
             </p>
+            <div className="mt-6 inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 font-bold text-sm">
+              <span className="text-[9px] font-black uppercase tracking-wider bg-emerald-500 text-white px-2 py-0.5 rounded-full">ใหม่</span>
+              <i className="fas fa-wallet" />
+              รองรับเติมเงินผ่าน TrueMoney อั่งเปา แล้ว ใช้ฟรี ไม่มีค่าธรรมเนียมเพิ่ม
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">

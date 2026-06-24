@@ -478,6 +478,10 @@ function OrderContent() {
                         <i className="fas fa-circle-info mr-1.5 text-primary" />
                         ราคาแพ็กเกจไม่รวมค่าธรรมเนียม EasySlip API ฿{easyslipFee} ต่อรายการเติมเงิน
                       </p>
+                      <p className="text-[10px] font-bold text-emerald-600 leading-relaxed mt-1.5">
+                        <i className="fas fa-wallet mr-1.5" />
+                        ใหม่! รองรับเติมเงินผ่าน TrueMoney อั่งเปา ใช้ฟรี ไม่มีค่าธรรมเนียมเพิ่ม
+                      </p>
                     </div>
                   </div>
                 </CardContent>
