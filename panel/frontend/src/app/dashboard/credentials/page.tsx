@@ -9,6 +9,7 @@ import { useToast } from '@/components/Toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import AdminActionModal, { AdminAction } from '@/components/credentials/AdminActionModal';
 
 interface Credentials {
   shopName: string; domain: string;
@@ -300,6 +301,7 @@ function CredContent() {
   const [shopAdmin, setShopAdmin] = useState<ShopAdmin | null>(null);
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminError, setAdminError] = useState(false);
+  const [adminAction, setAdminAction] = useState<AdminAction | null>(null);
 
   useEffect(() => { if (!loading && !user) router.push('/?auth=login'); }, [user, loading, router]);
   useEffect(() => {
@@ -421,13 +423,14 @@ function CredContent() {
 
   useEffect(() => { fetchShopAdmin(); }, [fetchShopAdmin]);
 
+  // Modal-driven: the card buttons open AdminActionModal which calls these on confirm.
   const regenAdmin = async () => {
-    if (!confirm('สุ่มรหัสแอดมินใหม่? รหัสเดิมจะใช้เข้าสู่ระบบไม่ได้ทันที')) return;
     try {
       setAdminLoading(true);
       const res = await api.post(`/api/subscriptions/${subId}/shop-admin/regenerate`);
       setShopAdmin(res.data);
       toast.success('สุ่มรหัสแอดมินใหม่แล้ว');
+      setAdminAction(null);
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'ไม่สามารถสุ่มรหัสใหม่ได้');
     } finally {
@@ -435,15 +438,14 @@ function CredContent() {
     }
   };
 
-  const setAdminPw = async () => {
-    const pw = prompt('ตั้งรหัสผ่านแอดมินใหม่ (อย่างน้อย 6 ตัวอักษร)');
-    if (pw === null) return;
-    if (pw.length < 6) { toast.error('รหัสผ่านต้องยาวอย่างน้อย 6 ตัวอักษร'); return; }
+  const setAdminPw = async (pw?: string) => {
+    if (!pw || pw.length < 6) { toast.error('รหัสผ่านต้องยาวอย่างน้อย 6 ตัวอักษร'); return; }
     try {
       setAdminLoading(true);
       const res = await api.post(`/api/subscriptions/${subId}/shop-admin/password`, { password: pw });
       setShopAdmin(res.data);
       toast.success('ตั้งรหัสแอดมินใหม่แล้ว');
+      setAdminAction(null);
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'ไม่สามารถตั้งรหัสได้');
     } finally {
@@ -524,8 +526,8 @@ function CredContent() {
               error={adminError}
               busy={adminLoading}
               onRefetch={fetchShopAdmin}
-              onRegen={regenAdmin}
-              onSetPw={setAdminPw}
+              onRegen={() => setAdminAction('regen')}
+              onSetPw={() => setAdminAction('setpw')}
             />
 
             {/* ── การจัดการเซิร์ฟเวอร์ (เฉพาะ Customer) ── */}
@@ -1228,6 +1230,13 @@ bridge:
           </div>
         )}
       </div>
+
+      <AdminActionModal
+        action={adminAction}
+        busy={adminLoading}
+        onClose={() => { if (!adminLoading) setAdminAction(null); }}
+        onConfirm={(pw) => { adminAction === 'setpw' ? setAdminPw(pw) : regenAdmin(); }}
+      />
     </div>
   );
 }
