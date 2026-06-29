@@ -405,9 +405,11 @@ function CredContent() {
     }
   };
 
-  // ── Shop web-admin credential (customer-owned subs only) ──
+  // ── Shop web-admin credential ──
+  // Customers see their own; admins (operators) can inspect/manage any shop
+  // (backend bypasses the owner check for role=admin on the shop-admin routes).
   const fetchShopAdmin = useCallback(async () => {
-    if (!user || !subId || user.role === 'admin') return;
+    if (!user || !subId) return;
     try {
       setAdminError(false);
       const res = await api.get(`/api/subscriptions/${subId}/shop-admin`);
@@ -516,17 +518,15 @@ function CredContent() {
               </CardContent>
             </Card>
 
-            {/* ── บัญชีแอดมินเว็บ (เฉพาะ Customer) ── */}
-            {user?.role !== 'admin' && (
-              <AdminCredentialCard
-                cred={shopAdmin}
-                error={adminError}
-                busy={adminLoading}
-                onRefetch={fetchShopAdmin}
-                onRegen={regenAdmin}
-                onSetPw={setAdminPw}
-              />
-            )}
+            {/* ── บัญชีแอดมินเว็บ (Customer + Admin/operator) ── */}
+            <AdminCredentialCard
+              cred={shopAdmin}
+              error={adminError}
+              busy={adminLoading}
+              onRefetch={fetchShopAdmin}
+              onRegen={regenAdmin}
+              onSetPw={setAdminPw}
+            />
 
             {/* ── การจัดการเซิร์ฟเวอร์ (เฉพาะ Customer) ── */}
             {sub && (
