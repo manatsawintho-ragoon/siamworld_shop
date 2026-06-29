@@ -17,7 +17,8 @@ export const registerSchema = z.object({
   username: z.string()
     .min(3, 'Username must be at least 3 characters')
     .max(32, 'Username too long')
-    .regex(/^[a-zA-Z0-9_]+$/, 'Username may only contain letters, numbers and underscores'),
+    // Allow a leading dot so Bedrock players (Geyser default prefix ".") can register.
+    .regex(/^[a-zA-Z0-9_.]+$/, 'Username may only contain letters, numbers, underscores and dots'),
   password: z.string().min(8, 'Password must be at least 8 characters').max(255),
   email: z.string().email('Invalid email format').max(255),
 });

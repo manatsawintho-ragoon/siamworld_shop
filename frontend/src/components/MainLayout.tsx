@@ -55,8 +55,8 @@ function GreenLogin() {
     if (password.length < 8) {
       showAlert({ type: 'warning', title: 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร' }); return;
     }
-    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-      showAlert({ type: 'warning', title: 'ชื่อผู้ใช้ไม่ถูกต้อง', message: 'ใช้ได้เฉพาะ a-z, A-Z, 0-9, _ เท่านั้น' }); return;
+    if (!/^[a-zA-Z0-9_.]+$/.test(username)) {
+      showAlert({ type: 'warning', title: 'ชื่อผู้ใช้ไม่ถูกต้อง', message: 'ใช้ได้เฉพาะ a-z, A-Z, 0-9, _ และ . (สำหรับผู้เล่น Bedrock/Geyser) เท่านั้น' }); return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       showAlert({ type: 'warning', title: 'รูปแบบอีเมลไม่ถูกต้อง' }); return;
