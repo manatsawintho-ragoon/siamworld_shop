@@ -1,9 +1,10 @@
-import { Router } from 'express';
+import { Router, Request } from 'express';
 import { asyncRoute } from '../middleware/asyncRoute';
 import { requireAuth } from '../middleware/auth';
 import { subscriptionService } from '../services/subscription.service';
 import { deployService } from '../services/deploy.service';
 import { customDomainService } from '../services/custom-domain.service';
+import { shopAdminCredentialService } from '../services/shop-admin-credential.service';
 import { ValidationError } from '../utils/errors';
 import { pool } from '../database/connection';
 
@@ -143,6 +144,49 @@ router.get('/:id/credentials', requireAuth, asyncRoute(async (req, res) => {
     setupUrl: `https://${sub.domain}/admin/setup`,
     mcIp: sub.mc_ip || null,
   });
+}));
+
+// ── Shop web-admin credential ─────────────────────────────────────────────────
+// Lets the shop owner see + reset the dedicated admin login (decoupled from the
+// Minecraft/AuthMe password). Ownership enforced via getById(id, userId).
+
+function presentCred(cred: Awaited<ReturnType<typeof shopAdminCredentialService.getOrProvision>>) {
+  return {
+    success: true,
+    username: cred.username,
+    password: cred.password,
+    rotating: cred.rotating,
+    nextPassword: cred.nextPassword,
+    expiresAt: cred.expiresAt,
+    remainingMs: cred.remainingMs,
+    windowSeconds: cred.windowSeconds,
+  };
+}
+
+// Admins (operators) may inspect/manage any shop's credential; customers are
+// scoped to subs they own. Passing undefined userId to getById skips the owner
+// filter — same bypass pattern as the other admin-capable /:id routes.
+const ownerScope = (req: Request): number | undefined =>
+  req.user!.role === 'admin' ? undefined : req.user!.userId;
+
+router.get('/:id/shop-admin', requireAuth, asyncRoute(async (req, res) => {
+  const sub = await subscriptionService.getById(parseInt(req.params.id), ownerScope(req));
+  const cred = await shopAdminCredentialService.getOrProvision(sub.shop_name);
+  res.json(presentCred(cred));
+}));
+
+router.post('/:id/shop-admin/regenerate', requireAuth, asyncRoute(async (req, res) => {
+  const sub = await subscriptionService.getById(parseInt(req.params.id), ownerScope(req));
+  const cred = await shopAdminCredentialService.regenerate(sub.shop_name);
+  res.json(presentCred(cred));
+}));
+
+router.post('/:id/shop-admin/password', requireAuth, asyncRoute(async (req, res) => {
+  const sub = await subscriptionService.getById(parseInt(req.params.id), ownerScope(req));
+  const password = String(req.body?.password ?? '');
+  if (password.length < 6) throw new ValidationError('รหัสผ่านต้องยาวอย่างน้อย 6 ตัวอักษร');
+  const cred = await shopAdminCredentialService.setPassword(sub.shop_name, password);
+  res.json(presentCred(cred));
 }));
 
 // ── Custom domain (BYOD) ──────────────────────────────────────────────────────

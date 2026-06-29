@@ -8,6 +8,7 @@ import { logger } from '../utils/logger';
 import { RowDataPacket } from 'mysql2';
 import { ValidationError } from '../utils/errors';
 import { createSession } from './session.service';
+import { adminCredentialService } from './admin-credential.service';
 
 interface RconConfig {
   host: string;
@@ -135,7 +136,31 @@ class SetupService {
   }
 
   /**
-   * Create the very first admin account. Only works when no admin exists yet.
+   * Create the first admin as a dedicated web-admin credential, auto-generating
+   * username (from the shop's subdomain) and a strong random password. Decoupled
+   * from authme so it can be reset later without touching any Minecraft account.
+   * Returns the plaintext credentials ONCE so the setup wizard can display them.
+   */
+  async initAdminAuto(): Promise<{ token: string; username: string; password: string }> {
+    const status = await this.getSetupStatus();
+    if (status.hasAdmin) {
+      throw new ValidationError('An admin account already exists');
+    }
+
+    const { userId, username, password } = await adminCredentialService.provision();
+
+    const jti = await createSession(userId);
+    const payload = { userId, username, role: 'admin', jti };
+    const token = jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn as jwt.SignOptions['expiresIn'] });
+
+    logger.info('Initial dedicated admin created via setup wizard', { userId, username });
+    return { token, username, password };
+  }
+
+  /**
+   * Legacy: create the very first admin account from a chosen username/password
+   * (writes authme). Kept for compatibility; the setup wizard now uses
+   * initAdminAuto. Only works when no admin exists yet.
    */
   async initAdmin(username: string, password: string): Promise<{ token: string }> {
     const status = await this.getSetupStatus();

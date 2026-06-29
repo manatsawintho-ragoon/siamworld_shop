@@ -9,6 +9,7 @@ import { RowDataPacket } from 'mysql2';
 import { JwtPayload } from '../middleware/auth';
 import { createSession, destroySession } from './session.service';
 import { bridgeClient } from './bridge-client.service';
+import { adminCredentialService } from './admin-credential.service';
 
 // AuthMe SHA256: $SHA$<salt>$sha256(sha256(password) + salt)
 function verifyAuthMeSHA256(password: string, storedHash: string): boolean {
@@ -85,6 +86,18 @@ class AuthService {
   }
 
   async login(username: string, password: string): Promise<{ token: string; user: JwtPayload }> {
+    // 1. Dedicated web-admin credential (decoupled from authme/bridge). Tried
+    //    first so the shop owner can always reach the admin panel even when the
+    //    shop runs in Bridge mode, where authme is not authoritative. A normal
+    //    player can never own this row (users.username is unique), so this only
+    //    ever matches the shop's dedicated admin.
+    const adminRow = await adminCredentialService.verify(username, password);
+    if (adminRow) {
+      // Soft-deleted admin: return the generic error, don't leak why.
+      if (adminRow.deleted_at) throw new AuthenticationError('Invalid username or password');
+      return this.finalizeLogin(adminRow.username, null);
+    }
+
     if (config.bridge.enabled) {
       const bridgeResult = await bridgeClient.verifyAuthme(username, password);
       if (bridgeResult.ok) {
