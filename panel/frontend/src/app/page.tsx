@@ -671,6 +671,9 @@ function LandingContent() {
                 <li><Link href="/" className="hover:text-primary transition-colors">หน้าแรก</Link></li>
                 <li><Link href="/#features" className="hover:text-primary transition-colors">ฟีเจอร์เด่น</Link></li>
                 <li><Link href="/#pricing" className="hover:text-primary transition-colors">ราคาแพ็กเกจ</Link></li>
+                <li><Link href="/solutions" className="hover:text-primary transition-colors">บริการเช่าเว็บร้านค้า</Link></li>
+                <li><Link href="/lp/เช่าเว็บร้านค้ามายคราฟ" className="hover:text-primary transition-colors">เช่าเว็บร้านค้ามายคราฟ</Link></li>
+                <li><Link href="/lp/ทางเลือกแทน-tebex" className="hover:text-primary transition-colors">ทางเลือกแทน Tebex</Link></li>
               </ul>
             </div>
 

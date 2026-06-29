@@ -24,6 +24,12 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 
+# Runtime: server-side SEO/metadata fetch talks to the backend over the internal
+# Docker network (no Cloudflare round-trip). Re-declared here so it survives into
+# the standalone runner stage, not just the builder.
+ARG BACKEND_INTERNAL_URL
+ENV BACKEND_INTERNAL_URL=${BACKEND_INTERNAL_URL}
+
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public

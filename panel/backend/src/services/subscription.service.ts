@@ -501,6 +501,121 @@ class SubscriptionService {
     await pool.execute(`UPDATE subscriptions SET ${updates.join(', ')} WHERE id=?`, params);
   }
 
+  // ── Manual time adjustment (+/- days) for compensation / promotions / corrections.
+  // Relative to current expires_at. Does not touch the wallet. Records an audit row
+  // and (optionally) a customer popup. See migration 016.
+  private static readonly ADJUST_CATEGORIES = ['compensation', 'promotion', 'correction', 'goodwill'];
+
+  async adjustTime(
+    subscriptionId: number,
+    adminUserId: number | null,
+    deltaDays: number,
+    opts: { category?: string | null; reason?: string | null; notifyCustomer?: boolean },
+    ip?: string,
+  ): Promise<{ oldExpiry: Date | null; newExpiry: Date; deltaDays: number }> {
+    if (!Number.isInteger(deltaDays) || deltaDays === 0) {
+      throw new ValidationError('จำนวนวันต้องเป็นจำนวนเต็มและไม่เป็นศูนย์');
+    }
+    if (Math.abs(deltaDays) > 3650) {
+      throw new ValidationError('ปรับได้ครั้งละไม่เกิน 3650 วัน');
+    }
+    const category = opts.category && SubscriptionService.ADJUST_CATEGORIES.includes(opts.category)
+      ? opts.category : null;
+    const reason = opts.reason?.trim() ? opts.reason.trim().slice(0, 2000) : null;
+    const notifyCustomer = opts.notifyCustomer ? 1 : 0;
+
+    const conn = await pool.getConnection();
+    let oldExpiry: Date | null = null;
+    let newExpiry: Date;
+    let status: string;
+    try {
+      await conn.beginTransaction();
+      const [rows] = await conn.execute<RowDataPacket[]>(
+        'SELECT expires_at, status FROM subscriptions WHERE id=? FOR UPDATE', [subscriptionId]
+      );
+      if (!rows.length) throw new NotFoundError('ไม่พบ subscription');
+      status = rows[0].status;
+      oldExpiry = rows[0].expires_at ? new Date(rows[0].expires_at) : null;
+      const base = oldExpiry ?? new Date();
+      newExpiry = new Date(base.getTime() + deltaDays * 86400000);
+
+      await conn.execute('UPDATE subscriptions SET expires_at=? WHERE id=?', [newExpiry, subscriptionId]);
+      await conn.execute(
+        `INSERT INTO subscription_adjustments
+           (subscription_id, admin_user_id, delta_days, old_expires_at, new_expires_at, category, reason, notify_customer)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [subscriptionId, adminUserId, deltaDays, oldExpiry, newExpiry, category, reason, notifyCustomer]
+      );
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+
+    // If we extended a stopped shop back into the future, bring it online (mirrors renew).
+    if ((status === 'suspended' || status === 'expired') && newExpiry.getTime() > Date.now()) {
+      try {
+        const sub = await this.getById(subscriptionId);
+        await deployService.startShop(sub.shop_name);
+        await customDomainService.onResume(sub.domain, sub.custom_domain, sub.custom_domain_status);
+        await pool.execute('UPDATE subscriptions SET status="active" WHERE id=?', [subscriptionId]);
+      } catch (err) {
+        console.error(`[adjustTime] resume failed for sub ${subscriptionId}:`, (err as Error).message);
+      }
+    }
+
+    await this.logAudit(
+      adminUserId, 'sub_adjust_time', 'subscription', subscriptionId,
+      `Adjusted time by ${deltaDays > 0 ? '+' : ''}${deltaDays}d` +
+        `${category ? ` [${category}]` : ''}${reason ? `: ${reason}` : ''}` +
+        ` (${oldExpiry ? oldExpiry.toISOString() : 'null'} -> ${newExpiry.toISOString()})`,
+      ip,
+    );
+    return { oldExpiry, newExpiry, deltaDays };
+  }
+
+  /** Recent adjustments for a subscription (admin history view), newest first. */
+  async getAdjustments(subscriptionId: number, limit = 20): Promise<RowDataPacket[]> {
+    const lim = Math.min(Math.max(parseInt(String(limit), 10) || 20, 1), 100);
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT a.id, a.delta_days, a.old_expires_at, a.new_expires_at, a.category, a.reason,
+              a.notify_customer, a.created_at, u.display_name AS admin_name
+         FROM subscription_adjustments a
+         LEFT JOIN panel_users u ON u.id = a.admin_user_id
+        WHERE a.subscription_id = ?
+        ORDER BY a.id DESC
+        LIMIT ?`,
+      [subscriptionId, lim]
+    );
+    return rows;
+  }
+
+  /** Unseen customer popups for adjustments on shops owned by this user. */
+  async getCustomerNotifications(userId: number): Promise<RowDataPacket[]> {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      `SELECT a.id, a.delta_days, a.category, a.reason, a.created_at, s.shop_name
+         FROM subscription_adjustments a
+         JOIN subscriptions s ON s.id = a.subscription_id
+        WHERE s.user_id = ? AND a.notify_customer = 1 AND a.customer_seen_at IS NULL
+        ORDER BY a.id DESC`,
+      [userId]
+    );
+    return rows;
+  }
+
+  /** Mark a customer popup as seen, only if it belongs to a shop the user owns. */
+  async markNotificationSeen(userId: number, adjustmentId: number): Promise<void> {
+    await pool.execute(
+      `UPDATE subscription_adjustments a
+         JOIN subscriptions s ON s.id = a.subscription_id
+          SET a.customer_seen_at = NOW()
+        WHERE a.id = ? AND s.user_id = ? AND a.customer_seen_at IS NULL`,
+      [adjustmentId, userId]
+    );
+  }
+
   async getDashboardStats() {
     const [rows] = await pool.execute<RowDataPacket[]>(`
       SELECT

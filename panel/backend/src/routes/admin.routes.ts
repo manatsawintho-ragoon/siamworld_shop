@@ -178,6 +178,23 @@ router.patch('/subscriptions/:id', asyncRoute(async (req, res) => {
   res.json({ success: true });
 }));
 
+router.post('/subscriptions/:id/adjust-time', asyncRoute(async (req, res) => {
+  const { deltaDays, category, reason, notifyCustomer } = req.body;
+  const result = await subscriptionService.adjustTime(
+    parseInt(req.params.id),
+    req.user!.userId,
+    Number(deltaDays),
+    { category, reason, notifyCustomer: !!notifyCustomer },
+    req.ip,
+  );
+  res.json({ success: true, ...result });
+}));
+
+router.get('/subscriptions/:id/adjustments', asyncRoute(async (req, res) => {
+  const adjustments = await subscriptionService.getAdjustments(parseInt(req.params.id));
+  res.json({ adjustments });
+}));
+
 router.post('/subscriptions/:id/action', asyncRoute(async (req, res) => {
   const { action } = req.body;
   if (!['start','stop','restart','suspend','unsuspend','redeploy'].includes(action)) {
