@@ -4,6 +4,20 @@ import { config } from '../config';
 import { encrypt, decrypt } from '../utils/crypto';
 import { RowDataPacket } from 'mysql2';
 import { logger } from '../utils/logger';
+import {
+  generateSeed,
+  currentRotatingPassword,
+  deriveRotatingPassword,
+  windowIndexAt,
+} from '../utils/rotatingPassword';
+
+/** Constant-time string compare that never throws on a length mismatch. */
+function constantTimeEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a, 'utf8');
+  const bb = Buffer.from(b, 'utf8');
+  if (ab.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ab, bb);
+}
 
 /**
  * Dedicated web-admin credential — a login that lives entirely in the app-side
@@ -33,16 +47,6 @@ function shopSlug(): string {
   }
 }
 
-/** Random password from an unambiguous alphabet (no O/0/I/l/1) so the owner can
- *  read it off the panel without confusion. */
-function randomPassword(len = 14): string {
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-  const bytes = crypto.randomBytes(len);
-  let out = '';
-  for (let i = 0; i < len; i++) out += alphabet[bytes[i] % alphabet.length];
-  return out;
-}
-
 export interface DedicatedAdminRow {
   id: number;
   username: string;
@@ -67,26 +71,28 @@ class AdminCredentialService {
     return `${base}${Date.now().toString().slice(-6)}`;
   }
 
-  /** Create a brand-new dedicated admin account. Returns the plaintext password
-   *  ONCE (the caller shows it; it is never returned in plaintext again except
-   *  by decrypting `admin_password_enc`). */
+  /** Create a brand-new dedicated admin account in ROTATING mode (migration
+   *  030): `admin_password_enc` holds a random seed and the login password is
+   *  derived per 60s window. Returns the password valid in the current window
+   *  ONCE so the setup wizard can display it; the panel shows the live value
+   *  thereafter. The owner makes it permanent by setting a custom password. */
   async provision(): Promise<{ userId: number; username: string; password: string }> {
     const username = await this.generateUniqueUsername();
-    const password = randomPassword();
-    const enc = encrypt(password);
+    const seed = generateSeed();
+    const enc = encrypt(seed);
 
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
       const [res] = await conn.execute(
-        'INSERT INTO users (username, email, role, admin_password_enc) VALUES (?, NULL, ?, ?)',
+        'INSERT INTO users (username, email, role, admin_password_enc, admin_pw_rotating) VALUES (?, NULL, ?, ?, 1)',
         [username, 'admin', enc]
       );
       const userId = (res as any).insertId;
       await conn.execute('INSERT INTO wallets (user_id, balance) VALUES (?, 0.00)', [userId]);
       await conn.commit();
-      logger.info('Dedicated admin credential provisioned', { userId, username });
-      return { userId, username, password };
+      logger.info('Dedicated admin credential provisioned (rotating)', { userId, username });
+      return { userId, username, password: currentRotatingPassword(seed) };
     } catch (err) {
       await conn.rollback();
       throw err;
@@ -103,7 +109,7 @@ class AdminCredentialService {
     let rows: RowDataPacket[];
     try {
       [rows] = await pool.execute<RowDataPacket[]>(
-        `SELECT id, username, role, deleted_at, admin_password_enc
+        `SELECT id, username, role, deleted_at, admin_password_enc, admin_pw_rotating
          FROM users WHERE LOWER(username) = LOWER(?) AND admin_password_enc IS NOT NULL LIMIT 1`,
         [username]
       );
@@ -114,12 +120,23 @@ class AdminCredentialService {
     if (rows.length === 0) return null;
     const row = rows[0];
 
-    let stored: string;
-    try { stored = decrypt(row.admin_password_enc); } catch { return null; }
+    let secret: string;
+    try { secret = decrypt(row.admin_password_enc); } catch { return null; }
 
-    const a = Buffer.from(stored, 'utf8');
-    const b = Buffer.from(password, 'utf8');
-    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+    let ok = false;
+    if (row.admin_pw_rotating) {
+      // Rotating: `secret` is the seed. Accept the current AND previous 60s
+      // window so an owner who copies a password right before it rolls over is
+      // not locked out (grace window). Fixed-length output → no length leak.
+      const w = windowIndexAt();
+      for (const idx of [w, w - 1]) {
+        if (constantTimeEqual(deriveRotatingPassword(secret, idx), password)) { ok = true; break; }
+      }
+    } else {
+      // Custom (permanent): `secret` is the real password.
+      ok = constantTimeEqual(secret, password);
+    }
+    if (!ok) return null;
 
     return { id: row.id, username: row.username, role: row.role, deleted_at: row.deleted_at };
   }
@@ -136,30 +153,35 @@ class AdminCredentialService {
     }
   }
 
-  /** Read the current plaintext credential (username + decrypted password) for
-   *  a dedicated admin, or null. Used by self-service surfaces inside the shop. */
+  /** Read the current usable credential (username + the password valid right
+   *  now) for a dedicated admin, or null. For rotating admins this is the
+   *  current window's derived password; for custom admins it is the stored one.
+   *  Used to detect dedicated admins and for self-service surfaces. */
   async getCurrent(userId: number): Promise<{ username: string; password: string } | null> {
     let rows: RowDataPacket[];
     try {
       [rows] = await pool.execute<RowDataPacket[]>(
-        'SELECT username, admin_password_enc FROM users WHERE id = ? AND admin_password_enc IS NOT NULL LIMIT 1', [userId]
+        'SELECT username, admin_password_enc, admin_pw_rotating FROM users WHERE id = ? AND admin_password_enc IS NOT NULL LIMIT 1', [userId]
       );
     } catch {
       return null;
     }
     if (rows.length === 0) return null;
     try {
-      return { username: rows[0].username, password: decrypt(rows[0].admin_password_enc) };
+      const secret = decrypt(rows[0].admin_password_enc);
+      const password = rows[0].admin_pw_rotating ? currentRotatingPassword(secret) : secret;
+      return { username: rows[0].username, password };
     } catch {
       return null;
     }
   }
 
-  /** Set a custom password for a dedicated admin. No-op for non-dedicated users. */
+  /** Set a custom password for a dedicated admin and PIN it (stop rotating).
+   *  This is the rotating → permanent transition. No-op for non-dedicated users. */
   async setPassword(userId: number, newPassword: string): Promise<boolean> {
     const enc = encrypt(newPassword);
     const [res] = await pool.execute(
-      'UPDATE users SET admin_password_enc = ? WHERE id = ? AND admin_password_enc IS NOT NULL', [enc, userId]
+      'UPDATE users SET admin_password_enc = ?, admin_pw_rotating = 0 WHERE id = ? AND admin_password_enc IS NOT NULL', [enc, userId]
     );
     return (res as any).affectedRows > 0;
   }

@@ -27,9 +27,12 @@ router.post('/change-password', authenticate, async (req: Request, res: Response
     if (newPassword.length < 8) return res.status(400).json({ success: false, message: 'รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร' });
 
     // Dedicated web-admin (no authme row): verify + update the encrypted credential instead.
+    // getCurrent only detects "is this a dedicated admin"; validation goes through
+    // verify() so a rotating password is accepted within its grace window.
     const current = await adminCredentialService.getCurrent(req.user!.userId);
     if (current) {
-      if (current.password !== currentPassword) {
+      const valid = await adminCredentialService.verify(req.user!.username, currentPassword);
+      if (!valid) {
         return res.status(400).json({ success: false, message: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
       }
       await adminCredentialService.setPassword(req.user!.userId, newPassword);

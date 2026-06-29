@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, useRef, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
@@ -55,6 +55,156 @@ function CredRow({ label, value, icon, secret }: { label: string; value: string 
         </div>
       </div>
     </div>
+  );
+}
+
+/* ── Shop web-admin credential ── */
+interface ShopAdmin {
+  username: string;
+  password: string;
+  rotating?: boolean;
+  nextPassword?: string;
+  expiresAt?: number;    // epoch ms (server clock) — informational only
+  remainingMs?: number;  // ms left in the window; used to anchor a local deadline
+  windowSeconds?: number;
+}
+
+/** Password row for ROTATING mode: eye toggle + live countdown bar. When the
+ *  window passes it shows the pre-fetched next password immediately and asks the
+ *  parent to refetch the following window's values (so there is no blank gap). */
+function CountdownPasswordRow({ cred, onExpire }: { cred: ShopAdmin; onExpire: () => void }) {
+  const [show, setShow] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+  const firedRef = useRef(false);
+  const total = (cred.windowSeconds ?? 60) * 1000;
+  // Anchor the deadline in the CLIENT's clock from the server's relative
+  // remainingMs, so an owner whose PC clock is skewed still gets a correct bar.
+  const deadlineRef = useRef<number>(Date.now() + (cred.remainingMs ?? total));
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(t);
+  }, []);
+  // A fresh credential arrived → re-anchor the deadline + re-arm the refetch guard.
+  useEffect(() => {
+    deadlineRef.current = Date.now() + (cred.remainingMs ?? total);
+    firedRef.current = false;
+  }, [cred.remainingMs, cred.password, total]);
+
+  const expired = now >= deadlineRef.current;
+  const remaining = Math.max(0, deadlineRef.current - now);
+  const secondsLeft = Math.max(0, Math.ceil(remaining / 1000));
+  const pct = Math.max(0, Math.min(100, (remaining / total) * 100));
+  const value = expired && cred.nextPassword ? cred.nextPassword : cred.password;
+
+  useEffect(() => {
+    if (expired && !firedRef.current) { firedRef.current = true; onExpire(); }
+  }, [expired, onExpire]);
+
+  const barColor = secondsLeft <= 10 ? 'bg-amber-500' : 'bg-emerald-500';
+  return (
+    <div className="py-3 border-b border-border/50 last:border-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-secondary text-foreground flex items-center justify-center">
+            <i className="fas fa-key text-sm" />
+          </div>
+          <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">รหัสผ่าน</span>
+        </div>
+        <div className="flex items-center gap-3 min-w-0 bg-secondary/30 px-3 py-1.5 rounded-lg border border-border">
+          <span className={`text-sm font-semibold truncate font-mono ${show ? 'text-foreground' : 'text-muted-foreground'}`}>
+            {show ? value : '••••••••••'}
+          </span>
+          <button onClick={() => setShow(v => !v)} className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 cursor-pointer">
+            <i className={`fas ${show ? 'fa-eye-slash' : 'fa-eye'} text-xs`} />
+          </button>
+          <div className="ml-2 pl-3 border-l border-border/50">
+            <CopyBtn value={value} />
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 flex items-center gap-3">
+        <div className="flex-1 h-2 rounded-full bg-secondary overflow-hidden">
+          <div className={`h-full ${barColor} transition-all duration-300 ease-linear`} style={{ width: `${pct}%` }} />
+        </div>
+        <span className="text-[11px] font-bold text-muted-foreground tabular-nums w-28 text-right">
+          เปลี่ยนใน {secondsLeft} วิ
+        </span>
+      </div>
+      <p className="text-[11px] text-muted-foreground font-medium mt-2">
+        <i className="fas fa-rotate mr-1.5" />รหัสนี้เปลี่ยนทุก 1 นาทีเพื่อความปลอดภัย คัดลอกแล้วรีบเข้าสู่ระบบ
+      </p>
+    </div>
+  );
+}
+
+/** The whole "บัญชีแอดมินเว็บ" card. Self-contained: handles loading, error +
+ *  retry, rotating vs custom display, and the action buttons per mode. */
+function AdminCredentialCard({ cred, error, busy, onRefetch, onRegen, onSetPw }: {
+  cred: ShopAdmin | null; error: boolean; busy: boolean;
+  onRefetch: () => void; onRegen: () => void; onSetPw: () => void;
+}) {
+  return (
+    <Card className="shadow-sm border-amber-500/20">
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center">
+            <i className="fas fa-user-shield" />
+          </div>
+          บัญชีแอดมินเว็บ
+        </CardTitle>
+        <CardDescription className="font-semibold">
+          ใช้เข้าหน้าจัดการร้าน (admin) แยกต่างหากจากรหัสในเกม รีเซ็ตได้ทุกเมื่อโดยไม่กระทบรหัส Minecraft
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-1">
+        {error ? (
+          <div className="py-6 text-center">
+            <p className="text-sm font-semibold text-muted-foreground mb-3">
+              <i className="fas fa-triangle-exclamation mr-2 text-amber-500" />โหลดบัญชีแอดมินไม่สำเร็จ
+            </p>
+            <Button variant="outline" onClick={onRefetch} className="rounded-full font-bold cursor-pointer">
+              <i className="fas fa-rotate-right mr-2" />ลองใหม่
+            </Button>
+          </div>
+        ) : !cred ? (
+          <div className="py-6 text-center text-sm font-semibold text-muted-foreground">
+            <i className="fas fa-spinner fa-spin mr-2" />กำลังโหลด...
+          </div>
+        ) : (
+          <>
+            <CredRow label="ชื่อผู้ใช้" value={cred.username} icon="fa-user" />
+            {cred.rotating ? (
+              <CountdownPasswordRow cred={cred} onExpire={onRefetch} />
+            ) : (
+              <CredRow label="รหัสผ่าน" value={cred.password} icon="fa-key" secret />
+            )}
+            <div className="mt-5 flex flex-wrap gap-3">
+              {cred.rotating ? (
+                <Button onClick={onSetPw} disabled={busy} className="cursor-pointer font-bold rounded-full">
+                  <i className="fas fa-lock mr-2" /> ตั้งรหัสถาวรของคุณเอง
+                </Button>
+              ) : (
+                <>
+                  <Button variant="outline" onClick={onSetPw} disabled={busy} className="cursor-pointer font-bold rounded-full">
+                    <i className="fas fa-pen mr-2" /> เปลี่ยนรหัส
+                  </Button>
+                  <Button variant="outline" onClick={onRegen} disabled={busy} className="cursor-pointer font-bold rounded-full">
+                    <i className="fas fa-rotate mr-2" /> กลับไปใช้รหัสหมุน
+                  </Button>
+                </>
+              )}
+            </div>
+            <p className="text-[11px] text-muted-foreground font-medium mt-3">
+              <i className="fas fa-circle-info mr-1.5" />
+              {cred.rotating
+                ? 'แนะนำ: ตั้งรหัสถาวรของคุณเอง จะได้เข้าสู่ระบบได้โดยไม่ต้องเปิดหน้านี้ดูรหัสทุกครั้ง'
+                : 'รหัสนี้เป็นรหัสถาวรที่คุณตั้งเอง ใช้เข้าสู่ระบบได้ตลอด'}
+            </p>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -147,8 +297,9 @@ function CredContent() {
   const [actionLoading, setActionLoading] = useState(false);
   const [setupTrack, setSetupTrack] = useState<'have' | 'new'>('have');
   const [setupAuthType, setSetupAuthType] = useState<'authme' | 'nlogin'>('authme');
-  const [shopAdmin, setShopAdmin] = useState<{ username: string; password: string } | null>(null);
+  const [shopAdmin, setShopAdmin] = useState<ShopAdmin | null>(null);
   const [adminLoading, setAdminLoading] = useState(false);
+  const [adminError, setAdminError] = useState(false);
 
   useEffect(() => { if (!loading && !user) router.push('/?auth=login'); }, [user, loading, router]);
   useEffect(() => {
@@ -255,17 +406,18 @@ function CredContent() {
   };
 
   // ── Shop web-admin credential (customer-owned subs only) ──
-  useEffect(() => {
+  const fetchShopAdmin = useCallback(async () => {
     if (!user || !subId || user.role === 'admin') return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await api.get(`/api/subscriptions/${subId}/shop-admin`);
-        if (!cancelled) setShopAdmin(res.data);
-      } catch { /* card stays in loading state; non-fatal */ }
-    })();
-    return () => { cancelled = true; };
+    try {
+      setAdminError(false);
+      const res = await api.get(`/api/subscriptions/${subId}/shop-admin`);
+      setShopAdmin(res.data);
+    } catch {
+      setAdminError(true);
+    }
   }, [user, subId]);
+
+  useEffect(() => { fetchShopAdmin(); }, [fetchShopAdmin]);
 
   const regenAdmin = async () => {
     if (!confirm('สุ่มรหัสแอดมินใหม่? รหัสเดิมจะใช้เข้าสู่ระบบไม่ได้ทันที')) return;
@@ -365,43 +517,15 @@ function CredContent() {
             </Card>
 
             {/* ── บัญชีแอดมินเว็บ (เฉพาะ Customer) ── */}
-            {sub && (
-              <Card className="shadow-sm border-amber-500/20">
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center">
-                      <i className="fas fa-user-shield" />
-                    </div>
-                    บัญชีแอดมินเว็บ
-                  </CardTitle>
-                  <CardDescription className="font-semibold">
-                    ใช้เข้าหน้าจัดการร้าน (admin) แยกต่างหากจากรหัสในเกม รีเซ็ตได้ทุกเมื่อโดยไม่กระทบรหัส Minecraft
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-1">
-                  {!shopAdmin ? (
-                    <div className="py-6 text-center text-sm font-semibold text-muted-foreground">
-                      <i className="fas fa-spinner fa-spin mr-2" />กำลังโหลด...
-                    </div>
-                  ) : (
-                    <>
-                      <CredRow label="ชื่อผู้ใช้" value={shopAdmin.username} icon="fa-user" />
-                      <CredRow label="รหัสผ่าน" value={shopAdmin.password} icon="fa-key" secret />
-                      <div className="mt-5 flex flex-wrap gap-3">
-                        <Button onClick={regenAdmin} disabled={adminLoading} className="cursor-pointer font-bold rounded-full">
-                          <i className="fas fa-dice mr-2" /> สุ่มรหัสใหม่
-                        </Button>
-                        <Button variant="outline" onClick={setAdminPw} disabled={adminLoading} className="cursor-pointer font-bold rounded-full">
-                          <i className="fas fa-pen mr-2" /> ตั้งรหัสเอง
-                        </Button>
-                      </div>
-                      <p className="text-[11px] text-muted-foreground font-medium mt-3">
-                        <i className="fas fa-circle-info mr-1.5" />แนะนำให้เปลี่ยนรหัสนี้เป็นของคุณเองหลังเข้าใช้งานครั้งแรก
-                      </p>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
+            {user?.role !== 'admin' && (
+              <AdminCredentialCard
+                cred={shopAdmin}
+                error={adminError}
+                busy={adminLoading}
+                onRefetch={fetchShopAdmin}
+                onRegen={regenAdmin}
+                onSetPw={setAdminPw}
+              />
             )}
 
             {/* ── การจัดการเซิร์ฟเวอร์ (เฉพาะ Customer) ── */}

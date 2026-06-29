@@ -255,12 +255,12 @@ export default function SetupWizardPage() {
                 <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-800 flex gap-3">
                   <i className="fas fa-triangle-exclamation mt-0.5 text-amber-500"></i>
                   <div>
-                    <p className="font-bold mb-0.5">บันทึกรหัสนี้ไว้ให้ดี</p>
-                    <p className="text-amber-700">นี่คือบัญชีสำหรับเข้าหน้าแอดมิน หากลืม สามารถดู/สุ่มรหัสใหม่ได้ในหน้าจัดการร้าน (panel)</p>
+                    <p className="font-bold mb-0.5">จดชื่อผู้ใช้ไว้ให้ดี</p>
+                    <p className="text-amber-700">นี่คือบัญชีเข้าหน้าแอดมิน รหัสผ่านด้านล่างเป็นรหัสชั่วคราวที่เปลี่ยนทุก 1 นาทีเพื่อความปลอดภัย ดูรหัสล่าสุด (พร้อมตัวนับเวลา) ได้ที่หน้าจัดการร้าน (panel) เสมอ และตั้งรหัสถาวรของคุณเองได้ที่นั่น</p>
                   </div>
                 </div>
 
-                {([['ชื่อผู้ใช้', 'username', creds.username], ['รหัสผ่าน', 'password', creds.password]] as const).map(([label, key, value]) => (
+                {([['ชื่อผู้ใช้', 'username', creds.username], ['รหัสผ่านปัจจุบัน (เปลี่ยนทุก 1 นาที)', 'password', creds.password]] as const).map(([label, key, value]) => (
                   <div key={key}>
                     <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
                     <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
@@ -276,7 +276,7 @@ export default function SetupWizardPage() {
                 <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none pt-1">
                   <input type="checkbox" checked={credsAck} onChange={e => setCredsAck(e.target.checked)}
                     className="w-4 h-4 rounded accent-[#16a34a]" />
-                  ฉันบันทึกชื่อผู้ใช้และรหัสผ่านนี้เรียบร้อยแล้ว
+                  ฉันจดชื่อผู้ใช้ไว้แล้ว และเข้าใจว่าดูรหัสล่าสุดได้ที่หน้าจัดการร้าน (panel)
                 </label>
 
                 <div className="flex justify-end pt-2">
