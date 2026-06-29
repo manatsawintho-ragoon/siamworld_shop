@@ -4,6 +4,7 @@ import { requireAuth } from '../middleware/auth';
 import { subscriptionService } from '../services/subscription.service';
 import { deployService } from '../services/deploy.service';
 import { customDomainService } from '../services/custom-domain.service';
+import { shopAdminCredentialService } from '../services/shop-admin-credential.service';
 import { ValidationError } from '../utils/errors';
 import { pool } from '../database/connection';
 
@@ -143,6 +144,30 @@ router.get('/:id/credentials', requireAuth, asyncRoute(async (req, res) => {
     setupUrl: `https://${sub.domain}/admin/setup`,
     mcIp: sub.mc_ip || null,
   });
+}));
+
+// ── Shop web-admin credential ─────────────────────────────────────────────────
+// Lets the shop owner see + reset the dedicated admin login (decoupled from the
+// Minecraft/AuthMe password). Ownership enforced via getById(id, userId).
+
+router.get('/:id/shop-admin', requireAuth, asyncRoute(async (req, res) => {
+  const sub = await subscriptionService.getById(parseInt(req.params.id), req.user!.userId);
+  const cred = await shopAdminCredentialService.getOrProvision(sub.shop_name);
+  res.json({ success: true, username: cred.username, password: cred.password });
+}));
+
+router.post('/:id/shop-admin/regenerate', requireAuth, asyncRoute(async (req, res) => {
+  const sub = await subscriptionService.getById(parseInt(req.params.id), req.user!.userId);
+  const cred = await shopAdminCredentialService.regenerate(sub.shop_name);
+  res.json({ success: true, username: cred.username, password: cred.password });
+}));
+
+router.post('/:id/shop-admin/password', requireAuth, asyncRoute(async (req, res) => {
+  const sub = await subscriptionService.getById(parseInt(req.params.id), req.user!.userId);
+  const password = String(req.body?.password ?? '');
+  if (password.length < 6) throw new ValidationError('รหัสผ่านต้องยาวอย่างน้อย 6 ตัวอักษร');
+  const cred = await shopAdminCredentialService.setPassword(sub.shop_name, password);
+  res.json({ success: true, username: cred.username, password: cred.password });
 }));
 
 // ── Custom domain (BYOD) ──────────────────────────────────────────────────────

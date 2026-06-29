@@ -26,11 +26,6 @@ const saveServerSchema = z.object({
   max_players: z.number().int().positive().optional(),
 });
 
-const initAdminSchema = z.object({
-  username: z.string().min(3).max(30).regex(/^[a-zA-Z0-9_]+$/, 'Username must be alphanumeric'),
-  password: z.string().min(6).max(100),
-});
-
 const saveSetupSettingsSchema = z.object({
   shop_name: z.string().min(1).max(100),
   shop_subtitle: z.string().max(200).optional(),
@@ -44,8 +39,11 @@ router.get('/status', asyncHandler(async (_req, res) => {
   res.json({ success: true, ...status });
 }));
 
-router.post('/init-admin', validate(initAdminSchema), asyncHandler(async (req, res) => {
-  const result = await setupService.initAdmin(req.body.username, req.body.password);
+// Auto-generates a dedicated web-admin credential (username from the shop's
+// subdomain + random password) and returns it ONCE so the wizard can display it.
+// No body required; legacy username/password fields are ignored.
+router.post('/init-admin', asyncHandler(async (_req, res) => {
+  const result = await setupService.initAdminAuto();
   // Set httpOnly cookie so the browser is immediately authenticated for subsequent setup steps
   res.cookie('auth_token', result.token, {
     httpOnly: true,
@@ -54,7 +52,7 @@ router.post('/init-admin', validate(initAdminSchema), asyncHandler(async (req, r
     maxAge: 24 * 60 * 60 * 1000,
     path: '/',
   });
-  res.json({ success: true, ...result });
+  res.json({ success: true, username: result.username, password: result.password, token: result.token });
 }));
 
 // ── Protected routes (admin JWT required) ─────────────────────

@@ -14,8 +14,11 @@ export default function SetupWizardPage() {
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Step 1: Admin Account
-  const [adminForm, setAdminForm] = useState({ username: '', password: '', confirm: '' });
+  // Step 1: Admin Account — auto-generated dedicated credential (decoupled from
+  // the Minecraft/AuthMe password so it can be reset later from the panel).
+  const [creds, setCreds] = useState<{ username: string; password: string } | null>(null);
+  const [credsAck, setCredsAck] = useState(false);
+  const [copied, setCopied] = useState('');
   // Step 2: Shop Settings
   const [shopForm, setShopForm] = useState({ shop_name: '', shop_subtitle: '', currency_symbol: '฿' });
   // Steps 3–4: Server Config (game-info + RCON)
@@ -36,22 +39,15 @@ export default function SetupWizardPage() {
 
   // ── Handlers ───────────────────────────────────────────────
 
-  const createAdmin = async () => {
-    if (adminForm.password !== adminForm.confirm) {
-      setMessage('รหัสผ่านไม่ตรงกัน');
-      return;
-    }
+  const generateAdmin = async () => {
     setSaving(true);
     setMessage('');
     try {
-      const res = await api('/setup/init-admin', {
-        method: 'POST',
-        body: { username: adminForm.username, password: adminForm.password },
-      });
-      if (res.success) {
+      const res = await api('/setup/init-admin', { method: 'POST', body: {} });
+      if (res.success && res.username && res.password) {
         setToken(res.token as string);
         await refresh();
-        setStep(2);
+        setCreds({ username: res.username as string, password: res.password as string });
       } else {
         setMessage(String(res.error || 'เกิดข้อผิดพลาด'));
       }
@@ -60,6 +56,12 @@ export default function SetupWizardPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const copyText = (label: string, value: string) => {
+    navigator.clipboard.writeText(value);
+    setCopied(label);
+    setTimeout(() => setCopied(''), 1500);
   };
 
   const saveShopSettings = async () => {
@@ -211,48 +213,80 @@ export default function SetupWizardPage() {
           })}
         </div>
 
-        {/* ── Step 1: Create Admin ───────────────────────────── */}
+        {/* ── Step 1: Create Admin (auto-generated credential) ── */}
         {step === 1 && (
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
             <div>
-              <h2 className="text-lg font-bold text-gray-900">สร้างบัญชีผู้ดูแลระบบ</h2>
-              <p className="text-sm text-gray-500 mt-0.5">บัญชีนี้จะมีสิทธิ์เข้าถึง Admin Panel ทั้งหมด</p>
+              <h2 className="text-lg font-bold text-gray-900">บัญชีผู้ดูแลระบบ</h2>
+              <p className="text-sm text-gray-500 mt-0.5">
+                ระบบจะสร้างบัญชีแอดมินให้อัตโนมัติ บัญชีนี้แยกต่างหากจากรหัสในเกม (Minecraft) จึงรีเซ็ตรหัสได้ภายหลังโดยไม่กระทบรหัสในเกม
+              </p>
             </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อผู้ใช้ (Username)</label>
-                <input type="text" value={adminForm.username}
-                  onChange={e => setAdminForm(p => ({ ...p, username: e.target.value }))}
-                  className={INPUT} placeholder="admin" autoComplete="username" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">รหัสผ่าน (อย่างน้อย 6 ตัวอักษร)</label>
-                <input type="password" value={adminForm.password}
-                  onChange={e => setAdminForm(p => ({ ...p, password: e.target.value }))}
-                  className={INPUT} placeholder="••••••••" autoComplete="new-password" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ยืนยันรหัสผ่าน</label>
-                <input type="password" value={adminForm.confirm}
-                  onChange={e => setAdminForm(p => ({ ...p, confirm: e.target.value }))}
-                  className={INPUT} placeholder="••••••••" autoComplete="new-password" />
-              </div>
-            </div>
+            {/* Before generation */}
+            {!creds && (
+              <>
+                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-800 flex gap-3">
+                  <i className="fas fa-wand-magic-sparkles mt-0.5 text-emerald-500"></i>
+                  <div>
+                    <p className="font-bold mb-0.5">สร้างให้อัตโนมัติ ไม่ต้องตั้งเอง</p>
+                    <p className="text-emerald-700">ชื่อผู้ใช้และรหัสผ่านจะถูกสุ่มให้ คุณดูและเปลี่ยนรหัสได้ทีหลังในหน้าจัดการร้าน (panel)</p>
+                  </div>
+                </div>
 
-            {message && (
-              <div className="p-3 rounded-xl text-sm bg-red-50 text-red-600 border border-red-200">
-                <i className="fas fa-circle-exclamation mr-2"></i>{message}
-              </div>
+                {message && (
+                  <div className="p-3 rounded-xl text-sm bg-red-50 text-red-600 border border-red-200">
+                    <i className="fas fa-circle-exclamation mr-2"></i>{message}
+                  </div>
+                )}
+
+                <div className="flex justify-end pt-2">
+                  <button onClick={generateAdmin} disabled={saving}
+                    className="px-6 py-2.5 bg-[#16a34a] hover:bg-[#15803d] text-white font-bold rounded-xl shadow-[0_4px_0_#0d6b2e] active:shadow-none active:translate-y-[3px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
+                    {saving ? <><i className="fas fa-spinner fa-spin mr-2"></i>กำลังสร้าง...</> : <><i className="fas fa-key mr-1.5"></i>สร้างบัญชีแอดมิน</>}
+                  </button>
+                </div>
+              </>
             )}
 
-            <div className="flex justify-end pt-2">
-              <button onClick={createAdmin}
-                disabled={saving || !adminForm.username || !adminForm.password || !adminForm.confirm}
-                className="px-6 py-2.5 bg-[#16a34a] hover:bg-[#15803d] text-white font-bold rounded-xl shadow-[0_4px_0_#0d6b2e] active:shadow-none active:translate-y-[3px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
-                {saving ? <><i className="fas fa-spinner fa-spin mr-2"></i>กำลังสร้าง...</> : <>ถัดไป <i className="fas fa-arrow-right ml-1.5"></i></>}
-              </button>
-            </div>
+            {/* After generation — show credentials once */}
+            {creds && (
+              <>
+                <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-800 flex gap-3">
+                  <i className="fas fa-triangle-exclamation mt-0.5 text-amber-500"></i>
+                  <div>
+                    <p className="font-bold mb-0.5">บันทึกรหัสนี้ไว้ให้ดี</p>
+                    <p className="text-amber-700">นี่คือบัญชีสำหรับเข้าหน้าแอดมิน หากลืม สามารถดู/สุ่มรหัสใหม่ได้ในหน้าจัดการร้าน (panel)</p>
+                  </div>
+                </div>
+
+                {([['ชื่อผู้ใช้', 'username', creds.username], ['รหัสผ่าน', 'password', creds.password]] as const).map(([label, key, value]) => (
+                  <div key={key}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+                    <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
+                      <code className="flex-1 text-gray-900 font-mono font-semibold break-all">{value}</code>
+                      <button onClick={() => copyText(key, value)}
+                        className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0 ${copied === key ? 'bg-emerald-500 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-100'}`}>
+                        <i className={`fas ${copied === key ? 'fa-check' : 'fa-copy'} mr-1`}></i>{copied === key ? 'คัดลอกแล้ว' : 'คัดลอก'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none pt-1">
+                  <input type="checkbox" checked={credsAck} onChange={e => setCredsAck(e.target.checked)}
+                    className="w-4 h-4 rounded accent-[#16a34a]" />
+                  ฉันบันทึกชื่อผู้ใช้และรหัสผ่านนี้เรียบร้อยแล้ว
+                </label>
+
+                <div className="flex justify-end pt-2">
+                  <button onClick={() => setStep(2)} disabled={!credsAck}
+                    className="px-6 py-2.5 bg-[#16a34a] hover:bg-[#15803d] text-white font-bold rounded-xl shadow-[0_4px_0_#0d6b2e] active:shadow-none active:translate-y-[3px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
+                    ถัดไป <i className="fas fa-arrow-right ml-1.5"></i>
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
 

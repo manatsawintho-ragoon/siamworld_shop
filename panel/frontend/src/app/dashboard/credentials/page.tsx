@@ -147,6 +147,8 @@ function CredContent() {
   const [actionLoading, setActionLoading] = useState(false);
   const [setupTrack, setSetupTrack] = useState<'have' | 'new'>('have');
   const [setupAuthType, setSetupAuthType] = useState<'authme' | 'nlogin'>('authme');
+  const [shopAdmin, setShopAdmin] = useState<{ username: string; password: string } | null>(null);
+  const [adminLoading, setAdminLoading] = useState(false);
 
   useEffect(() => { if (!loading && !user) router.push('/?auth=login'); }, [user, loading, router]);
   useEffect(() => {
@@ -252,6 +254,49 @@ function CredContent() {
     }
   };
 
+  // ── Shop web-admin credential (customer-owned subs only) ──
+  useEffect(() => {
+    if (!user || !subId || user.role === 'admin') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.get(`/api/subscriptions/${subId}/shop-admin`);
+        if (!cancelled) setShopAdmin(res.data);
+      } catch { /* card stays in loading state; non-fatal */ }
+    })();
+    return () => { cancelled = true; };
+  }, [user, subId]);
+
+  const regenAdmin = async () => {
+    if (!confirm('สุ่มรหัสแอดมินใหม่? รหัสเดิมจะใช้เข้าสู่ระบบไม่ได้ทันที')) return;
+    try {
+      setAdminLoading(true);
+      const res = await api.post(`/api/subscriptions/${subId}/shop-admin/regenerate`);
+      setShopAdmin(res.data);
+      toast.success('สุ่มรหัสแอดมินใหม่แล้ว');
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'ไม่สามารถสุ่มรหัสใหม่ได้');
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  const setAdminPw = async () => {
+    const pw = prompt('ตั้งรหัสผ่านแอดมินใหม่ (อย่างน้อย 6 ตัวอักษร)');
+    if (pw === null) return;
+    if (pw.length < 6) { toast.error('รหัสผ่านต้องยาวอย่างน้อย 6 ตัวอักษร'); return; }
+    try {
+      setAdminLoading(true);
+      const res = await api.post(`/api/subscriptions/${subId}/shop-admin/password`, { password: pw });
+      setShopAdmin(res.data);
+      toast.success('ตั้งรหัสแอดมินใหม่แล้ว');
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'ไม่สามารถตั้งรหัสได้');
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
   if (loading) return null;
 
   return (
@@ -318,6 +363,46 @@ function CredContent() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* ── บัญชีแอดมินเว็บ (เฉพาะ Customer) ── */}
+            {sub && (
+              <Card className="shadow-sm border-amber-500/20">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                      <i className="fas fa-user-shield" />
+                    </div>
+                    บัญชีแอดมินเว็บ
+                  </CardTitle>
+                  <CardDescription className="font-semibold">
+                    ใช้เข้าหน้าจัดการร้าน (admin) แยกต่างหากจากรหัสในเกม รีเซ็ตได้ทุกเมื่อโดยไม่กระทบรหัส Minecraft
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-1">
+                  {!shopAdmin ? (
+                    <div className="py-6 text-center text-sm font-semibold text-muted-foreground">
+                      <i className="fas fa-spinner fa-spin mr-2" />กำลังโหลด...
+                    </div>
+                  ) : (
+                    <>
+                      <CredRow label="ชื่อผู้ใช้" value={shopAdmin.username} icon="fa-user" />
+                      <CredRow label="รหัสผ่าน" value={shopAdmin.password} icon="fa-key" secret />
+                      <div className="mt-5 flex flex-wrap gap-3">
+                        <Button onClick={regenAdmin} disabled={adminLoading} className="cursor-pointer font-bold rounded-full">
+                          <i className="fas fa-dice mr-2" /> สุ่มรหัสใหม่
+                        </Button>
+                        <Button variant="outline" onClick={setAdminPw} disabled={adminLoading} className="cursor-pointer font-bold rounded-full">
+                          <i className="fas fa-pen mr-2" /> ตั้งรหัสเอง
+                        </Button>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground font-medium mt-3">
+                        <i className="fas fa-circle-info mr-1.5" />แนะนำให้เปลี่ยนรหัสนี้เป็นของคุณเองหลังเข้าใช้งานครั้งแรก
+                      </p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* ── การจัดการเซิร์ฟเวอร์ (เฉพาะ Customer) ── */}
             {sub && (

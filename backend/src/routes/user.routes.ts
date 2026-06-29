@@ -9,6 +9,7 @@ import { pool } from '../database/connection';
 import { RowDataPacket, PoolConnection } from 'mysql2/promise';
 import bcrypt from 'bcrypt';
 import { destroySession } from '../services/session.service';
+import { adminCredentialService } from '../services/admin-credential.service';
 
 const router = Router();
 
@@ -24,6 +25,17 @@ router.post('/change-password', authenticate, async (req: Request, res: Response
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword) return res.status(400).json({ success: false, message: 'กรุณากรอกข้อมูลให้ครบ' });
     if (newPassword.length < 8) return res.status(400).json({ success: false, message: 'รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร' });
+
+    // Dedicated web-admin (no authme row): verify + update the encrypted credential instead.
+    const current = await adminCredentialService.getCurrent(req.user!.userId);
+    if (current) {
+      if (current.password !== currentPassword) {
+        return res.status(400).json({ success: false, message: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
+      }
+      await adminCredentialService.setPassword(req.user!.userId, newPassword);
+      await destroySession(req.user!.userId);
+      return res.json({ success: true, message: 'เปลี่ยนรหัสผ่านสำเร็จ กรุณาเข้าสู่ระบบใหม่' });
+    }
 
     const [rows] = await pool.execute<RowDataPacket[]>(
       'SELECT a.password FROM users u JOIN authme a ON LOWER(a.username) = LOWER(u.username) WHERE u.id = ?',
