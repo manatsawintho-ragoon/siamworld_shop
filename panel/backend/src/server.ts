@@ -14,6 +14,7 @@ import { config } from './config';
 import { errorHandler } from './middleware/errorHandler';
 import { startCronJobs } from './services/cron.service';
 import { bridgeService } from './services/bridge.service';
+import { deployService } from './services/deploy.service';
 
 import authRoutes         from './routes/auth.routes';
 import walletRoutes       from './routes/wallet.routes';
@@ -128,6 +129,10 @@ bridgeService.attach(httpServer);
 httpServer.listen(config.port, () => {
   process.stdout.write(`[Panel] Backend running on port ${config.port}\n`);
   startCronJobs();
+  // Auto-complete any customer deploy that a previous panel restart/rebuild
+  // interrupted (cert issued but not attached, status stuck deploying/pending).
+  deployService.reconcileInterruptedDeploys().catch((err) =>
+    console.error('[Reconcile] startup reconcile failed:', (err as Error).message));
 });
 
 export default app;

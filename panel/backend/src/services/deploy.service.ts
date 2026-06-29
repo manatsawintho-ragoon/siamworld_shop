@@ -57,6 +57,97 @@ class DeployService {
     });
   }
 
+  /**
+   * Finish any deploy that a panel restart/rebuild interrupted.
+   *
+   * runDeploy() runs as an in-process background promise (see deployAsync), so a
+   * `docker compose up --build panel-backend` while a customer auto-deploy is in
+   * flight kills the promise between "create NPM host" (step 3) and "mark active"
+   * (step 5). The shop containers + Let's Encrypt cert survive (separate compose
+   * project), but the cert is left unattached to the NPM host and the status stays
+   * stuck in deploying/pending — the shop then fails the Cloudflare TLS handshake.
+   *
+   * Run once on startup. For every shop stuck in deploying/pending that actually
+   * has containers, this idempotently re-attaches SSL (reusing the existing cert),
+   * ensures Cloudflare DNS, and flips to active. Anything it can't safely finish
+   * (no container yet = the build itself was interrupted) is left for an admin
+   * redeploy and only logged.
+   */
+  async reconcileInterruptedDeploys(): Promise<void> {
+    let rows: RowDataPacket[];
+    try {
+      [rows] = await pool.execute<RowDataPacket[]>(
+        "SELECT id, shop_name, domain, frontend_port, backend_port FROM subscriptions WHERE status IN ('deploying','pending')"
+      );
+    } catch (err) {
+      console.error('[Reconcile] query failed:', (err as Error).message);
+      return;
+    }
+    if (!rows.length) return;
+    console.log(`[Reconcile] checking ${rows.length} subscription(s) in deploying/pending...`);
+
+    for (const sub of rows) {
+      const shopName: string = sub.shop_name;
+      const domain: string = sub.domain;
+      // No env file => never deployed (e.g. awaiting first deploy). Leave untouched.
+      const envFile = path.join(config.deployDir, 'customers', shopName, '.env');
+      if (!fs.existsSync(envFile)) continue;
+
+      try {
+        // If the container never got built, the build itself was interrupted —
+        // don't guess, leave it for an admin redeploy.
+        let status = await this.getShopStatus(shopName);
+        if (status === 'stopped') {
+          console.warn(`[Reconcile] ${shopName}: no container present, skipping (needs redeploy)`);
+          continue;
+        }
+        if (status !== 'running') {
+          await this.startShop(shopName).catch(() => {});
+          status = await this.getShopStatus(shopName);
+        }
+        if (status !== 'running') {
+          console.warn(`[Reconcile] ${shopName}: container not running (${status}), skipping`);
+          continue;
+        }
+
+        const fp = Number(sub.frontend_port);
+        const bp = Number(sub.backend_port);
+        if (!fp || !bp) {
+          console.warn(`[Reconcile] ${shopName}: ports not assigned, skipping`);
+          continue;
+        }
+
+        // The step that gets dropped on interruption: attach SSL to the NPM proxy
+        // host. updateProxyHost reuses the existing LE cert; if the host itself
+        // was never created (interrupted before step 3), fall back to create.
+        try {
+          await npmService.updateProxyHost(domain, fp, bp);
+        } catch (e) {
+          if (((e as Error).message || '').includes('ไม่พบ proxy host')) {
+            await npmService.createProxyHost(domain, fp, bp);
+          } else {
+            throw e;
+          }
+        }
+
+        // Ensure Cloudflare DNS exists (idempotent — no-op if already present).
+        try {
+          await cloudflareService.ensureWebDnsRecord(domain);
+        } catch (e) {
+          console.warn(`[Reconcile] ${shopName}: CF DNS check failed: ${(e as Error).message}`);
+        }
+
+        await pool.execute(
+          "UPDATE subscriptions SET status='active' WHERE id=? AND status IN ('deploying','pending')",
+          [sub.id]
+        );
+        console.log(`[Reconcile] ${shopName}: finished interrupted deploy -> active`);
+      } catch (err) {
+        console.error(`[Reconcile] ${shopName}: could not finish: ${(err as Error).message}`);
+      }
+    }
+  }
+
   async getAvailablePorts(): Promise<{ frontendPort: number; backendPort: number }> {
     const [rows] = await pool.execute<RowDataPacket[]>(
       'SELECT frontend_port, backend_port FROM subscriptions ORDER BY frontend_port ASC'
