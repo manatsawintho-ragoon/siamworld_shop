@@ -22,7 +22,9 @@ router.get('/settings', async (_req: Request, res: Response, next: NextFunction)
       'show_lootbox_nav', 'show_download_nav', 'show_topup_rank_widget', 'show_topup_daily_widget', 'show_live_shop_widget', 'show_popular_widget',
       'show_welcome_marquee', 'show_server_status_widget', 'show_gacha_live_widget', 'show_exclusive_gacha', 'show_popular_gacha', 'show_new_arrivals',
       // Product image dimension hint (used by the upload UI placeholder).
-      'product_image_width', 'product_image_height'];
+      'product_image_width', 'product_image_height',
+      // SEO / Google: verification code + optional metadata overrides (server-rendered).
+      'google_site_verification', 'seo_title', 'seo_description', 'seo_keywords'];
     const settings: Record<string, string> = {};
     for (const [key, value] of Object.entries(allSettings)) {
       if (publicKeys.includes(key)) {

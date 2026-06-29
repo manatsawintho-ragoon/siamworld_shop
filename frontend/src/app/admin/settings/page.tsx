@@ -285,6 +285,27 @@ export default function AdminSettings() {
             </div>
           </SectionCard>
 
+          {/* SEO / Google */}
+          <SectionCard icon="fa-magnifying-glass" title="SEO / Google" description="ทำให้ร้านของคุณค้นเจอบน Google และยืนยันใน Search Console"
+            actions={<ActionButtons saving={!!sectionSaving.seo} saved={!!sectionSaved.seo} onSave={() => handleSaveKeys('seo', ['google_site_verification', 'seo_title', 'seo_description', 'seo_keywords'])} />}
+          >
+            <div className="space-y-4">
+              <div className="rounded-xl bg-[#637469]/5 border border-[#637469]/15 p-3.5 text-xs text-gray-600 leading-relaxed">
+                <p className="font-bold text-gray-700 mb-1"><i className="fas fa-circle-info mr-1.5 text-[#637469]" />วิธีทำให้ร้านขึ้น Google</p>
+                <ol className="list-decimal ml-4 space-y-0.5">
+                  <li>เข้า Google Search Console เลือกยืนยันแบบ HTML tag แล้วคัดลอกเฉพาะค่า content</li>
+                  <li>วางค่านั้นในช่อง "รหัสยืนยัน Google" ด้านล่าง แล้วกดบันทึก</li>
+                  <li>กลับไปกด Verify ใน Search Console</li>
+                  <li>ส่ง Sitemap โดยใส่ <span className="font-mono">sitemap.xml</span></li>
+                </ol>
+              </div>
+              <FieldInput label="รหัสยืนยัน Google (google-site-verification)" value={settings.google_site_verification || ''} onChange={v => set('google_site_verification', v)} placeholder="เช่น AbCdEf123... (เฉพาะค่า content)" icon="fa-shield-halved" hint="ใช้ยืนยันความเป็นเจ้าของเว็บใน Google Search Console" />
+              <FieldInput label="หัวข้อ SEO (ไม่บังคับ)" value={settings.seo_title || ''} onChange={v => set('seo_title', v)} placeholder="เว้นว่างเพื่อใช้ชื่อร้านอัตโนมัติ" icon="fa-heading" hint="ปล่อยว่างได้ ระบบจะใช้ชื่อร้านของคุณเป็น Title อัตโนมัติ" />
+              <FieldInput label="คำอธิบาย SEO (ไม่บังคับ)" value={settings.seo_description || ''} onChange={v => set('seo_description', v)} placeholder="เว้นว่างเพื่อใช้คำอธิบายร้านอัตโนมัติ" icon="fa-align-left" hint="Meta Description ที่แสดงในผลค้นหา Google (แนะนำ 150-160 ตัวอักษร)" />
+              <FieldInput label="คีย์เวิร์ด SEO (ไม่บังคับ)" value={settings.seo_keywords || ''} onChange={v => set('seo_keywords', v)} placeholder="เช่น เซิร์ฟ survival, สกายบล็อค, pvp" icon="fa-tags" hint="คั่นด้วยคอมมา เพิ่มเติมจากคีย์เวิร์ดมาตรฐานของระบบ" />
+            </div>
+          </SectionCard>
+
           {/* ประกาศเซิฟเวอร์ */}
           <SectionCard icon="fa-bullhorn" title="ประกาศเซิฟเวอร์" description="ข้อความประกาศที่แสดงเป็นวิ่งบนหน้าแรก"
             actions={<ActionButtons saving={!!sectionSaving.announce} saved={!!sectionSaved.announce} onSave={() => handleSaveKeys('announce', ['welcome_message'])} />}

@@ -1,28 +1,67 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import Providers from './providers';
+import { fetchShopSeo } from '@/lib/serverSeo';
 
-export const metadata: Metadata = {
-  title: 'SIAMSITE STORE | ร้านค้ามายคราฟอัตโนมัติที่ดีที่สุด',
-  description: 'ซื้อไอเท็ม Minecraft เติมเงินอัตโนมัติ รับของทันที 24 ชั่วโมง ระบบที่รวดเร็วและปลอดภัยที่สุดสำหรับคุณ',
-  keywords: 'ร้านค้ามายคราฟ, เติมเงินมายคราฟ, ซื้อไอเท็มมายคราฟ, Minecraft Store, PromptPay, TrueMoney',
-  openGraph: {
-    title: 'SIAMSITE STORE | ร้านค้ามายคราฟอัตโนมัติที่ดีที่สุด',
-    description: 'ซื้อไอเท็ม Minecraft เติมเงินอัตโนมัติ รับของทันที 24 ชั่วโมง',
-    type: 'website',
-    locale: 'th_TH',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'SIAMSITE STORE | ร้านค้ามายคราฟอัตโนมัติที่ดีที่สุด',
-    description: 'ซื้อไอเท็ม Minecraft เติมเงินอัตโนมัติ รับของทันที 24 ชั่วโมง',
-  },
-};
+// Per-tenant metadata: each shop gets its own name/description/canonical resolved
+// from the request host at runtime (works for subdomains and custom domains alike).
+export async function generateMetadata(): Promise<Metadata> {
+  const seo = await fetchShopSeo();
+  const defaultTitle = seo.title || `${seo.shopName} | ร้านค้า Minecraft เติมเงินอัตโนมัติ รับของทันที`;
+  const keywords =
+    `${seo.shopName}, ร้านค้ามายคราฟ, เติมเงินมายคราฟ, ซื้อไอเท็มมายคราฟ, Minecraft Store, เซิร์ฟเวอร์มายคราฟ, PromptPay, TrueMoney` +
+    (seo.keywords ? `, ${seo.keywords}` : '');
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return {
+    metadataBase: new URL(seo.baseUrl),
+    title: { default: defaultTitle, template: `%s | ${seo.shopName}` },
+    description: seo.description,
+    keywords,
+    applicationName: seo.shopName,
+    alternates: { canonical: '/' },
+    openGraph: {
+      title: defaultTitle,
+      description: seo.description,
+      type: 'website',
+      locale: 'th_TH',
+      siteName: seo.shopName,
+      url: '/',
+      ...(seo.logoUrl ? { images: [{ url: seo.logoUrl }] } : {}),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: defaultTitle,
+      description: seo.description,
+      ...(seo.logoUrl ? { images: [seo.logoUrl] } : {}),
+    },
+    robots: { index: true, follow: true },
+    ...(seo.googleVerification ? { verification: { google: seo.googleVerification } } : {}),
+  };
+}
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const seo = await fetchShopSeo();
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Store',
+    name: seo.shopName,
+    description: seo.description,
+    url: seo.baseUrl,
+    ...(seo.logoUrl ? { logo: seo.logoUrl, image: seo.logoUrl } : {}),
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: `${seo.baseUrl}/shop?q={search_term_string}`,
+      'query-input': 'required name=search_term_string',
+    },
+  };
+
   return (
     <html lang="th" suppressHydrationWarning>
       <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
