@@ -182,6 +182,23 @@ function Content() {
     if (input !== null) updateMcIp(sub, input);
   };
 
+  const adjustTime = async (
+    sub: Sub,
+    payload: { deltaDays: number; category: string | null; reason: string | null; notifyCustomer: boolean },
+  ) => {
+    setActionLoading(sub.id);
+    try {
+      await api.post(`/api/admin/subscriptions/${sub.id}/adjust-time`, payload);
+      toast.success('สำเร็จ', `ปรับเวลา ${payload.deltaDays > 0 ? '+' : ''}${payload.deltaDays} วันแล้ว`);
+      await load(true);
+    } catch (err: any) {
+      toast.error('ล้มเหลว', err.response?.data?.error || 'ไม่สามารถปรับเวลาได้');
+      throw err;
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const exportPDF = () => {
     window.print();
   };
@@ -477,6 +494,7 @@ function Content() {
             loading={actionLoading === manageSub.id}
             onAction={(action) => doAction(manageSub.id, action)}
             onSetMcIp={(value) => updateMcIp(manageSub, value)}
+            onAdjustTime={(payload) => adjustTime(manageSub, payload)}
             onClose={() => setManageSub(null)}
           />
         )}
@@ -550,17 +568,18 @@ function Content() {
 }
 
 function ManageModal({
-  sub, loading, onAction, onSetMcIp, onClose,
+  sub, loading, onAction, onSetMcIp, onAdjustTime, onClose,
 }: {
   sub: Sub;
   loading: boolean;
   onAction: (action: string) => void;
   onSetMcIp: (value: string) => void;
+  onAdjustTime: (payload: { deltaDays: number; category: string | null; reason: string | null; notifyCustomer: boolean }) => Promise<void>;
   onClose: () => void;
 }) {
   const [mounted, setMounted] = useState(false);
   const [mcIpInput, setMcIpInput] = useState(sub.mc_ip || '');
-  
+
   useEffect(() => { setMcIpInput(sub.mc_ip || ''); }, [sub.id]);
 
   useEffect(() => {
@@ -666,6 +685,8 @@ function ManageModal({
             )}
           </div>
 
+          <AdjustTimeSection sub={sub} loading={loading} onAdjustTime={onAdjustTime} />
+
           <div className="space-y-3">
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">การควบคุมระบบ</p>
             <div className="grid grid-cols-3 gap-2">
@@ -727,6 +748,177 @@ function ManageModal({
       </motion.div>
     </div>,
     document.body
+  );
+}
+
+const ADJUST_CATEGORIES: { value: string; label: string; badge: string }[] = [
+  { value: 'compensation', label: 'ชดเชย',        badge: 'bg-blue-500/10 text-blue-600 border-blue-500/20' },
+  { value: 'promotion',    label: 'โปรโมชั่น',     badge: 'bg-purple-500/10 text-purple-600 border-purple-500/20' },
+  { value: 'correction',   label: 'แก้ไขข้อมูล',   badge: 'bg-amber-500/10 text-amber-600 border-amber-500/20' },
+  { value: 'goodwill',     label: 'น้ำใจ',         badge: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' },
+];
+
+function fmtDate(d: string | Date | null): string {
+  if (!d) return '-';
+  const date = new Date(d);
+  if (isNaN(date.getTime())) return '-';
+  return new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+}
+
+interface Adjustment {
+  id: number; delta_days: number; old_expires_at: string | null; new_expires_at: string | null;
+  category: string | null; reason: string | null; notify_customer: number; created_at: string; admin_name: string | null;
+}
+
+function AdjustTimeSection({
+  sub, loading, onAdjustTime,
+}: {
+  sub: Sub;
+  loading: boolean;
+  onAdjustTime: (payload: { deltaDays: number; category: string | null; reason: string | null; notifyCustomer: boolean }) => Promise<void>;
+}) {
+  const [delta, setDelta] = useState(0);
+  const [category, setCategory] = useState<string>('');
+  const [reason, setReason] = useState('');
+  const [notify, setNotify] = useState(false);
+  const [history, setHistory] = useState<Adjustment[]>([]);
+
+  const loadHistory = useCallback(async () => {
+    try {
+      const r = await api.get(`/api/admin/subscriptions/${sub.id}/adjustments`);
+      setHistory(r.data.adjustments || []);
+    } catch { /* non-critical */ }
+  }, [sub.id]);
+
+  useEffect(() => {
+    setDelta(0); setCategory(''); setReason(''); setNotify(false);
+    loadHistory();
+  }, [sub.id, loadHistory]);
+
+  const preview = delta !== 0
+    ? new Date(new Date(sub.expires_at).getTime() + delta * 86400000)
+    : null;
+
+  const submit = async () => {
+    if (delta === 0) return;
+    try {
+      await onAdjustTime({
+        deltaDays: delta,
+        category: category || null,
+        reason: reason.trim() || null,
+        notifyCustomer: notify,
+      });
+      setDelta(0); setCategory(''); setReason(''); setNotify(false);
+      loadHistory();
+    } catch { /* toast handled upstream */ }
+  };
+
+  const presets = [1, 7, 30];
+
+  return (
+    <div className="p-5 bg-secondary/50 border border-border rounded-2xl space-y-4">
+      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+        <i className="fas fa-clock-rotate-left text-primary/60" /> ปรับเวลา (ชดเชย / โปรโมชั่น)
+      </p>
+
+      <div className="grid grid-cols-3 gap-2">
+        {presets.map(p => (
+          <button
+            key={`plus-${p}`}
+            onClick={() => setDelta(d => d + p)}
+            className="h-10 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-emerald-600 font-bold text-xs hover:bg-emerald-500 hover:text-white transition-all active:scale-95 cursor-pointer"
+          >
+            +{p} วัน
+          </button>
+        ))}
+        {[1, 7].map(p => (
+          <button
+            key={`minus-${p}`}
+            onClick={() => setDelta(d => d - p)}
+            className="h-10 rounded-xl border border-rose-500/20 bg-rose-500/5 text-rose-500 font-bold text-xs hover:bg-rose-500 hover:text-white transition-all active:scale-95 cursor-pointer"
+          >
+            -{p} วัน
+          </button>
+        ))}
+        <button
+          onClick={() => setDelta(0)}
+          className="h-10 rounded-xl border border-border bg-white text-muted-foreground font-bold text-xs hover:bg-secondary transition-all active:scale-95 cursor-pointer"
+        >
+          รีเซ็ต
+        </button>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          value={delta || ''}
+          onChange={e => setDelta(parseInt(e.target.value) || 0)}
+          placeholder="กรอกจำนวนวัน (ใส่ลบเพื่อหัก)"
+          className="flex-1 px-4 py-2.5 bg-white border-2 border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl text-xs font-bold tracking-tight outline-none transition-all"
+        />
+        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+          {delta > 0 ? `เพิ่ม ${delta}` : delta < 0 ? `หัก ${Math.abs(delta)}` : 'วัน'}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <select
+          value={category}
+          onChange={e => setCategory(e.target.value)}
+          className="px-3 py-2.5 bg-white border-2 border-transparent focus:border-primary rounded-xl text-xs font-bold outline-none transition-all cursor-pointer"
+        >
+          <option value="">ประเภท (ไม่บังคับ)</option>
+          {ADJUST_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+        </select>
+        <label className="flex items-center gap-2 px-3 py-2.5 bg-white border-2 border-transparent rounded-xl text-xs font-bold cursor-pointer select-none">
+          <input type="checkbox" checked={notify} onChange={e => setNotify(e.target.checked)} className="w-4 h-4 accent-primary cursor-pointer" />
+          แจ้งลูกค้า (popup)
+        </label>
+      </div>
+
+      <textarea
+        value={reason}
+        onChange={e => setReason(e.target.value)}
+        rows={2}
+        placeholder="เหตุผล (ไม่บังคับ) เช่น ชดเชยเซิร์ฟล่ม 2 ชม."
+        className="w-full px-4 py-2.5 bg-white border-2 border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl text-xs outline-none transition-all resize-none"
+      />
+
+      {preview && (
+        <div className="text-[11px] font-bold text-muted-foreground bg-white border border-border rounded-xl px-4 py-2.5">
+          หมดอายุใหม่: <span className="text-foreground">{fmtDate(preview)}</span>
+          <span className="text-muted-foreground/60"> (เดิม {fmtDate(sub.expires_at)})</span>
+        </div>
+      )}
+
+      <Button
+        onClick={submit}
+        disabled={loading || delta === 0}
+        className="w-full h-11 rounded-xl cursor-pointer font-bold text-[10px] uppercase tracking-widest shadow-md shadow-primary/20 active:scale-95"
+      >
+        <i className="fas fa-check mr-2" /> ยืนยันปรับเวลา
+      </Button>
+
+      {history.length > 0 && (
+        <div className="space-y-1.5 pt-1">
+          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">ประวัติการปรับล่าสุด</p>
+          {history.slice(0, 5).map(h => {
+            const cat = ADJUST_CATEGORIES.find(c => c.value === h.category);
+            return (
+              <div key={h.id} className="flex items-center gap-2 text-[10px] bg-white border border-border rounded-lg px-3 py-2">
+                <span className={`font-bold ${h.delta_days > 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                  {h.delta_days > 0 ? '+' : ''}{h.delta_days} วัน
+                </span>
+                {cat && <span className={`px-1.5 py-0.5 rounded border text-[9px] font-bold ${cat.badge}`}>{cat.label}</span>}
+                {h.notify_customer ? <i className="fas fa-bell text-primary/50 text-[9px]" title="แจ้งลูกค้าแล้ว" /> : null}
+                {h.reason && <span className="text-muted-foreground truncate flex-1">{h.reason}</span>}
+                <span className="text-muted-foreground/50 ml-auto whitespace-nowrap">{fmtDate(h.created_at)}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 

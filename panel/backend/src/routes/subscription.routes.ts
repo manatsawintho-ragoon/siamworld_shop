@@ -38,6 +38,18 @@ router.get('/', requireAuth, asyncRoute(async (req, res) => {
   res.json({ subscriptions: subs, ...eligibility, promos, easyslipFee });
 }));
 
+// Customer popups for operator time adjustments (compensation / promo). Must be
+// declared before the `/:id` routes so "notifications" is not captured as an id.
+router.get('/notifications', requireAuth, asyncRoute(async (req, res) => {
+  const notifications = await subscriptionService.getCustomerNotifications(req.user!.userId);
+  res.json({ notifications });
+}));
+
+router.post('/notifications/:id/seen', requireAuth, asyncRoute(async (req, res) => {
+  await subscriptionService.markNotificationSeen(req.user!.userId, parseInt(req.params.id));
+  res.json({ success: true });
+}));
+
 router.post('/', requireAuth, asyncRoute(async (req, res) => {
   const { shopName, packageMonths, mcIp, kind } = req.body;
   const subKind = (kind === 'trial' || kind === 'intro') ? kind : 'regular';

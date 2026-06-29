@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
 import DomainModal from '@/components/domain/DomainModal';
+import CompensationPopup from '@/components/CompensationPopup';
 
 interface Sub {
   id: number; shop_name: string; domain: string; status: string;
@@ -140,6 +141,7 @@ function DashboardContent() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] dark:bg-background">
+      <CompensationPopup />
       <Navbar />
       <div className="max-w-7xl mx-auto px-6 py-12 space-y-10">
 
