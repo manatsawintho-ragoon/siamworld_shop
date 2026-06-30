@@ -19,7 +19,19 @@ interface Sub {
   expires_at: string; package_months: number; price_paid: number;
   display_name: string; email: string; frontend_port: number;
   mc_ip?: string; deploy_log?: string;
+  custom_domain?: string | null;
+  custom_domain_status?: 'pending_dns' | 'pending_ssl' | 'active' | 'failed' | null;
 }
+
+// Custom-domain badge styling per status (matches the domain flow's 4-state machine).
+const CUSTOM_DOMAIN_META: Record<string, { label: string; badge: string }> = {
+  active:      { label: 'ใช้งานได้',  badge: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500 hover:text-white' },
+  pending_dns: { label: 'รอ DNS',     badge: 'bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500 hover:text-white' },
+  pending_ssl: { label: 'รอ SSL',     badge: 'bg-sky-500/10 text-sky-600 border-sky-500/20 hover:bg-sky-500 hover:text-white' },
+  failed:      { label: 'ล้มเหลว',     badge: 'bg-rose-500/10 text-rose-600 border-rose-500/20 hover:bg-rose-500 hover:text-white' },
+};
+const customDomainMeta = (status?: string | null) =>
+  CUSTOM_DOMAIN_META[status || ''] || { label: 'รอตรวจสอบ', badge: 'bg-secondary text-secondary-foreground border-border hover:bg-slate-900 hover:text-white' };
 
 const FILTER_TABS = [
   { value: '',           label: 'ทั้งหมด',        icon: 'fa-list' },
@@ -403,7 +415,7 @@ function Content() {
                                 <i className="fas fa-plug text-primary/60" />
                                 {sub.frontend_port}
                               </span>
-                              <button 
+                              <button
                                 onClick={() => promptMcIp(sub)}
                                 className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-bold transition-all border shadow-sm cursor-pointer ${
                                   sub.mc_ip
@@ -414,6 +426,27 @@ function Content() {
                                 <i className="fas fa-shield-halved" />
                                 {sub.mc_ip || 'FIREWALL OFF'}
                               </button>
+                            </div>
+                            <div className="mt-1.5">
+                              {sub.custom_domain ? (
+                                <button
+                                  onClick={() => { navigator.clipboard.writeText(sub.custom_domain!); toast.info('คัดลอกแล้ว', sub.custom_domain!); }}
+                                  title={`โดเมนของลูกค้า: ${sub.custom_domain} (${customDomainMeta(sub.custom_domain_status).label})`}
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-bold transition-all border shadow-sm cursor-pointer max-w-full ${customDomainMeta(sub.custom_domain_status).badge}`}
+                                >
+                                  <i className="fas fa-globe flex-shrink-0" />
+                                  <span className="truncate">{sub.custom_domain}</span>
+                                  <span className="opacity-60 flex-shrink-0">• {customDomainMeta(sub.custom_domain_status).label}</span>
+                                </button>
+                              ) : (
+                                <span
+                                  title="ลูกค้ายังไม่ได้ตั้งโดเมนของตัวเอง"
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-bold border border-border/60 bg-secondary/40 text-muted-foreground shadow-sm"
+                                >
+                                  <i className="fas fa-globe opacity-40" />
+                                  ไม่มีโดเมนเอง
+                                </span>
+                              )}
                             </div>
                           </td>
                           <td className="px-6 py-4 text-center">
