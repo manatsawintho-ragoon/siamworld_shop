@@ -30,6 +30,7 @@ const TITLES: Array<[RegExp, string]> = [
   [/^\/admin\/payments$/,          'การชำระเงิน'],
   [/^\/admin\/vouchers$/,          'โค้ดส่วนลด'],
   [/^\/admin\/support$/,           'ตั๋วช่วยเหลือ'],
+  [/^\/admin\/activity$/,          'พฤติกรรมการใช้งาน'],
   [/^\/admin\/audit-logs$/,        'บันทึกการตรวจสอบ'],
   [/^\/admin\/settings$/,          'ตั้งค่าระบบ'],
 ];

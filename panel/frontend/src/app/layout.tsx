@@ -4,6 +4,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { ToastProvider } from '@/components/Toast';
 import SessionToastBridge from '@/components/SessionToastBridge';
 import PageTitleManager from '@/components/PageTitle';
+import ActivityTracker from '@/components/ActivityTracker';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://panel.siamsite.shop'),
@@ -209,7 +210,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        <ToastProvider><AuthProvider><SessionToastBridge /><PageTitleManager />{children}</AuthProvider></ToastProvider>
+        <ToastProvider><AuthProvider><SessionToastBridge /><PageTitleManager /><ActivityTracker />{children}</AuthProvider></ToastProvider>
       </body>
     </html>
   );

@@ -87,12 +87,14 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   id          INT PRIMARY KEY AUTO_INCREMENT,
   user_id     INT,
   action      VARCHAR(100) NOT NULL,
+  category    VARCHAR(20) NOT NULL DEFAULT 'action', -- 'action' = accountability, 'activity' = page_view/feature_click telemetry
   target_type VARCHAR(50),
   target_id   INT,
   details     TEXT,
   ip_address  VARCHAR(45),
   created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES panel_users(id) ON DELETE SET NULL
+  FOREIGN KEY (user_id) REFERENCES panel_users(id) ON DELETE SET NULL,
+  INDEX idx_audit_category_created (category, created_at)
 );
 
 -- ── Panel Settings (key-value) ────────────────────────────────

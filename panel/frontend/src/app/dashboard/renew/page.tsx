@@ -306,6 +306,7 @@ function RenewContent() {
                   )}
 
                   <Button
+                    data-track="renew_submit"
                     className="w-full rounded-full cursor-pointer h-12 text-base shadow-md hover:shadow-lg transition-all"
                     disabled={!selectedSub || !selection || insufficient || submitting}
                     onClick={handleRenew}>

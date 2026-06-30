@@ -27,6 +27,7 @@ import internalBridgeRoutes from './routes/internal-bridge.routes';
 import { publicInstallRouter, authedInstallRouter } from './routes/install.routes';
 import announcementRoutes from './routes/announcement.routes';
 import showcaseRoutes     from './routes/showcase.routes';
+import activityRoutes     from './routes/activity.routes';
 import { pool } from './database/connection';
 import { redis } from './database/redis';
 
@@ -111,6 +112,8 @@ app.use('/install',           smallJson,  publicInstallRouter);
 app.use('/api/announcements', smallJson,  announcementRoutes);
 // Landing-page feature showcase: public read + admin CRUD (largeJson — base64 images)
 app.use('/api/showcase',      largeJson,  showcaseRoutes);
+// Behavioural telemetry ingest (page views + tagged feature clicks) via sendBeacon
+app.use('/api/activity',      smallJson,  activityRoutes);
 
 // Health check — includes DB and Redis liveness
 app.get('/api/health', async (_req, res) => {

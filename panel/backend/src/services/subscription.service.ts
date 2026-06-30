@@ -664,11 +664,12 @@ class SubscriptionService {
       `SELECT l.*, u.display_name, u.email
        FROM audit_logs l
        LEFT JOIN panel_users u ON l.user_id = u.id
+       WHERE l.category = 'action'
        ORDER BY l.created_at DESC
        LIMIT ${safeLimit} OFFSET ${offset}`
     );
 
-    const [total] = await pool.execute<RowDataPacket[]>('SELECT COUNT(*) as count FROM audit_logs');
+    const [total] = await pool.execute<RowDataPacket[]>(`SELECT COUNT(*) as count FROM audit_logs WHERE category = 'action'`);
 
     return { logs, total: total[0].count };
   }

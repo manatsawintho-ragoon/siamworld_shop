@@ -13,6 +13,7 @@ function safePagination(rawPage: unknown, rawLimit: unknown, defaultLimit = 20, 
   return { page, limit, offset: (page - 1) * limit };
 }
 import { subscriptionService } from '../services/subscription.service';
+import { activityService } from '../services/activity.service';
 import { deployService } from '../services/deploy.service';
 import { paymentService } from '../services/payment.service';
 import { settingsService } from '../services/settings.service';
@@ -47,6 +48,17 @@ router.get('/stats/charts', asyncRoute(async (_req, res) => {
 router.get('/audit-logs', asyncRoute(async (req, res) => {
   const { page, limit } = safePagination(req.query.page, req.query.limit, 50);
   const result = await subscriptionService.getAuditLogs(page, limit);
+  res.json(result);
+}));
+
+// Usage hotspots — aggregated page views + feature clicks (category='activity').
+router.get('/activity-hotspots', asyncRoute(async (req, res) => {
+  const userId = req.query.userId ? parseInt(String(req.query.userId)) || undefined : undefined;
+  const result = await activityService.getHotspots({
+    from: req.query.from ? String(req.query.from) : undefined,
+    to: req.query.to ? String(req.query.to) : undefined,
+    userId,
+  });
   res.json(result);
 }));
 

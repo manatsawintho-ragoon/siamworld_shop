@@ -244,7 +244,7 @@ function OrderContent() {
               <Button variant="outline" className="flex-1 rounded-full cursor-pointer h-12 font-bold" onClick={() => setStep('form')} disabled={submitting}>
                 ย้อนกลับ
               </Button>
-              <Button className="flex-1 rounded-full cursor-pointer h-12 font-bold shadow-sm hover:shadow-md transition-all" onClick={handleOrder} disabled={submitting}>
+              <Button data-track="order_submit" className="flex-1 rounded-full cursor-pointer h-12 font-bold shadow-sm hover:shadow-md transition-all" onClick={handleOrder} disabled={submitting}>
                 {submitting ? <><i className="fas fa-spinner fa-spin mr-2" /> กำลังดำเนินการ...</> : 'ยืนยันและชำระเงิน'}
               </Button>
             </CardFooter>

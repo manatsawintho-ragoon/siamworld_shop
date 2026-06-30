@@ -159,7 +159,7 @@ export default function ProfilePage() {
                 </p>
               </CardContent>
               <CardFooter>
-                <Button type="submit" className="w-full rounded-xl font-bold h-11 cursor-pointer shadow-sm hover:shadow-md transition-all" disabled={saving}>
+                <Button data-track="profile_save" type="submit" className="w-full rounded-xl font-bold h-11 cursor-pointer shadow-sm hover:shadow-md transition-all" disabled={saving}>
                   {saving ? <><i className="fas fa-spinner fa-spin mr-2" /> กำลังบันทึก...</> : <><i className="fas fa-floppy-disk mr-2" /> บันทึกข้อมูล</>}
                 </Button>
               </CardFooter>

@@ -323,7 +323,7 @@ export default function TopupPage() {
                     <i className="fas fa-circle-exclamation flex-shrink-0" />{error}
                   </div>
                 )}
-                <Button className="w-full rounded-full cursor-pointer h-12 text-base" onClick={submitSlip} disabled={!slip || submitting}>
+                <Button data-track="topup_submit" className="w-full rounded-full cursor-pointer h-12 text-base" onClick={submitSlip} disabled={!slip || submitting}>
                   {submitting ? <><i className="fas fa-spinner fa-spin mr-2" /> กำลังตรวจสอบ...</> : <><i className="fas fa-shield-check mr-2" /> ยืนยันสลิป</>}
                 </Button>
                 <Button className="w-full rounded-full cursor-pointer h-12 text-base" variant="outline" onClick={() => setStep('qr')}>

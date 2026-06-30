@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
+import { trackFeature } from '@/lib/track';
 import { useToast } from '@/components/Toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -428,6 +429,7 @@ function CredContent() {
     try {
       setAdminLoading(true);
       const res = await api.post(`/api/subscriptions/${subId}/shop-admin/regenerate`);
+      trackFeature('credentials_regenerate');
       setShopAdmin(res.data);
       toast.success('สุ่มรหัสแอดมินใหม่แล้ว');
       setAdminAction(null);

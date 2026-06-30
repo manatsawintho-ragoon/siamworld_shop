@@ -1,6 +1,10 @@
 import cron from 'node-cron';
 import { redis } from '../database/redis';
 import { notificationService } from './notification.service';
+import { activityService } from './activity.service';
+
+// Telemetry rows (page views / feature clicks) are kept this many days, then pruned.
+const ACTIVITY_RETENTION_DAYS = 90;
 
 /**
  * Run `fn` only if we can acquire `lockKey` in Redis. Prevents multi-replica double-runs
@@ -55,7 +59,16 @@ export function startCronJobs(): void {
     }).catch(err => console.error('[Cron] delete failed:', err));
   });
 
-  console.log('[Cron] Jobs scheduled (notify: 09:00 daily, suspend: hourly, delete: 03:00 daily)');
+  // Run daily at 04:00 — prune old activity-telemetry rows from audit_logs.
+  // Only category='activity' rows are touched; accountability rows are kept indefinitely.
+  cron.schedule('0 4 * * *', () => {
+    withRedisLock('panel_cron_lock:prune_activity', 30 * 60, async () => {
+      const removed = await activityService.pruneActivity(ACTIVITY_RETENTION_DAYS);
+      console.log(`[Cron] Pruned ${removed} activity rows older than ${ACTIVITY_RETENTION_DAYS}d.`);
+    }).catch(err => console.error('[Cron] prune_activity failed:', err));
+  });
+
+  console.log('[Cron] Jobs scheduled (notify: 09:00 daily, suspend: hourly, delete: 03:00 daily, prune-activity: 04:00 daily)');
 }
 
 /** Exposed so other services (deploy port allocation, etc.) can reuse the same primitive. */
