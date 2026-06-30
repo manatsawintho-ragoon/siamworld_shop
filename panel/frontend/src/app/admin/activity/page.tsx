@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
+import { PATH_LABELS, FEATURE_LABELS } from '@/lib/activityLabels';
 
 interface PageRow { path: string; views: number; users: number; }
 interface FeatureRow { feature: string; clicks: number; users: number; }
@@ -17,51 +18,9 @@ interface Hotspots {
   totals: { totalViews: number; totalClicks: number; activeUsers: number };
 }
 
-// Friendly Thai labels for the tracked panel routes. Unknown paths fall back to the raw path.
-const PATH_LABELS: Record<string, string> = {
-  '/dashboard': 'แดชบอร์ด (หน้าหลัก)',
-  '/dashboard/renew': 'ต่ออายุแพ็กเกจ',
-  '/dashboard/topup': 'เติมเงิน',
-  '/dashboard/domain': 'เชื่อมโดเมน',
-  '/dashboard/credentials': 'รหัสแอดมินร้าน',
-  '/dashboard/profile': 'โปรไฟล์',
-  '/dashboard/support': 'แจ้งปัญหา',
-  '/admin': 'แอดมิน: ภาพรวม',
-  '/admin/customers': 'แอดมิน: ร้านค้าทั้งหมด',
-  '/admin/customers/:id': 'แอดมิน: รายละเอียดร้าน',
-  '/admin/users': 'แอดมิน: ผู้ใช้งาน',
-  '/admin/payments': 'แอดมิน: รายการชำระเงิน',
-  '/admin/vouchers': 'แอดมิน: โค้ดโปรโมชั่น',
-  '/admin/announcements': 'แอดมิน: ประกาศ',
-  '/admin/showcase': 'แอดมิน: ตัวอย่างฟีเจอร์',
-  '/admin/support': 'แอดมิน: Tickets',
-  '/admin/audit-logs': 'แอดมิน: บันทึกเหตุการณ์',
-  '/admin/activity': 'แอดมิน: พฤติกรรมการใช้งาน',
-  '/admin/settings': 'แอดมิน: ตั้งค่าระบบ',
-};
-
-// Friendly labels for tagged feature clicks. Keep in sync with backend ALLOWED_FEATURES.
-const FEATURE_LABELS: Record<string, string> = {
-  renew_open: 'เปิดหน้าต่ออายุ',
-  renew_submit: 'กดต่ออายุ',
-  renew_promptpay: 'ต่ออายุ: PromptPay',
-  renew_easyslip: 'ต่ออายุ: แนบสลิป',
-  topup_open: 'เปิดหน้าเติมเงิน',
-  topup_promptpay: 'เติมเงิน: PromptPay',
-  topup_truemoney: 'เติมเงิน: TrueMoney',
-  topup_submit: 'กดเติมเงิน',
-  domain_connect: 'เชื่อมโดเมน',
-  domain_verify: 'ตรวจสอบโดเมน',
-  support_open: 'เปิดหน้าแจ้งปัญหา',
-  support_submit: 'ส่ง Ticket',
-  profile_save: 'บันทึกโปรไฟล์',
-  account_delete_open: 'เปิดหน้าลบบัญชี',
-  credentials_regenerate: 'สุ่มรหัสแอดมินใหม่',
-  credentials_copy: 'คัดลอกรหัสแอดมิน',
-  order_open: 'เปิดหน้าสั่งซื้อร้าน',
-  order_submit: 'ยืนยันสั่งซื้อร้าน',
-  dashboard_manage_shop: 'เข้าจัดการร้าน',
-};
+// Deep-link a hotspot row into the audit log, filtered to that page/feature, so the
+// admin can see exactly who used it and when (latest first).
+const detailLink = (detail: string) => `/admin/audit-logs?category=activity&q=${encodeURIComponent(detail)}`;
 
 const RANGES = [
   { days: 7, label: '7 วัน' },
@@ -180,13 +139,14 @@ function Content() {
                 {data.pages.length === 0 ? (
                   <div className="p-8 text-center text-xs text-muted-foreground">ไม่มีข้อมูล</div>
                 ) : data.pages.map((p) => (
-                  <div key={p.path} className="px-6 py-3.5 hover:bg-secondary/20 transition-colors">
+                  <Link key={p.path} href={detailLink(p.path)} className="block px-6 py-3.5 hover:bg-secondary/20 transition-colors group/row">
                     <div className="flex items-center justify-between gap-3 mb-2">
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-foreground truncate tracking-tight">{PATH_LABELS[p.path] || p.path}</p>
+                        <p className="text-xs font-bold text-foreground truncate tracking-tight group-hover/row:text-primary transition-colors">{PATH_LABELS[p.path] || p.path}</p>
                         <p className="text-[9px] font-mono text-muted-foreground/70 truncate mt-0.5">{p.path}</p>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-[9px] font-bold text-primary opacity-0 group-hover/row:opacity-100 transition-opacity whitespace-nowrap">ดูล่าสุด <i className="fas fa-arrow-right text-[8px]" /></span>
                         <Badge variant="outline" className="text-[9px] font-bold border-border bg-secondary/30 rounded-lg">
                           <i className="fas fa-user mr-1 opacity-60" />{p.users}
                         </Badge>
@@ -194,7 +154,7 @@ function Content() {
                       </div>
                     </div>
                     <Bar value={p.views} max={maxViews} />
-                  </div>
+                  </Link>
                 ))}
               </div>
             </Card>
@@ -211,13 +171,14 @@ function Content() {
                 {data.features.length === 0 ? (
                   <div className="p-8 text-center text-xs text-muted-foreground">ยังไม่มีการกดปุ่มที่ติดตาม</div>
                 ) : data.features.map((f) => (
-                  <div key={f.feature} className="px-6 py-3.5 hover:bg-secondary/20 transition-colors">
+                  <Link key={f.feature} href={detailLink(f.feature)} className="block px-6 py-3.5 hover:bg-secondary/20 transition-colors group/row">
                     <div className="flex items-center justify-between gap-3 mb-2">
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-foreground truncate tracking-tight">{FEATURE_LABELS[f.feature] || f.feature}</p>
+                        <p className="text-xs font-bold text-foreground truncate tracking-tight group-hover/row:text-primary transition-colors">{FEATURE_LABELS[f.feature] || f.feature}</p>
                         <p className="text-[9px] font-mono text-muted-foreground/70 truncate mt-0.5">{f.feature}</p>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-[9px] font-bold text-primary opacity-0 group-hover/row:opacity-100 transition-opacity whitespace-nowrap">ดูล่าสุด <i className="fas fa-arrow-right text-[8px]" /></span>
                         <Badge variant="outline" className="text-[9px] font-bold border-border bg-secondary/30 rounded-lg">
                           <i className="fas fa-user mr-1 opacity-60" />{f.users}
                         </Badge>
@@ -225,7 +186,7 @@ function Content() {
                       </div>
                     </div>
                     <Bar value={f.clicks} max={maxClicks} />
-                  </div>
+                  </Link>
                 ))}
               </div>
             </Card>

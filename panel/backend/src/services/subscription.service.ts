@@ -656,20 +656,44 @@ class SubscriptionService {
     return rows;
   }
 
-  async getAuditLogs(page: number = 1, limit: number = 50) {
+  async getAuditLogs(
+    page: number = 1,
+    limit: number = 50,
+    opts: { category?: string; q?: string } = {}
+  ) {
     const safeLimit = Math.min(Math.max(limit | 0, 1), 200);
     const safePage = Math.max(page | 0, 1);
     const offset = (safePage - 1) * safeLimit;
+
+    // Activity rows now live alongside action rows in the same view (not split out).
+    // `category` optionally narrows to 'action' or 'activity'; `q` filters by the
+    // page path / feature key (details). Anything else = show everything.
+    const where: string[] = [];
+    const params: any[] = [];
+    if (opts.category === 'action' || opts.category === 'activity') {
+      where.push('l.category = ?');
+      params.push(opts.category);
+    }
+    if (opts.q) {
+      where.push('l.details LIKE ?');
+      params.push(`%${opts.q}%`);
+    }
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
     const [logs] = await pool.execute<RowDataPacket[]>(
       `SELECT l.*, u.display_name, u.email
        FROM audit_logs l
        LEFT JOIN panel_users u ON l.user_id = u.id
-       WHERE l.category = 'action'
+       ${whereSql}
        ORDER BY l.created_at DESC
-       LIMIT ${safeLimit} OFFSET ${offset}`
+       LIMIT ${safeLimit} OFFSET ${offset}`,
+      params
     );
 
-    const [total] = await pool.execute<RowDataPacket[]>(`SELECT COUNT(*) as count FROM audit_logs WHERE category = 'action'`);
+    const [total] = await pool.execute<RowDataPacket[]>(
+      `SELECT COUNT(*) as count FROM audit_logs l ${whereSql}`,
+      params
+    );
 
     return { logs, total: total[0].count };
   }

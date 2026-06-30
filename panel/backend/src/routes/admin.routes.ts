@@ -47,7 +47,9 @@ router.get('/stats/charts', asyncRoute(async (_req, res) => {
 
 router.get('/audit-logs', asyncRoute(async (req, res) => {
   const { page, limit } = safePagination(req.query.page, req.query.limit, 50);
-  const result = await subscriptionService.getAuditLogs(page, limit);
+  const category = req.query.category ? String(req.query.category) : undefined;
+  const q = req.query.q ? String(req.query.q).slice(0, 191) : undefined;
+  const result = await subscriptionService.getAuditLogs(page, limit, { category, q });
   res.json(result);
 }));
 

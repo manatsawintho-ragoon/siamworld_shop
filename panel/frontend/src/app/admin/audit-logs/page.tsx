@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import { SkeletonTable } from '@/components/SkeletonLoader';
 import EmptyState from '@/components/EmptyState';
@@ -8,9 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
+import { activityLabel } from '@/lib/activityLabels';
 
 interface AuditLog {
-  id: number; user_id: number; action: string; target_type: string; target_id: number;
+  id: number; user_id: number; action: string; category: string; target_type: string; target_id: number;
   details: string; ip_address: string; created_at: string;
   display_name: string; email: string;
 }
@@ -24,26 +26,47 @@ const ACTION_MAP: Record<string, { label: string; variant: string; colorClass: s
   reject_slip:          { label: 'ปฏิเสธสลิป',    variant: 'warning',     colorClass: 'bg-amber-500/10 text-amber-600 border-amber-500/20', icon: 'fa-circle-xmark' },
   edit_user:            { label: 'แก้ไขผู้ใช้',   variant: 'outline',     colorClass: 'bg-blue-500/10 text-blue-600 border-blue-500/20', icon: 'fa-user-pen' },
   update_mc_ip:         { label: 'แก้ไข MC IP',   variant: 'outline',     colorClass: 'bg-slate-500/10 text-slate-600 border-slate-500/20', icon: 'fa-shield-halved' },
+  page_view:            { label: 'เปิดหน้า',      variant: 'secondary',   colorClass: 'bg-violet-500/10 text-violet-600 border-violet-500/20', icon: 'fa-eye' },
+  feature_click:        { label: 'กดใช้งาน',     variant: 'secondary',   colorClass: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20', icon: 'fa-hand-pointer' },
 };
+
+const FILTERS = [
+  { key: 'all',      label: 'ทั้งหมด',   icon: 'fa-layer-group' },
+  { key: 'action',   label: 'การกระทำ',  icon: 'fa-bolt' },
+  { key: 'activity', label: 'การใช้งาน', icon: 'fa-fire' },
+];
 
 const PAGE_SIZE = 50;
 
 function Content() {
+  const searchParams = useSearchParams();
+  const q = searchParams.get('q') || '';
+  const urlCategory = searchParams.get('category') || 'all';
+
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [category, setCategory] = useState(urlCategory);
+
+  // Adopt the category from the URL when arriving via a hotspot deep-link.
+  useEffect(() => { setCategory(urlCategory); setPage(1); }, [urlCategory]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await api.get('/api/admin/audit-logs', { params: { page, limit: PAGE_SIZE } });
+      const params: Record<string, string | number> = { page, limit: PAGE_SIZE };
+      if (category && category !== 'all') params.category = category;
+      if (q) params.q = q;
+      const r = await api.get('/api/admin/audit-logs', { params });
       setLogs(r.data.logs);
       setTotal(r.data.total);
     } catch { } finally { setLoading(false); }
-  }, [page]);
+  }, [page, category, q]);
 
   useEffect(() => { load(); }, [load]);
+
+  const selectFilter = (key: string) => { setCategory(key); setPage(1); };
 
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -64,7 +87,7 @@ function Content() {
           </div>
           <p className="text-muted-foreground font-medium text-sm flex items-center gap-2">
             <i className="fas fa-clock-rotate-left text-primary text-xs" />
-            บันทึกเหตุการณ์และกิจกรรมย้อนหลังในระบบทั้งหมด
+            บันทึกเหตุการณ์ การกระทำ และการใช้งานของผู้ใช้ (ใคร ทำอะไร เมื่อไหร่)
           </p>
         </motion.div>
         
@@ -78,6 +101,32 @@ function Content() {
              <i className="fas fa-arrows-rotate text-xs" />
            </Button>
         </motion.div>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex items-center gap-1.5 bg-card border border-border p-1.5 rounded-xl shadow-sm w-fit">
+          {FILTERS.map((f) => (
+            <Button
+              key={f.key}
+              onClick={() => selectFilter(f.key)}
+              variant={category === f.key ? 'default' : 'ghost'}
+              size="sm"
+              className="h-8 rounded-lg text-xs font-bold"
+            >
+              <i className={`fas ${f.icon} mr-1.5 text-[10px]`} />{f.label}
+            </Button>
+          ))}
+        </div>
+        {q && (
+          <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-xl px-3 py-2 w-fit">
+            <i className="fas fa-filter text-primary text-[10px]" />
+            <span className="text-xs font-bold text-primary">กรอง: <span className="font-mono">{q}</span></span>
+            <Link href="/admin/audit-logs" className="text-primary/60 hover:text-primary transition-colors">
+              <i className="fas fa-xmark text-xs" />
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* List */}
@@ -141,7 +190,12 @@ function Content() {
                             </Badge>
                           </td>
                           <td className="px-6 py-4">
-                            <p className="text-[11px] text-foreground/80 leading-relaxed line-clamp-2 max-w-[350px] font-semibold tracking-tight">{log.details}</p>
+                            <p className="text-[11px] text-foreground/80 leading-relaxed line-clamp-2 max-w-[350px] font-semibold tracking-tight">
+                              {log.category === 'activity' ? activityLabel(log.action, log.details) : log.details}
+                            </p>
+                            {log.category === 'activity' && (
+                              <p className="text-[9px] font-mono text-muted-foreground/60 truncate max-w-[350px] mt-0.5">{log.details}</p>
+                            )}
                           </td>
                           <td className="px-6 py-4 text-right">
                             <Badge variant="outline" className="font-mono text-[9px] font-bold border-border bg-secondary/30 px-2 py-0.5 rounded-lg text-muted-foreground/80">
