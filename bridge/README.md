@@ -48,9 +48,10 @@ Customer MC server                    Panel
 
 ## Versioning
 
-- **Plugin version** (`1.0.0`) is independent. The same jar runs on any
-  Minecraft server 1.16+ — see [`plugin/README.md`](plugin/README.md) for
-  why this works without conditional code.
+- **Plugin version** (`1.1.0`) is independent. The same jar runs on any
+  Minecraft server 1.16+, including Folia (declares `folia-supported: true`) —
+  see [`plugin/README.md`](plugin/README.md) for why this works without
+  conditional code.
 - **Protocol version** (currently v1) is path-scoped in the WS URL:
   `wss://panel.siamsite.shop/bridge`. Future breaking wire changes go to
   `/bridge/v2`, letting two plugin generations coexist during rollout.

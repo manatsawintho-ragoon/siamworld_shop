@@ -1096,7 +1096,7 @@ EXIT;`}
                         กดปุ่มด้านล่างเพื่อโหลด เก็บไว้ก่อน เดี๋ยวเอาไปวางในขั้น 3
                       </p>
                       <Button variant="outline" asChild className="mt-1 cursor-pointer rounded-full font-bold h-10 px-6">
-                        <a href="/downloads/siamsite-bridge-1.0.0.jar" download>
+                        <a href="/downloads/siamsite-bridge-1.1.0.jar" download>
                           <i className="fas fa-download mr-2" /> ดาวน์โหลด siamsite-bridge.jar
                         </a>
                       </Button>
@@ -1130,13 +1130,13 @@ EXIT;`}
                       {osType === 'linux' ? (
                         <ol className="text-xs text-muted-foreground font-medium space-y-1.5 list-decimal pl-5">
                           <li>SSH หรือ SFTP เข้าเซิร์ฟ ไปที่โฟลเดอร์ที่เก็บเซิร์ฟ MC</li>
-                          <li>ลากไฟล์ <code>siamsite-bridge-1.0.0.jar</code> ที่โหลดมา วางในโฟลเดอร์ <code>plugins/</code></li>
+                          <li>ลากไฟล์ <code>siamsite-bridge-1.1.0.jar</code> ที่โหลดมา วางในโฟลเดอร์ <code>plugins/</code></li>
                           <li><strong>เปิดเซิร์ฟ 1 ครั้ง</strong> รอจน console บอก <code>Done!</code> แล้วพิมพ์ <code>stop</code></li>
                         </ol>
                       ) : (
                         <ol className="text-xs text-muted-foreground font-medium space-y-1.5 list-decimal pl-5">
                           <li>เปิด Windows Explorer ไปที่โฟลเดอร์เซิร์ฟ MC</li>
-                          <li>ลากไฟล์ <code>siamsite-bridge-1.0.0.jar</code> ที่โหลดมา วางใน <code>plugins\</code></li>
+                          <li>ลากไฟล์ <code>siamsite-bridge-1.1.0.jar</code> ที่โหลดมา วางใน <code>plugins\</code></li>
                           <li><strong>เปิดเซิร์ฟ 1 ครั้ง</strong> double-click <code>run.bat</code> รอจนบอก <code>Done!</code> แล้วพิมพ์ <code>stop</code> ใน CMD</li>
                         </ol>
                       )}

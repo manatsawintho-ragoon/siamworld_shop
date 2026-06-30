@@ -30,13 +30,13 @@ panel goes down, your players keep playing without interruption.
    - Copy the token. **It's shown only once** — paste it somewhere safe immediately.
 
 2. **Download the plugin**
-   - From the dashboard, click **Download `siamsite-bridge-1.0.0.jar`**
+   - From the dashboard, click **Download `siamsite-bridge-1.1.0.jar`**
    - Or grab it from [github.com/siamsite/bridge/releases](https://github.com/siamsite/bridge/releases)
    - Or build it yourself from source: see [`plugin/README.md`](plugin/README.md)
 
 3. **Install**
    - Stop your MC server (or just drop the jar in and use `/reload confirm`)
-   - Copy `siamsite-bridge-1.0.0.jar` into `your-server/plugins/`
+   - Copy `siamsite-bridge-1.1.0.jar` into `your-server/plugins/`
    - Start the server once. The plugin auto-creates `plugins/SiamsiteBridge/config.yml`.
 
 4. **Configure**
@@ -114,7 +114,7 @@ report it.
 
 ## Uninstall
 
-- Delete `siamsite-bridge-1.0.0.jar` from `/plugins`
+- Delete `siamsite-bridge-1.1.0.jar` from `/plugins`
 - Delete `plugins/SiamsiteBridge/`
 - Restart the server
 - (Optional) Revoke the token in the panel dashboard

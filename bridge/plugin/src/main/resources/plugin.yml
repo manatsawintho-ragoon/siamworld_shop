@@ -1,9 +1,14 @@
 name: SiamsiteBridge
-version: '1.0.0'
+version: '1.1.0'
 main: shop.siamsite.bridge.SiamsiteBridgePlugin
 # Lowest API level we compile against. Plugin runs on 1.16 through the latest
 # Paper/Spigot/Bukkit release without recompilation.
 api-version: '1.16'
+# Folia support. The plugin does all its work on its own thread pools and never
+# touches the main thread (no Bukkit scheduler, no entity/world access), so it is
+# safe under Folia's regionised threading. This flag is the gate Folia checks
+# before loading the plugin; without it Folia refuses to enable it.
+folia-supported: true
 author: Siamsite
 website: https://panel.siamsite.shop
 description: Outbound WSS gateway connecting AuthMe or nLogin to the Siamsite shop panel.

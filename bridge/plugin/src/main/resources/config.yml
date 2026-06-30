@@ -1,30 +1,28 @@
-# SiamsiteBridge configuration.
-# After editing, run /siamsite-bridge reload (or restart the server).
+# ตั้งค่า SiamsiteBridge
+# แก้เสร็จแล้วพิมพ์ /siamsite-bridge reload หรือรีสตาร์ทเซิร์ฟเวอร์
 
 panel:
-  # Production endpoint. Leave as-is unless support tells you otherwise.
+  # ที่อยู่เซิร์ฟเวอร์ panel ไม่ต้องแก้ ยกเว้นทีมงานบอกให้แก้
   url: wss://panel.siamsite.shop/bridge
-  # Paste your token from panel.siamsite.shop → Dashboard → Bridge → Issue Token.
-  # It is only shown once; if you lose it, just issue a new one.
+  # โทเคนจาก panel.siamsite.shop -> Dashboard -> Bridge -> Issue Token
+  # แสดงครั้งเดียว ถ้าหายให้กดสร้างใหม่
   token: "PASTE-YOUR-TOKEN-HERE"
 
 authme:
-  # MySQL credentials. Leave `auto: true` to read from plugins/AuthMe/config.yml
-  # (recommended). Set `auto: false` to use the explicit values below.
+  # auto: true = อ่านค่า MySQL จาก plugins/AuthMe/config.yml ให้อัตโนมัติ (แนะนำ)
+  # auto: false = ใช้ค่าด้านล่างแทน
   auto: true
   host: 127.0.0.1
   port: 3306
   database: authme
   user: authme
   password: ""
-  # Override the AuthMe table name if your server uses a non-default one.
-  # When auto-detect is on, this is also read from the AuthMe config.
+  # ชื่อตาราง AuthMe แก้เฉพาะกรณีใช้ชื่อไม่ใช่ค่าเริ่มต้น
   table: authme
 
 nlogin:
-  # MySQL credentials. Leave `auto: true` to read from plugins/nLogin/config.yml
-  # (recommended). Set `auto: false` to use the explicit values below.
-  # Only used when `bridge.backend` resolves to `nlogin`.
+  # auto: true = อ่านค่า MySQL จาก plugins/nLogin/config.yml ให้อัตโนมัติ (แนะนำ)
+  # ใช้เมื่อ bridge.backend เป็น nlogin เท่านั้น
   auto: true
   host: 127.0.0.1
   port: 3306
@@ -32,8 +30,8 @@ nlogin:
   user: nlogin
   password: ""
   table: nlogin
-  # nLogin lets operators rename every column. Defaults match a stock install;
-  # override only if your nLogin config.yml renames them and auto-detect is off.
+  # nLogin เปลี่ยนชื่อคอลัมน์ได้ ค่าด้านล่างคือค่ามาตรฐาน
+  # แก้เฉพาะกรณีเปลี่ยนชื่อคอลัมน์เองและปิด auto
   columns:
     id: ai
     last_name: username
@@ -43,18 +41,15 @@ nlogin:
     last_seen: last_seen
 
 bridge:
-  # Which auth plugin to read from: `auto`, `authme`, or `nlogin`.
-  # `auto` picks whichever plugin folder exists. If both exist the bridge
-  # prefers AuthMe (for backward compatibility) and logs a warning — set
-  # this explicitly to `nlogin` if you're migrating to nLogin.
+  # เลือกระบบล็อกอินที่จะอ่าน: auto, authme หรือ nlogin
+  # auto = เลือกปลั๊กอินที่เจอ ถ้ามีทั้งคู่จะใช้ AuthMe และเตือนใน log
   backend: auto
-  # Maximum concurrent DB connections used by the bridge. Don't raise this
-  # unless a support engineer asks — 4 is enough for hundreds of req/sec.
+  # จำนวน connection MySQL สูงสุด ปกติ 4 พอสำหรับหลักร้อย req/วินาที
   connection_pool_size: 4
-  # Async worker threads handling WS frames and bcrypt verifies.
+  # จำนวน thread ที่ประมวลผล WS และตรวจรหัสผ่าน
   worker_threads: 4
-  # Auto-reconnect timing. Exponential backoff with jitter.
+  # เวลา reconnect อัตโนมัติ (เพิ่มเป็นเท่าตัวแบบสุ่ม)
   reconnect_initial_ms: 1000
   reconnect_max_ms: 60000
-  # Hard cap on in-flight requests per connection. Matches the panel side.
+  # จำกัดจำนวน request ที่ค้างต่อ connection ต้องตรงกับฝั่ง panel
   max_inflight: 256

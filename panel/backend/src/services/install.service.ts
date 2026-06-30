@@ -190,7 +190,7 @@ class InstallService {
     const dumpUrl = `${base}/install/${opts.subscriptionId}/dump?key=${opts.plaintextKey}`;
     const scriptUrl = `${base}/install/${opts.subscriptionId}/setup.${opts.os === 'windows' ? 'ps1' : 'sh'}?key=${opts.plaintextKey}`;
     const panelWs = config.urls.frontend.replace(/^https?:/, 'wss:').replace(/\/$/, '') + '/bridge';
-    const bridgeJarUrl = `${config.urls.frontend.replace(/\/$/, '')}/downloads/siamsite-bridge-1.0.0.jar`;
+    const bridgeJarUrl = `${config.urls.frontend.replace(/\/$/, '')}/downloads/siamsite-bridge-1.1.0.jar`;
 
     const replacements: Record<string, string> = {
       SUB_ID: String(opts.subscriptionId),

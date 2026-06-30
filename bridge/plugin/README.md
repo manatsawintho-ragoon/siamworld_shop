@@ -51,12 +51,12 @@ cd bridge/plugin
 mvn -B clean package
 ```
 
-Output: `target/siamsite-bridge-1.0.0.jar` (shaded fat jar, ~2–3 MB).
+Output: `target/siamsite-bridge-1.1.0.jar` (shaded fat jar, ~2–3 MB).
 
 To install on a local test server:
 
 ```bash
-cp target/siamsite-bridge-1.0.0.jar /path/to/server/plugins/
+cp target/siamsite-bridge-1.1.0.jar /path/to/server/plugins/
 ```
 
 ## Why a single artifact for multiple Minecraft versions?
@@ -78,6 +78,18 @@ Mojang ever ships a 2.0 that genuinely breaks the API, we'll cut a new
 plugin artifact and the panel will gate distribution by detected MC
 version.
 
+### Folia
+
+Folia refuses to enable any plugin that does not explicitly opt in via
+`folia-supported: true` in `plugin.yml`, even if the code is already
+thread-safe. We set that flag because the plugin genuinely satisfies Folia's
+contract: all DB queries, bcrypt verifies, and WS I/O run on our own
+`AsyncExecutor` / scheduler threads, and we never call the Bukkit scheduler
+or touch any entity/world/player object that Folia pins to a region thread.
+The only Bukkit calls are config IO and `getServer().getName()` /
+`getBukkitVersion()` for diagnostics, all of which are thread-safe. No
+region/global scheduler migration was needed.
+
 The protocol version is path-scoped in the WS URL (`/bridge` = v1). Future
 breaking wire changes go to `/bridge/v2`, allowing two plugin builds to
 coexist for the rollout window.
@@ -89,6 +101,7 @@ coexist for the rollout window.
 | Paper   | 1.16.5, 1.18.2, 1.19.4, 1.20.4, 1.21.x          |
 | Spigot  | 1.16.5, 1.20.4                                  |
 | Purpur  | 1.20.4                                          |
+| Folia   | 1.20.x, 1.21.x (via `folia-supported: true`)    |
 
 Earlier than 1.16 is not supported because `api-version` was introduced in
 1.13 and the Bukkit ConfigurationSerialization scheme used by AuthMe 5.x
