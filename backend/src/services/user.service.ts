@@ -1,6 +1,6 @@
 import { pool } from '../database/connection';
 import bcrypt from 'bcrypt';
-import { NotFoundError } from '../utils/errors';
+import { NotFoundError, ConflictError } from '../utils/errors';
 import { RowDataPacket } from 'mysql2';
 import { destroySession } from './session.service';
 
@@ -70,9 +70,11 @@ class UserService {
   async getAllUsers(page: number = 1, limit: number = 20, search?: string) {
     const offset = (page - 1) * limit;
     const params: (string | number)[] = [];
-    let whereClause = '';
+    // Always hide soft-deleted users so admins don't see (and re-try to delete)
+    // accounts that are already gone.
+    let whereClause = 'WHERE u.deleted_at IS NULL';
     if (search) {
-      whereClause = 'WHERE u.username LIKE ?';
+      whereClause += ' AND u.username LIKE ?';
       params.push(`%${search}%`);
     }
     const [rows] = await pool.execute<RowDataPacket[]>(
@@ -198,7 +200,7 @@ class UserService {
       if (rows.length === 0) throw new NotFoundError('User not found');
       if ((rows[0] as any).deleted_at) {
         await conn.rollback();
-        throw new Error('ผู้ใช้นี้ถูกลบไปแล้ว');
+        throw new ConflictError('ผู้ใช้นี้ถูกลบไปแล้ว');
       }
       await conn.execute('UPDATE users SET deleted_at = NOW() WHERE id = ?', [userId]);
       await conn.commit();
@@ -241,7 +243,7 @@ class UserService {
       );
       if (fromRows.length === 0) throw new NotFoundError('ไม่พบผู้ใช้ต้นทาง');
       if (toRows.length === 0) throw new NotFoundError('ไม่พบผู้ใช้ปลายทาง');
-      if ((toRows[0] as any).deleted_at) throw new Error('ผู้ใช้ปลายทางถูกลบไปแล้ว');
+      if ((toRows[0] as any).deleted_at) throw new ConflictError('ผู้ใช้ปลายทางถูกลบไปแล้ว');
 
       // Lock wallets in stable id order to avoid deadlocks under concurrent transfers.
       const a = Math.min(fromUserId, toUserId);
