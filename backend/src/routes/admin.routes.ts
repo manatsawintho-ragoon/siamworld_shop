@@ -6,7 +6,7 @@ import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { adminStatsService } from '../services/admin-stats.service';
 import { shopService } from '../services/shop.service';
 import { lootBoxService } from '../services/loot-box.service';
-import { userService } from '../services/user.service';
+import { userService, UserListFilters } from '../services/user.service';
 import { walletService } from '../services/wallet.service';
 import { serverService } from '../services/server.service';
 import { settingsService } from '../services/settings.service';
@@ -195,9 +195,95 @@ router.get('/users', async (req: Request, res: Response, next: NextFunction) => 
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
-    const search = req.query.search as string | undefined;
-    const users = await userService.getAllUsers(page, limit, search);
+    const q = req.query;
+
+    const filters: UserListFilters = {
+      search: (q.search as string) || undefined,
+      role: q.role === 'admin' || q.role === 'user' ? q.role : undefined,
+      status: q.status === 'banned' || q.status === 'active' ? q.status : undefined,
+      hasBalance: q.hasBalance === '1' || q.hasBalance === 'true',
+      hasTopup: q.hasTopup === '1' || q.hasTopup === 'true',
+      hasPurchase: q.hasPurchase === '1' || q.hasPurchase === 'true',
+      balanceMin: q.balanceMin !== undefined && q.balanceMin !== '' ? Number(q.balanceMin) : undefined,
+      balanceMax: q.balanceMax !== undefined && q.balanceMax !== '' ? Number(q.balanceMax) : undefined,
+      createdFrom: (q.createdFrom as string) || undefined,
+      createdTo: (q.createdTo as string) || undefined,
+      sortBy: ['id', 'username', 'wallet_balance', 'total_topup', 'total_spent', 'created_at'].includes(q.sortBy as string)
+        ? (q.sortBy as UserListFilters['sortBy']) : undefined,
+      sortDir: q.sortDir === 'asc' ? 'asc' : 'desc',
+    };
+    if (filters.balanceMin !== undefined && Number.isNaN(filters.balanceMin)) filters.balanceMin = undefined;
+    if (filters.balanceMax !== undefined && Number.isNaN(filters.balanceMax)) filters.balanceMax = undefined;
+
+    // Resolve the live online set only when the "online" filter is requested.
+    if (q.online === '1' || q.online === 'true') {
+      const playerTracker = req.app.get('playerTracker');
+      const online = playerTracker ? await playerTracker.getOnlinePlayers() : { servers: {} };
+      const names = new Set<string>();
+      for (const s of Object.values(online.servers || {}) as any[]) {
+        for (const p of s.players || []) names.add(String(p).toLowerCase());
+      }
+      filters.onlineUsernames = Array.from(names);
+    }
+
+    const users = await userService.getAllUsers(page, limit, filters);
     res.json({ success: true, ...users });
+  } catch (err) { next(err); }
+});
+
+// Currently-suspended users. MUST be registered before '/users/:id' so "banned"
+// isn't captured as an :id param.
+router.get('/users/banned', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data = await userService.getBannedUsers();
+    res.json({ success: true, ...data });
+  } catch (err) { next(err); }
+});
+
+// Detailed online-players view: online IGNs cross-referenced against web accounts.
+router.get('/online-players', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const playerTracker = req.app.get('playerTracker');
+    const data = playerTracker ? await playerTracker.getOnlinePlayers() : { servers: {}, totalOnline: 0 };
+
+    const allNames: string[] = [];
+    for (const s of Object.values(data.servers || {}) as any[]) {
+      for (const p of s.players || []) allNames.push(String(p));
+    }
+    const accounts = await userService.lookupPlayersByUsernames(allNames);
+
+    let matched = 0;
+    const servers = Object.entries(data.servers || {}).map(([id, s]: [string, any]) => ({
+      id,
+      serverName: s.serverName,
+      count: s.count,
+      truncated: !!s.truncated,
+      players: (s.players || []).map((name: string) => {
+        const acc = accounts.get(name.toLowerCase());
+        if (acc) matched++;
+        return acc
+          ? {
+              name,
+              hasAccount: true,
+              userId: (acc as any).id,
+              role: (acc as any).role,
+              banned: !!(acc as any).banned_at,
+              walletBalance: Number((acc as any).wallet_balance) || 0,
+              totalTopup: Number((acc as any).total_topup) || 0,
+              totalSpent: Number((acc as any).total_spent) || 0,
+              createdAt: (acc as any).created_at,
+            }
+          : { name, hasAccount: false };
+      }),
+    }));
+
+    res.json({
+      success: true,
+      servers,
+      totalOnline: data.totalOnline || 0,
+      matchedAccounts: matched,
+      guests: allNames.length - matched,
+    });
   } catch (err) { next(err); }
 });
 
@@ -301,6 +387,64 @@ router.delete('/users/:id', async (req: Request, res: Response, next: NextFuncti
       description: `ลบบัญชี (soft) ${targetUsername}`, refId: String(id), meta: { target: targetUsername },
     });
     res.json({ success: true, message: 'ลบบัญชีสำเร็จ' });
+  } catch (err) { next(err); }
+});
+
+// Ban (suspend) a user from the website. Reversible via /unban.
+router.post('/users/:id/ban', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (Number.isNaN(id) || id <= 0) return res.status(400).json({ success: false, message: 'Invalid user id' });
+    if (id === req.user!.userId) return res.status(400).json({ success: false, message: 'ไม่สามารถระงับบัญชีของตัวเองได้' });
+
+    const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim().slice(0, 500) : '';
+    if (!reason) return res.status(400).json({ success: false, message: 'กรุณาระบุเหตุผลการระงับ' });
+
+    const [targetUser] = await pool.execute<RowDataPacket[]>('SELECT username, role FROM users WHERE id = ?', [id]);
+    if (targetUser.length === 0) return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
+    const targetUsername = (targetUser[0] as any).username;
+    if ((targetUser[0] as any).role === 'admin') {
+      return res.status(400).json({ success: false, message: 'ไม่สามารถระงับบัญชีแอดมินได้ ให้ลดสิทธิ์เป็น user ก่อน' });
+    }
+
+    await userService.banUser(id, reason, { id: req.user!.userId, username: req.user!.username });
+    auditService.log({
+      userId: req.user!.userId, username: req.user!.username, actionType: 'admin_user_ban',
+      description: `ระงับบัญชี ${targetUsername}: ${reason}`, refId: String(id), meta: { target: targetUsername, reason },
+    });
+    res.json({ success: true, message: 'ระงับบัญชีสำเร็จ' });
+  } catch (err) { next(err); }
+});
+
+// Lift a ban.
+router.post('/users/:id/unban', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (Number.isNaN(id) || id <= 0) return res.status(400).json({ success: false, message: 'Invalid user id' });
+
+    const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim().slice(0, 500) : '';
+    if (!reason) return res.status(400).json({ success: false, message: 'กรุณาระบุเหตุผลการปลดระงับ' });
+
+    const [targetUser] = await pool.execute<RowDataPacket[]>('SELECT username FROM users WHERE id = ?', [id]);
+    if (targetUser.length === 0) return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
+    const targetUsername = (targetUser[0] as any).username;
+
+    await userService.unbanUser(id, reason, { id: req.user!.userId, username: req.user!.username });
+    auditService.log({
+      userId: req.user!.userId, username: req.user!.username, actionType: 'admin_user_unban',
+      description: `ปลดระงับบัญชี ${targetUsername}: ${reason}`, refId: String(id), meta: { target: targetUsername, reason },
+    });
+    res.json({ success: true, message: 'ปลดระงับบัญชีสำเร็จ' });
+  } catch (err) { next(err); }
+});
+
+// Full ban/unban history for one user.
+router.get('/users/:id/ban-logs', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (Number.isNaN(id) || id <= 0) return res.status(400).json({ success: false, message: 'Invalid user id' });
+    const data = await userService.getUserBanLogs(id);
+    res.json({ success: true, ...data });
   } catch (err) { next(err); }
 });
 

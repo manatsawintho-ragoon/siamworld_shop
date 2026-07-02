@@ -137,13 +137,14 @@ class AuthService {
   // Ensures the app-side `users` + `wallets` rows exist and issues the JWT.
   // Shared by local and bridge login paths so the post-auth flow stays identical.
   private async finalizeLogin(username: string, emailFromBridge: string | null): Promise<{ token: string; user: JwtPayload }> {
-    let appUser: { id: number; username: string; role: string; deleted_at: Date | null } | null =
+    let appUser: { id: number; username: string; role: string; deleted_at: Date | null; banned_at: Date | null } | null =
       await this.findUser(username) as any;
     if (!appUser) {
-      appUser = { ...(await this.createUser(username, emailFromBridge || undefined)), deleted_at: null };
+      appUser = { ...(await this.createUser(username, emailFromBridge || undefined)), deleted_at: null, banned_at: null };
     }
-    if (appUser.deleted_at) {
-      // Soft-deleted users cannot log in. Don't leak why — return the generic error.
+    if (appUser.deleted_at || appUser.banned_at) {
+      // Soft-deleted or suspended (banned) users cannot log in. Don't leak why —
+      // return the generic error.
       throw new AuthenticationError('Invalid username or password');
     }
 
@@ -162,7 +163,7 @@ class AuthService {
 
   private async findUser(username: string) {
     const [rows] = await pool.execute<RowDataPacket[]>(
-      'SELECT id, username, role, deleted_at FROM users WHERE LOWER(username) = LOWER(?)', [username]
+      'SELECT id, username, role, deleted_at, banned_at FROM users WHERE LOWER(username) = LOWER(?)', [username]
     );
     return rows[0] || null;
   }

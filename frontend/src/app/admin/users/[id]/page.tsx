@@ -30,6 +30,9 @@ interface UserDetail {
   purchase_count: number;
   daily_redeem_count: number;
   net_balance_rate: number;
+  banned_at?: string | null;
+  ban_reason?: string | null;
+  banned_by_username?: string | null;
 }
 
 // ─── Page ────────────────────────────────────────────────────────────────────
@@ -49,8 +52,12 @@ export default function AdminUserDetail() {
   const [savingSettings,  setSavingSettings]  = useState(false);
 
   // Danger-zone modals
-  const [deleteOpen,    setDeleteOpen]    = useState(false);
-  const [deleteBusy,    setDeleteBusy]    = useState(false);
+  const [banOpen,       setBanOpen]       = useState(false);
+  const [banReason,     setBanReason]     = useState('');
+  const [banBusy,       setBanBusy]       = useState(false);
+  const [unbanOpen,     setUnbanOpen]     = useState(false);
+  const [unbanReason,   setUnbanReason]   = useState('');
+  const [unbanBusy,     setUnbanBusy]     = useState(false);
   const [transferOpen,  setTransferOpen]  = useState(false);
   const [transferTo,    setTransferTo]    = useState('');
   const [transferBusy,  setTransferBusy]  = useState(false);
@@ -87,18 +94,35 @@ export default function AdminUserDetail() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!user) return;
-    setDeleteBusy(true);
+  const handleBan = async () => {
+    if (!user || !banReason.trim()) return;
+    setBanBusy(true);
     try {
-      await api(`/admin/users/${id}`, { method: 'DELETE', token: getToken()! });
-      adminAlert({ title: 'ลบบัญชีสำเร็จ', message: `${user.username} ถูกลบแล้ว (soft delete)`, type: 'success' });
-      router.push('/admin/users');
+      await api(`/admin/users/${id}/ban`, { method: 'POST', token: getToken()!, body: { reason: banReason.trim() } });
+      adminAlert({ title: 'ระงับบัญชีสำเร็จ', message: `${user.username} ถูกระงับการใช้งานแล้ว`, type: 'success' });
+      setBanOpen(false);
+      setBanReason('');
+      loadUser();
     } catch (err: any) {
-      adminAlert({ title: 'ลบบัญชีไม่สำเร็จ', message: err?.message || 'เกิดข้อผิดพลาด', type: 'error' });
+      adminAlert({ title: 'ระงับบัญชีไม่สำเร็จ', message: err?.message || 'เกิดข้อผิดพลาด', type: 'error' });
     } finally {
-      setDeleteBusy(false);
-      setDeleteOpen(false);
+      setBanBusy(false);
+    }
+  };
+
+  const handleUnban = async () => {
+    if (!user || !unbanReason.trim()) return;
+    setUnbanBusy(true);
+    try {
+      await api(`/admin/users/${id}/unban`, { method: 'POST', token: getToken()!, body: { reason: unbanReason.trim() } });
+      adminAlert({ title: 'ปลดระงับสำเร็จ', message: `${user.username} กลับมาใช้งานได้แล้ว`, type: 'success' });
+      setUnbanOpen(false);
+      setUnbanReason('');
+      loadUser();
+    } catch (err: any) {
+      adminAlert({ title: 'ปลดระงับไม่สำเร็จ', message: err?.message || 'เกิดข้อผิดพลาด', type: 'error' });
+    } finally {
+      setUnbanBusy(false);
     }
   };
 
@@ -166,6 +190,27 @@ export default function AdminUserDetail() {
           <i className="fas fa-arrow-left text-xs" /> ย้อนกลับ
         </Link>
       </div>
+
+      {/* ── Ban status banner ── */}
+      {user.banned_at && (
+        <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex-shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
+            <i className="fas fa-user-slash text-red-500 text-sm" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-red-700">บัญชีนี้ถูกระงับการใช้งาน</p>
+            <p className="text-xs text-red-600 mt-0.5 leading-relaxed">
+              เหตุผล: {user.ban_reason || '-'}
+              <span className="text-red-400"> · ระงับเมื่อ {new Date(user.banned_at).toLocaleString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+              {user.banned_by_username && <span className="text-red-400"> · โดย {user.banned_by_username}</span>}
+            </p>
+          </div>
+          <button onClick={() => setUnbanOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500 border border-green-600 text-white text-[11px] font-bold shadow-[0_3px_0_#15803d] hover:brightness-110 transition-all active:shadow-[0_1px_0_#15803d] active:translate-y-[2px] flex-shrink-0">
+            <i className="fas fa-unlock text-[10px]" /> ปลดระงับ
+          </button>
+        </div>
+      )}
 
       {/* ── Top: User Card + Edit ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-shrink-0">
@@ -310,7 +355,7 @@ export default function AdminUserDetail() {
                 : <><i className="fas fa-save" /> บันทึกข้อมูลทั้งหมด</>}
             </button>
 
-            {/* Danger zone — Transfer + Delete */}
+            {/* Danger zone — Transfer + Ban / Unban */}
             <div className="pt-4 mt-4 border-t border-gray-200">
               <p className="text-[11px] font-black text-red-500 uppercase tracking-widest mb-3 flex items-center gap-2"><i className="fas fa-triangle-exclamation text-[10px]" /> การดำเนินการพิเศษ</p>
               <div className="flex flex-col sm:flex-row gap-2">
@@ -318,13 +363,20 @@ export default function AdminUserDetail() {
                   className="flex-1 py-2 bg-amber-500 text-white font-bold rounded-lg shadow-[0_3px_0_#b45309] text-xs">
                   <i className="fas fa-arrow-right-arrow-left mr-2" /> โอนข้อมูลไปบัญชีอื่น
                 </button>
-                <button onClick={() => setDeleteOpen(true)}
-                  className="flex-1 py-2 bg-red-500 text-white font-bold rounded-lg shadow-[0_3px_0_#991b1b] text-xs">
-                  <i className="fas fa-user-slash mr-2" /> ลบบัญชี (Soft)
-                </button>
+                {user.banned_at ? (
+                  <button onClick={() => setUnbanOpen(true)}
+                    className="flex-1 py-2 bg-green-500 text-white font-bold rounded-lg shadow-[0_3px_0_#15803d] text-xs">
+                    <i className="fas fa-unlock mr-2" /> ปลดระงับการใช้งาน
+                  </button>
+                ) : (
+                  <button onClick={() => setBanOpen(true)}
+                    className="flex-1 py-2 bg-red-500 text-white font-bold rounded-lg shadow-[0_3px_0_#991b1b] text-xs">
+                    <i className="fas fa-user-slash mr-2" /> ระงับการใช้งาน
+                  </button>
+                )}
               </div>
               <p className="text-[10px] text-gray-400 mt-2 leading-relaxed">
-                "ลบบัญชี" จะปิดการเข้าใช้แต่เก็บข้อมูลเดิมไว้ (audit). "โอนข้อมูล" จะย้ายยอดเงิน + ประวัติการซื้อ + ของในคลังไปอีกบัญชีหนึ่ง
+                "ระงับการใช้งาน" จะบล็อกไม่ให้ผู้ใช้ล็อกอินเข้าเว็บ แต่เก็บข้อมูลเดิมไว้ทั้งหมด (ปลดระงับได้ภายหลัง). "โอนข้อมูล" จะย้ายยอดเงิน + ประวัติการซื้อ + ของในคลังไปอีกบัญชีหนึ่ง
               </p>
             </div>
           </div>
@@ -414,29 +466,74 @@ export default function AdminUserDetail() {
 
       </div>
 
-      {/* Delete modal */}
-      {deleteOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm" onClick={() => !deleteBusy && setDeleteOpen(false)}>
+      {/* Ban modal */}
+      {banOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm" onClick={() => !banBusy && setBanOpen(false)}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-5 border-b border-gray-100 flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
                 <i className="fas fa-user-slash text-red-500" />
               </div>
               <div>
-                <h3 className="font-bold text-gray-900 text-base">ลบบัญชี (Soft delete)</h3>
-                <p className="text-[11px] text-gray-500">ผู้ใช้จะถูกล็อกออก และเข้าใช้งานไม่ได้อีก</p>
+                <h3 className="font-bold text-gray-900 text-base">ระงับการใช้งาน</h3>
+                <p className="text-[11px] text-gray-500">ผู้ใช้จะล็อกอินเข้าเว็บไม่ได้ จนกว่าจะปลดระงับ</p>
               </div>
             </div>
-            <div className="px-6 py-5 space-y-2">
-              <p className="text-sm text-gray-700">คุณแน่ใจหรือไม่ที่จะลบบัญชี <b>{user.username}</b>?</p>
+            <div className="px-6 py-5 space-y-3">
+              <p className="text-sm text-gray-700">ระงับบัญชี <b>{user.username}</b>?</p>
+              <div>
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 block">เหตุผลการระงับ <span className="text-red-500">*</span></label>
+                <textarea value={banReason} onChange={(e) => setBanReason(e.target.value)} rows={3} maxLength={500}
+                  placeholder="เช่น ใช้สลิปปลอม / โกงระบบ / ละเมิดกฎ"
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-red-400 resize-none" />
+              </div>
               <p className="text-xs text-gray-500 leading-relaxed">ประวัติการเงิน + การซื้อ + audit log จะยังถูกเก็บไว้ ผู้ใช้แค่จะ login ไม่ได้</p>
             </div>
             <div className="px-6 py-4 bg-gray-50 flex items-center justify-end gap-2 border-t border-gray-100">
-              <button onClick={() => setDeleteOpen(false)} disabled={deleteBusy}
+              <button onClick={() => setBanOpen(false)} disabled={banBusy}
                 className="px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-700">ยกเลิก</button>
-              <button onClick={handleDelete} disabled={deleteBusy}
-                className="px-5 py-2.5 text-[13px] font-bold rounded-lg bg-red-500 text-white shadow-[0_3px_0_#991b1b]">
-                {deleteBusy ? <i className="fas fa-spinner fa-spin" /> : <><i className="fas fa-trash mr-1.5" /> ยืนยันลบ</>}
+              <button onClick={handleBan} disabled={banBusy || !banReason.trim()}
+                className="px-5 py-2.5 text-[13px] font-bold rounded-lg bg-red-500 text-white shadow-[0_3px_0_#991b1b] disabled:opacity-50">
+                {banBusy ? <i className="fas fa-spinner fa-spin" /> : <><i className="fas fa-ban mr-1.5" /> ยืนยันระงับ</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unban modal */}
+      {unbanOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm" onClick={() => !unbanBusy && setUnbanOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                <i className="fas fa-unlock text-green-500" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-base">ปลดระงับการใช้งาน</h3>
+                <p className="text-[11px] text-gray-500">ผู้ใช้จะกลับมาล็อกอินเข้าเว็บได้อีกครั้ง</p>
+              </div>
+            </div>
+            <div className="px-6 py-5 space-y-3">
+              <p className="text-sm text-gray-700">ปลดระงับบัญชี <b>{user.username}</b>?</p>
+              {user.ban_reason && (
+                <div className="bg-red-50 border border-red-200 rounded-lg px-3.5 py-2.5">
+                  <p className="text-[11px] text-red-700 leading-relaxed"><i className="fas fa-circle-info mr-1" /> เหตุผลที่ถูกระงับ: {user.ban_reason}</p>
+                </div>
+              )}
+              <div>
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 block">เหตุผลการปลดระงับ <span className="text-red-500">*</span></label>
+                <textarea value={unbanReason} onChange={(e) => setUnbanReason(e.target.value)} rows={3} maxLength={500}
+                  placeholder="เช่น ตรวจสอบแล้วเข้าใจผิด / ครบกำหนดโทษ"
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-green-400 resize-none" />
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 flex items-center justify-end gap-2 border-t border-gray-100">
+              <button onClick={() => setUnbanOpen(false)} disabled={unbanBusy}
+                className="px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-700">ยกเลิก</button>
+              <button onClick={handleUnban} disabled={unbanBusy || !unbanReason.trim()}
+                className="px-5 py-2.5 text-[13px] font-bold rounded-lg bg-green-500 text-white shadow-[0_3px_0_#15803d] disabled:opacity-50">
+                {unbanBusy ? <i className="fas fa-spinner fa-spin" /> : <><i className="fas fa-unlock mr-1.5" /> ยืนยันปลดระงับ</>}
               </button>
             </div>
           </div>

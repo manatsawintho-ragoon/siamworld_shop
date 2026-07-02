@@ -4,11 +4,33 @@ import { NotFoundError, ConflictError } from '../utils/errors';
 import { RowDataPacket } from 'mysql2';
 import { destroySession } from './session.service';
 
+export interface UserListFilters {
+  search?: string;
+  role?: 'admin' | 'user';
+  status?: 'banned' | 'active';
+  hasBalance?: boolean;
+  balanceMin?: number;
+  balanceMax?: number;
+  hasTopup?: boolean;
+  hasPurchase?: boolean;
+  createdFrom?: string;
+  createdTo?: string;
+  onlineUsernames?: string[];
+  sortBy?: 'id' | 'username' | 'wallet_balance' | 'total_topup' | 'total_spent' | 'created_at';
+  sortDir?: 'asc' | 'desc';
+}
+
 class UserService {
   async getProfile(userId: number) {
     const [rows] = await pool.execute<RowDataPacket[]>(
-      `SELECT u.id, u.username, u.email, u.role, u.created_at, COALESCE(w.balance, 0) as wallet_balance
-       FROM users u LEFT JOIN wallets w ON u.id = w.user_id WHERE u.id = ?`, [userId]
+      `SELECT u.id, u.username, u.email, u.role, u.created_at,
+              u.banned_at, u.ban_reason, u.banned_by,
+              ba.username as banned_by_username,
+              COALESCE(w.balance, 0) as wallet_balance
+       FROM users u
+       LEFT JOIN wallets w ON u.id = w.user_id
+       LEFT JOIN users ba ON ba.id = u.banned_by
+       WHERE u.id = ?`, [userId]
     );
     if (rows.length === 0) throw new NotFoundError('User not found');
 
@@ -67,28 +89,187 @@ class UserService {
     };
   }
 
-  async getAllUsers(page: number = 1, limit: number = 20, search?: string) {
+  async getAllUsers(page: number = 1, limit: number = 20, filters: UserListFilters = {}) {
     const offset = (page - 1) * limit;
+
+    // Shared aggregate joins so topup/spend totals can be both sorted and filtered on.
+    const baseFrom = `
+      FROM users u
+      LEFT JOIN wallets w ON u.id = w.user_id
+      LEFT JOIN (SELECT user_id, SUM(amount) AS total_topup FROM transactions
+                 WHERE type = 'topup' AND status = 'success' GROUP BY user_id) tp ON tp.user_id = u.id
+      LEFT JOIN (SELECT user_id, SUM(ABS(amount)) AS total_spent FROM transactions
+                 WHERE type = 'purchase' AND status = 'success' GROUP BY user_id) sp ON sp.user_id = u.id`;
+
+    // Always hide soft-deleted (merge-retired) users.
+    const where: string[] = ['u.deleted_at IS NULL'];
     const params: (string | number)[] = [];
-    // Always hide soft-deleted users so admins don't see (and re-try to delete)
-    // accounts that are already gone.
-    let whereClause = 'WHERE u.deleted_at IS NULL';
-    if (search) {
-      whereClause += ' AND u.username LIKE ?';
-      params.push(`%${search}%`);
+
+    if (filters.search) { where.push('u.username LIKE ?'); params.push(`%${filters.search}%`); }
+    if (filters.role === 'admin' || filters.role === 'user') { where.push('u.role = ?'); params.push(filters.role); }
+    if (filters.status === 'banned') where.push('u.banned_at IS NOT NULL');
+    else if (filters.status === 'active') where.push('u.banned_at IS NULL');
+    if (filters.hasBalance) where.push('COALESCE(w.balance, 0) > 0');
+    if (filters.balanceMin !== undefined) { where.push('COALESCE(w.balance, 0) >= ?'); params.push(filters.balanceMin); }
+    if (filters.balanceMax !== undefined) { where.push('COALESCE(w.balance, 0) <= ?'); params.push(filters.balanceMax); }
+    if (filters.hasTopup) where.push('COALESCE(tp.total_topup, 0) > 0');
+    if (filters.hasPurchase) where.push('COALESCE(sp.total_spent, 0) > 0');
+    if (filters.createdFrom) { where.push('u.created_at >= ?'); params.push(filters.createdFrom); }
+    if (filters.createdTo) { where.push('u.created_at <= ?'); params.push(filters.createdTo); }
+
+    // Online filter: caller resolves the live online set (from PlayerTracker) and passes
+    // the lowercased usernames. Empty array = nobody online → return no rows.
+    if (filters.onlineUsernames) {
+      if (filters.onlineUsernames.length === 0) {
+        return { users: [], total: 0, pagination: { page, totalPages: 0, total: 0 } };
+      }
+      where.push(`LOWER(u.username) IN (${filters.onlineUsernames.map(() => '?').join(',')})`);
+      params.push(...filters.onlineUsernames.map((n) => n.toLowerCase()));
     }
+
+    const whereClause = `WHERE ${where.join(' AND ')}`;
+
+    // Whitelist sort column + direction (never interpolate raw input).
+    const SORT_COLUMNS: Record<string, string> = {
+      id: 'u.id',
+      username: 'u.username',
+      wallet_balance: 'COALESCE(w.balance, 0)',
+      total_topup: 'COALESCE(tp.total_topup, 0)',
+      total_spent: 'COALESCE(sp.total_spent, 0)',
+      created_at: 'u.created_at',
+    };
+    const sortCol = SORT_COLUMNS[filters.sortBy || 'id'] || 'u.id';
+    const sortDir = filters.sortDir === 'asc' ? 'ASC' : 'DESC';
+
     const [rows] = await pool.execute<RowDataPacket[]>(
-      `SELECT u.id, u.username, u.role, u.created_at, COALESCE(w.balance, 0) as wallet_balance
-       FROM users u LEFT JOIN wallets w ON u.id = w.user_id
-       ${whereClause} ORDER BY u.id DESC LIMIT ? OFFSET ?`,
+      `SELECT u.id, u.username, u.role, u.created_at, u.banned_at, u.ban_reason,
+              COALESCE(w.balance, 0) AS wallet_balance,
+              COALESCE(tp.total_topup, 0) AS total_topup,
+              COALESCE(sp.total_spent, 0) AS total_spent
+       ${baseFrom}
+       ${whereClause}
+       ORDER BY ${sortCol} ${sortDir}, u.id DESC
+       LIMIT ? OFFSET ?`,
       [...params, String(limit), String(offset)]
     );
-    const countParams = search ? [`%${search}%`] : [];
     const [countResult] = await pool.execute<RowDataPacket[]>(
-      `SELECT COUNT(*) as total FROM users u ${whereClause}`, countParams
+      `SELECT COUNT(*) AS total ${baseFrom} ${whereClause}`, params
     );
     const total = countResult[0].total;
     return { users: rows, total, pagination: { page, totalPages: Math.ceil(total / limit), total } };
+  }
+
+  /** Currently-suspended users with their active ban reason + who/when. */
+  async getBannedUsers() {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      `SELECT u.id, u.username, u.role, u.banned_at, u.ban_reason,
+              u.banned_by, ba.username AS banned_by_username,
+              COALESCE(w.balance, 0) AS wallet_balance
+       FROM users u
+       LEFT JOIN wallets w ON u.id = w.user_id
+       LEFT JOIN users ba ON ba.id = u.banned_by
+       WHERE u.banned_at IS NOT NULL AND u.deleted_at IS NULL
+       ORDER BY u.banned_at DESC`
+    );
+    return { users: rows };
+  }
+
+  /** Full ban/unban history for one user. */
+  async getUserBanLogs(userId: number) {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      `SELECT id, action, reason, admin_id, admin_username, created_at
+       FROM ban_logs WHERE user_id = ? ORDER BY created_at DESC, id DESC`, [userId]
+    );
+    return { logs: rows };
+  }
+
+  /**
+   * Ban (suspend) a user from the website. Sets banned_at + reason, records a
+   * ban_logs entry, and destroys the session. Kept separate from deleted_at.
+   */
+  async banUser(userId: number, reason: string, admin: { id: number; username: string }): Promise<void> {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const [rows] = await conn.execute<RowDataPacket[]>(
+        'SELECT username, role, banned_at, deleted_at FROM users WHERE id = ? FOR UPDATE', [userId]
+      );
+      if (rows.length === 0) throw new NotFoundError('User not found');
+      const target = rows[0] as any;
+      if (target.deleted_at) throw new ConflictError('บัญชีนี้ถูกลบไปแล้ว');
+      if (target.banned_at) throw new ConflictError('บัญชีนี้ถูกระงับอยู่แล้ว');
+
+      await conn.execute(
+        'UPDATE users SET banned_at = NOW(), ban_reason = ?, banned_by = ? WHERE id = ?',
+        [reason || null, admin.id, userId]
+      );
+      await conn.execute(
+        'INSERT INTO ban_logs (user_id, action, reason, admin_id, admin_username) VALUES (?, ?, ?, ?, ?)',
+        [userId, 'ban', reason || null, admin.id, admin.username]
+      );
+      await conn.commit();
+    } catch (err) {
+      try { await conn.rollback(); } catch { /* already committed */ }
+      throw err;
+    } finally {
+      conn.release();
+    }
+    // Kill any active session so the JWT can't be reused. Non-fatal on failure.
+    try { await destroySession(userId); } catch { /* ignore */ }
+  }
+
+  /** Lift a ban. Clears banned_at + reason and records a ban_logs unban entry. */
+  async unbanUser(userId: number, reason: string, admin: { id: number; username: string }): Promise<void> {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const [rows] = await conn.execute<RowDataPacket[]>(
+        'SELECT banned_at FROM users WHERE id = ? FOR UPDATE', [userId]
+      );
+      if (rows.length === 0) throw new NotFoundError('User not found');
+      if (!(rows[0] as any).banned_at) throw new ConflictError('บัญชีนี้ไม่ได้ถูกระงับอยู่');
+
+      await conn.execute(
+        'UPDATE users SET banned_at = NULL, ban_reason = NULL, banned_by = NULL WHERE id = ?', [userId]
+      );
+      await conn.execute(
+        'INSERT INTO ban_logs (user_id, action, reason, admin_id, admin_username) VALUES (?, ?, ?, ?, ?)',
+        [userId, 'unban', reason || null, admin.id, admin.username]
+      );
+      await conn.commit();
+    } catch (err) {
+      try { await conn.rollback(); } catch { /* already committed */ }
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
+
+  /**
+   * Cross-reference a set of online IGNs against the web `users` table so the
+   * admin online view can show web role / wallet / spend / ban status per player.
+   * Returns a map keyed by lowercased username.
+   */
+  async lookupPlayersByUsernames(usernames: string[]): Promise<Map<string, RowDataPacket>> {
+    const map = new Map<string, RowDataPacket>();
+    if (usernames.length === 0) return map;
+    const lowered = usernames.map((n) => n.toLowerCase());
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      `SELECT u.id, u.username, u.role, u.created_at, u.banned_at,
+              COALESCE(w.balance, 0) AS wallet_balance,
+              COALESCE(tp.total_topup, 0) AS total_topup,
+              COALESCE(sp.total_spent, 0) AS total_spent
+       FROM users u
+       LEFT JOIN wallets w ON u.id = w.user_id
+       LEFT JOIN (SELECT user_id, SUM(amount) AS total_topup FROM transactions
+                  WHERE type = 'topup' AND status = 'success' GROUP BY user_id) tp ON tp.user_id = u.id
+       LEFT JOIN (SELECT user_id, SUM(ABS(amount)) AS total_spent FROM transactions
+                  WHERE type = 'purchase' AND status = 'success' GROUP BY user_id) sp ON sp.user_id = u.id
+       WHERE u.deleted_at IS NULL AND LOWER(u.username) IN (${lowered.map(() => '?').join(',')})`,
+      lowered
+    );
+    for (const row of rows) map.set(String((row as any).username).toLowerCase(), row);
+    return map;
   }
 
   async updateUserRole(userId: number, role: 'user' | 'admin') {

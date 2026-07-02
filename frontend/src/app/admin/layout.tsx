@@ -43,6 +43,7 @@ const MENU_CATEGORIES = [
     category: 'SYSTEM',
     items: [
       { href: '/admin/servers', icon: 'fa-server', label: 'จัดการเซิร์ฟเวอร์' },
+      { href: '/admin/online', icon: 'fa-signal', label: 'ผู้เล่นออนไลน์' },
       {
         id: 'payment',
         icon: 'fa-money-bill-wave',
@@ -53,7 +54,6 @@ const MENU_CATEGORIES = [
         ]
       },
       { href: '/admin/purchases', icon: 'fa-wallet', label: 'Audit log' },
-      { href: '/admin/setup', icon: 'fa-wand-magic-sparkles', label: 'Setup Wizard' },
     ]
   }
 ];
