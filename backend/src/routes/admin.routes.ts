@@ -200,7 +200,7 @@ router.get('/users', async (req: Request, res: Response, next: NextFunction) => 
     const filters: UserListFilters = {
       search: (q.search as string) || undefined,
       role: q.role === 'admin' || q.role === 'user' ? q.role : undefined,
-      status: q.status === 'banned' || q.status === 'active' ? q.status : undefined,
+      status: q.status === 'banned' || q.status === 'active' || q.status === 'deleted' ? q.status : undefined,
       hasBalance: q.hasBalance === '1' || q.hasBalance === 'true',
       hasTopup: q.hasTopup === '1' || q.hasTopup === 'true',
       hasPurchase: q.hasPurchase === '1' || q.hasPurchase === 'true',
@@ -253,6 +253,7 @@ router.get('/online-players', async (req: Request, res: Response, next: NextFunc
     const accounts = await userService.lookupPlayersByUsernames(allNames);
 
     let matched = 0;
+    let onlineWallet = 0, onlineSpent = 0, adminsOnline = 0, bannedOnline = 0;
     const servers = await Promise.all(Object.entries(data.servers || {}).map(async ([id, s]: [string, any]) => {
       // First-seen timestamps for this server (lowercased name → epoch ms).
       const sinceMap = playerTracker ? await playerTracker.getSinceMap(Number(id)) : {};
@@ -263,7 +264,13 @@ router.get('/online-players', async (req: Request, res: Response, next: NextFunc
         truncated: !!s.truncated,
         players: (s.players || []).map((name: string) => {
           const acc = accounts.get(name.toLowerCase());
-          if (acc) matched++;
+          if (acc) {
+            matched++;
+            onlineWallet += Number((acc as any).wallet_balance) || 0;
+            onlineSpent += Number((acc as any).total_spent) || 0;
+            if ((acc as any).role === 'admin') adminsOnline++;
+            if ((acc as any).banned_at) bannedOnline++;
+          }
           const onlineSince = sinceMap[name.toLowerCase()] ?? null;
           const base = acc
             ? {
@@ -285,6 +292,8 @@ router.get('/online-players', async (req: Request, res: Response, next: NextFunc
 
     const totalOnline = data.totalOnline || 0;
     const peakToday = playerTracker ? Math.max(await playerTracker.getPeakToday(), totalOnline) : totalOnline;
+    const trend = playerTracker ? await playerTracker.getTrend() : [];
+    const recentEvents = playerTracker ? await playerTracker.getRecentEvents() : [];
 
     res.json({
       success: true,
@@ -293,6 +302,12 @@ router.get('/online-players', async (req: Request, res: Response, next: NextFunc
       peakToday,
       matchedAccounts: matched,
       guests: allNames.length - matched,
+      onlineWallet: Math.round(onlineWallet * 100) / 100,
+      onlineSpent: Math.round(onlineSpent * 100) / 100,
+      adminsOnline,
+      bannedOnline,
+      trend,
+      recentEvents,
     });
   } catch (err) { next(err); }
 });
@@ -470,6 +485,25 @@ router.post('/users/:id/unban', async (req: Request, res: Response, next: NextFu
       description: `ปลดระงับบัญชี ${targetUsername}: ${reason}`, refId: String(id), meta: { target: targetUsername, reason },
     });
     res.json({ success: true, message: 'ปลดระงับบัญชีสำเร็จ' });
+  } catch (err) { next(err); }
+});
+
+// Restore a soft-deleted account (clears deleted_at so it can log in again).
+router.post('/users/:id/restore', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (Number.isNaN(id) || id <= 0) return res.status(400).json({ success: false, message: 'Invalid user id' });
+
+    const [targetUser] = await pool.execute<RowDataPacket[]>('SELECT username FROM users WHERE id = ?', [id]);
+    if (targetUser.length === 0) return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
+    const targetUsername = (targetUser[0] as any).username;
+
+    await userService.restoreUser(id);
+    auditService.log({
+      userId: req.user!.userId, username: req.user!.username, actionType: 'admin_user_restore',
+      description: `กู้คืนบัญชี ${targetUsername}`, refId: String(id), meta: { target: targetUsername },
+    });
+    res.json({ success: true, message: 'กู้คืนบัญชีสำเร็จ' });
   } catch (err) { next(err); }
 });
 

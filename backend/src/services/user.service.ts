@@ -7,7 +7,7 @@ import { destroySession } from './session.service';
 export interface UserListFilters {
   search?: string;
   role?: 'admin' | 'user';
-  status?: 'banned' | 'active';
+  status?: 'banned' | 'active' | 'deleted';
   hasBalance?: boolean;
   balanceMin?: number;
   balanceMax?: number;
@@ -24,7 +24,7 @@ class UserService {
   async getProfile(userId: number) {
     const [rows] = await pool.execute<RowDataPacket[]>(
       `SELECT u.id, u.username, u.email, u.role, u.created_at,
-              u.banned_at, u.ban_reason, u.banned_by,
+              u.banned_at, u.ban_reason, u.banned_by, u.deleted_at,
               ba.username as banned_by_username,
               COALESCE(w.balance, 0) as wallet_balance
        FROM users u
@@ -101,8 +101,9 @@ class UserService {
       LEFT JOIN (SELECT user_id, SUM(ABS(amount)) AS total_spent FROM transactions
                  WHERE type = 'purchase' AND status = 'success' GROUP BY user_id) sp ON sp.user_id = u.id`;
 
-    // Always hide soft-deleted (merge-retired) users.
-    const where: string[] = ['u.deleted_at IS NULL'];
+    // Hide deleted users by default; the 'deleted' status filter shows only them
+    // (so admins can find + restore accounts) — the two are mutually exclusive.
+    const where: string[] = [filters.status === 'deleted' ? 'u.deleted_at IS NOT NULL' : 'u.deleted_at IS NULL'];
     const params: (string | number)[] = [];
 
     if (filters.search) { where.push('u.username LIKE ?'); params.push(`%${filters.search}%`); }
@@ -142,7 +143,7 @@ class UserService {
     const sortDir = filters.sortDir === 'asc' ? 'ASC' : 'DESC';
 
     const [rows] = await pool.execute<RowDataPacket[]>(
-      `SELECT u.id, u.username, u.role, u.created_at, u.banned_at, u.ban_reason,
+      `SELECT u.id, u.username, u.role, u.created_at, u.banned_at, u.ban_reason, u.deleted_at,
               COALESCE(w.balance, 0) AS wallet_balance,
               COALESCE(tp.total_topup, 0) AS total_topup,
               COALESCE(sp.total_spent, 0) AS total_spent
@@ -397,15 +398,43 @@ class UserService {
   }
 
   /**
+   * Restore a soft-deleted account: clears deleted_at so the user can log in
+   * again. Login is blocked by deleted_at OR banned_at, so restoring only lifts
+   * the delete — a separately-banned account stays banned until unbanned.
+   */
+  async restoreUser(userId: number): Promise<void> {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const [rows] = await conn.execute<RowDataPacket[]>(
+        'SELECT deleted_at FROM users WHERE id = ? FOR UPDATE', [userId]
+      );
+      if (rows.length === 0) throw new NotFoundError('User not found');
+      if (!(rows[0] as any).deleted_at) throw new ConflictError('บัญชีนี้ไม่ได้ถูกลบ');
+      await conn.execute('UPDATE users SET deleted_at = NULL WHERE id = ?', [userId]);
+      await conn.commit();
+    } catch (err) {
+      try { await conn.rollback(); } catch { /* tx may be committed */ }
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
+
+  /**
    * Transfer all financial + game-state from one user to another in a single
    * transaction. The source user keeps its row + audit trail; the target
    * absorbs balances, purchases, inventory, and redeem-code usage.
+   *
+   * The source is left as a normal, usable (now-empty) account — transfer does
+   * NOT ban or delete it. Retiring an account is a separate, explicit action
+   * (ban → banned_at, delete → deleted_at) so a data move can never lock a
+   * player out of login by accident.
    *
    * Order matters:
    *   1. Lock both wallets (smaller id first to avoid deadlocks).
    *   2. Merge balances.
    *   3. Re-attribute FK rows.
-   *   4. Soft-delete the source so the username can't double-claim history.
    */
   async transferData(fromUserId: number, toUserId: number): Promise<{
     merged: { balance: number; transactions: number; purchases: number; inventory: number; redeemLogs: number };
@@ -480,13 +509,10 @@ class UserService {
       const [rl] = await conn.execute('UPDATE IGNORE redeem_logs SET user_id = ? WHERE user_id = ?', [toUserId, fromUserId]);
       await conn.execute('DELETE FROM redeem_logs WHERE user_id = ?', [fromUserId]);
 
-      // 4. Soft-delete the source so its username is retired in this app.
-      await conn.execute('UPDATE users SET deleted_at = NOW() WHERE id = ?', [fromUserId]);
-
+      // NOTE: the source is intentionally NOT retired. Transfer moves data only; the
+      // source stays a normal, usable (now-empty) account and can still log in. Banning
+      // (banned_at) and deleting (deleted_at) are separate, explicit admin actions.
       await conn.commit();
-
-      // Best-effort: kill source's session so they're logged out instantly.
-      try { await destroySession(fromUserId); } catch { /* ignore */ }
 
       return {
         merged: {

@@ -12,6 +12,7 @@ interface User {
   created_at: string;
   banned_at?: string | null;
   ban_reason?: string | null;
+  deleted_at?: string | null;
   total_topup?: number;
   total_spent?: number;
 }
@@ -52,7 +53,7 @@ export default function AdminUsers() {
   const [sortBy, setSortBy]         = useState<SortBy>('id');
   const [sortDir, setSortDir]       = useState<'asc' | 'desc'>('desc');
   const [fRole, setFRole]           = useState<'' | 'admin' | 'user'>('');
-  const [fStatus, setFStatus]       = useState<'' | 'active' | 'banned'>('');
+  const [fStatus, setFStatus]       = useState<'' | 'active' | 'banned' | 'deleted'>('');
   const [fHasBalance, setFHasBalance] = useState(false);
   const [fHasTopup, setFHasTopup]   = useState(false);
   const [fHasPurchase, setFHasPurchase] = useState(false);
@@ -387,6 +388,7 @@ export default function AdminUsers() {
                   <option value="">ทั้งหมด</option>
                   <option value="active">ปกติ</option>
                   <option value="banned">ถูกระงับ</option>
+                  <option value="deleted">ถูกลบ</option>
                 </select>
               </div>
               {/* Reset */}
@@ -470,6 +472,11 @@ export default function AdminUsers() {
                           {u.banned_at && (
                             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-600" title={u.ban_reason || 'ถูกระงับ'}>
                               <i className="fas fa-ban text-[8px]"></i> ระงับอยู่
+                            </span>
+                          )}
+                          {u.deleted_at && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-gray-200 text-gray-600" title="ถูกลบ">
+                              <i className="fas fa-user-slash text-[8px]"></i> ถูกลบ
                             </span>
                           )}
                         </div>

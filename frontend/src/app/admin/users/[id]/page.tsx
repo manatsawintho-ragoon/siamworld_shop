@@ -33,6 +33,7 @@ interface UserDetail {
   banned_at?: string | null;
   ban_reason?: string | null;
   banned_by_username?: string | null;
+  deleted_at?: string | null;
 }
 
 // ─── Page ────────────────────────────────────────────────────────────────────
@@ -61,6 +62,8 @@ export default function AdminUserDetail() {
   const [transferOpen,  setTransferOpen]  = useState(false);
   const [transferTo,    setTransferTo]    = useState('');
   const [transferBusy,  setTransferBusy]  = useState(false);
+  const [restoreOpen,   setRestoreOpen]   = useState(false);
+  const [restoreBusy,   setRestoreBusy]   = useState(false);
 
   const loadUser = () => {
     setLoading(true);
@@ -155,6 +158,21 @@ export default function AdminUserDetail() {
     }
   };
 
+  const handleRestore = async () => {
+    if (!user) return;
+    setRestoreBusy(true);
+    try {
+      await api(`/admin/users/${id}/restore`, { method: 'POST', token: getToken()! });
+      adminAlert({ title: 'กู้คืนบัญชีสำเร็จ', message: `${user.username} กลับมาใช้งานได้แล้ว`, type: 'success' });
+      setRestoreOpen(false);
+      loadUser();
+    } catch (err: any) {
+      adminAlert({ title: 'กู้คืนบัญชีไม่สำเร็จ', message: err?.message || 'เกิดข้อผิดพลาด', type: 'error' });
+    } finally {
+      setRestoreBusy(false);
+    }
+  };
+
   // ── Loading / Error states ──────────────────────────────────────────────────
 
   if (loading) return (
@@ -208,6 +226,26 @@ export default function AdminUserDetail() {
           <button onClick={() => setUnbanOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500 border border-green-600 text-white text-[11px] font-bold shadow-[0_3px_0_#15803d] hover:brightness-110 transition-all active:shadow-[0_1px_0_#15803d] active:translate-y-[2px] flex-shrink-0">
             <i className="fas fa-unlock text-[10px]" /> ปลดระงับ
+          </button>
+        </div>
+      )}
+
+      {/* ── Deleted status banner ── */}
+      {user.deleted_at && (
+        <div className="flex items-start gap-3 bg-gray-100 border border-gray-300 rounded-xl px-4 py-3 flex-shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-gray-200 flex items-center justify-center flex-shrink-0">
+            <i className="fas fa-user-slash text-gray-500 text-sm" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-gray-700">บัญชีนี้ถูกลบ</p>
+            <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+              ผู้ใช้เข้าสู่ระบบไม่ได้จนกว่าจะกู้คืน
+              <span className="text-gray-400"> · ลบเมื่อ {new Date(user.deleted_at).toLocaleString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+            </p>
+          </div>
+          <button onClick={() => setRestoreOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500 border border-green-600 text-white text-[11px] font-bold shadow-[0_3px_0_#15803d] hover:brightness-110 transition-all active:shadow-[0_1px_0_#15803d] active:translate-y-[2px] flex-shrink-0">
+            <i className="fas fa-rotate-left text-[10px]" /> กู้คืนบัญชี
           </button>
         </div>
       )}
@@ -562,7 +600,7 @@ export default function AdminUserDetail() {
               </div>
               <div className="bg-amber-50 border border-amber-200 rounded-lg px-3.5 py-2.5">
                 <p className="text-[11px] text-amber-700 leading-relaxed">
-                  <i className="fas fa-circle-info mr-1" /> หลังโอน: บัญชี <b>{user.username}</b> จะถูก soft-delete อัตโนมัติ และข้อมูลทั้งหมดจะอยู่ที่บัญชีปลายทาง
+                  <i className="fas fa-circle-info mr-1" /> หลังโอน: ข้อมูลทั้งหมดจะย้ายไปบัญชีปลายทาง บัญชี <b>{user.username}</b> ยังใช้งานได้ปกติ (ยอดเงินจะเป็น 0)
                 </p>
               </div>
             </div>
@@ -572,6 +610,39 @@ export default function AdminUserDetail() {
               <button onClick={handleTransfer} disabled={transferBusy || !transferTo.trim()}
                 className="px-5 py-2.5 text-[13px] font-bold rounded-lg bg-amber-500 text-white shadow-[0_3px_0_#b45309] disabled:opacity-50">
                 {transferBusy ? <i className="fas fa-spinner fa-spin" /> : <><i className="fas fa-check mr-1.5" /> ยืนยันโอนข้อมูล</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Restore modal */}
+      {restoreOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm" onClick={() => !restoreBusy && setRestoreOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                <i className="fas fa-rotate-left text-green-500" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-base">กู้คืนบัญชี</h3>
+                <p className="text-[11px] text-gray-500">ยกเลิกการลบ ให้ผู้ใช้กลับมาเข้าสู่ระบบได้</p>
+              </div>
+            </div>
+            <div className="px-6 py-5 space-y-3">
+              <p className="text-sm text-gray-700">กู้คืนบัญชี <b>{user.username}</b>?</p>
+              <div className="bg-green-50 border border-green-200 rounded-lg px-3.5 py-2.5">
+                <p className="text-[11px] text-green-700 leading-relaxed">
+                  <i className="fas fa-circle-info mr-1" /> บัญชีจะกลับมาเข้าสู่ระบบได้ทันที ข้อมูลที่เคยถูกโอนไปบัญชีอื่นจะยังอยู่ที่ปลายทาง
+                </p>
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 flex items-center justify-end gap-2 border-t border-gray-100">
+              <button onClick={() => setRestoreOpen(false)} disabled={restoreBusy}
+                className="px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-white border border-gray-200 text-gray-700">ยกเลิก</button>
+              <button onClick={handleRestore} disabled={restoreBusy}
+                className="px-5 py-2.5 text-[13px] font-bold rounded-lg bg-green-500 text-white shadow-[0_3px_0_#15803d] disabled:opacity-50">
+                {restoreBusy ? <i className="fas fa-spinner fa-spin" /> : <><i className="fas fa-rotate-left mr-1.5" /> ยืนยันกู้คืน</>}
               </button>
             </div>
           </div>

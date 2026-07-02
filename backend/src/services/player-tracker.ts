@@ -13,6 +13,36 @@ const PLAYER_CACHE_TTL_SEC = 90;
 // First-seen (session) hash TTL. Refreshed every poll; self-heals if the tracker stops.
 const SINCE_TTL_SEC = 3600;
 
+// Join/leave event feed (near-realtime, refreshed on the 10s poll cadence).
+const EVENTS_KEY = 'mc:events';
+const EVENTS_MAX = 100;        // keep the last N events
+const EVENTS_TTL_SEC = 6 * 3600;
+
+// Online-count trend: one bucket per minute (peak within the minute), 48h retention.
+const TREND_TTL_SEC = 48 * 3600;
+
+export interface PlayerEvent {
+  type: 'join' | 'leave';
+  name: string;
+  serverId: number;
+  serverName: string;
+  ts: number;
+}
+
+/**
+ * Pure case-insensitive set-diff of two player-name lists. Returns names that
+ * joined (in `curr` not `prev`) and left (in `prev` not `curr`), each in the
+ * casing of the list they came from. Exported for unit testing.
+ */
+export function diffPlayers(prev: string[], curr: string[]): { joined: string[]; left: string[] } {
+  const prevSet = new Set(prev.map((n) => n.toLowerCase()));
+  const currSet = new Set(curr.map((n) => n.toLowerCase()));
+  return {
+    joined: curr.filter((n) => !prevSet.has(n.toLowerCase())),
+    left: prev.filter((n) => !currSet.has(n.toLowerCase())),
+  };
+}
+
 export class PlayerTracker {
   private interval: ReturnType<typeof setInterval> | null = null;
 
@@ -91,6 +121,25 @@ export class PlayerTracker {
           }
           sinceMulti.expire(sinceKey, SINCE_TTL_SEC); // self-heal if tracker dies
           await sinceMulti.exec();
+
+          // Join/leave feed — only from COMPLETE lists (truncated lists shuffle names
+          // in/out of the cutoff and would emit false events). Skip the very first
+          // poll (empty `existing`) so we don't report every online player as a join.
+          if (!truncated && Object.keys(existing).length > 0) {
+            const { joined, left } = diffPlayers(Object.keys(existing), data.players);
+            if (joined.length > 0 || left.length > 0) {
+              const evMulti = this.redis.multi();
+              for (const name of joined) {
+                evMulti.rpush(EVENTS_KEY, JSON.stringify({ type: 'join', name, serverId: Number(id), serverName: data.serverName, ts: now }));
+              }
+              for (const name of left) {
+                evMulti.rpush(EVENTS_KEY, JSON.stringify({ type: 'leave', name, serverId: Number(id), serverName: data.serverName, ts: now }));
+              }
+              evMulti.ltrim(EVENTS_KEY, -EVENTS_MAX, -1);
+              evMulti.expire(EVENTS_KEY, EVENTS_TTL_SEC);
+              await evMulti.exec();
+            }
+          }
         } catch { /* non-fatal — timing display is best-effort */ }
       }
 
@@ -101,6 +150,19 @@ export class PlayerTracker {
         if (!prev || totalOnline > parseInt(prev, 10)) {
           await this.redis.set(dateKey, String(totalOnline), 'EX', 60 * 60 * 48);
         }
+      } catch { /* non-fatal */ }
+
+      // Online-count trend: one bucket per minute (keep the peak within each minute)
+      // so the panel can draw a sparkline without storing every 10s tick.
+      try {
+        const date = new Date().toISOString().slice(0, 10);
+        const trendKey = `mc:trend:${date}`;
+        const minute = String(Math.floor(Date.now() / 60000));
+        const prevMin = await this.redis.hget(trendKey, minute);
+        if (!prevMin || totalOnline > parseInt(prevMin, 10)) {
+          await this.redis.hset(trendKey, minute, String(totalOnline));
+        }
+        await this.redis.expire(trendKey, TREND_TTL_SEC);
       } catch { /* non-fatal */ }
 
       // Store full payload in Redis for API access
@@ -153,6 +215,34 @@ export class PlayerTracker {
       return v ? parseInt(v, 10) : 0;
     } catch {
       return 0;
+    }
+  }
+
+  /** Recent join/leave events, newest first (up to `limit`). */
+  async getRecentEvents(limit = 40): Promise<PlayerEvent[]> {
+    try {
+      const raw = await this.redis.lrange(EVENTS_KEY, -limit, -1);
+      const out: PlayerEvent[] = [];
+      for (const s of raw) {
+        try { out.push(JSON.parse(s)); } catch { /* skip malformed */ }
+      }
+      return out.reverse(); // newest first
+    } catch {
+      return [];
+    }
+  }
+
+  /** Today's online-count trend as ascending {ts, total} points (last `limit` minutes). */
+  async getTrend(limit = 180): Promise<{ ts: number; total: number }[]> {
+    try {
+      const h = await this.redis.hgetall(`mc:trend:${new Date().toISOString().slice(0, 10)}`);
+      const points = Object.entries(h)
+        .map(([min, total]) => ({ ts: parseInt(min, 10) * 60000, total: parseInt(total, 10) }))
+        .filter((p) => !Number.isNaN(p.ts) && !Number.isNaN(p.total))
+        .sort((a, b) => a.ts - b.ts);
+      return points.slice(-limit);
+    } catch {
+      return [];
     }
   }
 

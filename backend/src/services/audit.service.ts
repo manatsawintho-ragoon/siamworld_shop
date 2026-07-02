@@ -14,7 +14,7 @@ export type AuditActionType =
   | 'admin_server_create' | 'admin_server_update' | 'admin_server_delete' | 'admin_server_toggle'
   // Users
   | 'admin_wallet_adjust' | 'admin_user_role' | 'admin_user_edit' | 'admin_user_delete' | 'admin_user_transfer'
-  | 'admin_user_ban' | 'admin_user_unban'
+  | 'admin_user_ban' | 'admin_user_unban' | 'admin_user_restore'
   // System
   | 'admin_settings' | 'admin_rcon_cmd';
 
