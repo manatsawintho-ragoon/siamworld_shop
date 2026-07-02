@@ -253,37 +253,72 @@ router.get('/online-players', async (req: Request, res: Response, next: NextFunc
     const accounts = await userService.lookupPlayersByUsernames(allNames);
 
     let matched = 0;
-    const servers = Object.entries(data.servers || {}).map(([id, s]: [string, any]) => ({
-      id,
-      serverName: s.serverName,
-      count: s.count,
-      truncated: !!s.truncated,
-      players: (s.players || []).map((name: string) => {
-        const acc = accounts.get(name.toLowerCase());
-        if (acc) matched++;
-        return acc
-          ? {
-              name,
-              hasAccount: true,
-              userId: (acc as any).id,
-              role: (acc as any).role,
-              banned: !!(acc as any).banned_at,
-              walletBalance: Number((acc as any).wallet_balance) || 0,
-              totalTopup: Number((acc as any).total_topup) || 0,
-              totalSpent: Number((acc as any).total_spent) || 0,
-              createdAt: (acc as any).created_at,
-            }
-          : { name, hasAccount: false };
-      }),
+    const servers = await Promise.all(Object.entries(data.servers || {}).map(async ([id, s]: [string, any]) => {
+      // First-seen timestamps for this server (lowercased name → epoch ms).
+      const sinceMap = playerTracker ? await playerTracker.getSinceMap(Number(id)) : {};
+      return {
+        id,
+        serverName: s.serverName,
+        count: s.count,
+        truncated: !!s.truncated,
+        players: (s.players || []).map((name: string) => {
+          const acc = accounts.get(name.toLowerCase());
+          if (acc) matched++;
+          const onlineSince = sinceMap[name.toLowerCase()] ?? null;
+          const base = acc
+            ? {
+                name,
+                hasAccount: true,
+                userId: (acc as any).id,
+                role: (acc as any).role,
+                banned: !!(acc as any).banned_at,
+                walletBalance: Number((acc as any).wallet_balance) || 0,
+                totalTopup: Number((acc as any).total_topup) || 0,
+                totalSpent: Number((acc as any).total_spent) || 0,
+                createdAt: (acc as any).created_at,
+              }
+            : { name, hasAccount: false };
+          return { ...base, onlineSince };
+        }),
+      };
     }));
+
+    const totalOnline = data.totalOnline || 0;
+    const peakToday = playerTracker ? Math.max(await playerTracker.getPeakToday(), totalOnline) : totalOnline;
 
     res.json({
       success: true,
       servers,
-      totalOnline: data.totalOnline || 0,
+      totalOnline,
+      peakToday,
       matchedAccounts: matched,
       guests: allNames.length - matched,
     });
+  } catch (err) { next(err); }
+});
+
+// On-demand world/dimension lookup for one online player (kept out of the poll to
+// spare RCON). Returns { world: 'minecraft:overworld' | raw | null }.
+router.get('/online-players/:serverId/:name/world', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const serverId = parseInt(req.params.serverId);
+    const name = String(req.params.name || '');
+    if (Number.isNaN(serverId) || serverId <= 0) return res.status(400).json({ success: false, message: 'Invalid server id' });
+    if (!/^[A-Za-z0-9_]{1,16}$/.test(name)) return res.status(400).json({ success: false, message: 'Invalid player name' });
+
+    const rconManager = req.app.get('rconManager');
+    if (!rconManager) return res.json({ success: true, world: null });
+
+    let world: string | null = null;
+    try {
+      const raw = await rconManager.sendCommandDirect(serverId, `data get entity ${name} Dimension`);
+      // e.g. `Steve has the following entity data: "minecraft:overworld"`
+      const m = String(raw).match(/"?(minecraft:[a-z_]+)"?/i);
+      world = m ? m[1] : (String(raw).trim() || null);
+    } catch {
+      world = null; // RCON unreachable / command unsupported (proxy/old server)
+    }
+    res.json({ success: true, world });
   } catch (err) { next(err); }
 });
 

@@ -10,6 +10,9 @@ const REDIS_KEY = 'mc:online_players';
 // that purchase/redeem online-checks rely on, short enough to self-heal if the tracker dies.
 const PLAYER_CACHE_TTL_SEC = 90;
 
+// First-seen (session) hash TTL. Refreshed every poll; self-heals if the tracker stops.
+const SINCE_TTL_SEC = 3600;
+
 export class PlayerTracker {
   private interval: ReturnType<typeof setInterval> | null = null;
 
@@ -67,7 +70,38 @@ export class PlayerTracker {
         multi.set(truncKey, truncated ? '1' : '0', 'EX', PLAYER_CACHE_TTL_SEC);
         multi.expire(redisKey, PLAYER_CACHE_TTL_SEC); // auto-cleanup if tracker stops
         await multi.exec();
+
+        // Track first-seen timestamps so the admin panel can show login time +
+        // session playtime. Hash `mc:since:<id>`: lowercased name → first-seen epoch ms.
+        try {
+          const sinceKey = `mc:since:${id}`;
+          const currentLower = data.players.map((p) => p.toLowerCase());
+          const existing = await this.redis.hgetall(sinceKey);
+          const sinceMulti = this.redis.multi();
+          const now = Date.now();
+          for (const name of currentLower) {
+            if (!existing[name]) sinceMulti.hset(sinceKey, name, String(now));
+          }
+          // Only evict left players when we have a COMPLETE list. A truncated list
+          // must not drop still-online players beyond the cutoff (would reset their timer).
+          if (!truncated) {
+            for (const name of Object.keys(existing)) {
+              if (!currentLower.includes(name)) sinceMulti.hdel(sinceKey, name);
+            }
+          }
+          sinceMulti.expire(sinceKey, SINCE_TTL_SEC); // self-heal if tracker dies
+          await sinceMulti.exec();
+        } catch { /* non-fatal — timing display is best-effort */ }
       }
+
+      // Track peak online for today (max total seen). 48h expiry auto-rotates the daily key.
+      try {
+        const dateKey = `mc:peak:${new Date().toISOString().slice(0, 10)}`;
+        const prev = await this.redis.get(dateKey);
+        if (!prev || totalOnline > parseInt(prev, 10)) {
+          await this.redis.set(dateKey, String(totalOnline), 'EX', 60 * 60 * 48);
+        }
+      } catch { /* non-fatal */ }
 
       // Store full payload in Redis for API access
       await this.redis.set(REDIS_KEY, JSON.stringify({ servers: payload, totalOnline, updatedAt: Date.now() }), 'EX', 30);
@@ -95,6 +129,31 @@ export class PlayerTracker {
       totalOnline += info.count;
     }
     return { servers, totalOnline };
+  }
+
+  /** First-seen timestamps (lowercased name → epoch ms) for one server's online players. */
+  async getSinceMap(serverId: number): Promise<Record<string, number>> {
+    try {
+      const h = await this.redis.hgetall(`mc:since:${serverId}`);
+      const out: Record<string, number> = {};
+      for (const [k, v] of Object.entries(h)) {
+        const n = parseInt(v, 10);
+        if (!Number.isNaN(n)) out[k] = n;
+      }
+      return out;
+    } catch {
+      return {};
+    }
+  }
+
+  /** Peak simultaneous online count recorded so far today. */
+  async getPeakToday(): Promise<number> {
+    try {
+      const v = await this.redis.get(`mc:peak:${new Date().toISOString().slice(0, 10)}`);
+      return v ? parseInt(v, 10) : 0;
+    } catch {
+      return 0;
+    }
   }
 
   /**
