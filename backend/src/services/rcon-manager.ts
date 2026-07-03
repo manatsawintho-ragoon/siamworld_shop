@@ -21,6 +21,31 @@ const VANILLA_RCON_COMMANDS = new Set([
   'whitelist', 'seed', 'list', 'data', 'forceload', 'function',
 ]);
 
+/**
+ * Minecraft Java usernames are [a-zA-Z0-9_]. Bedrock players who join through
+ * Geyser/Floodgate carry a prefix (default '.') that is a REAL part of their
+ * in-game name, e.g. ".IRUK9170". Stripping it made the online check target the
+ * wrong entity (@a[name=IRUK9170] never matches ".IRUK9170") and made delivery
+ * `give` to a nonexistent player. Preserve '.' while still removing RCON/selector
+ * metacharacters (spaces, commas, brackets, '=', '@', quotes) so the value stays
+ * safe to interpolate into `execute if entity @a[name=...]` and give templates —
+ * a '.' has no special meaning in RCON commands or target selectors.
+ */
+export function sanitizePlayerName(username: string): string {
+  return username.replace(/[^a-zA-Z0-9_.]/g, '');
+}
+
+/**
+ * Whether a token parsed out of a `list` response is a real player name rather
+ * than a truncation artifact (e.g. '...'). Accepts an optional single leading
+ * Floodgate prefix '.' followed by a normal Minecraft name, so Bedrock players
+ * are counted and cached instead of being dropped (which falsely looked like a
+ * truncated list).
+ */
+export function isListedPlayerName(name: string): boolean {
+  return /^\.?[a-zA-Z0-9_]{1,16}$/.test(name);
+}
+
 export interface ServerInfo {
   id: number;
   name: string;
@@ -132,7 +157,7 @@ export class RconManager {
     username: string,
     times: number = 1,
   ): Promise<{ deliveredUnits: number; totalUnits: number; results: string[]; error?: string }> {
-    const sanitized = username.replace(/[^a-zA-Z0-9_]/g, '');
+    const sanitized = sanitizePlayerName(username);
     const totalUnits = Math.max(1, Math.floor(times));
     const AMOUNT_PLACEHOLDER = /\{(amount|qty|quantity)\}/i;
     const singleShot = AMOUNT_PLACEHOLDER.test(commandTemplate);
@@ -259,7 +284,7 @@ export class RconManager {
           .replace(/\s*\([0-9a-f-]{36}\)/gi, '')  // strip UUID (list uuids format)
           .trim()
         )
-        .filter((p) => /^[a-zA-Z0-9_]{1,16}$/.test(p)); // valid Minecraft names only, drop '...' artifacts
+        .filter(isListedPlayerName); // valid Minecraft names (incl. Bedrock '.' prefix), drop '...' artifacts
 
       // If header count is larger than known names, list was truncated — log it
       if (total > players.length) {
@@ -287,7 +312,7 @@ export class RconManager {
    * Falls back to name-list search if execute is not available.
    */
   async checkPlayerOnlineDirect(serverId: number, username: string): Promise<boolean> {
-    const sanitized = username.replace(/[^a-zA-Z0-9_]/g, '');
+    const sanitized = sanitizePlayerName(username);
     const lower = sanitized.toLowerCase();
     try {
       // 'execute if entity @a[name=X,limit=1]' returns "Test passed" if player is online.
