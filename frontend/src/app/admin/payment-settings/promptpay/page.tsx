@@ -20,7 +20,8 @@ export default function PromptPaySettingsPage() {
   const [loading,      setLoading]      = useState(true);
   const [ppEnabled,    setPpEnabled]    = useState(false);
   const [ppType,       setPpType]       = useState<'mobile' | 'taxid'>('mobile');
-  const [ppId,         setPpId]         = useState('');
+  const [ppMobile,     setPpMobile]     = useState(''); // เบอร์โทรพร้อมเพย์
+  const [ppTaxId,      setPpTaxId]      = useState(''); // เลขบัตรประชาชน
   const [ppFirstname,  setPpFirstname]  = useState('');
   const [ppLastname,   setPpLastname]   = useState('');
   const [ppBankAcct,   setPpBankAcct]   = useState('');
@@ -46,8 +47,11 @@ export default function PromptPaySettingsPage() {
       (settingsRes.settings as { key: string; value: string }[])
         ?.forEach(({ key, value }) => { s[key] = value; });
       setPpEnabled(s.promptpay_enabled === 'true');
-      setPpType((s.promptpay_type as 'mobile' | 'taxid') || 'mobile');
-      setPpId(s.promptpay_id || '');
+      const savedType = (s.promptpay_type as 'mobile' | 'taxid') || 'mobile';
+      setPpType(savedType);
+      // Keep the two numbers in separate fields so switching type never mixes them.
+      setPpMobile(savedType === 'mobile' ? (s.promptpay_id || '') : '');
+      setPpTaxId(savedType === 'taxid'  ? (s.promptpay_id || '') : '');
       setPpFirstname(s.promptpay_firstname || '');
       setPpLastname(s.promptpay_lastname  || '');
       setPpBankAcct(s.promptpay_bankacct  || '');
@@ -62,9 +66,12 @@ export default function PromptPaySettingsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // The active PromptPay number depends on the selected type.
+  const activePpId = ppType === 'mobile' ? ppMobile : ppTaxId;
+
   const handleSave = async () => {
-    if (ppEnabled && !ppId.trim()) {
-      adminAlert({ type: 'error', title: 'กรุณากรอกเลขพร้อมเพย์ก่อนเปิดใช้งาน' });
+    if (ppEnabled && !activePpId.trim()) {
+      adminAlert({ type: 'error', title: ppType === 'mobile' ? 'กรุณากรอกเบอร์โทรพร้อมเพย์ก่อนเปิดใช้งาน' : 'กรุณากรอกเลขบัตรประชาชนก่อนเปิดใช้งาน' });
       return;
     }
     if (ppEnabled && ppType === 'taxid' && !ppBankAcct.trim()) {
@@ -78,7 +85,7 @@ export default function PromptPaySettingsPage() {
         body: { settings: [
           { key: 'promptpay_enabled',   value: String(ppEnabled) },
           { key: 'promptpay_type',      value: ppType },
-          { key: 'promptpay_id',        value: ppId.trim() },
+          { key: 'promptpay_id',        value: activePpId.trim() },
           { key: 'promptpay_firstname', value: ppFirstname.trim() },
           { key: 'promptpay_lastname',  value: ppLastname.trim() },
           { key: 'promptpay_name',      value: `${ppFirstname.trim()} ${ppLastname.trim()}`.trim() },
@@ -209,23 +216,39 @@ export default function PromptPaySettingsPage() {
               </div>
             </div>
 
-            {/* PromptPay number */}
-            <div>
-              <label className="block text-xs font-bold text-gray-500 mb-1.5">
-                เลขพร้อมเพย์ <span className="text-red-400">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300">
-                  <i className="fas fa-hashtag text-sm" />
+            {/* PromptPay number — a separate field per type so the phone number and
+                the citizen ID never share one input (avoids confusion / value bleed). */}
+            {ppType === 'mobile' ? (
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">
+                  เบอร์โทรพร้อมเพย์ <span className="text-red-400">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300">
+                    <i className="fas fa-mobile-alt text-sm" />
+                  </div>
+                  <input type="text" value={ppMobile} onChange={e => setPpMobile(e.target.value)}
+                    placeholder="0812345678"
+                    className="w-full pl-9 pr-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 font-mono tracking-wider" />
                 </div>
-                <input type="text" value={ppId} onChange={e => setPpId(e.target.value)}
-                  placeholder={ppType === 'mobile' ? '0812345678' : '1234567890123'}
-                  className="w-full pl-9 pr-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 font-mono tracking-wider" />
+                <p className="text-[10px] text-gray-400 mt-1">เบอร์โทร 10 หลัก ตรงกับที่ลงทะเบียน PromptPay</p>
               </div>
-              <p className="text-[10px] text-gray-400 mt-1">
-                {ppType === 'mobile' ? 'เบอร์โทร 10 หลัก ตรงกับที่ลงทะเบียน PromptPay' : 'เลขบัตรประชาชน 13 หลัก'}
-              </p>
-            </div>
+            ) : (
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">
+                  เลขบัตรประชาชน <span className="text-red-400">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300">
+                    <i className="fas fa-id-card text-sm" />
+                  </div>
+                  <input type="text" value={ppTaxId} onChange={e => setPpTaxId(e.target.value)}
+                    placeholder="1234567890123"
+                    className="w-full pl-9 pr-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 font-mono tracking-wider" />
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1">เลขบัตรประชาชน 13 หลัก ที่ลงทะเบียน PromptPay</p>
+              </div>
+            )}
 
             {/* Name row */}
             <div className="grid grid-cols-2 gap-3">
@@ -270,7 +293,7 @@ export default function PromptPaySettingsPage() {
             )}
 
             {/* Preview pill */}
-            {(ppFirstname || ppLastname || ppId) && (
+            {(ppFirstname || ppLastname || activePpId) && (
               <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-lg bg-green-50 border border-green-100">
                 <div className="w-6 h-6 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
                   <i className="fas fa-qrcode text-green-600 text-[10px]" />
@@ -280,7 +303,7 @@ export default function PromptPaySettingsPage() {
                     {[ppFirstname, ppLastname].filter(Boolean).join(' ') || 'ชื่อ-นามสกุล'}
                   </p>
                   <p className="text-[10px] text-gray-400 font-mono">
-                    {ppId ? ppId.slice(0, 2) + 'x-xxx-' + ppId.slice(-4) : 'เลขพร้อมเพย์'}
+                    {activePpId ? activePpId.slice(0, 2) + 'x-xxx-' + activePpId.slice(-4) : (ppType === 'mobile' ? 'เบอร์โทรพร้อมเพย์' : 'เลขบัตรประชาชน')}
                   </p>
                 </div>
                 <span className="text-[10px] text-green-600 font-bold flex-shrink-0">Preview</span>
@@ -363,7 +386,7 @@ export default function PromptPaySettingsPage() {
               </div>
               <div className="divide-y divide-gray-50">
                 {[
-                  { label: 'PromptPay QR Code',          ok: !!(ppId),               desc: ppId ? 'ตั้งค่าแล้ว' : 'ยังไม่ได้ตั้งค่าเลขพร้อมเพย์' },
+                  { label: 'PromptPay QR Code',          ok: !!(activePpId),         desc: activePpId ? 'ตั้งค่าแล้ว' : 'ยังไม่ได้ตั้งค่าเลขพร้อมเพย์' },
                   { label: 'ตรวจสลิปอัตโนมัติ',          ok: !!esStatus?.configured, desc: esStatus?.configured ? 'พร้อมใช้งาน' : 'ยังไม่ได้ตั้งค่า Key' },
                   { label: 'ป้องกันสลิปซ้ำ 2 ชั้น',      ok: true,                    desc: 'เปิดใช้งาน' },
                   { label: 'เข้ารหัส SSL ทุกการส่งข้อมูล', ok: true,                  desc: 'ปลอดภัย' },
