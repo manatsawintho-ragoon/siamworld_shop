@@ -27,13 +27,25 @@ function ppCrc16(str: string): string {
 // Generate PromptPay QR WITH a fixed amount embedded.
 // Thai banking apps (K PLUS, SCB EASY, etc.) auto-fill and LOCK the amount field —
 // the user cannot change it before confirming payment.
-function generatePromptPayPayload(promptpayId: string, amount: number): string {
+//
+// EMVCo PromptPay uses a DIFFERENT merchant-account sub-tag per proxy type:
+//   01 = mobile number  (formatted 0066 + last 9 digits)
+//   02 = national ID / Tax ID (13 digits, as-is)
+// Encoding a 13-digit Tax ID under tag 01 produces a QR that banking apps read as
+// an (invalid) phone number → "ข้อมูลไม่ถูกต้อง / โอนไม่ได้". Pick the tag by the
+// configured type, falling back to length detection (10 = phone, 13 = Tax ID).
+export function generatePromptPayPayload(
+  promptpayId: string,
+  amount: number,
+  type?: 'mobile' | 'taxid',
+): string {
   const normalized = promptpayId.replace(/[-\s]/g, '');
-  // Phone: 10 digits → 0066 + last 9; Tax ID: 13 digits → keep as-is
-  const target = normalized.length === 10
-    ? '0066' + normalized.slice(1)
-    : normalized;
-  const merchantInfo = ppTag('00', 'A000000677010111') + ppTag('01', target);
+  const isTaxId = type === 'taxid' || (type === undefined && normalized.length === 13);
+  const proxyTag = isTaxId ? '02' : '01';
+  const target = isTaxId
+    ? normalized                                           // Tax ID: 13 digits as-is
+    : (normalized.length === 10 ? '0066' + normalized.slice(1) : normalized); // phone
+  const merchantInfo = ppTag('00', 'A000000677010111') + ppTag(proxyTag, target);
   const body = [
     ppTag('00', '01'),
     ppTag('01', '12'),           // multiple-use QR
@@ -89,8 +101,9 @@ class PaymentService {
 
     if (!promptpayId) throw new ValidationError('ยังไม่ได้ตั้งค่า PromptPay ID กรุณาแจ้งผู้ดูแลระบบ');
 
+    const ppType    = (settings['promptpay_type'] as 'mobile' | 'taxid') || undefined;
     const reference = `PP${Date.now()}${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-    const payload   = generatePromptPayPayload(promptpayId, amount);
+    const payload   = generatePromptPayPayload(promptpayId, amount, ppType);
 
     await pool.execute(
       'INSERT INTO transactions (user_id, amount, type, method, status, reference, description) VALUES (?,?,?,?,?,?,?)',
