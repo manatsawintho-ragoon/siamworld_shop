@@ -77,14 +77,16 @@ export interface BankSlipData {
       bank: { id: string; name: string; short: string };
       account: {
         name: { th?: string; en?: string };
-        bank: { type: string; account: string };
+        bank?: { type: string; account: string };
+        proxy?: { type: string; account: string };
       };
     };
     receiver: {
       bank: { id: string; name: string; short: string };
       account: {
         name: { th?: string; en?: string };
-        bank: { type: string; account: string };
+        bank?: { type: string; account: string };
+        proxy?: { type: string; account: string };
       };
     };
   };

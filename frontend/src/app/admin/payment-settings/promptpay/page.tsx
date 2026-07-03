@@ -23,6 +23,7 @@ export default function PromptPaySettingsPage() {
   const [ppId,         setPpId]         = useState('');
   const [ppFirstname,  setPpFirstname]  = useState('');
   const [ppLastname,   setPpLastname]   = useState('');
+  const [ppBankAcct,   setPpBankAcct]   = useState('');
   const [saving,       setSaving]       = useState(false);
   const [esStatus,     setEsStatus]     = useState<EasySlipStatus | null>(null);
   const [testing,      setTesting]      = useState(false);
@@ -49,6 +50,7 @@ export default function PromptPaySettingsPage() {
       setPpId(s.promptpay_id || '');
       setPpFirstname(s.promptpay_firstname || '');
       setPpLastname(s.promptpay_lastname  || '');
+      setPpBankAcct(s.promptpay_bankacct  || '');
       // Per-method bonus, falling back to the legacy shared keys.
       setBonusEnabled((s.topup_bonus_promptpay_enabled ?? s.topup_bonus_enabled) === 'true');
       setBonusMult(s.topup_bonus_promptpay_multiplier ?? s.topup_bonus_multiplier ?? '1');
@@ -65,6 +67,10 @@ export default function PromptPaySettingsPage() {
       adminAlert({ type: 'error', title: 'กรุณากรอกเลขพร้อมเพย์ก่อนเปิดใช้งาน' });
       return;
     }
+    if (ppEnabled && ppType === 'taxid' && !ppBankAcct.trim()) {
+      adminAlert({ type: 'error', title: 'กรุณากรอกเลขบัญชีธนาคารผู้รับ', message: 'พร้อมเพย์แบบเลขบัตรประชาชนต้องใช้เลขบัญชีธนาคารในการตรวจสลิป' });
+      return;
+    }
     setSaving(true);
     try {
       await api('/admin/settings', {
@@ -76,6 +82,7 @@ export default function PromptPaySettingsPage() {
           { key: 'promptpay_firstname', value: ppFirstname.trim() },
           { key: 'promptpay_lastname',  value: ppLastname.trim() },
           { key: 'promptpay_name',      value: `${ppFirstname.trim()} ${ppLastname.trim()}`.trim() },
+          { key: 'promptpay_bankacct',  value: ppType === 'taxid' ? ppBankAcct.trim() : '' },
         ]},
       });
       adminAlert({ type: 'success', title: 'บันทึกข้อมูลแล้ว' });
@@ -240,6 +247,27 @@ export default function PromptPaySettingsPage() {
                 </div>
               ))}
             </div>
+
+            {/* Bank account — required for Tax ID PromptPay, since EasySlip returns
+                the linked bank account (not the 13-digit card number) on the slip. */}
+            {ppType === 'taxid' && (
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">
+                  เลขบัญชีธนาคารผู้รับ <span className="text-red-400">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300">
+                    <i className="fas fa-landmark text-sm" />
+                  </div>
+                  <input type="text" value={ppBankAcct} onChange={e => setPpBankAcct(e.target.value)}
+                    placeholder="เลขบัญชีธนาคารที่ผูกกับพร้อมเพย์"
+                    className="w-full pl-9 pr-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 font-mono tracking-wider" />
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1">
+                  พร้อมเพย์แบบเลขบัตรประชาชน: สลิปจะไม่แสดงเลขบัตร ระบบจึงตรวจด้วย <b>เลขบัญชีธนาคาร + ชื่อผู้รับ</b> (ต้องตรงทั้งคู่)
+                </p>
+              </div>
+            )}
 
             {/* Preview pill */}
             {(ppFirstname || ppLastname || ppId) && (

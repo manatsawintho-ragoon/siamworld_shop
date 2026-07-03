@@ -4,6 +4,7 @@ import { logger } from '../utils/logger';
 import { RowDataPacket } from 'mysql2';
 import { easySlipService, EasySlipApiError } from './easyslip.service';
 import { settingsService } from './settings.service';
+import { matchReceiver } from './receiver-match';
 import { notificationService } from './notification.service';
 import { discountService } from './discount.service';
 import { truemoneyService, extractVoucherHash, TrueMoneyApiError } from './truemoney.service';
@@ -354,34 +355,21 @@ class PaymentService {
     if (!configuredId) {
       throw new ValidationError('ยังไม่ได้ตั้งค่าบัญชีรับเงิน กรุณาแจ้งผู้ดูแลระบบ');
     }
-    // PromptPay: receiver is in proxy.account (may be masked e.g. "xxx-xxx-0553"), not bank.account
-    // Bank transfer: receiver is in bank.account (full number)
-    const receiverRaw: string = (
-      (raw.receiver?.account as any)?.proxy?.account ??
-      raw.receiver?.account?.bank?.account ??
-      ''
-    );
-    if (!receiverRaw) {
+    // Delegate receiver matching to the shared helper (see receiver-match.ts):
+    //  - phone PromptPay  → proxy/bank number matches promptpay_id
+    //  - บัตรปชช. PromptPay → EasySlip returns the linked bank account, not the
+    //    citizen id, so require BOTH promptpay_bankacct AND the receiver name.
+    const match = matchReceiver(raw.receiver as any, allSettings);
+    if (!match.receiverAccount && !match.receiverName) {
       logger.warn('Slip receiver account missing in EasySlip response', { transRef, userId, receiver: raw.receiver });
       throw new ValidationError('สลิปนี้ไม่มีข้อมูลบัญชีผู้รับ ไม่สามารถยืนยันได้');
     }
-    // Normalize: 0066XXXXXXXXX ↔ 0XXXXXXXXX ↔ 66XXXXXXXXX
-    const normalizeAccount = (v: string) => {
-      if (v.startsWith('0066')) return '0' + v.slice(4);
-      if (/^66\d{9}$/.test(v))  return '0' + v.slice(2);
-      return v;
-    };
-    // EasySlip may return masked number e.g. "06xxxx6132" (prefix digits + x's + suffix digits)
-    // Extract only the trailing digits AFTER the masking chars to get an unambiguous suffix.
-    // e.g. "06xxxx6132" → maskedSuffix="6132"; "xxx-xxx-0553" → maskedSuffix="0553"
-    const receiverAccount = receiverRaw.replace(/[-\s]/g, '');
-    const maskedSuffix = receiverAccount.match(/x+([0-9]+)$/i)?.[1] ?? '';
-    const visibleDigits = maskedSuffix || receiverAccount.replace(/[^0-9]/g, '');
-    const receiverMatched =
-      normalizeAccount(receiverAccount) === normalizeAccount(configuredId) ||
-      (visibleDigits.length >= 4 && normalizeAccount(configuredId).endsWith(visibleDigits));
-    if (!receiverMatched) {
-      logger.warn('Slip receiver mismatch', { transRef, userId, receiverRaw, configuredId });
+    if (!match.matched) {
+      logger.warn('Slip receiver mismatch', {
+        transRef, userId,
+        receiverAccount: match.receiverAccount, receiverName: match.receiverName,
+        configuredId, hasBankAcct: !!allSettings['promptpay_bankacct'],
+      });
       const [uRowsR] = await pool.execute<RowDataPacket[]>('SELECT username FROM users WHERE id = ?', [userId]);
       const usernameR = uRowsR[0]?.username ?? `User#${userId}`;
       notificationService.create('topup_failed',
@@ -390,7 +378,7 @@ class PaymentService {
           username: usernameR, userId,
           status: 'ปฏิเสธ',
           reason: 'บัญชีผู้รับไม่ตรง',
-          detail: `สลิปโอนไปยัง ${receiverAccount} แต่ระบบกำหนด ${configuredId}`,
+          detail: `สลิปโอนไปยัง ${match.receiverAccount || match.receiverName || '-'} ไม่ตรงกับบัญชีของร้าน`,
           trans_ref: transRef,
           amount: `฿${amount}`,
           bank: raw.sender?.bank?.short ?? '-',
@@ -398,6 +386,7 @@ class PaymentService {
       );
       throw new ValidationError('สลิปนี้โอนไปยังบัญชีอื่น ไม่ใช่บัญชีของร้านนี้');
     }
+    logger.info('Slip receiver matched', { transRef, userId, matchedBy: match.matchedBy });
 
     // ── Layer 6: Bonus calculation ────────────────────────────────────────────
     const ppBonus = resolveTopupBonus(allSettings, 'promptpay');
