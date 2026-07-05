@@ -63,27 +63,27 @@ Siamsite Shop คือเว็บร้านค้าสำหรับเจ
 
 ```mermaid
 flowchart TD
-    subgraph ผู้ใช้งาน
+    subgraph users["ผู้ใช้งาน"]
       B["เบราว์เซอร์ผู้เล่น / มือถือ"]
     end
-    subgraph หน้าเว็บ
+    subgraph web["หน้าเว็บ"]
       FE["Frontend: Next.js 14 + Tailwind"]
     end
-    subgraph เซิร์ฟเวอร์ระบบ
+    subgraph srv["เซิร์ฟเวอร์ระบบ"]
       BE["Backend API: Express + TypeScript"]
       WS["Socket.IO (เรียลไทม์)"]
     end
-    subgraph เก็บข้อมูล
+    subgraph data["เก็บข้อมูล"]
       DB[("MySQL 8")]
       RD[("Redis 7")]
     end
-    subgraph ภายนอก
+    subgraph ext["ภายนอก"]
       PAY["พร้อมเพย์ / ทรูมันนี่ / EasySlip"]
       MC["เซิร์ฟเวอร์ Minecraft"]
     end
 
     B --> FE --> BE
-    B <-.->|จำนวนคนออนไลน์| WS
+    WS -->|จำนวนคนออนไลน์| B
     WS --- BE
     BE --> DB
     BE --> RD
