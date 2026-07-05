@@ -1,26 +1,26 @@
 'use client';
-import { Children, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Children, ReactNode, useEffect, useRef } from 'react';
 
 /**
- * AutoScrollCarousel — a fixed (non-continuous) paged carousel.
+ * AutoScrollCarousel — smooth transform-based marquee.
  *
- * - Items sit still; the view advances one page every `interval` ms (default 5s).
- * - Finite: real left end / right end. When auto-advance reaches the right end
- *   it snaps back to the leftmost page (where the best items live).
- * - Prev/Next arrows let the user jump toward either end manually; native
- *   horizontal scroll / touch swipe still works.
- * - Auto-advance pauses while the pointer is over the carousel.
+ * - Auto-scroll: a gentle, continuous glide (never a paged "block" jump).
+ *   Finite track — it eases to the right end, then reverses back to the left
+ *   end (ping-pong), so the best items on the left always come back into view.
+ * - Free drag: grab and fling in either direction with momentum/inertia
+ *   (mouse + touch). Position is clamped softly at both ends.
+ * - Auto-scroll pauses on hover and while dragging, then resumes.
  *
- * Uses native scrolling (no pointer capture / click interception) so buttons
- * inside the cards — buy, view details — remain fully clickable.
+ * Drag is tracked via window listeners (NOT setPointerCapture), so buttons
+ * inside the cards — buy, view details — stay fully clickable; only a real
+ * drag (past the movement threshold) swallows the trailing click.
  */
 interface Props {
   children: ReactNode;
   /** Width class applied to each item wrapper (controls how many peek in view). */
   itemClassName?: string;
-  /** Auto-advance interval in ms. */
-  interval?: number;
+  /** Auto-scroll speed in px/second. */
+  speed?: number;
   /** Horizontal gap between items in px. */
   gap?: number;
   className?: string;
@@ -29,86 +29,134 @@ interface Props {
 export default function AutoScrollCarousel({
   children,
   itemClassName = 'w-[44%] sm:w-[30%] md:w-[24%] xl:w-[19%]',
-  interval = 5000,
+  speed = 32,
   gap = 12,
   className = '',
 }: Props) {
   const items = Children.toArray(children);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [canLeft, setCanLeft] = useState(false);
-  const [canRight, setCanRight] = useState(false);
-  const [paused, setPaused] = useState(false);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
 
-  const updateEdges = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    setCanLeft(el.scrollLeft > 4);
-    setCanRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
-  }, []);
+  const offset = useRef(0);      // translateX, in [min, 0]
+  const min = useRef(0);         // most-negative offset (right end)
+  const dir = useRef(-1);        // auto direction: -1 => reveal right, +1 => back to left
+  const paused = useRef(false);  // hover pause
+  const dragging = useRef(false);
+  const momentum = useRef(0);    // px/s carried after release
+  const startX = useRef(0);
+  const startOffset = useRef(0);
+  const lastX = useRef(0);
+  const lastT = useRef(0);
+  const moved = useRef(false);   // did this gesture pass the click threshold
+
+  const measure = () => {
+    const vp = viewportRef.current;
+    const track = trackRef.current;
+    if (!vp || !track) return;
+    min.current = Math.min(0, vp.clientWidth - track.scrollWidth);
+    if (offset.current < min.current) offset.current = min.current;
+  };
 
   useEffect(() => {
-    updateEdges();
-    const el = scrollRef.current;
-    if (!el) return;
-    el.addEventListener('scroll', updateEdges, { passive: true });
-    const ro = new ResizeObserver(updateEdges);
-    ro.observe(el);
-    return () => { el.removeEventListener('scroll', updateEdges); ro.disconnect(); };
-  }, [updateEdges, items.length]);
+    measure();
+    const vp = viewportRef.current;
+    const track = trackRef.current;
+    if (!vp || !track) return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(vp);
+    ro.observe(track);
+    return () => ro.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.length]);
 
-  const step = useCallback((dir: 'left' | 'right') => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const amount = el.clientWidth * 0.9;
-    el.scrollBy({ left: dir === 'right' ? amount : -amount, behavior: 'smooth' });
-  }, []);
-
-  // Auto-advance one page every `interval`; loop back to the start at the end.
   useEffect(() => {
-    if (paused) return;
-    const t = setInterval(() => {
-      const el = scrollRef.current;
-      if (!el) return;
-      const atEnd = el.scrollLeft >= el.scrollWidth - el.clientWidth - 4;
-      if (atEnd) el.scrollTo({ left: 0, behavior: 'smooth' });
-      else el.scrollBy({ left: el.clientWidth * 0.9, behavior: 'smooth' });
-    }, interval);
-    return () => clearInterval(t);
-  }, [paused, interval, items.length]);
+    let raf = 0;
+    let prev = performance.now();
+    const frame = (t: number) => {
+      const dt = Math.min((t - prev) / 1000, 0.05); // clamp long gaps (tab blur)
+      prev = t;
+      const track = trackRef.current;
+      if (track) {
+        if (!dragging.current) {
+          if (Math.abs(momentum.current) > 4) {
+            offset.current += momentum.current * dt;
+            momentum.current *= Math.pow(0.94, dt * 60); // inertia decay
+          } else {
+            momentum.current = 0;
+            if (!paused.current && min.current < 0) {
+              offset.current += dir.current * speed * dt;
+            }
+          }
+        }
+        // Clamp at ends and bounce the auto direction (ping-pong).
+        if (offset.current > 0) { offset.current = 0; dir.current = -1; momentum.current = 0; }
+        else if (offset.current < min.current) { offset.current = min.current; dir.current = 1; momentum.current = 0; }
+        track.style.transform = `translate3d(${offset.current}px,0,0)`;
+      }
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }, [speed]);
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (min.current === 0) return; // nothing to scroll
+    dragging.current = true;
+    moved.current = false;
+    momentum.current = 0;
+    startX.current = e.clientX;
+    startOffset.current = offset.current;
+    lastX.current = e.clientX;
+    lastT.current = performance.now();
+
+    const onMove = (ev: PointerEvent) => {
+      const dx = ev.clientX - startX.current;
+      if (Math.abs(dx) > 4) moved.current = true;
+      offset.current = startOffset.current + dx;
+      const now = performance.now();
+      const dtt = (now - lastT.current) / 1000;
+      if (dtt > 0) momentum.current = (ev.clientX - lastX.current) / dtt;
+      lastX.current = ev.clientX;
+      lastT.current = now;
+    };
+    const onUp = () => {
+      dragging.current = false;
+      momentum.current = Math.max(-2600, Math.min(2600, momentum.current));
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+  };
+
+  // Swallow the click that ends a real drag so cards don't navigate on release.
+  const onClickCapture = (e: React.MouseEvent) => {
+    if (moved.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      moved.current = false;
+    }
+  };
 
   return (
     <div
-      className={`relative ${className}`}
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
+      ref={viewportRef}
+      className={`overflow-hidden select-none ${className}`}
+      onMouseEnter={() => { paused.current = true; }}
+      onMouseLeave={() => { paused.current = false; }}
+      onPointerDown={onPointerDown}
+      onClickCapture={onClickCapture}
+      style={{ cursor: 'grab', touchAction: 'pan-y' }}
     >
-      <button
-        onClick={() => step('left')}
-        aria-label="เลื่อนซ้าย"
-        className={`absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 z-20 w-8 h-8 rounded-full bg-surface border border-border shadow-theme-md flex items-center justify-center text-foreground hover:border-primary/40 transition-opacity ${canLeft ? 'opacity-90 hover:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-      >
-        <ChevronLeft className="w-4 h-4" strokeWidth={2.5} />
-      </button>
-
-      <div
-        ref={scrollRef}
-        className="flex overflow-x-auto scrollbar-hide scroll-smooth snap-x snap-mandatory"
-        style={{ gap: `${gap}px` }}
-      >
+      <div ref={trackRef} className="flex will-change-transform" style={{ gap: `${gap}px` }}>
         {items.map((child, i) => (
-          <div key={i} className={`flex-shrink-0 snap-start ${itemClassName}`}>
+          <div key={i} className={`flex-shrink-0 ${itemClassName}`}>
             {child}
           </div>
         ))}
       </div>
-
-      <button
-        onClick={() => step('right')}
-        aria-label="เลื่อนขวา"
-        className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 z-20 w-8 h-8 rounded-full bg-surface border border-border shadow-theme-md flex items-center justify-center text-foreground hover:border-primary/40 transition-opacity ${canRight ? 'opacity-90 hover:opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-      >
-        <ChevronRight className="w-4 h-4" strokeWidth={2.5} />
-      </button>
     </div>
   );
 }
