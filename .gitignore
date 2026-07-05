@@ -36,11 +36,17 @@ docker-compose.override.yml
 coverage/
 *.tsbuildinfo
 
-# ── Internal tools (not needed by the team) ───────────────────
+# ── AI assistant / internal tooling (never commit) ────────────
 CLAUDE.md
+GEMINI.md
+AGENTS.md
 .agents/
-skills-lock.json
 .claude/
+.cursor/
+.cursorrules
+.aider*
+.github/copilot-instructions.md
+skills-lock.json
 .openclaude-profile.json
 
 # ── Local scratch files (screenshots, throwaway scripts) ─────
