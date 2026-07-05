@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import RegistrarGuide from './RegistrarGuide';
 import DomainStepper from './DomainStepper';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 type DomainStatus = 'pending_dns' | 'pending_ssl' | 'active' | 'failed';
 
@@ -36,7 +37,7 @@ function CopyBtn({ value }: { value: string }) {
   return (
     <button type="button" onClick={() => { navigator.clipboard.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
       className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border cursor-pointer flex-shrink-0 transition-colors ${copied ? 'border-emerald-500 text-emerald-600 bg-emerald-500/10' : 'border-border text-muted-foreground hover:bg-secondary'}`}>
-      <i className={`fas ${copied ? 'fa-check' : 'fa-copy'} mr-1`} />{copied ? 'คัดลอกแล้ว' : 'คัดลอก'}
+      <Icon name={copied ? 'check' : 'copy'} className={`mr-1`} />{copied ? 'คัดลอกแล้ว' : 'คัดลอก'}
     </button>
   );
 }
@@ -153,7 +154,7 @@ export default function DomainModal({ subId, isOpen, onClose }: { subId: number 
             <div className="flex items-start justify-between gap-4 p-6 border-b border-border">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-                  <i className="fas fa-globe text-lg" />
+                  <Icon name="globe" className="text-lg" />
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-foreground tracking-tight">โดเมนของฉัน (Custom Domain)</h2>
@@ -161,7 +162,7 @@ export default function DomainModal({ subId, isOpen, onClose }: { subId: number 
                 </div>
               </div>
               <button type="button" onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary cursor-pointer flex-shrink-0">
-                <i className="fas fa-xmark" />
+                <Icon name="xmark" />
               </button>
             </div>
 
@@ -171,14 +172,14 @@ export default function DomainModal({ subId, isOpen, onClose }: { subId: number 
 
               {error && (
                 <div className="text-center py-8">
-                  <i className="fas fa-circle-exclamation text-destructive text-2xl mb-2" />
+                  <Icon name="circle-exclamation" className="text-destructive text-2xl mb-2" />
                   <p className="text-sm font-bold text-destructive">{error}</p>
                 </div>
               )}
 
               {!data && !error && (
                 <div className="text-center py-10">
-                  <i className="fas fa-spinner fa-spin text-primary text-2xl" />
+                  <Icon name="spinner" className="text-primary text-2xl animate-spin" />
                 </div>
               )}
 
@@ -188,7 +189,7 @@ export default function DomainModal({ subId, isOpen, onClose }: { subId: number 
                   {!data.customDomain && (
                     <div className="space-y-3">
                       <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                        <i className="fas fa-lightbulb text-amber-500" />
+                        <Icon name="lightbulb" className="text-amber-500" />
                         แนะนำให้ใช้ subdomain เช่น <code className="font-mono">shop.</code> / <code className="font-mono">store.</code> / <code className="font-mono">www.</code>
                       </div>
                       <input
@@ -202,13 +203,13 @@ export default function DomainModal({ subId, isOpen, onClose }: { subId: number 
                       {/* live preview / validation */}
                       {input && previewOk && (
                         <p className="text-xs font-semibold text-emerald-600 flex items-center gap-1.5">
-                          <i className="fas fa-circle-check" /> ลูกค้าจะเข้าผ่าน https://{(live as { value: string }).value}
+                          <Icon name="circle-check" /> ลูกค้าจะเข้าผ่าน https://{(live as { value: string }).value}
                         </p>
                       )}
                       {(fieldError || (input && !previewOk)) && (
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-xs font-bold text-destructive flex items-center gap-1.5">
-                            <i className="fas fa-circle-exclamation" /> {fieldError || (live as { error: string }).error}
+                            <Icon name="circle-exclamation" /> {fieldError || (live as { error: string }).error}
                           </p>
                           {!fieldError && (live as { apex?: boolean }).apex && (
                             <button type="button" onClick={() => setInput(`shop.${input.trim().toLowerCase()}`)}
@@ -219,7 +220,7 @@ export default function DomainModal({ subId, isOpen, onClose }: { subId: number 
                         </div>
                       )}
                       <Button onClick={submit} disabled={busy} className="cursor-pointer font-bold rounded-full">
-                        {busy ? <i className="fas fa-spinner fa-spin mr-2" /> : <i className="fas fa-plus mr-2" />} เพิ่มโดเมน
+                        {busy ? <Icon name="spinner" className="mr-2 animate-spin" /> : <Icon name="plus" className="mr-2" />} เพิ่มโดเมน
                       </Button>
                     </div>
                   )}
@@ -229,17 +230,17 @@ export default function DomainModal({ subId, isOpen, onClose }: { subId: number 
                     <div className="space-y-4">
                       <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
                         <p className="text-sm font-bold text-foreground mb-1">
-                          <i className="fas fa-circle-1 mr-1.5 text-amber-600" /> เพิ่ม CNAME ที่ผู้ให้บริการโดเมนของคุณ
+                          <Icon name="circle-1" className="mr-1.5 text-amber-600" /> เพิ่ม CNAME ที่ผู้ให้บริการโดเมนของคุณ
                         </p>
                         <p className="text-xs font-medium text-muted-foreground">เลือกค่ายของคุณด้านล่าง แล้วทำตามขั้นตอน (DNS อาจใช้เวลา 5-30 นาที)</p>
                       </div>
                       <RegistrarGuide host={host} cname={cname} />
                       <div className="flex flex-wrap gap-2 pt-1">
                         <Button onClick={() => verify(false)} disabled={busy} className="cursor-pointer font-bold rounded-full">
-                          {busy ? <i className="fas fa-spinner fa-spin mr-2" /> : <i className="fas fa-rotate-right mr-2" />} ตรวจสอบสถานะ
+                          {busy ? <Icon name="spinner" className="mr-2 animate-spin" /> : <Icon name="rotate-right" className="mr-2" />} ตรวจสอบสถานะ
                         </Button>
                         <Button variant="outline" onClick={remove} disabled={busy} className="cursor-pointer font-bold rounded-full text-destructive border-destructive/30">
-                          <i className="fas fa-trash mr-2" /> ลบโดเมน
+                          <Icon name="trash" className="mr-2" /> ลบโดเมน
                         </Button>
                       </div>
                     </div>
@@ -248,7 +249,7 @@ export default function DomainModal({ subId, isOpen, onClose }: { subId: number 
                   {/* pending_ssl */}
                   {data.customDomain && data.status === 'pending_ssl' && (
                     <div className="rounded-xl border border-blue-500/30 bg-blue-500/5 p-5 flex items-center gap-4">
-                      <i className="fas fa-spinner fa-spin text-blue-500 text-xl" />
+                      <Icon name="spinner" className="text-blue-500 text-xl animate-spin" />
                       <div>
                         <p className="text-sm font-bold text-foreground">กำลังออกใบรับรอง (SSL) สำหรับ {host}</p>
                         <p className="text-xs text-muted-foreground font-medium mt-0.5">พบ CNAME แล้ว รอสักครู่ ระบบจะเปิดใช้งานอัตโนมัติ</p>
@@ -261,7 +262,7 @@ export default function DomainModal({ subId, isOpen, onClose }: { subId: number 
                     <div className="space-y-3">
                       <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
                         <div className="flex items-center gap-2 mb-3">
-                          <i className="fas fa-circle-check text-emerald-600" />
+                          <Icon name="circle-check" className="text-emerald-600" />
                           <span className="text-sm font-bold text-foreground">โดเมนพร้อมใช้งาน</span>
                           <Badge variant="success" className="font-bold uppercase tracking-widest ml-1">Live</Badge>
                         </div>
@@ -273,15 +274,15 @@ export default function DomainModal({ subId, isOpen, onClose }: { subId: number 
                       <div className="flex flex-wrap gap-2">
                         <Button asChild className="cursor-pointer font-bold rounded-full">
                           <a href={`https://${host}`} target="_blank" rel="noopener noreferrer">
-                            <i className="fas fa-arrow-up-right-from-square mr-2" /> เปิดเว็บร้านค้า
+                            <Icon name="arrow-up-right-from-square" className="mr-2" /> เปิดเว็บร้านค้า
                           </a>
                         </Button>
                         <Button variant="outline" onClick={remove} disabled={busy} className="cursor-pointer font-bold rounded-full text-destructive border-destructive/30">
-                          <i className="fas fa-trash mr-2" /> ลบโดเมน
+                          <Icon name="trash" className="mr-2" /> ลบโดเมน
                         </Button>
                       </div>
                       <p className="text-xs text-muted-foreground font-medium flex items-start gap-1.5">
-                        <i className="fas fa-circle-info mt-0.5" />
+                        <Icon name="circle-info" className="mt-0.5" />
                         หากร้านหมดอายุ โดเมนนี้จะหยุดทำงานชั่วคราว ต่ออายุแล้วกลับมาทำงานเองอัตโนมัติ
                       </p>
                     </div>
@@ -291,15 +292,15 @@ export default function DomainModal({ subId, isOpen, onClose }: { subId: number 
                   {data.customDomain && data.status === 'failed' && (
                     <div className="space-y-3">
                       <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-                        <p className="text-sm font-bold text-destructive mb-1"><i className="fas fa-circle-exclamation mr-1.5" /> ตั้งค่าโดเมนไม่สำเร็จ</p>
+                        <p className="text-sm font-bold text-destructive mb-1"><Icon name="circle-exclamation" className="mr-1.5" /> ตั้งค่าโดเมนไม่สำเร็จ</p>
                         <p className="text-xs font-medium text-muted-foreground">ตรวจสอบว่า {host} ชี้ไปที่ {cname} แล้วลองอีกครั้ง</p>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <Button onClick={() => verify(false)} disabled={busy} className="cursor-pointer font-bold rounded-full">
-                          <i className="fas fa-rotate-right mr-2" /> ตรวจสอบอีกครั้ง
+                          <Icon name="rotate-right" className="mr-2" /> ตรวจสอบอีกครั้ง
                         </Button>
                         <Button variant="outline" onClick={remove} disabled={busy} className="cursor-pointer font-bold rounded-full text-destructive border-destructive/30">
-                          <i className="fas fa-trash mr-2" /> ลบและลองใหม่
+                          <Icon name="trash" className="mr-2" /> ลบและลองใหม่
                         </Button>
                       </div>
                     </div>

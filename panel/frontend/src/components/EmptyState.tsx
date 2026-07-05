@@ -1,7 +1,8 @@
 import Link from 'next/link';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 interface Props {
-  icon: string;
+  icon: IconName;
   title: string;
   description?: string;
   actionLabel?: string;
@@ -13,7 +14,7 @@ export default function EmptyState({ icon, title, description, actionLabel, acti
   return (
     <div className="card shadow-[var(--shadow-md)] flex flex-col items-center justify-center py-24 text-gray-400 dark:text-slate-500 bg-white dark:bg-slate-800">
       <div className="w-20 h-20 rounded-[2rem] bg-gray-50 dark:bg-slate-900/50 flex items-center justify-center border-2 border-gray-100 dark:border-slate-700/50 mb-6 shadow-inner">
-        <i className={`fas ${icon} text-3xl text-gray-300 dark:text-slate-600`} />
+        <Icon name={icon} className="text-3xl text-gray-300 dark:text-slate-600" />
       </div>
       <p className="text-sm font-black text-gray-500 dark:text-slate-400 uppercase tracking-widest mb-2">{title}</p>
       {description && <p className="text-xs font-bold text-gray-400 dark:text-slate-500 mb-8 max-w-sm text-center">{description}</p>}

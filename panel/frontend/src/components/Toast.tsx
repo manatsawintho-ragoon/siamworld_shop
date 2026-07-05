@@ -1,5 +1,6 @@
 'use client';
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -22,9 +23,9 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 
 const TOAST_DURATION = 4000;
 
-const TYPE_CONFIG: Record<ToastType, { icon: string; bg: string; border: string; progress: string; text: string; title: string }> = {
+const TYPE_CONFIG: Record<ToastType, { icon: IconName; bg: string; border: string; progress: string; text: string; title: string }> = {
   success: {
-    icon: 'fa-circle-check',
+    icon: 'circle-check',
     bg: 'bg-white dark:bg-slate-800',
     border: 'border-emerald-500',
     progress: 'bg-emerald-500',
@@ -32,7 +33,7 @@ const TYPE_CONFIG: Record<ToastType, { icon: string; bg: string; border: string;
     title: 'text-gray-900 dark:text-slate-50',
   },
   error: {
-    icon: 'fa-circle-xmark',
+    icon: 'circle-xmark',
     bg: 'bg-white dark:bg-slate-800',
     border: 'border-red-500',
     progress: 'bg-red-500',
@@ -40,7 +41,7 @@ const TYPE_CONFIG: Record<ToastType, { icon: string; bg: string; border: string;
     title: 'text-gray-900 dark:text-slate-50',
   },
   warning: {
-    icon: 'fa-triangle-exclamation',
+    icon: 'triangle-exclamation',
     bg: 'bg-white dark:bg-slate-800',
     border: 'border-amber-500',
     progress: 'bg-amber-500',
@@ -48,7 +49,7 @@ const TYPE_CONFIG: Record<ToastType, { icon: string; bg: string; border: string;
     title: 'text-gray-900 dark:text-slate-50',
   },
   info: {
-    icon: 'fa-circle-info',
+    icon: 'circle-info',
     bg: 'bg-white dark:bg-slate-800',
     border: 'border-blue-500',
     progress: 'bg-blue-500',
@@ -104,7 +105,7 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
     >
       <div className="flex items-start gap-3 px-4 py-3.5">
         <div className={`flex-shrink-0 mt-0.5 text-base ${cfg.text}`}>
-          <i className={`fas ${cfg.icon}`} />
+          <Icon name={cfg.icon} />
         </div>
         <div className="flex-1 min-w-0">
           <p className={`text-xs font-black uppercase tracking-wide leading-tight ${cfg.title}`}>
@@ -120,7 +121,7 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
           onClick={dismiss}
           className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-lg text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 transition-colors"
         >
-          <i className="fas fa-xmark text-[10px]" />
+          <Icon name="xmark" className="text-[10px]" />
         </button>
       </div>
       {/* Progress bar */}

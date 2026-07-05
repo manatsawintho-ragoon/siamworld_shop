@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 export default function CommandPalette() {
   const [isOpen, setIsOpen] = useState(false);
@@ -49,7 +50,7 @@ export default function CommandPalette() {
       
       <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[2rem] border-2 border-amber-500 shadow-2xl overflow-hidden animate-saas-fade">
         <div className="p-6 border-b-2 border-gray-100 dark:border-slate-800 flex items-center gap-4">
-          <i className={`fas ${loading ? 'fa-spinner fa-spin' : 'fa-search'} text-amber-500 text-lg`} />
+          <Icon name={loading ? 'spinner' : 'search'} className={`text-amber-500 text-lg ${loading ? 'animate-spin' : ''}`} />
           <input 
             autoFocus
             type="text" 
@@ -86,7 +87,7 @@ export default function CommandPalette() {
                 className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all group border-2 border-transparent hover:border-amber-100 dark:hover:border-amber-900/50"
               >
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm border-2 ${r.type === 'user' ? 'bg-blue-50 border-blue-100 text-blue-500' : 'bg-amber-50 border-amber-100 text-amber-500'}`}>
-                  <i className={`fas ${r.type === 'user' ? 'fa-user' : 'fa-server'}`} />
+                  <Icon name={r.type === 'user' ? 'user' : 'server'} />
                 </div>
                 <div className="text-left flex-1 min-w-0">
                   <p className="font-black text-gray-900 dark:text-white uppercase tracking-tight truncate">{r.name}</p>

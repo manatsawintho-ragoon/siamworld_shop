@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 interface Props {
   date: string;
@@ -77,14 +78,14 @@ export default function TimeRemaining({ date, suspendAt = null, suspended = fals
     : (view as { isExpiringSoon?: boolean }).isExpiringSoon ? 'text-amber-600 dark:text-amber-400'
     : 'text-emerald-600 dark:text-emerald-400';
 
-  const icon = view.phase === 'suspended' ? 'fa-circle-pause'
-    : view.phase === 'grace' ? 'fa-triangle-exclamation'
-    : 'fa-clock';
+  const icon = view.phase === 'suspended' ? 'circle-pause'
+    : view.phase === 'grace' ? 'triangle-exclamation'
+    : 'clock';
 
   return (
     <div className={`flex flex-col ${className}`}>
       <div className={`flex items-center gap-1.5 text-xs font-bold ${colorClass}`}>
-        <i className={`fas ${icon} text-[10px] opacity-70`} />
+        <Icon name={icon} className="text-[10px] opacity-70" />
         <span className="font-semibold">{view.text}</span>
       </div>
       {view.sub && (

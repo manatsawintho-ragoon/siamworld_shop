@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { PATH_LABELS, FEATURE_LABELS } from '@/lib/activityLabels';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 interface PageRow { path: string; views: number; users: number; }
 interface FeatureRow { feature: string; clicks: number; users: number; }
@@ -43,11 +44,11 @@ function Bar({ value, max }: { value: number; max: number }) {
   );
 }
 
-function StatCard({ icon, label, value }: { icon: string; label: string; value: number }) {
+function StatCard({ icon, label, value }: { icon: IconName; label: string; value: number }) {
   return (
     <Card className="rounded-2xl border-border shadow-sm p-5 bg-white dark:bg-card flex items-center gap-4">
       <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-        <i className={`fas ${icon}`} />
+        <Icon name={icon} />
       </div>
       <div>
         <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-1">{label}</p>
@@ -82,14 +83,14 @@ function Content() {
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
           <div className="flex items-center gap-4 mb-1">
             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg bg-secondary/50 hover:bg-secondary transition-all" asChild>
-              <Link href="/admin"><i className="fas fa-arrow-left text-xs" /></Link>
+              <Link href="/admin"><Icon name="arrow-left" className="text-xs" /></Link>
             </Button>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
               พฤติกรรมการใช้งาน <span className="text-primary text-xl opacity-20">/</span>
             </h1>
           </div>
           <p className="text-muted-foreground font-medium text-sm flex items-center gap-2">
-            <i className="fas fa-fire text-primary text-xs" />
+            <Icon name="fire" className="text-primary text-xs" />
             หน้าและฟีเจอร์ที่ลูกค้าใช้งานมากที่สุด (hotspots) ในแผงควบคุม
           </p>
         </motion.div>
@@ -108,23 +109,23 @@ function Content() {
           ))}
           <div className="w-px h-6 bg-border/60" />
           <Button onClick={load} variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-secondary transition-all active:scale-95">
-            <i className="fas fa-arrows-rotate text-xs" />
+            <Icon name="arrows-rotate" className="text-xs" />
           </Button>
         </div>
       </div>
 
       {/* Totals */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard icon="fa-eye" label="Page Views" value={data?.totals.totalViews || 0} />
-        <StatCard icon="fa-hand-pointer" label="Feature Clicks" value={data?.totals.totalClicks || 0} />
-        <StatCard icon="fa-users" label="ผู้ใช้ที่ active" value={data?.totals.activeUsers || 0} />
+        <StatCard icon="eye" label="Page Views" value={data?.totals.totalViews || 0} />
+        <StatCard icon="hand-pointer" label="Feature Clicks" value={data?.totals.totalClicks || 0} />
+        <StatCard icon="users" label="ผู้ใช้ที่ active" value={data?.totals.activeUsers || 0} />
       </div>
 
       {loading ? (
         <Card className="rounded-3xl border-border shadow-sm overflow-hidden bg-white dark:bg-card"><SkeletonTable rows={8} /></Card>
       ) : !data || (data.pages.length === 0 && data.features.length === 0) ? (
         <Card className="rounded-3xl border-border shadow-sm p-16 bg-white dark:bg-card">
-          <EmptyState icon="fa-fire" title="ยังไม่มีข้อมูลการใช้งาน" description="ยังไม่มีการบันทึกการเคลื่อนไหวในช่วงเวลานี้" />
+          <EmptyState icon="fire" title="ยังไม่มีข้อมูลการใช้งาน" description="ยังไม่มีการบันทึกการเคลื่อนไหวในช่วงเวลานี้" />
         </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -132,7 +133,7 @@ function Content() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <Card className="rounded-3xl border-border shadow-sm overflow-hidden bg-white dark:bg-card">
               <div className="px-6 py-4 border-b border-border/60 bg-secondary/20 flex items-center gap-2.5">
-                <i className="fas fa-eye text-primary text-sm" />
+                <Icon name="eye" className="text-primary text-sm" />
                 <h2 className="text-sm font-bold text-foreground tracking-tight">หน้าที่เข้าชมมากที่สุด</h2>
               </div>
               <div className="divide-y divide-border/60">
@@ -146,9 +147,9 @@ function Content() {
                         <p className="text-[9px] font-mono text-muted-foreground/70 truncate mt-0.5">{p.path}</p>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
-                        <span className="text-[9px] font-bold text-primary opacity-0 group-hover/row:opacity-100 transition-opacity whitespace-nowrap">ดูล่าสุด <i className="fas fa-arrow-right text-[8px]" /></span>
+                        <span className="text-[9px] font-bold text-primary opacity-0 group-hover/row:opacity-100 transition-opacity whitespace-nowrap">ดูล่าสุด <Icon name="arrow-right" className="text-[8px]" /></span>
                         <Badge variant="outline" className="text-[9px] font-bold border-border bg-secondary/30 rounded-lg">
-                          <i className="fas fa-user mr-1 opacity-60" />{p.users}
+                          <Icon name="user" className="mr-1 opacity-60" />{p.users}
                         </Badge>
                         <span className="text-sm font-bold text-foreground tabular-nums">{p.views.toLocaleString('th-TH')}</span>
                       </div>
@@ -164,7 +165,7 @@ function Content() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
             <Card className="rounded-3xl border-border shadow-sm overflow-hidden bg-white dark:bg-card">
               <div className="px-6 py-4 border-b border-border/60 bg-secondary/20 flex items-center gap-2.5">
-                <i className="fas fa-hand-pointer text-primary text-sm" />
+                <Icon name="hand-pointer" className="text-primary text-sm" />
                 <h2 className="text-sm font-bold text-foreground tracking-tight">ฟีเจอร์ที่ใช้มากที่สุด</h2>
               </div>
               <div className="divide-y divide-border/60">
@@ -178,9 +179,9 @@ function Content() {
                         <p className="text-[9px] font-mono text-muted-foreground/70 truncate mt-0.5">{f.feature}</p>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
-                        <span className="text-[9px] font-bold text-primary opacity-0 group-hover/row:opacity-100 transition-opacity whitespace-nowrap">ดูล่าสุด <i className="fas fa-arrow-right text-[8px]" /></span>
+                        <span className="text-[9px] font-bold text-primary opacity-0 group-hover/row:opacity-100 transition-opacity whitespace-nowrap">ดูล่าสุด <Icon name="arrow-right" className="text-[8px]" /></span>
                         <Badge variant="outline" className="text-[9px] font-bold border-border bg-secondary/30 rounded-lg">
-                          <i className="fas fa-user mr-1 opacity-60" />{f.users}
+                          <Icon name="user" className="mr-1 opacity-60" />{f.users}
                         </Badge>
                         <span className="text-sm font-bold text-foreground tabular-nums">{f.clicks.toLocaleString('th-TH')}</span>
                       </div>

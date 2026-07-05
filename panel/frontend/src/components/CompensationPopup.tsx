@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 interface Notification {
   id: number;
@@ -69,7 +70,7 @@ export default function CompensationPopup() {
         >
           <div className="p-6 flex flex-col items-center text-center gap-3">
             <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-2xl border shadow-sm ${added ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border-amber-500/20'}`}>
-              <i className={`fas ${added ? 'fa-gift' : 'fa-clock'}`} />
+              <Icon name={added ? 'gift' : 'clock'} />
             </div>
 
             {cat && (

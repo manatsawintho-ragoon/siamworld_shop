@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 interface Package { months: number; price: number; label: string; save: number; kind?: 'regular' | 'trial' | 'intro' }
 interface Promo {
@@ -31,24 +32,24 @@ const DEFAULT_PROMOS: Promo[] = [
   { kind: 'intro', months: 1,           price: 99, label: 'เดือนแรกพิเศษ',  regularPrice: 350 },
 ];
 
-const FEATURES = [
+const FEATURES: { icon: IconName; title: string; desc: string }[] = [
   {
-    icon: 'fa-rocket',
+    icon: 'rocket',
     title: 'ระบบ Auto-Deploy',
     desc: 'พร้อมขายทันที ไม่ต้องเขียนโค้ด ไม่ต้องตั้งค่ายาก'
   },
   {
-    icon: 'fa-qrcode',
+    icon: 'qrcode',
     title: 'รับเงิน 24 ชม.',
     desc: 'PromptPay + TrueMoney อั่งเปา (ฟรี ไม่มีค่าธรรมเนียม) เงินเข้าทันทีแม้คุณนอน'
   },
   {
-    icon: 'fa-box-open',
+    icon: 'box-open',
     title: 'Loot Box ดึงดูดผู้เล่น',
     desc: 'ระบบสุ่มพร้อมแอนิเมชั่น CS:GO กระตุ้นยอดขายซ้ำ'
   },
   {
-    icon: 'fa-gears',
+    icon: 'gears',
     title: 'จัดการครบจากเว็บ',
     desc: 'ส่งของผ่าน RCON แม่นยำ ดู logs ดูยอดได้ทุกที่'
   },
@@ -82,7 +83,7 @@ function PackageCard({ pkg, isPromo = false, isTrial = false, onShowEasySlip }: 
           <div className="flex justify-between items-start mb-2">
             <CardTitle className="text-xl font-black">{isTrial ? 'ทดลองใช้ฟรี' : pkg.label}</CardTitle>
             <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[9px] font-black uppercase tracking-tighter border border-emerald-500/20">
-               <i className="fas fa-arrows-rotate text-[8px]" /> อัปเดตฟรี
+               <Icon name="arrows-rotate" className="text-[9px]" /> อัปเดตฟรี
             </div>
           </div>
           <div className="flex items-baseline gap-1">
@@ -94,26 +95,26 @@ function PackageCard({ pkg, isPromo = false, isTrial = false, onShowEasySlip }: 
         <CardContent className="flex-1 pb-6 space-y-6">
           <ul className="space-y-3.5">
             <li className="flex items-center gap-2.5 text-sm font-bold text-foreground/90">
-              <i className="fas fa-check-circle text-primary text-xs" /> ฟีเจอร์พรีเมียมครบทุกอย่าง
+              <Icon name="circle-check" className="text-primary text-sm" /> ฟีเจอร์พรีเมียมครบทุกอย่าง
             </li>
             <li className="flex items-center gap-2.5 text-[13px] font-medium text-muted-foreground">
-              <i className="fas fa-box-open text-primary/50 text-[10px]" /> ระบบสุ่ม Loot Box แอนิเมชั่น CS:GO
+              <Icon name="box-open" className="text-primary/60 text-sm" /> ระบบสุ่ม Loot Box แอนิเมชั่น CS:GO
             </li>
             <li className="flex items-center gap-2.5 text-[13px] font-medium text-muted-foreground">
-              <i className="fas fa-archive text-primary/50 text-[10px]" /> ระบบคลังเว็บ (Web Inventory)
+              <Icon name="archive" className="text-primary/60 text-sm" /> ระบบคลังเว็บ (Web Inventory)
             </li>
             <li className={`flex items-center gap-2.5 text-[13px] font-medium ${isTrial ? 'text-muted-foreground/40' : 'text-muted-foreground'}`}>
-              <i className={`fas ${isTrial ? 'fa-circle-xmark text-destructive/30' : 'fa-qrcode text-primary/50'} text-[10px]`} /> ตรวจสลิป PromptPay อัตโนมัติ 24 ชม.
+              <Icon name={isTrial ? 'circle-xmark' : 'qrcode'} className={`text-sm ${isTrial ? 'text-destructive/40' : 'text-primary/60'}`} /> ตรวจสลิป PromptPay อัตโนมัติ 24 ชม.
             </li>
             <li className="flex items-center gap-2.5 text-[13px] font-bold text-emerald-600">
-              <i className="fas fa-wallet text-emerald-500 text-[10px]" />
+              <Icon name="wallet" className="text-emerald-500 text-sm" />
               <span className="flex items-center gap-1.5 flex-wrap">
                 เติมผ่าน TrueMoney อั่งเปา ฟรี ไม่มีค่าธรรมเนียม
                 <span className="text-[8px] font-black uppercase tracking-wider bg-emerald-500 text-white px-1.5 py-0.5 rounded-full leading-none">ใหม่</span>
               </span>
             </li>
             <li className="flex items-center gap-2.5 text-[13px] font-medium text-muted-foreground">
-              <i className="fas fa-shield-halved text-primary/50 text-[10px]" /> ระบบความปลอดภัย Docker Isolation
+              <Icon name="shield-halved" className="text-primary/60 text-sm" /> ระบบความปลอดภัย Docker Isolation
             </li>
           </ul>
 
@@ -125,7 +126,7 @@ function PackageCard({ pkg, isPromo = false, isTrial = false, onShowEasySlip }: 
                   onClick={onShowEasySlip}
                   className="w-fit text-[9px] font-black text-primary hover:text-primary/80 flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
-                  <i className="fas fa-circle-info" />
+                  <Icon name="circle-info" className="text-[11px]" />
                   ดูรายละเอียดค่าบริการ EasySlip
                 </button>
               </div>
@@ -260,12 +261,12 @@ function LandingContent() {
     return () => clearInterval(interval);
   }, [currentIndex]);
 
-  const stats = useMemo(() => {
+  const stats: { label: string; value: string; icon: IconName }[] = useMemo(() => {
     return [
-      { label: 'ลูกค้าทั้งหมด', value: (statsData?.total_shops || 0).toLocaleString() + '+', icon: 'fa-shopping-cart' },
-      { label: 'สมาชิกทั้งหมด', value: (statsData?.total_users || 0).toLocaleString() + '+', icon: 'fa-users' },
-      { label: 'ความเร็วในการติดตั้ง', value: statsData?.delivery_speed || '< 1 วินาที', icon: 'fa-bolt' },
-      { label: 'Uptime ระบบ', value: statsData?.uptime || '99.9%', icon: 'fa-server' },
+      { label: 'ลูกค้าทั้งหมด', value: (statsData?.total_shops || 0).toLocaleString() + '+', icon: 'shopping-cart' },
+      { label: 'สมาชิกทั้งหมด', value: (statsData?.total_users || 0).toLocaleString() + '+', icon: 'users' },
+      { label: 'ความเร็วในการติดตั้ง', value: statsData?.delivery_speed || '< 1 วินาที', icon: 'bolt' },
+      { label: 'Uptime ระบบ', value: statsData?.uptime || '99.9%', icon: 'server' },
     ];
   }, [statsData]);
 
@@ -307,7 +308,7 @@ function LandingContent() {
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
               <Button size="lg" className="h-14 px-8 text-base rounded-full shadow-lg cursor-pointer" asChild>
                 <Link href="/order?kind=trial">
-                  <i className="fas fa-rocket mr-2" /> เริ่มทดลองฟรี 7 วัน
+                  <Icon name="rocket" className="mr-2" /> เริ่มทดลองฟรี 7 วัน
                 </Link>
               </Button>
               <Button variant="outline" size="lg" className="h-14 px-8 text-base rounded-full cursor-pointer" asChild>
@@ -318,7 +319,7 @@ function LandingContent() {
             {shops.length > 0 && (
               <div className="mt-8 pt-8 border-t border-border">
                 <p className="font-bold text-sm text-foreground mb-4 flex items-center gap-2">
-                  <i className="fas fa-heart text-primary animate-pulse" />
+                  <Icon name="heart" className="text-primary animate-pulse" />
                   ไว้วางใจโดย {totalShops}+ เซิร์ฟเวอร์ชั้นนำ
                 </p>
                 <div className="relative w-full overflow-hidden h-10">
@@ -337,7 +338,7 @@ function LandingContent() {
                       >
                         <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] group-hover/shop:scale-125 transition-transform" />
                         <span className="text-sm font-bold text-muted-foreground tracking-tight group-hover/shop:text-primary transition-colors">{s.name}</span>
-                        <i className="fas fa-external-link-alt text-[10px] text-muted-foreground/50 opacity-0 group-hover/shop:opacity-100 transition-opacity" />
+                        <Icon name="external-link-alt" className="text-[11px] text-muted-foreground/50 opacity-0 group-hover/shop:opacity-100 transition-opacity" />
                       </a>
                     ))}
                   </motion.div>
@@ -356,7 +357,7 @@ function LandingContent() {
             <div className="absolute -bottom-6 -left-6 bg-card border border-border p-4 rounded-2xl shadow-xl z-30 animate-float-y">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl">
-                  <i className="fas fa-check" />
+                  <Icon name="check" />
                 </div>
                 <div>
                   <p className="font-bold text-sm text-foreground">ออนไลน์ทันที</p>
@@ -382,7 +383,7 @@ function LandingContent() {
                 <Card className="bg-card hover:border-primary/50 transition-all hover:-translate-y-1 shadow-sm h-full">
                   <CardHeader>
                     <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4">
-                      <i className={`fas ${f.icon} text-xl`} />
+                      <Icon name={f.icon} className="text-xl" />
                     </div>
                     <CardTitle className="text-lg">{f.title}</CardTitle>
                   </CardHeader>
@@ -414,16 +415,18 @@ function LandingContent() {
                 size="icon" 
                 className="rounded-full w-12 h-12"
                 onClick={(e) => { e.stopPropagation(); prevImage(); }}
+                aria-label="ก่อนหน้า"
               >
-                <i className="fas fa-chevron-left" />
+                <Icon name="chevron-left" />
               </Button>
               <Button 
                 variant="outline" 
                 size="icon" 
                 className="rounded-full w-12 h-12"
                 onClick={(e) => { e.stopPropagation(); nextImage(); }}
+                aria-label="ถัดไป"
               >
-                <i className="fas fa-chevron-right" />
+                <Icon name="chevron-right" />
               </Button>
             </div>
           </div>
@@ -452,7 +455,7 @@ function LandingContent() {
                       />
                       <div className="absolute top-4 right-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="flex items-center gap-2 bg-background/80 backdrop-blur-md px-3 py-1.5 rounded-full text-foreground text-xs font-bold border border-border shadow-sm">
-                          <i className="fas fa-search-plus" />
+                          <Icon name="search-plus" />
                           <span>ดูรูปขยาย</span>
                         </div>
                       </div>
@@ -524,8 +527,9 @@ function LandingContent() {
                   size="icon"
                   className="absolute top-0 right-0 md:-top-12 md:-right-12 text-foreground hover:bg-primary/10 rounded-full"
                   onClick={() => setSelectedImage(null)}
+                  aria-label="ปิด"
                 >
-                  <i className="fas fa-times text-2xl" />
+                  <Icon name="times" className="text-2xl" />
                 </Button>
                 <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background to-transparent text-center">
                    <h4 className="text-xl font-bold text-foreground">{showcase[selectedImage].title}</h4>
@@ -547,7 +551,7 @@ function LandingContent() {
             </p>
             <div className="mt-6 inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 font-bold text-sm">
               <span className="text-[9px] font-black uppercase tracking-wider bg-emerald-500 text-white px-2 py-0.5 rounded-full">ใหม่</span>
-              <i className="fas fa-wallet" />
+              <Icon name="wallet" />
               รองรับเติมเงินผ่าน TrueMoney อั่งเปา แล้ว ใช้ฟรี ไม่มีค่าธรรมเนียมเพิ่ม
             </div>
           </div>
@@ -591,8 +595,8 @@ function LandingContent() {
               <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-2xl">
                 <div className="p-4 border-b border-border flex justify-between items-center bg-secondary/30">
                    <h4 className="font-black text-foreground text-sm">รายละเอียดค่าบริการ EasySlip</h4>
-                   <Button variant="ghost" size="icon" onClick={() => setShowEasySlipPlan(false)} className="rounded-full w-8 h-8">
-                     <i className="fas fa-times text-xs" />
+                   <Button variant="ghost" size="icon" onClick={() => setShowEasySlipPlan(false)} className="rounded-full w-8 h-8" aria-label="ปิด">
+                     <Icon name="times" className="text-xs" />
                    </Button>
                 </div>
                 <div className="p-2 bg-white">
@@ -623,7 +627,7 @@ function LandingContent() {
                 className="text-center group"
               >
                 <div className="w-16 h-16 rounded-2xl bg-background shadow-sm flex items-center justify-center mx-auto mb-6 text-primary border border-border group-hover:scale-110 transition-transform">
-                  <i className={`fas ${stat.icon} text-2xl`} />
+                  <Icon name={stat.icon} className="text-2xl" />
                 </div>
                 <h4 className="text-3xl md:text-4xl font-black text-foreground mb-2">{stat.value}</h4>
                 <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">{stat.label}</p>
@@ -656,11 +660,11 @@ function LandingContent() {
                 บริการแพลตฟอร์มจัดการร้านค้า Minecraft สำหรับเซิร์ฟเวอร์ไทย ที่เน้นความง่าย ความเสถียร และความเป็นมืออาชีพ
               </p>
               <div className="flex items-center gap-4 pt-2">
-                <a href="https://www.facebook.com/siamsitestore" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full border border-border flex items-center justify-center hover:text-primary hover:border-primary transition-all">
-                  <i className="fab fa-facebook-f" />
+                <a href="https://www.facebook.com/siamsitestore" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="w-10 h-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all">
+                  <Icon name="facebook-f" />
                 </a>
-                <a href="https://discord.gg/HysqVHra5n" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full border border-border flex items-center justify-center hover:text-primary hover:border-primary transition-all">
-                  <i className="fab fa-discord" />
+                <a href="https://discord.gg/HysqVHra5n" target="_blank" rel="noopener noreferrer" aria-label="Discord" className="w-10 h-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all">
+                  <Icon name="discord" />
                 </a>
               </div>
             </div>
@@ -693,14 +697,14 @@ function LandingContent() {
               <h4 className="font-bold text-foreground text-lg">ความปลอดภัย</h4>
               <div className="space-y-4">
                 <div className="flex items-center gap-3 p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
-                  <i className="fas fa-shield-check text-emerald-500 text-xl" />
+                  <Icon name="shield-check" className="text-emerald-500 text-xl" />
                   <div>
                     <p className="text-xs font-bold text-foreground">การเชื่อมต่อที่ปลอดภัย (SSL)</p>
                     <p className="text-[10px] text-muted-foreground">เข้ารหัสข้อมูลระดับสูง</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-3 rounded-2xl bg-amber-500/5 border border-amber-500/10">
-                  <i className="fas fa-qrcode text-amber-500 text-xl" />
+                  <Icon name="qrcode" className="text-amber-500 text-xl" />
                   <div>
                     <p className="text-xs font-bold text-foreground">ยืนยันผ่าน PromptPay</p>
                     <p className="text-[10px] text-muted-foreground">ตรวจสอบสลิปอัตโนมัติ</p>
@@ -714,9 +718,12 @@ function LandingContent() {
             <p className="text-sm text-muted-foreground font-semibold">
               &copy; {new Date().getFullYear()} SIAMSITE STORE. All rights reserved.
             </p>
-            <div className="flex items-center gap-6 grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all duration-500">
-               <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Nextjs-logo.svg/1024px-Nextjs-logo.svg.png" alt="Next.js" className="h-4" />
-               <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Tailwind_CSS_Logo.svg/1024px-Tailwind_CSS_Logo.svg.png" alt="Tailwind" className="h-3" />
+            <div className="flex items-center gap-2.5 text-[11px] font-semibold text-muted-foreground/70">
+              <Icon name="lock" className="text-emerald-500/80" />
+              <span>ชำระเงินปลอดภัย</span>
+              <span className="text-border">•</span>
+              <Icon name="bolt" className="text-amber-500/80" />
+              <span>ระบบเสถียร 99.9%</span>
             </div>
           </div>
         </div>

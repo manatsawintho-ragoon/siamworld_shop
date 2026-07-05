@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 interface Stats {
   active_shops: number; deploying: number; suspended: number; expiring_soon: number;
@@ -37,7 +38,7 @@ function StatCard({ label, value, icon, color = 'primary', subValue, href }: any
         <div className={`absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-5 transition-transform group-hover:scale-150 duration-700 ${colorMap[color].split(' ')[0]}`} />
         <div className="flex items-center gap-4 relative z-10">
           <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-base border shadow-sm transition-transform group-hover:rotate-12 ${colorMap[color]}`}>
-            <i className={`fas ${icon}`} />
+            <Icon name={icon} />
           </div>
           <div className="min-w-0">
             <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-1">{label}</p>
@@ -98,14 +99,14 @@ export default function AdminDashboard() {
             Admin Overview <span className="text-primary text-xl opacity-20">/</span>
           </h1>
           <p className="text-muted-foreground font-medium text-sm flex items-center gap-2 mt-0.5">
-            <i className="fas fa-shield-halved text-primary text-xs" />
+            <Icon name="shield-halved" className="text-primary text-xs" />
             แผงควบคุมระบบ Siamsite SaaS
           </p>
         </motion.div>
         
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
            <Button size="default" onClick={load} className="rounded-xl font-bold gap-2 h-11 px-6 shadow-md shadow-primary/10 active:scale-95 transition-all">
-             <i className="fas fa-arrows-rotate" /> รีเฟรชข้อมูล
+             <Icon name="arrows-rotate" /> รีเฟรชข้อมูล
            </Button>
         </motion.div>
       </div>
@@ -115,7 +116,7 @@ export default function AdminDashboard() {
         <StatCard 
           label="Active Shops" 
           value={stats?.active_shops ?? 0} 
-          icon="fa-store" 
+          icon="store" 
           color="emerald" 
           href="/admin/customers?status=active"
           subValue="ร้านค้าที่กำลังออนไลน์"
@@ -123,7 +124,7 @@ export default function AdminDashboard() {
         <StatCard 
           label="Monthly Revenue" 
           value={fmtBaht(stats?.revenue_30d ?? 0)} 
-          icon="fa-sack-dollar" 
+          icon="sack-dollar" 
           color="primary" 
           href="/admin/payments"
           subValue="รายได้รวม 30 วันล่าสุด"
@@ -131,7 +132,7 @@ export default function AdminDashboard() {
         <StatCard 
           label="Total Users" 
           value={stats?.total_users ?? 0} 
-          icon="fa-user-group" 
+          icon="user-group" 
           color="blue" 
           href="/admin/users"
           subValue="ผู้สมัครสมาชิกทั้งหมด"
@@ -139,7 +140,7 @@ export default function AdminDashboard() {
         <StatCard 
           label="Pending Slips" 
           value={stats?.pending_slips ?? 0} 
-          icon="fa-file-circle-check" 
+          icon="file-circle-check" 
           color="rose" 
           href="/admin/payments?status=pending"
           subValue={stats?.pending_slips ? "ต้องการการตรวจสอบด่วน" : "ตรวจสอบครบถ้วนแล้ว"}
@@ -153,7 +154,7 @@ export default function AdminDashboard() {
             <CardHeader className="px-6 pt-6 pb-3 flex flex-row items-center justify-between">
                <div className="flex items-center gap-3">
                  <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                    <i className="fas fa-chart-area text-sm" />
+                    <Icon name="chart-area" className="text-sm" />
                  </div>
                  <CardTitle className="text-base font-bold tracking-tight">Revenue Trends</CardTitle>
                </div>
@@ -170,7 +171,7 @@ export default function AdminDashboard() {
             <CardHeader className="px-6 pt-6 pb-3 flex flex-row items-center justify-between">
                <div className="flex items-center gap-3">
                  <div className="w-9 h-9 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center">
-                    <i className="fas fa-users-line text-sm" />
+                    <Icon name="users-line" className="text-sm" />
                  </div>
                  <CardTitle className="text-base font-bold tracking-tight">User Growth</CardTitle>
                </div>
@@ -192,12 +193,12 @@ export default function AdminDashboard() {
             <CardHeader className="px-8 py-8 border-b border-border/60 flex flex-row items-center justify-between bg-secondary/10">
                <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-background border border-border flex items-center justify-center text-muted-foreground">
-                    <i className="fas fa-clock-rotate-left text-sm" />
+                    <Icon name="clock-rotate-left" className="text-sm" />
                   </div>
                   <CardTitle className="text-base font-black tracking-tight uppercase">Recent Installations</CardTitle>
                </div>
                <Button variant="ghost" asChild className="h-9 px-4 rounded-xl font-bold text-xs gap-2 hover:bg-white transition-all">
-                 <Link href="/admin/customers">View All <i className="fas fa-arrow-right text-[10px] opacity-30" /></Link>
+                 <Link href="/admin/customers">View All <Icon name="arrow-right" className="text-[10px] opacity-30" /></Link>
                </Button>
             </CardHeader>
             <CardContent className="p-0">
@@ -240,7 +241,7 @@ export default function AdminDashboard() {
             <CardHeader className="px-8 py-8 border-b border-border/60 bg-rose-500/5">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-600 flex items-center justify-center">
-                  <i className="fas fa-receipt text-sm" />
+                  <Icon name="receipt" className="text-sm" />
                 </div>
                 <CardTitle className="text-base font-black tracking-tight uppercase">Verification Required</CardTitle>
               </div>
@@ -249,7 +250,7 @@ export default function AdminDashboard() {
               {slips.length === 0 ? (
                 <div className="py-12 text-center space-y-3">
                   <div className="w-16 h-16 rounded-[2rem] bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto text-2xl">
-                    <i className="fas fa-check-circle" />
+                    <Icon name="check-circle" />
                   </div>
                   <p className="text-xs font-black text-muted-foreground uppercase tracking-widest">System Clear</p>
                 </div>
@@ -266,7 +267,7 @@ export default function AdminDashboard() {
                            <p className="text-[11px] font-bold text-muted-foreground truncate max-w-[140px] mt-1">{slip.display_name}</p>
                         </div>
                         <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground group-hover:bg-rose-500 group-hover:text-white transition-all">
-                          <i className="fas fa-magnifying-glass text-xs" />
+                          <Icon name="magnifying-glass" className="text-xs" />
                         </div>
                       </Link>
                     </motion.div>

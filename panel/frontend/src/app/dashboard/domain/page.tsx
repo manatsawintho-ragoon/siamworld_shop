@@ -1,6 +1,7 @@
 'use client';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 /**
  * The custom-domain flow moved into a modal opened from the dashboard ("โดเมน" button).
@@ -11,7 +12,7 @@ export default function DomainRedirect() {
   useEffect(() => { router.replace('/dashboard'); }, [router]);
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">
-      <i className="fas fa-spinner fa-spin text-2xl text-primary" />
+      <Icon name="spinner" className="text-2xl text-primary animate-spin" />
     </div>
   );
 }

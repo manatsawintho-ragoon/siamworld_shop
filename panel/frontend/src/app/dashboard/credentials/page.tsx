@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import AdminActionModal, { AdminAction } from '@/components/credentials/AdminActionModal';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 interface Credentials {
   shopName: string; domain: string;
@@ -27,21 +28,21 @@ function CopyBtn({ value }: { value: string }) {
       className={`h-7 text-[10px] font-bold uppercase tracking-widest cursor-pointer px-3 flex-shrink-0 ${copied ? 'border-emerald-500 text-emerald-600 bg-emerald-500/10' : ''}`}
       onClick={() => { navigator.clipboard.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
     >
-      <i className={`fas ${copied ? 'fa-check' : 'fa-copy'} mr-1.5`} />
+      <Icon name={copied ? 'check' : 'copy'} className={`mr-1.5`} />
       {copied ? 'คัดลอกแล้ว' : 'คัดลอก'}
     </Button>
   );
 }
 
 /* ── CredRow ── */
-function CredRow({ label, value, icon, secret }: { label: string; value: string | number; icon?: string; secret?: boolean }) {
+function CredRow({ label, value, icon, secret }: { label: string; value: string | number; icon?: IconName; secret?: boolean }) {
   const [show, setShow] = useState(false);
   const display = secret && !show ? '••••••••••••' : String(value);
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-border/50 last:border-0 last:pb-0 gap-3">
       <div className="flex items-center gap-3 flex-shrink-0">
         {icon && <div className="w-8 h-8 rounded-lg bg-secondary text-foreground flex items-center justify-center">
-          <i className={`fas ${icon} text-sm`} />
+          <Icon name={icon} className="text-sm" />
         </div>}
         <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{label}</span>
       </div>
@@ -49,7 +50,7 @@ function CredRow({ label, value, icon, secret }: { label: string; value: string 
         <span className={`text-sm font-semibold truncate ${secret && !show ? 'text-muted-foreground' : 'text-foreground'}`}>{display}</span>
         {secret && (
           <button onClick={() => setShow(v => !v)} className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 cursor-pointer">
-            <i className={`fas ${show ? 'fa-eye-slash' : 'fa-eye'} text-xs`} />
+            <Icon name={show ? 'eye-slash' : 'eye'} className={`text-xs`} />
           </button>
         )}
         <div className="ml-2 pl-3 border-l border-border/50">
@@ -109,7 +110,7 @@ function CountdownPasswordRow({ cred, onExpire }: { cred: ShopAdmin; onExpire: (
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3 flex-shrink-0">
           <div className="w-8 h-8 rounded-lg bg-secondary text-foreground flex items-center justify-center">
-            <i className="fas fa-key text-sm" />
+            <Icon name="key" className="text-sm" />
           </div>
           <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">รหัสผ่าน</span>
         </div>
@@ -118,7 +119,7 @@ function CountdownPasswordRow({ cred, onExpire }: { cred: ShopAdmin; onExpire: (
             {show ? value : '••••••••••'}
           </span>
           <button onClick={() => setShow(v => !v)} className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 cursor-pointer">
-            <i className={`fas ${show ? 'fa-eye-slash' : 'fa-eye'} text-xs`} />
+            <Icon name={show ? 'eye-slash' : 'eye'} className={`text-xs`} />
           </button>
           <div className="ml-2 pl-3 border-l border-border/50">
             <CopyBtn value={value} />
@@ -134,7 +135,7 @@ function CountdownPasswordRow({ cred, onExpire }: { cred: ShopAdmin; onExpire: (
         </span>
       </div>
       <p className="text-[11px] text-muted-foreground font-medium mt-2">
-        <i className="fas fa-rotate mr-1.5" />รหัสนี้เปลี่ยนทุก 1 นาทีเพื่อความปลอดภัย คัดลอกแล้วรีบเข้าสู่ระบบ
+        <Icon name="rotate" className="mr-1.5" />รหัสนี้เปลี่ยนทุก 1 นาทีเพื่อความปลอดภัย คัดลอกแล้วรีบเข้าสู่ระบบ
       </p>
     </div>
   );
@@ -151,7 +152,7 @@ function AdminCredentialCard({ cred, error, busy, onRefetch, onRegen, onSetPw }:
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center">
-            <i className="fas fa-user-shield" />
+            <Icon name="user-shield" />
           </div>
           บัญชีแอดมินเว็บ
         </CardTitle>
@@ -163,42 +164,42 @@ function AdminCredentialCard({ cred, error, busy, onRefetch, onRegen, onSetPw }:
         {error ? (
           <div className="py-6 text-center">
             <p className="text-sm font-semibold text-muted-foreground mb-3">
-              <i className="fas fa-triangle-exclamation mr-2 text-amber-500" />โหลดบัญชีแอดมินไม่สำเร็จ
+              <Icon name="triangle-exclamation" className="mr-2 text-amber-500" />โหลดบัญชีแอดมินไม่สำเร็จ
             </p>
             <Button variant="outline" onClick={onRefetch} className="rounded-full font-bold cursor-pointer">
-              <i className="fas fa-rotate-right mr-2" />ลองใหม่
+              <Icon name="rotate-right" className="mr-2" />ลองใหม่
             </Button>
           </div>
         ) : !cred ? (
           <div className="py-6 text-center text-sm font-semibold text-muted-foreground">
-            <i className="fas fa-spinner fa-spin mr-2" />กำลังโหลด...
+            <Icon name="spinner" className="mr-2 animate-spin" />กำลังโหลด...
           </div>
         ) : (
           <>
-            <CredRow label="ชื่อผู้ใช้" value={cred.username} icon="fa-user" />
+            <CredRow label="ชื่อผู้ใช้" value={cred.username} icon="user" />
             {cred.rotating ? (
               <CountdownPasswordRow cred={cred} onExpire={onRefetch} />
             ) : (
-              <CredRow label="รหัสผ่าน" value={cred.password} icon="fa-key" secret />
+              <CredRow label="รหัสผ่าน" value={cred.password} icon="key" secret />
             )}
             <div className="mt-5 flex flex-wrap gap-3">
               {cred.rotating ? (
                 <Button onClick={onSetPw} disabled={busy} className="cursor-pointer font-bold rounded-full">
-                  <i className="fas fa-lock mr-2" /> ตั้งรหัสถาวรของคุณเอง
+                  <Icon name="lock" className="mr-2" /> ตั้งรหัสถาวรของคุณเอง
                 </Button>
               ) : (
                 <>
                   <Button variant="outline" onClick={onSetPw} disabled={busy} className="cursor-pointer font-bold rounded-full">
-                    <i className="fas fa-pen mr-2" /> เปลี่ยนรหัส
+                    <Icon name="pen" className="mr-2" /> เปลี่ยนรหัส
                   </Button>
                   <Button variant="outline" onClick={onRegen} disabled={busy} className="cursor-pointer font-bold rounded-full">
-                    <i className="fas fa-rotate mr-2" /> กลับไปใช้รหัสหมุน
+                    <Icon name="rotate" className="mr-2" /> กลับไปใช้รหัสหมุน
                   </Button>
                 </>
               )}
             </div>
             <p className="text-[11px] text-muted-foreground font-medium mt-3">
-              <i className="fas fa-circle-info mr-1.5" />
+              <Icon name="circle-info" className="mr-1.5" />
               {cred.rotating
                 ? 'แนะนำ: ตั้งรหัสถาวรของคุณเอง จะได้เข้าสู่ระบบได้โดยไม่ต้องเปิดหน้านี้ดูรหัสทุกครั้ง'
                 : 'รหัสนี้เป็นรหัสถาวรที่คุณตั้งเอง ใช้เข้าสู่ระบบได้ตลอด'}
@@ -216,7 +217,7 @@ function StepCard({ n, title, children, done, warn }: { n: number; title: string
     <Card className={`border shadow-none transition-all ${done ? 'bg-emerald-500/5 border-emerald-500/30' : warn ? 'bg-amber-500/5 border-amber-500/30' : 'bg-background border-border'}`}>
       <CardContent className="p-5 flex gap-4">
         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5 ${done ? 'bg-emerald-500 text-white' : warn ? 'bg-amber-500 text-white' : 'bg-primary text-primary-foreground'}`}>
-          {done ? <i className="fas fa-check text-xs" /> : n}
+          {done ? <Icon name="check" className="text-xs" /> : n}
         </div>
         <div className="flex-1 min-w-0">
           <p className={`text-sm font-bold tracking-tight mb-2 ${done ? 'text-emerald-600 dark:text-emerald-400' : warn ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'}`}>{title}</p>
@@ -236,7 +237,7 @@ function CodeBlock({ code, language = 'yaml' }: { code: string; language?: strin
         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{language}</span>
         <button onClick={() => { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
           className="text-[10px] font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1.5 transition-colors cursor-pointer">
-          <i className={`fas ${copied ? 'fa-check' : 'fa-copy'}`} /> {copied ? 'คัดลอกแล้ว' : 'คัดลอก'}
+          <Icon name={copied ? 'check' : 'copy'} /> {copied ? 'คัดลอกแล้ว' : 'คัดลอก'}
         </button>
       </div>
       <pre className="px-4 py-3 text-xs leading-relaxed text-slate-300 overflow-x-auto whitespace-pre font-mono">{code}</pre>
@@ -269,7 +270,7 @@ function CommandCard({ label, desc, code, lang = 'bash', tone = 'neutral' }: {
             copied ? 'bg-emerald-500 text-white' : 'bg-foreground text-background hover:opacity-90'
           }`}
         >
-          <i className={`fas ${copied ? 'fa-check' : 'fa-copy'} text-xs`} />
+          <Icon name={copied ? 'check' : 'copy'} className={`text-xs`} />
           {copied ? 'คัดลอกแล้ว' : 'คัดลอกคำสั่ง'}
         </button>
       </div>
@@ -466,7 +467,7 @@ function CredContent() {
         <div className="flex items-center gap-4 mb-8">
           <Button variant="outline" size="icon" className="rounded-full cursor-pointer h-10 w-10 border-border" asChild>
             <Link href="/dashboard">
-              <i className="fas fa-arrow-left text-muted-foreground" />
+              <Icon name="arrow-left" className="text-muted-foreground" />
             </Link>
           </Button>
           <div>
@@ -478,7 +479,7 @@ function CredContent() {
         {error && (
           <Card className="border-destructive/30 bg-destructive/5 mb-8">
             <CardContent className="p-6 text-center">
-              <i className="fas fa-circle-exclamation text-destructive text-3xl mb-3" />
+              <Icon name="circle-exclamation" className="text-destructive text-3xl mb-3" />
               <p className="text-sm font-bold text-destructive">{error}</p>
             </CardContent>
           </Card>
@@ -486,7 +487,7 @@ function CredContent() {
 
         {!creds && !error && (
           <div className="py-20 text-center flex flex-col items-center">
-            <i className="fas fa-spinner fa-spin text-primary text-3xl mb-4" />
+            <Icon name="spinner" className="text-primary text-3xl mb-4 animate-spin" />
             <p className="text-sm font-semibold text-muted-foreground">กำลังโหลดข้อมูล...</p>
           </div>
         )}
@@ -499,23 +500,23 @@ function CredContent() {
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                    <i className="fas fa-store" />
+                    <Icon name="store" />
                   </div>
                   รายละเอียดเว็บไซต์
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-1">
-                <CredRow label="ชื่อร้าน" value={creds.shopName} icon="fa-font" />
-                <CredRow label="URL เว็บไซต์" value={`https://${creds.domain}`} icon="fa-globe" />
+                <CredRow label="ชื่อร้าน" value={creds.shopName} icon="font" />
+                <CredRow label="URL เว็บไซต์" value={`https://${creds.domain}`} icon="globe" />
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Button asChild className="cursor-pointer font-bold rounded-full">
                     <a href={`https://${creds.domain}`} target="_blank" rel="noopener noreferrer">
-                      <i className="fas fa-arrow-up-right-from-square mr-2" /> เปิดเว็บร้านค้า
+                      <Icon name="arrow-up-right-from-square" className="mr-2" /> เปิดเว็บร้านค้า
                     </a>
                   </Button>
                   <Button variant="outline" asChild className="cursor-pointer font-bold rounded-full">
                     <a href={creds.setupUrl} target="_blank" rel="noopener noreferrer">
-                      <i className="fas fa-wand-magic-sparkles mr-2" /> เริ่มตั้งค่าเว็บครั้งแรก
+                      <Icon name="wand-magic-sparkles" className="mr-2" /> เริ่มตั้งค่าเว็บครั้งแรก
                     </a>
                   </Button>
                 </div>
@@ -538,7 +539,7 @@ function CredContent() {
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                   <CardTitle className="text-base flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center">
-                      <i className="fas fa-server" />
+                      <Icon name="server" />
                     </div>
                     การจัดการเซิร์ฟเวอร์
                   </CardTitle>
@@ -557,16 +558,16 @@ function CredContent() {
                 <CardContent>
                   <div className="flex flex-wrap gap-3">
                     <Button variant="outline" size="sm" onClick={() => handleAction('start')} disabled={actionLoading} className="cursor-pointer font-bold text-emerald-600 border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500 hover:text-white">
-                      <i className="fas fa-play mr-1.5" /> เริ่มเซิร์ฟเวอร์
+                      <Icon name="play" className="mr-1.5" /> เริ่มเซิร์ฟเวอร์
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => handleAction('restart')} disabled={actionLoading} className="cursor-pointer font-bold text-amber-600 border-amber-500/30 bg-amber-500/5 hover:bg-amber-500 hover:text-white">
-                      <i className="fas fa-rotate-right mr-1.5" /> รีสตาร์ท
+                      <Icon name="rotate-right" className="mr-1.5" /> รีสตาร์ท
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => handleAction('stop')} disabled={actionLoading} className="cursor-pointer font-bold text-destructive border-destructive/30 bg-destructive/5 hover:bg-destructive hover:text-white">
-                      <i className="fas fa-stop mr-1.5" /> หยุดเซิร์ฟเวอร์
+                      <Icon name="stop" className="mr-1.5" /> หยุดเซิร์ฟเวอร์
                     </Button>
                     <Button variant="secondary" size="sm" onClick={handleLogs} disabled={actionLoading} className="cursor-pointer font-bold ml-auto">
-                      <i className="fas fa-terminal mr-1.5" /> ดู Logs ของระบบ
+                      <Icon name="terminal" className="mr-1.5" /> ดู Logs ของระบบ
                     </Button>
                   </div>
                 </CardContent>
@@ -579,10 +580,10 @@ function CredContent() {
                 <div className="bg-slate-950 rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col border border-slate-800 shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
                   <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900">
                     <h3 className="text-white font-bold text-sm flex items-center gap-2">
-                      <i className="fas fa-terminal text-blue-400" /> Container Logs
+                      <Icon name="terminal" className="text-blue-400" /> Container Logs
                     </h3>
                     <button onClick={() => setShowLogs(false)} className="text-slate-400 hover:text-white transition-colors cursor-pointer w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-800">
-                      <i className="fas fa-times" />
+                      <Icon name="times" />
                     </button>
                   </div>
                   <div className="flex-1 overflow-auto p-6 bg-slate-950">
@@ -599,7 +600,7 @@ function CredContent() {
                   <div>
                     <CardTitle className="text-base flex items-center gap-2">
                       <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-600 flex items-center justify-center">
-                        <i className="fas fa-code-branch" />
+                        <Icon name="code-branch" />
                       </div>
                       วิธีเชื่อมต่อฐานข้อมูลเกม (AuthMe / nLogin)
                     </CardTitle>
@@ -617,7 +618,7 @@ function CredContent() {
                       : 'bg-background border-border hover:border-emerald-500/30'}`}>
                     <Badge className="absolute -top-2 left-4 bg-emerald-500 text-white text-[9px] uppercase tracking-widest font-extrabold">มือใหม่</Badge>
                     <div className="flex items-center gap-3 mb-3 mt-1">
-                      <i className={`fas fa-circle-check text-xl ${mode === 'none' ? 'text-emerald-500' : 'text-muted-foreground'}`} />
+                      <Icon name="circle-check" className={`text-xl ${mode === 'none' ? 'text-emerald-500' : 'text-muted-foreground'}`} />
                       <span className={`text-base font-bold ${mode === 'none' ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
                         ไม่เชื่อมต่อ
                       </span>
@@ -635,7 +636,7 @@ function CredContent() {
                       : 'bg-background border-border hover:border-primary/50'}`}>
                     <Badge className="absolute -top-2 left-4 bg-primary text-primary-foreground text-[9px] uppercase tracking-widest font-extrabold">แนะนำ</Badge>
                     <div className="flex items-center gap-3 mb-3 mt-1">
-                      <i className={`fas fa-bolt text-xl ${mode === 'bridge' ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <Icon name="bolt" className={`text-xl ${mode === 'bridge' ? 'text-primary' : 'text-muted-foreground'}`} />
                       <span className={`text-base font-bold ${mode === 'bridge' ? 'text-primary' : 'text-foreground'}`}>
                         Bridge Plugin
                       </span>
@@ -658,7 +659,7 @@ function CredContent() {
                 <Card className="border-emerald-500/20 bg-emerald-500/5">
                   <CardContent className="p-6 flex gap-4">
                     <div className="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-600 flex items-center justify-center flex-shrink-0 text-lg">
-                      <i className="fas fa-bullseye" />
+                      <Icon name="bullseye" />
                     </div>
                     <div>
                       <h3 className="font-bold text-foreground mb-1">ไม่ต้องตั้งค่าการเชื่อมต่อใดๆ</h3>
@@ -673,7 +674,7 @@ function CredContent() {
                   <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
                       <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center">
-                        <i className="fas fa-bullhorn" />
+                        <Icon name="bullhorn" />
                       </div>
                       สิ่งสำคัญที่ต้องแจ้งผู้เล่น
                     </CardTitle>
@@ -682,7 +683,7 @@ function CredContent() {
                   <CardContent className="space-y-4">
                     <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20">
                       <p className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
-                        <i className="fas fa-key text-amber-500" />
+                        <Icon name="key" className="text-amber-500" />
                         ผู้เล่นต้องสมัครเว็บด้วย "ชื่อเดียวกับในเกม"
                       </p>
                       <p className="text-xs text-muted-foreground font-medium">
@@ -733,12 +734,12 @@ function CredContent() {
                         }`}
                       >
                         <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 text-3xl ${osType === 'linux' ? 'bg-amber-400 text-slate-900' : 'bg-amber-500/10 text-amber-600'}`}>
-                          <i className="fab fa-linux" />
+                          <Icon name="linux" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="font-bold text-base mb-0.5 flex items-center gap-2">
                             Linux
-                            {osType === 'linux' && <i className="fas fa-circle-check text-emerald-400 text-sm" />}
+                            {osType === 'linux' && <Icon name="circle-check" className="text-emerald-400 text-sm" />}
                           </p>
                           <p className={`text-[11px] font-medium ${osType === 'linux' ? 'text-background/70' : 'text-muted-foreground'}`}>
                             Ubuntu, Debian, CentOS
@@ -754,12 +755,12 @@ function CredContent() {
                         }`}
                       >
                         <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 text-3xl ${osType === 'windows' ? 'bg-sky-400 text-slate-900' : 'bg-sky-500/10 text-sky-600'}`}>
-                          <i className="fab fa-windows" />
+                          <Icon name="windows" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="font-bold text-base mb-0.5 flex items-center gap-2">
                             Windows
-                            {osType === 'windows' && <i className="fas fa-circle-check text-emerald-400 text-sm" />}
+                            {osType === 'windows' && <Icon name="circle-check" className="text-emerald-400 text-sm" />}
                           </p>
                           <p className={`text-[11px] font-medium ${osType === 'windows' ? 'text-background/70' : 'text-muted-foreground'}`}>
                             Windows 10, 11, Server
@@ -774,7 +775,7 @@ function CredContent() {
                 <Card className={`shadow-sm ${bridgeStatus?.online ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-border'}`}>
                   <CardContent className="p-4 flex items-center gap-4 flex-wrap">
                     <div className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 ${bridgeStatus?.online ? 'bg-emerald-500/20 text-emerald-600' : 'bg-secondary text-muted-foreground'}`}>
-                      <i className="fas fa-signal text-lg" />
+                      <Icon name="signal" className="text-lg" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -813,7 +814,7 @@ function CredContent() {
                         }`}
                       >
                         <div className="flex items-center gap-2 mb-1.5">
-                          <i className={`fas fa-circle-check text-lg ${setupTrack === 'have' ? 'text-emerald-500' : 'text-muted-foreground'}`} />
+                          <Icon name="circle-check" className={`text-lg ${setupTrack === 'have' ? 'text-emerald-500' : 'text-muted-foreground'}`} />
                           <span className={`text-sm font-bold ${setupTrack === 'have' ? 'text-emerald-700 dark:text-emerald-400' : 'text-foreground'}`}>มี AuthMe หรือ nLogin พร้อม MySQL อยู่แล้ว</span>
                         </div>
                         <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">ผู้เล่นสมัครและล็อกอินในเกมได้ปกติ ไปติดตั้ง Bridge ด้านล่างได้เลย</p>
@@ -825,7 +826,7 @@ function CredContent() {
                         }`}
                       >
                         <div className="flex items-center gap-2 mb-1.5">
-                          <i className={`fas fa-wrench text-lg ${setupTrack === 'new' ? 'text-amber-600' : 'text-muted-foreground'}`} />
+                          <Icon name="wrench" className={`text-lg ${setupTrack === 'new' ? 'text-amber-600' : 'text-muted-foreground'}`} />
                           <span className={`text-sm font-bold ${setupTrack === 'new' ? 'text-amber-700 dark:text-amber-400' : 'text-foreground'}`}>เริ่มจากศูนย์ ยังไม่เคยตั้งระบบล็อกอิน</span>
                         </div>
                         <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">ยังไม่มี MySQL หรือ AuthMe/nLogin จะมีคู่มือตั้งครบทุกขั้น พร้อมปุ่มก็อปคำสั่ง</p>
@@ -839,7 +840,7 @@ function CredContent() {
                   <Card className="shadow-sm border-emerald-500/40 bg-emerald-500/5">
                     <CardContent className="p-5 flex gap-4 items-start">
                       <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-600 flex items-center justify-center flex-shrink-0 text-lg">
-                        <i className="fas fa-circle-check" />
+                        <Icon name="circle-check" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <h4 className="font-bold text-foreground mb-1">ดีเลย ไม่ต้องแก้ AuthMe / nLogin / MySQL อะไรเพิ่ม</h4>
@@ -874,7 +875,7 @@ function CredContent() {
                             }`}
                           >
                             <p className={`text-sm font-bold mb-0.5 ${setupAuthType === 'authme' ? 'text-purple-600' : 'text-foreground'}`}>
-                              <i className="fas fa-shield-halved mr-1.5" />AuthMe
+                              <Icon name="shield-halved" className="mr-1.5" />AuthMe
                             </p>
                             <p className="text-[10px] text-muted-foreground font-medium">ยอดนิยม ใช้ในเซิร์ฟไทยกว่า 80%</p>
                           </button>
@@ -885,7 +886,7 @@ function CredContent() {
                             }`}
                           >
                             <p className={`text-sm font-bold mb-0.5 ${setupAuthType === 'nlogin' ? 'text-purple-600' : 'text-foreground'}`}>
-                              <i className="fas fa-lock mr-1.5" />nLogin
+                              <Icon name="lock" className="mr-1.5" />nLogin
                             </p>
                             <p className="text-[10px] text-muted-foreground font-medium">ตัวใหม่กว่า เซิร์ฟใหม่ๆ ใช้บ่อย</p>
                           </button>
@@ -944,7 +945,7 @@ sudo systemctl enable --now mariadb`}
 
                         <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
                           <p className="text-[12px] font-extrabold text-red-700 dark:text-red-400 mb-1">
-                            <i className="fas fa-circle-exclamation mr-1.5" />ก่อนรันคำสั่งถัดไป
+                            <Icon name="circle-exclamation" className="mr-1.5" />ก่อนรันคำสั่งถัดไป
                           </p>
                           <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
                             แก้ <code className="bg-secondary px-1 py-0.5 rounded">CHANGE_THIS_PASSWORD</code> ในคำสั่งด้านล่าง ให้เป็นรหัสผ่านที่คุณตั้งเอง (จะใช้ในขั้น 5 จดไว้)
@@ -978,7 +979,7 @@ EXIT;`}
 
                         <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
                           <p className="text-[12px] font-bold text-emerald-700 dark:text-emerald-400 mb-1">
-                            <i className="fas fa-circle-check mr-1.5" />ค่าที่ต้องจดไว้ใช้ในขั้น 5
+                            <Icon name="circle-check" className="mr-1.5" />ค่าที่ต้องจดไว้ใช้ในขั้น 5
                           </p>
                           <ul className="text-[11px] text-foreground font-medium space-y-0.5 mt-1.5">
                             <li>· Database: <code className="bg-background px-1.5 py-0.5 rounded">{setupAuthType === 'authme' ? 'authme' : 'nlogin'}</code></li>
@@ -1009,7 +1010,7 @@ EXIT;`}
                             target="_blank" rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline"
                           >
-                            <i className="fas fa-arrow-up-right-from-square" /> เปิด {setupAuthType === 'authme' ? 'AuthMeReloaded' : 'nLogin'} บน SpigotMC
+                            <Icon name="arrow-up-right-from-square" /> เปิด {setupAuthType === 'authme' ? 'AuthMeReloaded' : 'nLogin'} บน SpigotMC
                           </a>
                         </div>
 
@@ -1020,7 +1021,7 @@ EXIT;`}
 
                         <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
                           <p className="text-[12px] font-extrabold text-red-700 dark:text-red-400 mb-1">
-                            <i className="fas fa-circle-exclamation mr-1.5" />ก่อนคัดลอก YAML ข้างล่าง
+                            <Icon name="circle-exclamation" className="mr-1.5" />ก่อนคัดลอก YAML ข้างล่าง
                           </p>
                           <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
                             แก้ <code className="bg-secondary px-1 py-0.5 rounded">CHANGE_THIS_PASSWORD</code> เป็นรหัสจริงที่คุณตั้งในขั้น 4
@@ -1057,14 +1058,14 @@ EXIT;`}
 
                         <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
                           <p className="text-[12px] font-bold text-emerald-700 dark:text-emerald-400 mb-1">
-                            <i className="fas fa-circle-check mr-1.5" />D. เปิดเซิร์ฟอีกครั้ง แล้วทดสอบในเกม
+                            <Icon name="circle-check" className="mr-1.5" />D. เปิดเซิร์ฟอีกครั้ง แล้วทดสอบในเกม
                           </p>
                           <p className="text-[11px] text-muted-foreground font-medium">
                             เข้าเกม ลอง <code>/register รหัสผ่าน รหัสผ่าน</code> ถ้าผ่านแล้ว ระบบล็อกอินพร้อมใช้งานแล้ว ไปขั้นถัดไปติดตั้ง Bridge
                           </p>
                           {setupAuthType === 'nlogin' && (
                             <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium mt-2">
-                              <i className="fas fa-triangle-exclamation mr-1" /><strong>nLogin:</strong> ตรวจ <code>security.hashing.algorithm</code> ต้องเป็น <code>BCRYPT2A</code> (default) ไม่งั้นฟังก์ชัน reset password จะใช้ไม่ได้
+                              <Icon name="triangle-exclamation" className="mr-1" /><strong>nLogin:</strong> ตรวจ <code>security.hashing.algorithm</code> ต้องเป็น <code>BCRYPT2A</code> (default) ไม่งั้นฟังก์ชัน reset password จะใช้ไม่ได้
                             </p>
                           )}
                         </div>
@@ -1083,7 +1084,7 @@ EXIT;`}
                       <div>
                         <CardTitle className="text-base flex items-center gap-2">
                           ติดตั้งปลั๊กอิน Bridge สำหรับ <strong>{osType === 'linux' ? 'Linux' : 'Windows'}</strong>
-                          <i className={`fab ${osType === 'linux' ? 'fa-linux text-amber-600' : 'fa-windows text-sky-600'}`} />
+                          <Icon name={osType === 'linux' ? 'linux' : 'windows'} className={osType === 'linux' ? 'text-amber-600' : 'text-sky-600'} />
                         </CardTitle>
                         <CardDescription className="font-medium mt-0.5">ทำตามทีละขั้น ใช้เวลาประมาณ 3 นาที</CardDescription>
                       </div>
@@ -1097,7 +1098,7 @@ EXIT;`}
                       </p>
                       <Button variant="outline" asChild className="mt-1 cursor-pointer rounded-full font-bold h-10 px-6">
                         <a href="/downloads/siamsite-bridge-1.1.0.jar" download>
-                          <i className="fas fa-download mr-2" /> ดาวน์โหลด siamsite-bridge.jar
+                          <Icon name="download" className="mr-2" /> ดาวน์โหลด siamsite-bridge.jar
                         </a>
                       </Button>
                     </StepCard>
@@ -1108,7 +1109,7 @@ EXIT;`}
                       </p>
                       {!bridgeToken ? (
                         <Button className="font-bold cursor-pointer rounded-full h-10 px-6 mt-1" onClick={issueBridgeToken}>
-                          <i className="fas fa-plus mr-2" /> สร้าง Token
+                          <Icon name="plus" className="mr-2" /> สร้าง Token
                         </Button>
                       ) : (
                         <div className="mt-2 space-y-2">
@@ -1117,7 +1118,7 @@ EXIT;`}
                             <CopyBtn value={bridgeToken.token} />
                           </div>
                           <p className="text-[10px] font-bold text-amber-500">
-                            <i className="fas fa-triangle-exclamation mr-1.5" /> Token แสดงครั้งเดียว ห้ามปิดหน้าจนกว่าจะคัดลอกเสร็จ
+                            <Icon name="triangle-exclamation" className="mr-1.5" /> Token แสดงครั้งเดียว ห้ามปิดหน้าจนกว่าจะคัดลอกเสร็จ
                           </p>
                           <button onClick={revokeBridgeToken} className="text-[10px] font-bold text-destructive hover:underline cursor-pointer">
                             ยกเลิก / สร้างใหม่
@@ -1142,7 +1143,7 @@ EXIT;`}
                       )}
                       <div className="mt-3 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
                         <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
-                          <i className="fas fa-check-circle text-emerald-500 mr-1.5" />
+                          <Icon name="check-circle" className="text-emerald-500 mr-1.5" />
                           จะมีไฟล์ใหม่ที่ <code>{osType === 'linux' ? 'plugins/SiamsiteBridge/config.yml' : 'plugins\\SiamsiteBridge\\config.yml'}</code>
                         </p>
                       </div>
@@ -1161,13 +1162,13 @@ EXIT;`}
                         <li>บันทึก (Ctrl+S) ปิดไฟล์</li>
                       </ol>
                       <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
-                        <p className="text-[11px] text-foreground font-bold mb-0.5"><i className="fas fa-circle-check text-emerald-500 mr-1" />ส่วนอื่นในไฟล์ไม่ต้องแก้</p>
+                        <p className="text-[11px] text-foreground font-bold mb-0.5"><Icon name="circle-check" className="text-emerald-500 mr-1" />ส่วนอื่นในไฟล์ไม่ต้องแก้</p>
                         <p className="text-[11px] text-muted-foreground font-medium">Bridge อ่านข้อมูล MySQL จาก AuthMe / nLogin ของคุณเอง</p>
                       </div>
 
                       <details className="mt-3 group">
                         <summary className="cursor-pointer text-[11px] font-bold text-muted-foreground hover:text-foreground flex items-center gap-1.5 list-none">
-                          <i className="fas fa-chevron-right text-[10px] transition-transform group-open:rotate-90" />
+                          <Icon name="chevron-right" className="text-[10px] transition-transform group-open:rotate-90" />
                           ตั้งค่าขั้นสูง (เกือบทุกคนไม่ต้องใช้)
                         </summary>
                         <div className="mt-2 pl-5 space-y-2">
@@ -1212,7 +1213,7 @@ bridge:
                         <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/30">
                           <p className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest mb-1">ถ้าสำเร็จ</p>
                           <p className="text-[11px] font-medium text-foreground">
-                            <i className="fas fa-circle-check text-emerald-500 mr-1" />
+                            <Icon name="circle-check" className="text-emerald-500 mr-1" />
                             สถานะ <strong className="text-emerald-600">ออนไลน์</strong> เขียวกะพริบ
                           </p>
                           <p className="text-[11px] font-medium text-muted-foreground mt-1">ผู้เล่นล็อกอินเว็บได้ทันที</p>
@@ -1247,7 +1248,7 @@ export default function CredentialsPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <i className="fas fa-spinner fa-spin text-3xl text-primary" />
+        <Icon name="spinner" className="text-3xl text-primary animate-spin" />
       </div>
     }>
       <CredContent />

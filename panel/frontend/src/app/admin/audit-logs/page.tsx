@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
 import { activityLabel } from '@/lib/activityLabels';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 interface AuditLog {
   id: number; user_id: number; action: string; category: string; target_type: string; target_id: number;
@@ -18,22 +19,22 @@ interface AuditLog {
 }
 
 const ACTION_MAP: Record<string, { label: string; variant: string; colorClass: string; icon: string }> = {
-  wallet_credit:        { label: 'เพิ่มเงิน',      variant: 'success',     colorClass: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20', icon: 'fa-arrow-down' },
-  wallet_debit:         { label: 'หักเงิน',        variant: 'destructive', colorClass: 'bg-rose-500/10 text-rose-600 border-rose-500/20', icon: 'fa-arrow-up' },
-  remove_subscription:  { label: 'ลบร้านค้า',     variant: 'destructive', colorClass: 'bg-rose-500/10 text-rose-600 border-rose-500/20', icon: 'fa-trash' },
-  update_settings:      { label: 'แก้ไขตั้งค่า',  variant: 'default',     colorClass: 'bg-primary/10 text-primary border-primary/20', icon: 'fa-gear' },
-  verify_slip:          { label: 'ยืนยันสลิป',    variant: 'success',     colorClass: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20', icon: 'fa-circle-check' },
-  reject_slip:          { label: 'ปฏิเสธสลิป',    variant: 'warning',     colorClass: 'bg-amber-500/10 text-amber-600 border-amber-500/20', icon: 'fa-circle-xmark' },
-  edit_user:            { label: 'แก้ไขผู้ใช้',   variant: 'outline',     colorClass: 'bg-blue-500/10 text-blue-600 border-blue-500/20', icon: 'fa-user-pen' },
-  update_mc_ip:         { label: 'แก้ไข MC IP',   variant: 'outline',     colorClass: 'bg-slate-500/10 text-slate-600 border-slate-500/20', icon: 'fa-shield-halved' },
-  page_view:            { label: 'เปิดหน้า',      variant: 'secondary',   colorClass: 'bg-violet-500/10 text-violet-600 border-violet-500/20', icon: 'fa-eye' },
-  feature_click:        { label: 'กดใช้งาน',     variant: 'secondary',   colorClass: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20', icon: 'fa-hand-pointer' },
+  wallet_credit:        { label: 'เพิ่มเงิน',      variant: 'success',     colorClass: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20', icon: 'arrow-down' },
+  wallet_debit:         { label: 'หักเงิน',        variant: 'destructive', colorClass: 'bg-rose-500/10 text-rose-600 border-rose-500/20', icon: 'arrow-up' },
+  remove_subscription:  { label: 'ลบร้านค้า',     variant: 'destructive', colorClass: 'bg-rose-500/10 text-rose-600 border-rose-500/20', icon: 'trash' },
+  update_settings:      { label: 'แก้ไขตั้งค่า',  variant: 'default',     colorClass: 'bg-primary/10 text-primary border-primary/20', icon: 'gear' },
+  verify_slip:          { label: 'ยืนยันสลิป',    variant: 'success',     colorClass: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20', icon: 'circle-check' },
+  reject_slip:          { label: 'ปฏิเสธสลิป',    variant: 'warning',     colorClass: 'bg-amber-500/10 text-amber-600 border-amber-500/20', icon: 'circle-xmark' },
+  edit_user:            { label: 'แก้ไขผู้ใช้',   variant: 'outline',     colorClass: 'bg-blue-500/10 text-blue-600 border-blue-500/20', icon: 'user-pen' },
+  update_mc_ip:         { label: 'แก้ไข MC IP',   variant: 'outline',     colorClass: 'bg-slate-500/10 text-slate-600 border-slate-500/20', icon: 'shield-halved' },
+  page_view:            { label: 'เปิดหน้า',      variant: 'secondary',   colorClass: 'bg-violet-500/10 text-violet-600 border-violet-500/20', icon: 'eye' },
+  feature_click:        { label: 'กดใช้งาน',     variant: 'secondary',   colorClass: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20', icon: 'hand-pointer' },
 };
 
 const FILTERS = [
-  { key: 'all',      label: 'ทั้งหมด',   icon: 'fa-layer-group' },
-  { key: 'action',   label: 'การกระทำ',  icon: 'fa-bolt' },
-  { key: 'activity', label: 'การใช้งาน', icon: 'fa-fire' },
+  { key: 'all',      label: 'ทั้งหมด',   icon: 'layer-group' },
+  { key: 'action',   label: 'การกระทำ',  icon: 'bolt' },
+  { key: 'activity', label: 'การใช้งาน', icon: 'fire' },
 ];
 
 const PAGE_SIZE = 50;
@@ -78,7 +79,7 @@ function Content() {
           <div className="flex items-center gap-4 mb-1">
             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg bg-secondary/50 hover:bg-secondary transition-all" asChild>
               <Link href="/admin">
-                <i className="fas fa-arrow-left text-xs" />
+                <Icon name="arrow-left" className="text-xs" />
               </Link>
             </Button>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
@@ -86,7 +87,7 @@ function Content() {
             </h1>
           </div>
           <p className="text-muted-foreground font-medium text-sm flex items-center gap-2">
-            <i className="fas fa-clock-rotate-left text-primary text-xs" />
+            <Icon name="clock-rotate-left" className="text-primary text-xs" />
             บันทึกเหตุการณ์ การกระทำ และการใช้งานของผู้ใช้ (ใคร ทำอะไร เมื่อไหร่)
           </p>
         </motion.div>
@@ -98,7 +99,7 @@ function Content() {
            </div>
            <div className="w-px h-6 bg-border/60" />
            <Button onClick={load} variant="ghost" size="icon" className="h-9 w-9 rounded-lg hover:bg-secondary transition-all active:scale-95">
-             <i className="fas fa-arrows-rotate text-xs" />
+             <Icon name="arrows-rotate" className="text-xs" />
            </Button>
         </motion.div>
       </div>
@@ -114,16 +115,16 @@ function Content() {
               size="sm"
               className="h-8 rounded-lg text-xs font-bold"
             >
-              <i className={`fas ${f.icon} mr-1.5 text-[10px]`} />{f.label}
+              <Icon name={f.icon as IconName} className="mr-1.5 text-[10px]" />{f.label}
             </Button>
           ))}
         </div>
         {q && (
           <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-xl px-3 py-2 w-fit">
-            <i className="fas fa-filter text-primary text-[10px]" />
+            <Icon name="filter" className="text-primary text-[10px]" />
             <span className="text-xs font-bold text-primary">กรอง: <span className="font-mono">{q}</span></span>
             <Link href="/admin/audit-logs" className="text-primary/60 hover:text-primary transition-colors">
-              <i className="fas fa-xmark text-xs" />
+              <Icon name="xmark" className="text-xs" />
             </Link>
           </div>
         )}
@@ -137,7 +138,7 @@ function Content() {
           </Card>
         ) : logs.length === 0 ? (
           <Card className="rounded-3xl border-border shadow-sm p-16 bg-white dark:bg-card">
-            <EmptyState icon="fa-clock-rotate-left" title="ไม่พบประวัติการใช้งาน" description="ยังไม่มีการบันทึกกิจกรรมใดๆ ในขณะนี้" />
+            <EmptyState icon="clock-rotate-left" title="ไม่พบประวัติการใช้งาน" description="ยังไม่มีการบันทึกกิจกรรมใดๆ ในขณะนี้" />
           </Card>
         ) : (
           <Card className="rounded-3xl border-border shadow-sm overflow-hidden bg-white dark:bg-card">
@@ -155,7 +156,7 @@ function Content() {
                 <tbody className="divide-y divide-border/60">
                   <AnimatePresence mode="popLayout">
                     {logs.map((log, idx) => {
-                      const act = ACTION_MAP[log.action] || { label: log.action, variant: 'secondary', colorClass: 'bg-secondary text-muted-foreground', icon: 'fa-circle-info' };
+                      const act = ACTION_MAP[log.action] || { label: log.action, variant: 'secondary', colorClass: 'bg-secondary text-muted-foreground', icon: 'circle-info' };
                       return (
                         <motion.tr 
                           key={log.id} 
@@ -185,7 +186,7 @@ function Content() {
                           </td>
                           <td className="px-6 py-4 text-center">
                             <Badge className={`px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest border-none rounded-md shadow-sm ${act.colorClass}`}>
-                              <i className={`fas ${act.icon} mr-1.5`} />
+                              <Icon name={act.icon as IconName} className="mr-1.5" />
                               {act.label}
                             </Badge>
                           </td>
@@ -223,7 +224,7 @@ function Content() {
                     onClick={() => setPage(p => Math.max(1, p - 1))} 
                     className="h-8 w-8 rounded-lg active:scale-95 disabled:opacity-30 transition-all"
                   >
-                    <i className="fas fa-chevron-left text-[10px]" />
+                    <Icon name="chevron-left" className="text-[10px]" />
                   </Button>
                   <div className="px-3 flex items-center gap-1.5">
                     <span className="text-xs font-bold text-foreground">{page}</span>
@@ -237,7 +238,7 @@ function Content() {
                     onClick={() => setPage(p => Math.min(pages, p + 1))} 
                     className="h-8 w-8 rounded-lg active:scale-95 disabled:opacity-30 transition-all"
                   >
-                    <i className="fas fa-chevron-right text-[10px]" />
+                    <Icon name="chevron-right" className="text-[10px]" />
                   </Button>
                 </div>
               </div>

@@ -1,4 +1,5 @@
 'use client';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 type DomainStatus = 'pending_dns' | 'pending_ssl' | 'active' | 'failed' | null;
 
@@ -28,7 +29,7 @@ export default function DomainStepper({ status }: { status: DomainStatus }) {
                   : 'bg-secondary text-muted-foreground border border-border'
                 }`}
               >
-                {done ? <i className="fas fa-check" /> : activeStep ? <i className="fas fa-spinner fa-spin" /> : i + 1}
+                {done ? <Icon name="check" /> : activeStep ? <Icon name="spinner" className="animate-spin" /> : i + 1}
               </div>
               <span className={`text-[10px] font-bold text-center leading-tight ${done || activeStep ? 'text-foreground' : 'text-muted-foreground'}`}>
                 {label}

@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 interface Slip {
   id: number; amount: number; status: string; purpose: string;
@@ -21,10 +22,10 @@ interface Slip {
 }
 
 const FILTER_TABS = [
-  { value: '',         label: 'ทั้งหมด',       icon: 'fa-list' },
-  { value: 'pending',  label: 'รอดำเนินการ',  icon: 'fa-clock' },
-  { value: 'verified', label: 'ตรวจสอบแล้ว',  icon: 'fa-circle-check' },
-  { value: 'rejected', label: 'ปฏิเสธแล้ว',   icon: 'fa-circle-xmark' },
+  { value: '',         label: 'ทั้งหมด',       icon: 'list' },
+  { value: 'pending',  label: 'รอดำเนินการ',  icon: 'clock' },
+  { value: 'verified', label: 'ตรวจสอบแล้ว',  icon: 'circle-check' },
+  { value: 'rejected', label: 'ปฏิเสธแล้ว',   icon: 'circle-xmark' },
 ];
 
 const PAGE_SIZE = 50;
@@ -91,7 +92,7 @@ function Content() {
           <div className="flex items-center gap-4 mb-1">
             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg bg-secondary/50 hover:bg-secondary transition-all" asChild>
               <Link href="/admin">
-                <i className="fas fa-arrow-left text-xs" />
+                <Icon name="arrow-left" className="text-xs" />
               </Link>
             </Button>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
@@ -99,14 +100,14 @@ function Content() {
             </h1>
           </div>
           <p className="text-muted-foreground font-medium text-sm flex items-center gap-2">
-            <i className="fas fa-receipt text-primary text-xs" />
+            <Icon name="receipt" className="text-primary text-xs" />
             ตรวจสอบและจัดการรายการชำระเงินทั้งหมด {total.toLocaleString('th-TH')} รายการ
           </p>
         </motion.div>
         
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
            <Button size="default" onClick={load} className="rounded-xl font-bold gap-2 h-11 px-6 shadow-md shadow-primary/10 active:scale-95 transition-all">
-             <i className={`fas fa-arrows-rotate ${loading ? 'animate-spin' : ''}`} /> รีเฟรชข้อมูล
+             <Icon name="arrows-rotate" className={`${loading ? 'animate-spin' : ''}`} /> รีเฟรชข้อมูล
            </Button>
         </motion.div>
       </div>
@@ -126,7 +127,7 @@ function Content() {
                       : 'text-muted-foreground hover:bg-white hover:text-foreground hover:shadow-sm'
                   }`}
                 >
-                  <i className={`fas ${tab.icon} ${status === tab.value ? 'opacity-100' : 'opacity-40'}`} />
+                  <Icon name={tab.icon as IconName} className={`${status === tab.value ? 'opacity-100' : 'opacity-40'}`} />
                   {tab.label}
                 </button>
               ))}
@@ -143,7 +144,7 @@ function Content() {
           </Card>
         ) : slips.length === 0 ? (
           <Card className="rounded-[2.5rem] border-border shadow-sm p-24 bg-white dark:bg-card">
-            <EmptyState icon="fa-receipt" title="ไม่พบรายการชำระเงิน" description="ไม่พบข้อมูลสลิปที่ตรงกับสถานะที่คุณเลือก" />
+            <EmptyState icon="receipt" title="ไม่พบรายการชำระเงิน" description="ไม่พบข้อมูลสลิปที่ตรงกับสถานะที่คุณเลือก" />
           </Card>
         ) : (
           <Card className="rounded-[2.5rem] border-border shadow-sm overflow-hidden bg-white dark:bg-card">
@@ -194,13 +195,13 @@ function Content() {
                           <p className="text-[11px] font-bold text-foreground tracking-tight">{fmtDateTime(slip.created_at)}</p>
                           {slip.verified_at && (
                             <p className="text-[9px] text-emerald-600 font-bold mt-1 uppercase tracking-wider flex items-center gap-1 bg-emerald-500/10 px-1.5 py-0.5 rounded-md w-fit">
-                              <i className="fas fa-check-double text-[7px]" />
+                              <Icon name="check-double" className="text-[7px]" />
                               Verified at {new Date(slip.verified_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
                             </p>
                           )}
                           {slip.reject_reason && (
                             <div className="mt-1 flex items-center gap-1 text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded-md w-fit group-hover:animate-pulse">
-                              <i className="fas fa-circle-xmark text-[9px]" />
+                              <Icon name="circle-xmark" className="text-[9px]" />
                               <p className="text-[9px] font-bold uppercase tracking-wider truncate max-w-[120px]" title={slip.reject_reason}>
                                 {slip.reject_reason}
                               </p>
@@ -212,7 +213,7 @@ function Content() {
                             <div className="flex justify-end items-center gap-2">
                               <Button onClick={() => verify(slip.id)} disabled={actionLoading === slip.id}
                                 className="h-9 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-[10px] uppercase tracking-wider shadow-md shadow-emerald-500/10 active:scale-95 transition-all">
-                                {actionLoading === slip.id ? <i className="fas fa-spinner fa-spin" /> : 'Approve'}
+                                {actionLoading === slip.id ? <Icon name="spinner" className="animate-spin" /> : 'Approve'}
                               </Button>
                               <Button variant="outline" onClick={() => setRejectModal(slip)} disabled={actionLoading === slip.id}
                                 className="h-9 px-4 rounded-xl border-rose-500/20 text-rose-500 bg-rose-500/5 hover:bg-rose-500 hover:text-white font-bold text-[10px] uppercase tracking-wider active:scale-95 transition-all">
@@ -248,7 +249,7 @@ function Content() {
                     onClick={() => setPage(p => Math.max(1, p - 1))} 
                     className="h-8 w-8 rounded-lg active:scale-95 disabled:opacity-30 transition-all"
                   >
-                    <i className="fas fa-chevron-left text-[10px]" />
+                    <Icon name="chevron-left" className="text-[10px]" />
                   </Button>
                   <div className="px-3 flex items-center gap-1.5">
                     <span className="text-xs font-bold text-foreground">{page}</span>
@@ -262,7 +263,7 @@ function Content() {
                     onClick={() => setPage(p => Math.min(pages, p + 1))} 
                     className="h-8 w-8 rounded-lg active:scale-95 disabled:opacity-30 transition-all"
                   >
-                    <i className="fas fa-chevron-right text-[10px]" />
+                    <Icon name="chevron-right" className="text-[10px]" />
                   </Button>
                 </div>
               </div>
@@ -338,7 +339,7 @@ function RejectModal({
         <div className="flex items-center justify-between gap-4 p-6 border-b border-border flex-shrink-0 bg-rose-500/5">
           <div className="flex items-center gap-4 min-w-0 flex-1">
             <div className="w-12 h-12 rounded-xl bg-rose-500 text-white flex items-center justify-center flex-shrink-0 shadow-md shadow-rose-500/20">
-              <i className="fas fa-circle-xmark text-lg" />
+              <Icon name="circle-xmark" className="text-lg" />
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-bold text-foreground text-lg tracking-tight truncate leading-tight">Reject Payment</p>
@@ -351,7 +352,7 @@ function RejectModal({
             onClick={onClose} 
             className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-border text-muted-foreground hover:text-foreground hover:shadow-sm transition-all cursor-pointer active:scale-90"
           >
-            <i className="fas fa-times text-sm" />
+            <Icon name="times" className="text-sm" />
           </button>
         </div>
 
@@ -374,7 +375,7 @@ function RejectModal({
             </Button>
             <Button variant="destructive" onClick={submit} disabled={loading || !reason.trim()}
               className="flex-[2] h-12 rounded-xl font-bold text-[10px] uppercase tracking-wider active:scale-95 transition-all shadow-md shadow-rose-500/20">
-              {loading ? <><i className="fas fa-spinner fa-spin mr-2" /> Processing...</> : 'Confirm Rejection'}
+              {loading ? <><Icon name="spinner" className="mr-2 animate-spin" /> Processing...</> : 'Confirm Rejection'}
             </Button>
           </div>
         </div>

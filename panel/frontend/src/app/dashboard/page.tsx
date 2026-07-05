@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
 import DomainModal from '@/components/domain/DomainModal';
 import CompensationPopup from '@/components/CompensationPopup';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 interface Sub {
   id: number; shop_name: string; domain: string; status: string;
@@ -59,7 +60,7 @@ function StatCard({ label, value, icon, color = 'primary', subValue }: any) {
           <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full opacity-5 transition-transform group-hover:scale-150 duration-700 ${colorMap[color].split(' ')[0]}`} />
           <div className="flex items-center gap-5 relative z-10">
             <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 text-xl border shadow-sm ${colorMap[color]}`}>
-              <i className={`fas ${icon}`} />
+              <Icon name={icon} />
             </div>
             <div className="min-w-0">
               <p className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.15em] mb-1">{label}</p>
@@ -131,10 +132,10 @@ function DashboardContent() {
   const showPromoBanner = !hasActiveShop && (!usedTrial || !usedIntro) && (trialPromo || introPromo);
 
   const FILTER_TABS = [
-    { value: 'all', label: 'ทั้งหมด', icon: 'fa-layer-group' },
-    { value: 'active', label: 'ออนไลน์', icon: 'fa-circle-check' },
-    { value: 'deploying', label: 'กำลังติดตั้ง', icon: 'fa-rocket' },
-    { value: 'suspended', label: 'ถูกระงับ', icon: 'fa-circle-pause' },
+    { value: 'all', label: 'ทั้งหมด', icon: 'layer-group' },
+    { value: 'active', label: 'ออนไลน์', icon: 'circle-check' },
+    { value: 'deploying', label: 'กำลังติดตั้ง', icon: 'rocket' },
+    { value: 'suspended', label: 'ถูกระงับ', icon: 'circle-pause' },
   ];
 
   if (authLoading) return null;
@@ -156,7 +157,7 @@ function DashboardContent() {
               Dashboard <span className="text-primary text-2xl opacity-20">/</span>
             </h1>
             <p className="text-muted-foreground font-semibold flex items-center gap-2">
-              <i className="fas fa-sparkles text-amber-500 text-xs" />
+              <Icon name="sparkles" className="text-amber-500 text-xs" />
               ยินดีต้อนรับกลับมา, คุณ {user?.displayName}
             </p>
           </motion.div>
@@ -169,7 +170,7 @@ function DashboardContent() {
              <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-white dark:bg-card border border-border shadow-sm">
                 <Button variant="ghost" size="lg" asChild className="h-12 px-6 rounded-xl font-bold gap-2 hover:bg-secondary">
                   <Link href="/dashboard/topup">
-                    <i className="fas fa-plus-circle text-primary" /> เติมเงิน
+                    <Icon name="plus-circle" className="text-primary" /> เติมเงิน
                   </Link>
                 </Button>
                 <div className="h-6 w-px bg-border mx-1" />
@@ -182,19 +183,19 @@ function DashboardContent() {
              {!hasActiveShop && !usedTrial && trialPromo ? (
                <Button size="lg" asChild className="h-14 px-8 rounded-2xl font-black gap-3 shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20 transition-transform active:scale-95">
                  <Link href="/order?kind=trial">
-                   <i className="fas fa-rocket" /> ทดลองฟรี {trialPromo.days} วัน
+                   <Icon name="rocket" /> ทดลองฟรี {trialPromo.days} วัน
                  </Link>
                </Button>
              ) : !usedIntro && introPromo ? (
                <Button size="lg" asChild className="h-14 px-8 rounded-2xl font-black gap-3 shadow-lg shadow-primary/20 transition-transform active:scale-95">
                  <Link href="/order?kind=intro">
-                   <i className="fas fa-tag" /> เดือนแรก ฿{introPromo.price}
+                   <Icon name="tag" /> เดือนแรก ฿{introPromo.price}
                  </Link>
                </Button>
              ) : (
                <Button size="lg" asChild className="h-14 px-8 rounded-2xl font-black gap-3 shadow-lg shadow-primary/20 transition-transform active:scale-95">
                  <Link href="/order">
-                   <i className="fas fa-store-medical" /> สร้างร้านค้าใหม่
+                   <Icon name="store-medical" /> สร้างร้านค้าใหม่
                  </Link>
                </Button>
              )}
@@ -212,7 +213,7 @@ function DashboardContent() {
               <Link href="/order?kind=trial" className="group block">
                 <div className="flex items-center gap-5 p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 hover:border-emerald-500/60 hover:bg-emerald-500/15 transition-all duration-300">
                   <div className="w-12 h-12 rounded-xl bg-emerald-500 text-white flex items-center justify-center text-xl flex-shrink-0 shadow-sm shadow-emerald-500/30">
-                    <i className="fas fa-rocket" />
+                    <Icon name="rocket" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[10px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-widest mb-0.5">สิทธิ์ที่คุณได้รับ</p>
@@ -220,7 +221,7 @@ function DashboardContent() {
                     <p className="text-xs font-semibold text-muted-foreground">ไม่ต้องชำระเงิน · เริ่มได้เลย</p>
                   </div>
                   <div className="flex-shrink-0 text-emerald-600 group-hover:translate-x-1 transition-transform">
-                    <i className="fas fa-arrow-right" />
+                    <Icon name="arrow-right" />
                   </div>
                 </div>
               </Link>
@@ -229,7 +230,7 @@ function DashboardContent() {
               <Link href="/order?kind=intro" className="group block">
                 <div className="flex items-center gap-5 p-5 rounded-2xl bg-primary/10 border border-primary/30 hover:border-primary/60 hover:bg-primary/15 transition-all duration-300">
                   <div className="w-12 h-12 rounded-xl bg-primary text-primary-foreground flex items-center justify-center text-xl flex-shrink-0 shadow-sm shadow-primary/30">
-                    <i className="fas fa-tag" />
+                    <Icon name="tag" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-0.5">โปรโมชั่นพิเศษ</p>
@@ -237,7 +238,7 @@ function DashboardContent() {
                     <p className="text-xs font-semibold text-muted-foreground">ประหยัด ฿{introPromo.regularPrice - introPromo.price} · เฉพาะครั้งแรก</p>
                   </div>
                   <div className="flex-shrink-0 text-primary group-hover:translate-x-1 transition-transform">
-                    <i className="fas fa-arrow-right" />
+                    <Icon name="arrow-right" />
                   </div>
                 </div>
               </Link>
@@ -245,7 +246,7 @@ function DashboardContent() {
             {usedTrial && trialPromo && (
               <div className="flex items-center gap-5 p-5 rounded-2xl bg-secondary border border-border opacity-60">
                 <div className="w-12 h-12 rounded-xl bg-secondary border border-border text-muted-foreground flex items-center justify-center text-xl flex-shrink-0">
-                  <i className="fas fa-check" />
+                  <Icon name="check" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-0.5">ใช้สิทธิ์แล้ว</p>
@@ -257,7 +258,7 @@ function DashboardContent() {
             {usedIntro && introPromo && (
               <div className="flex items-center gap-5 p-5 rounded-2xl bg-secondary border border-border opacity-60">
                 <div className="w-12 h-12 rounded-xl bg-secondary border border-border text-muted-foreground flex items-center justify-center text-xl flex-shrink-0">
-                  <i className="fas fa-check" />
+                  <Icon name="check" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-0.5">ใช้สิทธิ์แล้ว</p>
@@ -274,21 +275,21 @@ function DashboardContent() {
            <StatCard 
              label="ยอดเงินคงเหลือ" 
              value={`฿${(Number(user?.walletBalance) || 0).toLocaleString()}`} 
-             icon="fa-wallet" 
+             icon="wallet" 
              color="emerald"
              subValue="พร้อมใช้งานสำหรับแพ็กเกจ"
            />
            <StatCard 
              label="ร้านที่ออนไลน์" 
              value={activeCount} 
-             icon="fa-signal" 
+             icon="signal" 
              color="primary"
              subValue="เซิร์ฟเวอร์เปิดใช้งานปกติ"
            />
            <StatCard 
              label="จำนวนร้านทั้งหมด" 
              value={subs.length} 
-             icon="fa-cubes" 
+             icon="cubes" 
              color="blue"
              subValue="รวมแพ็กเกจที่หมดอายุ"
            />
@@ -296,7 +297,7 @@ function DashboardContent() {
              <StatCard 
                label="ศูนย์ซัพพอร์ต" 
                value="ติดต่อ" 
-               icon="fa-headset" 
+               icon="headset" 
                color="amber"
                subValue="ทีมงานดูแลตลอด 24 ชม."
              />
@@ -318,7 +319,7 @@ function DashboardContent() {
                         ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20 scale-105'
                         : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                       }`}>
-                      <i className={`fas ${tab.icon} text-[11px]`} /> {tab.label}
+                      <Icon name={tab.icon as IconName} className="text-[11px]" /> {tab.label}
                     </button>
                   ))}
                 </div>
@@ -326,7 +327,7 @@ function DashboardContent() {
 
               <div className="relative w-full md:w-80">
                 <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                  <i className="fas fa-search text-muted-foreground/60 text-sm" />
+                  <Icon name="search" className="text-muted-foreground/60 text-sm" />
                 </div>
                 <input 
                   type="text" 
@@ -349,7 +350,7 @@ function DashboardContent() {
                     className="bg-card border-2 border-dashed border-border rounded-[2.5rem] p-20 text-center space-y-4"
                   >
                     <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center mx-auto text-muted-foreground/30 text-3xl">
-                       <i className="fas fa-search" />
+                       <Icon name="search" />
                     </div>
                     <p className="text-lg font-bold text-muted-foreground">ไม่พบร้านค้าที่ตรงตามการค้นหา</p>
                   </motion.div>
@@ -385,13 +386,13 @@ function DashboardContent() {
                                       ? 'bg-amber-500/10 border-amber-500/20 text-amber-600' 
                                       : 'bg-secondary border-transparent text-muted-foreground group-hover:border-primary/20 group-hover:bg-primary/5 group-hover:text-primary'
                                     }`}>
-                                      <i className="fas fa-cube text-lg" />
+                                      <Icon name="cube" className="text-lg" />
                                     </div>
                                     <div>
                                       <p className="font-black text-foreground text-base tracking-tight leading-tight group-hover:text-primary transition-colors">{sub.shop_name}</p>
                                       <a href={`https://${sub.domain}`} target="_blank" rel="noopener noreferrer"
                                         className="text-[13px] font-semibold text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5 mt-1 opacity-80">
-                                        {sub.domain} <i className="fas fa-arrow-up-right-from-square text-[9px]" />
+                                        {sub.domain} <Icon name="arrow-up-right-from-square" className="text-[9px]" />
                                       </a>
                                     </div>
                                   </div>
@@ -419,11 +420,11 @@ function DashboardContent() {
                                 <td className="px-8 py-6">
                                   <div className="flex justify-end items-center gap-3">
                                     <Button variant="outline" size="sm" onClick={() => setDomainSubId(sub.id)} className="h-10 px-5 rounded-xl font-bold border-border shadow-sm hover:border-primary/40 hover:bg-white cursor-pointer transition-all">
-                                      <i className="fas fa-globe mr-2 opacity-60" /> โดเมน
+                                      <Icon name="globe" className="mr-2 opacity-60" /> โดเมน
                                     </Button>
                                     <Button variant="outline" size="sm" asChild className="h-10 px-5 rounded-xl font-bold border-border shadow-sm hover:border-primary/40 hover:bg-white cursor-pointer transition-all">
                                       <Link href={`/dashboard/credentials?id=${sub.id}`} data-track="dashboard_manage_shop">
-                                        จัดการ <i className="fas fa-angle-right ml-2 opacity-50" />
+                                        จัดการ <Icon name="angle-right" className="ml-2 opacity-50" />
                                       </Link>
                                     </Button>
                                     <Button 
@@ -432,7 +433,7 @@ function DashboardContent() {
                                       className={`h-10 px-5 rounded-xl font-black transition-all active:scale-95 cursor-pointer ${!isExpiringSoon ? 'bg-foreground hover:bg-foreground/90' : ''}`}
                                     >
                                       <Link href={`/dashboard/renew?id=${sub.id}`}>
-                                        <i className="fas fa-bolt mr-2 text-[10px]" /> ต่ออายุ
+                                        <Icon name="bolt" className="mr-2 text-[10px]" /> ต่ออายุ
                                       </Link>
                                     </Button>
                                   </div>
@@ -458,7 +459,7 @@ function DashboardContent() {
                             onClick={() => setPage(p => Math.max(1, p - 1))}
                             className="rounded-xl w-10 h-10 border-border hover:bg-white transition-all shadow-sm"
                           >
-                            <i className="fas fa-chevron-left text-[10px]" />
+                            <Icon name="chevron-left" className="text-[10px]" />
                           </Button>
                           <div className="bg-white border border-border rounded-xl px-4 h-10 flex items-center font-black text-xs min-w-[80px] justify-center shadow-sm">
                             {page} / {totalPages}
@@ -470,7 +471,7 @@ function DashboardContent() {
                             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                             className="rounded-xl w-10 h-10 border-border hover:bg-white transition-all shadow-sm"
                           >
-                            <i className="fas fa-chevron-right text-[10px]" />
+                            <Icon name="chevron-right" className="text-[10px]" />
                           </Button>
                         </div>
                       </div>
@@ -485,7 +486,7 @@ function DashboardContent() {
                   <CardContent className="p-0">
                     <div className="bg-primary/5 p-12 text-center border-b border-border">
                        <div className="w-20 h-20 rounded-[2rem] bg-primary text-white flex items-center justify-center mx-auto text-3xl shadow-xl shadow-primary/20 mb-8">
-                          <i className="fas fa-rocket" />
+                          <Icon name="rocket" />
                        </div>
                        <h3 className="text-3xl font-black text-foreground tracking-tight mb-2">ยินดีต้อนรับสู่ SIAMSITE SHOP</h3>
                        <p className="text-muted-foreground font-semibold max-w-lg mx-auto">เริ่มต้นธุรกิจ Minecraft ของคุณด้วย 3 ขั้นตอนง่ายๆ เพื่อเตรียมตัวรับยอดขายแบบมืออาชีพ</p>
@@ -494,19 +495,19 @@ function DashboardContent() {
                     <div className="p-12 grid grid-cols-1 md:grid-cols-3 gap-10 bg-white">
                       {[
                         {
-                          step: 1, title: 'เติมเงินเข้ากระเป๋า', icon: 'fa-wallet',
+                          step: 1, title: 'เติมเงินเข้ากระเป๋า', icon: 'wallet',
                           desc: 'รองรับการเติมเงินผ่าน PromptPay ตรวจสลิปไวใน 1 วินาที เพื่อเตรียมซื้อแพ็กเกจร้านค้า',
                           done: (user?.walletBalance ?? 0) > 0,
                           action: '/dashboard/topup', actionLabel: 'ไปหน้าเติมเงิน',
                         },
                         {
-                          step: 2, title: 'เปิดร้านค้า', icon: 'fa-shop',
+                          step: 2, title: 'เปิดร้านค้า', icon: 'shop',
                           desc: 'เลือกชื่อร้านและโดเมนที่ต้องการ ระบบจะทำการติดตั้ง (Deploy) ร้านค้าของคุณให้อัตโนมัติ',
                           done: false,
                           action: null, actionLabel: null,
                         },
                         {
-                          step: 3, title: 'เชื่อมต่อเซิร์ฟเวอร์', icon: 'fa-link',
+                          step: 3, title: 'เชื่อมต่อเซิร์ฟเวอร์', icon: 'link',
                           desc: 'นำรหัส RCON ไปใส่ใน Plugin AuthMe ของคุณ เพื่อเริ่มต้นการส่งไอเท็มเข้าตัวผู้เล่นทันที',
                           done: false, action: null, actionLabel: null,
                         },
@@ -514,7 +515,7 @@ function DashboardContent() {
                         <div key={s.step} className="space-y-6 group">
                           <div className="flex items-center gap-4">
                             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg flex-shrink-0 shadow-sm border-2 transition-all duration-500 ${s.done ? 'bg-emerald-500 border-emerald-500 text-white rotate-[360deg]' : 'bg-secondary border-border text-muted-foreground group-hover:border-primary/30 group-hover:text-primary'}`}>
-                              <i className={`fas ${s.done ? 'fa-check' : s.icon}`} />
+                              <Icon name={(s.done ? 'check' : s.icon) as IconName} />
                             </div>
                             <div>
                               <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${s.done ? 'text-emerald-600' : 'text-primary'}`}>Step {s.step}</span>
@@ -528,20 +529,20 @@ function DashboardContent() {
                                 {trialPromo && !usedTrial && (
                                   <Button asChild className="rounded-xl w-full h-11 font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm active:scale-95 transition-all">
                                     <Link href="/order?kind=trial">
-                                      <i className="fas fa-rocket mr-2" /> ทดลองฟรี {trialPromo.days} วัน
+                                      <Icon name="rocket" className="mr-2" /> ทดลองฟรี {trialPromo.days} วัน
                                     </Link>
                                   </Button>
                                 )}
                                 {introPromo && !usedIntro && (
                                   <Button variant={usedTrial || !trialPromo ? 'default' : 'secondary'} asChild className="rounded-xl w-full h-11 font-bold border border-border shadow-sm active:scale-95 transition-all">
                                     <Link href="/order?kind=intro">
-                                      <i className="fas fa-tag mr-2" /> เดือนแรก ฿{introPromo.price}
+                                      <Icon name="tag" className="mr-2" /> เดือนแรก ฿{introPromo.price}
                                     </Link>
                                   </Button>
                                 )}
                                 <Button variant="secondary" asChild className="rounded-xl w-full h-11 font-bold border border-border shadow-sm active:scale-95 transition-all">
                                   <Link href="/order">
-                                    <i className="fas fa-store mr-2" /> ซื้อแพ็กเกจปกติ
+                                    <Icon name="store" className="mr-2" /> ซื้อแพ็กเกจปกติ
                                   </Link>
                                 </Button>
                               </>
@@ -551,7 +552,7 @@ function DashboardContent() {
                               </Button>
                             ) : s.done ? (
                               <div className="h-11 flex items-center justify-center gap-2 rounded-xl bg-emerald-500/10 text-emerald-600 text-sm font-black border border-emerald-500/20">
-                                <i className="fas fa-check-circle" /> เสร็จสมบูรณ์
+                                <Icon name="check-circle" /> เสร็จสมบูรณ์
                               </div>
                             ) : (
                               <div className="h-11 flex items-center justify-center gap-2 rounded-xl bg-secondary text-muted-foreground/50 text-xs font-black border border-border border-dashed">

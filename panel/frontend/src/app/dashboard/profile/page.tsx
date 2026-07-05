@@ -9,11 +9,12 @@ import { useToast } from '@/components/Toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 function InputField({
   label, icon, value, onChange, type = 'text', disabled = false, placeholder = '', rightEl,
 }: {
-  label: string; icon: string; value: string;
+  label: string; icon: IconName; value: string;
   onChange: (v: string) => void;
   type?: string; disabled?: boolean; placeholder?: string;
   rightEl?: React.ReactNode;
@@ -23,7 +24,7 @@ function InputField({
       <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">{label}</label>
       <div className="relative">
         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary/70 text-sm pointer-events-none">
-          <i className={`fas ${icon}`} />
+          <Icon name={icon} />
         </span>
         <input
           type={type}
@@ -95,7 +96,7 @@ export default function ProfilePage() {
         <div className="flex items-center gap-4 mb-8">
           <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl cursor-pointer" asChild>
             <Link href="/dashboard">
-              <i className="fas fa-arrow-left text-xs" />
+              <Icon name="arrow-left" className="text-xs" />
             </Link>
           </Button>
           <div>
@@ -115,7 +116,7 @@ export default function ProfilePage() {
               <p className="text-sm text-muted-foreground font-medium mt-1">{user?.email}</p>
               <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-3">
                 <Badge variant={user?.role === 'admin' ? "default" : "secondary"} className="px-3 py-1 font-bold uppercase tracking-wider text-[10px]">
-                  <i className={`fas ${user?.role === 'admin' ? 'fa-shield-halved' : 'fa-user'} mr-1.5`} />
+                  <Icon name={user?.role === 'admin' ? 'shield-halved' : 'user'} className={`mr-1.5`} />
                   {user?.role === 'admin' ? 'แอดมิน' : 'ลูกค้า'}
                 </Badge>
                 <Badge variant="outline" className="px-3 py-1 font-bold border-border bg-background/50 text-[10px]">
@@ -136,31 +137,31 @@ export default function ProfilePage() {
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                    <i className="fas fa-user-gear" />
+                    <Icon name="user-gear" />
                   </div>
                   ข้อมูลส่วนตัว
                 </CardTitle>
                 <CardDescription className="font-medium">แก้ไขชื่อที่แสดงและข้อมูลติดต่อ</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <InputField label="ชื่อที่แสดง" icon="fa-id-card"
+                <InputField label="ชื่อที่แสดง" icon="id-card"
                   value={form.displayName}
                   onChange={v => setForm(f => ({ ...f, displayName: v }))} />
-                <InputField label="อีเมล (เปลี่ยนไม่ได้)" icon="fa-envelope"
+                <InputField label="อีเมล (เปลี่ยนไม่ได้)" icon="envelope"
                   value={user?.email || ''} onChange={() => {}} disabled
                   placeholder="อีเมลไม่สามารถเปลี่ยนได้" />
-                <InputField label="เบอร์โทรศัพท์" icon="fa-phone"
+                <InputField label="เบอร์โทรศัพท์" icon="phone"
                   value={form.phone}
                   onChange={v => setForm(f => ({ ...f, phone: v }))}
                   placeholder="08x-xxx-xxxx" />
                 <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 ml-1 font-semibold">
-                  <i className="fas fa-envelope text-primary" />
+                  <Icon name="envelope" className="text-primary" />
                   ระบบจะส่งอีเมลแจ้งเตือนก่อนร้านหมดอายุไปยังอีเมลของคุณอัตโนมัติ
                 </p>
               </CardContent>
               <CardFooter>
                 <Button data-track="profile_save" type="submit" className="w-full rounded-xl font-bold h-11 cursor-pointer shadow-sm hover:shadow-md transition-all" disabled={saving}>
-                  {saving ? <><i className="fas fa-spinner fa-spin mr-2" /> กำลังบันทึก...</> : <><i className="fas fa-floppy-disk mr-2" /> บันทึกข้อมูล</>}
+                  {saving ? <><Icon name="spinner" className="mr-2 animate-spin" /> กำลังบันทึก...</> : <><Icon name="floppy-disk" className="mr-2" /> บันทึกข้อมูล</>}
                 </Button>
               </CardFooter>
             </Card>
@@ -172,46 +173,46 @@ export default function ProfilePage() {
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-secondary text-foreground flex items-center justify-center">
-                    <i className="fas fa-lock" />
+                    <Icon name="lock" />
                   </div>
                   เปลี่ยนรหัสผ่าน
                 </CardTitle>
                 <CardDescription className="font-medium">รักษาความปลอดภัยของบัญชีคุณ</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <InputField label="รหัสผ่านเดิม" icon="fa-lock" type={showOld ? 'text' : 'password'}
+                <InputField label="รหัสผ่านเดิม" icon="lock" type={showOld ? 'text' : 'password'}
                   value={pwForm.oldPassword}
                   onChange={v => setPwForm(f => ({ ...f, oldPassword: v }))}
                   rightEl={
                     <button type="button" onClick={() => setShowOld(s => !s)}
                       className="text-muted-foreground hover:text-primary transition-colors cursor-pointer w-8 h-8 flex items-center justify-center">
-                      <i className={`fas ${showOld ? 'fa-eye-slash' : 'fa-eye'} text-sm`} />
+                      <Icon name={showOld ? 'eye-slash' : 'eye'} className={`text-sm`} />
                     </button>
                   } />
-                <InputField label="รหัสผ่านใหม่" icon="fa-key" type={showNew ? 'text' : 'password'}
+                <InputField label="รหัสผ่านใหม่" icon="key" type={showNew ? 'text' : 'password'}
                   value={pwForm.newPassword}
                   onChange={v => setPwForm(f => ({ ...f, newPassword: v }))}
                   placeholder="อย่างน้อย 8 ตัวอักษร"
                   rightEl={
                     <button type="button" onClick={() => setShowNew(s => !s)}
                       className="text-muted-foreground hover:text-primary transition-colors cursor-pointer w-8 h-8 flex items-center justify-center">
-                      <i className={`fas ${showNew ? 'fa-eye-slash' : 'fa-eye'} text-sm`} />
+                      <Icon name={showNew ? 'eye-slash' : 'eye'} className={`text-sm`} />
                     </button>
                   } />
-                <InputField label="ยืนยันรหัสผ่านใหม่" icon="fa-key" type={showCfm ? 'text' : 'password'}
+                <InputField label="ยืนยันรหัสผ่านใหม่" icon="key" type={showCfm ? 'text' : 'password'}
                   value={pwForm.confirm}
                   onChange={v => setPwForm(f => ({ ...f, confirm: v }))}
                   placeholder="กรอกรหัสผ่านใหม่อีกครั้ง"
                   rightEl={
                     <button type="button" onClick={() => setShowCfm(s => !s)}
                       className="text-muted-foreground hover:text-primary transition-colors cursor-pointer w-8 h-8 flex items-center justify-center">
-                      <i className={`fas ${showCfm ? 'fa-eye-slash' : 'fa-eye'} text-sm`} />
+                      <Icon name={showCfm ? 'eye-slash' : 'eye'} className={`text-sm`} />
                     </button>
                   } />
               </CardContent>
               <CardFooter>
                 <Button type="submit" variant="secondary" className="w-full rounded-xl font-bold h-11 cursor-pointer border border-border" disabled={saving}>
-                  {saving ? <><i className="fas fa-spinner fa-spin mr-2" /> กำลังเปลี่ยน...</> : <><i className="fas fa-shield-keyhole mr-2" /> เปลี่ยนรหัสผ่าน</>}
+                  {saving ? <><Icon name="spinner" className="mr-2 animate-spin" /> กำลังเปลี่ยน...</> : <><Icon name="shield-keyhole" className="mr-2" /> เปลี่ยนรหัสผ่าน</>}
                 </Button>
               </CardFooter>
             </Card>

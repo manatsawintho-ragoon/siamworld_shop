@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 export type AdminAction = 'regen' | 'setpw';
 
@@ -67,7 +68,7 @@ export default function AdminActionModal({
             <div className="flex items-start justify-between gap-4 p-6 border-b border-border">
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isSetPw ? 'bg-primary/10 text-primary' : 'bg-amber-500/10 text-amber-600'}`}>
-                  <i className={`fas ${isSetPw ? 'fa-pen' : 'fa-dice'} text-lg`} />
+                  <Icon name={isSetPw ? 'pen' : 'dice'} className={`text-lg`} />
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-foreground tracking-tight">
@@ -80,7 +81,7 @@ export default function AdminActionModal({
               </div>
               <button type="button" onClick={() => { if (!busy) onClose(); }}
                 className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary cursor-pointer flex-shrink-0">
-                <i className="fas fa-xmark" />
+                <Icon name="xmark" />
               </button>
             </div>
 
@@ -103,19 +104,19 @@ export default function AdminActionModal({
                     />
                     <button type="button" onClick={() => setShow(v => !v)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer">
-                      <i className={`fas ${show ? 'fa-eye-slash' : 'fa-eye'} text-sm`} />
+                      <Icon name={show ? 'eye-slash' : 'eye'} className={`text-sm`} />
                     </button>
                   </div>
                   {err && (
                     <p className="text-xs font-bold text-destructive flex items-center gap-1.5">
-                      <i className="fas fa-circle-exclamation" /> {err}
+                      <Icon name="circle-exclamation" /> {err}
                     </p>
                   )}
                 </>
               ) : (
                 <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
                   <p className="text-sm font-bold text-foreground mb-1">
-                    <i className="fas fa-triangle-exclamation mr-1.5 text-amber-600" /> รหัสเดิมจะใช้เข้าสู่ระบบไม่ได้ทันที
+                    <Icon name="triangle-exclamation" className="mr-1.5 text-amber-600" /> รหัสเดิมจะใช้เข้าสู่ระบบไม่ได้ทันที
                   </p>
                   <p className="text-xs font-medium text-muted-foreground">
                     ระบบจะสร้างรหัสหมุนเวียนชุดใหม่ที่เปลี่ยนทุก 1 นาที คัดลอกรหัสใหม่จากการ์ดหลังยืนยัน
@@ -127,8 +128,8 @@ export default function AdminActionModal({
                 <Button onClick={submit} disabled={busy}
                   className={`flex-1 cursor-pointer font-bold rounded-full ${isSetPw ? '' : 'bg-amber-500 hover:bg-amber-600 text-white'}`}>
                   {busy
-                    ? <i className="fas fa-spinner fa-spin mr-2" />
-                    : <i className={`fas ${isSetPw ? 'fa-check' : 'fa-dice'} mr-2`} />}
+                    ? <Icon name="spinner" className="mr-2 animate-spin" />
+                    : <Icon name={isSetPw ? 'check' : 'dice'} className={`mr-2`} />}
                   {isSetPw ? 'บันทึกรหัสผ่าน' : 'ยืนยันสุ่มรหัสใหม่'}
                 </Button>
                 <Button variant="outline" onClick={() => { if (!busy) onClose(); }} disabled={busy}

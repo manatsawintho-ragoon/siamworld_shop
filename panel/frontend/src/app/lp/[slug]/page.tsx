@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { LANDING_PAGES, getLandingBySlug, getRelated, CLUSTERS } from '@/lib/seo/keywords';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 const BASE = 'https://panel.siamsite.shop';
 
@@ -90,7 +91,7 @@ export default function LandingPageView({ params }: { params: { slug: string } }
         <header className="space-y-4 mb-8">
           {cluster && (
             <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-bold uppercase tracking-wider">
-              <i className={`fas ${cluster.icon}`} /> {cluster.label}
+              <Icon name={cluster.icon as IconName} /> {cluster.label}
             </span>
           )}
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground leading-tight">{page.h1}</h1>
@@ -107,7 +108,7 @@ export default function LandingPageView({ params }: { params: { slug: string } }
           <ul className="space-y-3">
             {page.bullets.map((b, i) => (
               <li key={i} className="flex items-start gap-3 bg-card border border-border rounded-2xl p-4">
-                <i className="fas fa-circle-check text-emerald-500 mt-0.5" />
+                <Icon name="circle-check" className="text-emerald-500 mt-0.5" />
                 <span className="text-sm text-foreground/90 leading-relaxed">{b}</span>
               </li>
             ))}
@@ -132,7 +133,7 @@ export default function LandingPageView({ params }: { params: { slug: string } }
               <details key={i} className="group bg-card border border-border rounded-2xl p-4">
                 <summary className="cursor-pointer font-bold text-sm text-foreground flex items-center justify-between">
                   {f.q}
-                  <i className="fas fa-chevron-down text-xs text-muted-foreground group-open:rotate-180 transition-transform" />
+                  <Icon name="chevron-down" className="text-xs text-muted-foreground group-open:rotate-180 transition-transform" />
                 </summary>
                 <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{f.a}</p>
               </details>

@@ -10,6 +10,7 @@ import { useToast } from '@/components/Toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 // Used until live package prices load from the backend.
 const FALLBACK_PRESETS = [100, 350, 500, 945, 1000, 1785];
@@ -139,7 +140,7 @@ export default function TopupPage() {
         <div className="flex items-center gap-4">
           <Button variant="outline" size="icon" className="rounded-full cursor-pointer h-10 w-10 border-border" asChild>
             <Link href="/dashboard">
-              <i className="fas fa-arrow-left text-muted-foreground" />
+              <Icon name="arrow-left" className="text-muted-foreground" />
             </Link>
           </Button>
           <div>
@@ -163,7 +164,7 @@ export default function TopupPage() {
                         : i === currentStepIdx
                         ? 'bg-primary/10 border-2 border-primary text-primary'
                         : 'bg-secondary text-muted-foreground'}`}>
-                      {i < currentStepIdx ? <i className="fas fa-check text-xs" /> : i + 1}
+                      {i < currentStepIdx ? <Icon name="check" className="text-xs" /> : i + 1}
                     </div>
                     <span className={`text-[11px] mt-2 font-semibold tracking-wide hidden sm:block whitespace-nowrap ${i <= currentStepIdx ? 'text-foreground' : 'text-muted-foreground'}`}>
                       {s}
@@ -183,7 +184,7 @@ export default function TopupPage() {
           <Card className="text-center max-w-md mx-auto shadow-md border-emerald-500/30">
             <CardContent className="p-10 flex flex-col items-center">
               <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-3xl mb-6">
-                <i className="fas fa-check" />
+                <Icon name="check" />
               </div>
               <h2 className="text-2xl font-bold text-foreground mb-2">เติมเงินสำเร็จ!</h2>
               <p className="text-sm text-muted-foreground mb-2">ยอดเงินคงเหลือใหม่</p>
@@ -192,11 +193,11 @@ export default function TopupPage() {
               </p>
               <div className="flex w-full gap-3">
                 <Button className="flex-1 rounded-full cursor-pointer" variant="outline" onClick={() => { setStep('amount'); setAmount(''); setSlip(''); setSlipPreview(''); }}>
-                  <i className="fas fa-plus mr-2" /> เติมอีกครั้ง
+                  <Icon name="plus" className="mr-2" /> เติมอีกครั้ง
                 </Button>
                 <Button className="flex-1 rounded-full cursor-pointer" asChild>
                   <Link href="/dashboard">
-                    <i className="fas fa-gauge-high mr-2" /> แดชบอร์ด
+                    <Icon name="gauge-high" className="mr-2" /> แดชบอร์ด
                   </Link>
                 </Button>
               </div>
@@ -227,7 +228,7 @@ export default function TopupPage() {
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                    <i className="fas fa-circle-info" />
+                    <Icon name="circle-info" />
                   </div>
                   ขั้นตอนการชำระเงิน
                 </CardTitle>
@@ -244,10 +245,10 @@ export default function TopupPage() {
               </CardContent>
               <CardFooter className="flex-col gap-3">
                 <Button className="w-full rounded-full cursor-pointer h-12 text-base" onClick={() => setStep('slip')}>
-                  <i className="fas fa-image mr-2" /> แนบสลิปการโอน
+                  <Icon name="image" className="mr-2" /> แนบสลิปการโอน
                 </Button>
                 <Button className="w-full rounded-full cursor-pointer h-12 text-base" variant="outline" onClick={() => setStep('amount')}>
-                  <i className="fas fa-arrow-left mr-2" /> กลับ
+                  <Icon name="arrow-left" className="mr-2" /> กลับ
                 </Button>
               </CardFooter>
             </Card>
@@ -261,7 +262,7 @@ export default function TopupPage() {
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                    <i className="fas fa-image" />
+                    <Icon name="image" />
                   </div>
                   อัปโหลดสลิปการโอน
                 </CardTitle>
@@ -274,7 +275,7 @@ export default function TopupPage() {
                     <img src={slipPreview} alt="slip" className="max-h-52 mx-auto rounded-xl object-contain shadow-sm" />
                   ) : (
                     <div className="py-8">
-                      <i className="fas fa-cloud-arrow-up text-4xl text-primary/40 mb-4 block" />
+                      <Icon name="cloud-arrow-up" className="text-4xl text-primary/40 mb-4 block" />
                       <p className="text-sm font-bold text-foreground">คลิกเพื่ออัปโหลดสลิป</p>
                       <p className="text-xs text-muted-foreground mt-2">รองรับ JPG, PNG</p>
                     </div>
@@ -284,7 +285,7 @@ export default function TopupPage() {
                 {slipPreview && (
                   <button className="mt-4 w-full text-sm text-destructive hover:text-destructive/80 transition-colors flex items-center justify-center gap-2 font-bold cursor-pointer"
                     onClick={() => { setSlip(''); setSlipPreview(''); }}>
-                    <i className="fas fa-trash" /> ลบรูปเพื่อเปลี่ยนใหม่
+                    <Icon name="trash" /> ลบรูปเพื่อเปลี่ยนใหม่
                   </button>
                 )}
               </CardContent>
@@ -294,7 +295,7 @@ export default function TopupPage() {
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-secondary text-foreground flex items-center justify-center">
-                    <i className="fas fa-receipt" />
+                    <Icon name="receipt" />
                   </div>
                   สรุปรายการ
                 </CardTitle>
@@ -320,14 +321,14 @@ export default function TopupPage() {
               <CardFooter className="flex-col gap-3">
                 {error && (
                   <div className="w-full flex items-center gap-2 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3 font-semibold mb-2">
-                    <i className="fas fa-circle-exclamation flex-shrink-0" />{error}
+                    <Icon name="circle-exclamation" className="flex-shrink-0" />{error}
                   </div>
                 )}
                 <Button data-track="topup_submit" className="w-full rounded-full cursor-pointer h-12 text-base" onClick={submitSlip} disabled={!slip || submitting}>
-                  {submitting ? <><i className="fas fa-spinner fa-spin mr-2" /> กำลังตรวจสอบ...</> : <><i className="fas fa-shield-check mr-2" /> ยืนยันสลิป</>}
+                  {submitting ? <><Icon name="spinner" className="mr-2 animate-spin" /> กำลังตรวจสอบ...</> : <><Icon name="shield-check" className="mr-2" /> ยืนยันสลิป</>}
                 </Button>
                 <Button className="w-full rounded-full cursor-pointer h-12 text-base" variant="outline" onClick={() => setStep('qr')}>
-                  <i className="fas fa-arrow-left mr-2" /> กลับ
+                  <Icon name="arrow-left" className="mr-2" /> กลับ
                 </Button>
               </CardFooter>
             </Card>
@@ -343,7 +344,7 @@ export default function TopupPage() {
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                      <i className="fas fa-bolt" />
+                      <Icon name="bolt" />
                     </div>
                     เลือกยอดด่วน
                   </CardTitle>
@@ -360,7 +361,7 @@ export default function TopupPage() {
                     ))}
                   </div>
                   <div className="mt-6 p-4 bg-primary/5 border border-primary/20 rounded-xl flex items-start gap-3">
-                    <i className="fas fa-info-circle text-primary mt-0.5" />
+                    <Icon name="info-circle" className="text-primary mt-0.5" />
                     <p className="text-xs text-primary/90 font-semibold leading-relaxed">
                       ยอดที่ตรงกับแพ็กเกจ: <br/>
                       {packages.length
@@ -377,7 +378,7 @@ export default function TopupPage() {
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base">ระบุจำนวนเงิน</CardTitle>
                     <Badge variant="secondary" className="font-semibold px-2 py-1">
-                      <i className="fas fa-wallet text-primary mr-1.5" /> ฿{(user?.walletBalance || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                      <Icon name="wallet" className="text-primary mr-1.5" /> ฿{(user?.walletBalance || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                     </Badge>
                   </div>
                 </CardHeader>
@@ -392,11 +393,11 @@ export default function TopupPage() {
                       min={10} />
                   </div>
                   <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mt-3 flex items-center gap-1.5">
-                    <i className="fas fa-circle-info" /> ยอดขั้นต่ำ 10 บาท ต่อครั้ง
+                    <Icon name="circle-info" /> ยอดขั้นต่ำ 10 บาท ต่อครั้ง
                   </p>
                   {error && (
                     <p className="text-xs text-destructive mt-3 flex items-center gap-1.5 font-bold">
-                      <i className="fas fa-circle-exclamation" />{error}
+                      <Icon name="circle-exclamation" />{error}
                     </p>
                   )}
                   {amount && !isNaN(parseFloat(amount)) && parseFloat(amount) >= 10 && (
@@ -414,8 +415,8 @@ export default function TopupPage() {
                     onClick={generateQR}
                     disabled={submitting || !amount || parseFloat(amount) < 10}>
                     {submitting
-                      ? <><i className="fas fa-spinner fa-spin mr-2" /> กำลังสร้าง QR...</>
-                      : <><i className="fas fa-qrcode mr-2" /> สร้าง QR Code</>}
+                      ? <><Icon name="spinner" className="mr-2 animate-spin" /> กำลังสร้าง QR...</>
+                      : <><Icon name="qrcode" className="mr-2" /> สร้าง QR Code</>}
                   </Button>
                 </CardFooter>
               </Card>
@@ -426,13 +427,13 @@ export default function TopupPage() {
               <CardContent className="p-6">
                 <h3 className="text-sm font-bold text-foreground mb-4 flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
-                    <i className="fas fa-ticket" />
+                    <Icon name="ticket" />
                   </div>
                   แลกโค้ดโปรโมชั่น / Voucher
                 </h3>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="relative flex-1">
-                    <i className="fas fa-gift absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Icon name="gift" className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <input type="text"
                       className="w-full bg-background border border-border rounded-xl pl-10 pr-4 py-3 text-sm font-bold outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all text-foreground placeholder:text-muted-foreground uppercase"
                       placeholder="กรอกโค้ดที่นี่"
@@ -444,7 +445,7 @@ export default function TopupPage() {
                     className="sm:w-32 h-[50px] rounded-xl cursor-pointer font-bold border-emerald-500/50 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-colors"
                     onClick={redeemVoucher}
                     disabled={redeeming || !voucherCode}>
-                    {redeeming ? <i className="fas fa-spinner fa-spin" /> : 'แลกรับ'}
+                    {redeeming ? <Icon name="spinner" className="animate-spin" /> : 'แลกรับ'}
                   </Button>
                 </div>
               </CardContent>

@@ -1,5 +1,5 @@
 'use client';
-import { useState, FormEvent, useEffect, useCallback } from 'react';
+import { useState, FormEvent, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
@@ -7,7 +7,8 @@ import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import TurnstileWidget from './TurnstileWidget';
 import { LEGAL_DOCS, LEGAL_VERSION } from '@/lib/legal';
-import { LogIn, UserPlus, X, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
+import { Icon, type IconName } from '@/components/ui/icon';
+import { LogIn, UserPlus, X, CircleAlert, LoaderCircle, Eye, EyeOff } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -26,11 +27,13 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
   const [phone, setPhone] = useState('');
   const [confirm, setConfirm] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const [mounted, setMounted] = useState(false);
   const [animate, setAnimate] = useState(false);
+  const firstFieldRef = useRef<HTMLInputElement>(null);
 
   // ── Cloudflare Turnstile (CAPTCHA) state ────────────────────────────────
   const [captchaConfig, setCaptchaConfig] = useState<{ enabled: boolean; siteKey: string }>({ enabled: false, siteKey: '' });
@@ -49,24 +52,37 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
   useEffect(() => {
     if (isOpen) {
       setMounted(true);
-      setTimeout(() => setAnimate(true), 10);
+      const t = setTimeout(() => {
+        setAnimate(true);
+        firstFieldRef.current?.focus();
+      }, 30);
       setTab(initialTab);
       setError('');
       setCaptchaToken('');
       setAcceptedTerms(false);
+      setShowPassword(false);
       document.body.style.overflow = 'hidden';
+      return () => clearTimeout(t);
     } else {
       setAnimate(false);
       const timer = setTimeout(() => {
         setMounted(false);
         document.body.style.overflow = 'unset';
-      }, 300);
+      }, 250);
       return () => {
         clearTimeout(timer);
         document.body.style.overflow = 'unset';
       };
     }
   }, [isOpen, initialTab]);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -129,85 +145,105 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
 
   if (!mounted || !isOpen) return null;
 
+  const isRegister = tab === 'register';
+
   return (
-    <div className={`fixed inset-0 z-[99999] overflow-y-auto py-6 px-4 sm:py-10 flex items-center justify-center ${animate ? 'pointer-events-auto' : 'pointer-events-none'}`}>
-      {/* Backdrop */}
-      <div 
-        onClick={onClose} 
-        className={`fixed inset-0 bg-slate-900/50 dark:bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${animate ? 'opacity-100' : 'opacity-0'}`} 
+    <div
+      className={`fixed inset-0 z-[99999] overflow-y-auto py-6 px-4 sm:py-10 flex items-center justify-center ${animate ? 'pointer-events-auto' : 'pointer-events-none'}`}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="auth-modal-title"
+    >
+      {/* Scrim — strong enough to isolate the dialog */}
+      <div
+        onClick={onClose}
+        className={`fixed inset-0 bg-slate-950/60 backdrop-blur-[3px] transition-opacity duration-250 ${animate ? 'opacity-100' : 'opacity-0'}`}
       />
 
-      {/* Modal Box */}
-      <div 
-        className={`relative w-full max-w-sm sm:max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-3xl border border-white/20 dark:border-slate-700/50 shadow-2xl overflow-hidden transition-all duration-500 transform ${animate ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}
+      {/* Modal */}
+      <div
+        className={`relative w-full max-w-[420px] bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-[0_24px_70px_-15px_rgba(15,23,42,0.35)] overflow-hidden transition-all duration-300 ease-out transform ${animate ? 'scale-100 translate-y-0 opacity-100' : 'scale-[0.97] translate-y-3 opacity-0'}`}
       >
-        <div className="p-6 sm:p-8">
-          {/* Logo Section */}
+        {/* Top accent hairline */}
+        <div className="h-1 w-full bg-gradient-to-r from-amber-400 via-amber-500 to-amber-400" />
+
+        <div className="px-6 pt-7 pb-6 sm:px-8">
+          {/* Brand */}
           <div className="flex flex-col items-center mb-6">
             <Image
               src="/images/logosiamsite-h256.png"
-              alt="SIAMSITE logo"
+              alt="SIAMSITE"
               width={160}
               height={100}
               priority
-              className="h-20 w-auto object-contain mb-3 drop-shadow-sm"
+              className="h-14 w-auto object-contain mb-4"
             />
-            <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight">
-              {tab === 'login' ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก'}
+            <h2 id="auth-modal-title" className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              {isRegister ? 'สร้างบัญชีผู้ขาย' : 'เข้าสู่ระบบ'}
             </h2>
-            <p className="text-slate-400 dark:text-slate-500 font-bold text-[10px] uppercase tracking-[0.15em] mt-1">Siamsite Store Manager</p>
+            <p className="text-slate-400 dark:text-slate-500 font-semibold text-[10px] uppercase tracking-[0.18em] mt-1.5">
+              Siamsite Store Manager
+            </p>
           </div>
 
-          {/* Animated Tabs */}
-          <div className="relative flex p-1 bg-slate-100/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-xl mb-6 shadow-inner border border-slate-200/50 dark:border-slate-700/50">
-            {/* Sliding Background */}
-            <div 
-              className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-amber-500 rounded-lg shadow-sm transition-all duration-300 ease-out ${tab === 'login' ? 'left-1' : 'left-[calc(50%+2px)]'}`}
+          {/* Segmented tabs */}
+          <div className="relative flex p-1 bg-slate-100 dark:bg-slate-800/70 rounded-xl mb-6 border border-slate-200/70 dark:border-slate-700/60">
+            <div
+              className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white dark:bg-slate-700 rounded-lg shadow-sm ring-1 ring-slate-900/5 transition-all duration-300 ease-out ${tab === 'login' ? 'left-1' : 'left-[calc(50%+3px)]'}`}
             />
-            <button 
-              onClick={() => setTab('login')} 
-              className={`relative z-10 flex-1 py-2.5 font-bold text-xs transition-all ${tab === 'login' ? 'text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+            <button
+              type="button"
+              onClick={() => setTab('login')}
+              className={`relative z-10 flex-1 py-2 font-bold text-[13px] rounded-lg transition-colors cursor-pointer ${tab === 'login' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+              aria-pressed={tab === 'login'}
             >
               เข้าสู่ระบบ
             </button>
-            <button 
-              onClick={() => setTab('register')} 
-              className={`relative z-10 flex-1 py-2.5 font-bold text-xs transition-all ${tab === 'register' ? 'text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+            <button
+              type="button"
+              onClick={() => setTab('register')}
+              className={`relative z-10 flex-1 py-2 font-bold text-[13px] rounded-lg transition-colors cursor-pointer ${isRegister ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+              aria-pressed={isRegister}
             >
               สมัครสมาชิก
             </button>
           </div>
 
-          <form onSubmit={tab === 'login' ? handleLogin : handleRegister} className="space-y-4">
-            {tab === 'register' ? (
+          <form onSubmit={isRegister ? handleRegister : handleLogin} className="space-y-4" noValidate>
+            {isRegister ? (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="label-minimal">ชื่อที่แสดง</label>
-                    <input className="input-minimal" placeholder="ชื่อ-นามสกุล" value={displayName} onChange={e => setDisplayName(e.target.value)} required />
+                    <label htmlFor="reg-name" className="label-minimal">ชื่อที่แสดง</label>
+                    <input ref={firstFieldRef} id="reg-name" className="input-minimal" placeholder="ชื่อ-นามสกุล" autoComplete="name" value={displayName} onChange={e => setDisplayName(e.target.value)} required />
                   </div>
                   <div>
-                    <label className="label-minimal">เบอร์โทรศัพท์</label>
-                    <input type="tel" className="input-minimal" placeholder="08X-XXX-XXXX" value={phone} onChange={e => setPhone(e.target.value)} />
+                    <label htmlFor="reg-phone" className="label-minimal">เบอร์โทรศัพท์</label>
+                    <input id="reg-phone" type="tel" inputMode="tel" className="input-minimal" placeholder="08X-XXX-XXXX" autoComplete="tel" value={phone} onChange={e => setPhone(e.target.value)} />
                   </div>
                 </div>
                 <div>
-                  <label className="label-minimal">อีเมลใช้งาน</label>
-                  <input type="email" className="input-minimal" placeholder="อีเมลของคุณ" value={email} onChange={e => setEmail(e.target.value)} required />
+                  <label htmlFor="reg-email" className="label-minimal">อีเมลใช้งาน</label>
+                  <input id="reg-email" type="email" inputMode="email" className="input-minimal" placeholder="you@example.com" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="label-minimal">รหัสผ่าน</label>
-                    <input type="password" className="input-minimal" placeholder="อย่างน้อย 8 ตัว" value={password} onChange={e => setPassword(e.target.value)} required />
+                    <label htmlFor="reg-pass" className="label-minimal">รหัสผ่าน</label>
+                    <div className="relative">
+                      <input id="reg-pass" type={showPassword ? 'text' : 'password'} className="input-minimal pr-9" placeholder="อย่างน้อย 8 ตัว" autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} required />
+                      <button type="button" onClick={() => setShowPassword(s => !s)} className="pass-toggle" aria-label={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}>
+                        {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
                   </div>
                   <div>
-                    <label className="label-minimal">ยืนยันรหัส</label>
-                    <input type="password" className="input-minimal" placeholder="ยืนยันรหัสผ่าน" value={confirm} onChange={e => setConfirm(e.target.value)} required />
+                    <label htmlFor="reg-confirm" className="label-minimal">ยืนยันรหัส</label>
+                    <input id="reg-confirm" type={showPassword ? 'text' : 'password'} className="input-minimal" placeholder="ยืนยันรหัสผ่าน" autoComplete="new-password" value={confirm} onChange={e => setConfirm(e.target.value)} required />
                   </div>
                 </div>
 
                 {/* Legal consent — required before account creation */}
-                <label className="flex items-start gap-2.5 cursor-pointer select-none rounded-xl border border-slate-200 dark:border-slate-700/60 bg-slate-50/60 dark:bg-slate-800/40 p-3">
+                <label className="flex items-start gap-2.5 cursor-pointer select-none rounded-xl border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/40 p-3 transition-colors hover:border-amber-300 dark:hover:border-amber-500/40">
                   <input
                     type="checkbox"
                     checked={acceptedTerms}
@@ -219,7 +255,7 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
                     {LEGAL_DOCS.map((d, i) => (
                       <span key={d.slug}>
                         {i === 0 ? ' ' : i === LEGAL_DOCS.length - 1 ? ' และ' : ', '}
-                        <Link href={d.href} target="_blank" className="text-amber-500 hover:text-amber-600 underline underline-offset-2">
+                        <Link href={d.href} target="_blank" className="text-amber-600 dark:text-amber-400 hover:text-amber-700 underline underline-offset-2">
                           {d.title}
                         </Link>
                       </span>
@@ -230,18 +266,23 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
             ) : (
               <div className="space-y-4">
                 <div>
-                  <label className="label-minimal">อีเมลผู้ใช้งาน</label>
-                  <input type="email" className="input-minimal" placeholder="อีเมลของคุณ" value={email} onChange={e => setEmail(e.target.value)} required />
+                  <label htmlFor="login-email" className="label-minimal">อีเมลผู้ใช้งาน</label>
+                  <input ref={firstFieldRef} id="login-email" type="email" inputMode="email" className="input-minimal" placeholder="you@example.com" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required />
                 </div>
                 <div>
-                  <label className="label-minimal">รหัสผ่าน</label>
-                  <input type="password" className="input-minimal" placeholder="ป้อนรหัสผ่านของคุณ" value={password} onChange={e => setPassword(e.target.value)} required />
+                  <label htmlFor="login-pass" className="label-minimal">รหัสผ่าน</label>
+                  <div className="relative">
+                    <input id="login-pass" type={showPassword ? 'text' : 'password'} className="input-minimal pr-9" placeholder="ป้อนรหัสผ่านของคุณ" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} required />
+                    <button type="button" onClick={() => setShowPassword(s => !s)} className="pass-toggle" aria-label={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}>
+                      {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
 
             {captchaConfig.enabled && captchaConfig.siteKey && (
-              <div className="flex justify-center pt-2">
+              <div className="flex justify-center pt-1">
                 <TurnstileWidget
                   siteKey={captchaConfig.siteKey}
                   onToken={handleCaptchaToken}
@@ -252,72 +293,74 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
             )}
 
             {error && (
-              <div className="p-3 bg-red-50/80 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs font-bold rounded-xl border border-red-100 dark:border-red-800/30 flex items-center gap-2 animate-shake">
-                <AlertCircle size={16} className="flex-shrink-0" /> {error}
+              <div role="alert" aria-live="assertive" className="p-3 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 text-xs font-bold rounded-xl border border-red-100 dark:border-red-900/50 flex items-center gap-2 animate-shake">
+                <CircleAlert size={16} className="flex-shrink-0" /> {error}
               </div>
             )}
 
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={loading || (tab === 'register' && !acceptedTerms)}
-                className="w-full h-[48px] bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-[14px] transition-all shadow-md shadow-amber-500/20 hover:shadow-lg hover:shadow-amber-500/30 hover:-translate-y-0.5 active:translate-y-[1px] active:shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
-              >
-                {loading ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : (
-                  <>
-                    {tab === 'login' ? <LogIn size={18} /> : <UserPlus size={18} />}
-                    {tab === 'login' ? 'เข้าสู่ระบบ' : 'สมัครสมาชิกเปิดร้านค้า'}
-                  </>
-                )}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={loading || (isRegister && !acceptedTerms)}
+              className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-sm transition-all shadow-sm shadow-amber-500/25 hover:shadow-md hover:shadow-amber-500/30 active:translate-y-px flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900"
+            >
+              {loading ? (
+                <LoaderCircle size={18} className="animate-spin" />
+              ) : (
+                <>
+                  {isRegister ? <UserPlus size={18} /> : <LogIn size={18} />}
+                  {isRegister ? 'สมัครสมาชิกเปิดร้านค้า' : 'เข้าสู่ระบบ'}
+                </>
+              )}
+            </button>
           </form>
 
-          {tab === 'login' && (
+          {!isRegister && (
             <>
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200 dark:border-slate-800"></div></div>
-                <div className="relative flex justify-center text-[10px] font-bold uppercase tracking-widest"><span className="bg-white dark:bg-slate-900 px-3 text-slate-400">หรือเข้าด้วย Social</span></div>
+              <div className="relative my-5">
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200 dark:border-slate-800" /></div>
+                <div className="relative flex justify-center text-[10px] font-bold uppercase tracking-widest">
+                  <span className="bg-white dark:bg-slate-900 px-3 text-slate-400 dark:text-slate-500">หรือดำเนินการต่อด้วย</span>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => { window.location.href = '/api/auth/google'; }}
-                  className="flex items-center justify-center gap-2.5 h-[44px] border border-slate-200 dark:border-slate-700/80 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all font-bold text-[11px] text-slate-600 dark:text-slate-300 shadow-sm hover:shadow-md cursor-pointer"
+                  className="social-btn"
                 >
-                  <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-4 h-4" />
-                  GOOGLE
+                  <Icon name="google-color" className="text-base" />
+                  Google
                 </button>
                 <button
                   type="button"
                   onClick={() => { window.location.href = '/api/auth/facebook'; }}
-                  className="flex items-center justify-center gap-2.5 h-[44px] border border-slate-200 dark:border-slate-700/80 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all font-bold text-[11px] text-slate-600 dark:text-slate-300 shadow-sm hover:shadow-md cursor-pointer"
+                  className="social-btn"
                 >
-                  <img src="https://www.svgrepo.com/show/475647/facebook-color.svg" alt="Facebook" className="w-4 h-4" />
-                  FACEBOOK
+                  <Icon name="facebook" className="text-base text-[#1877F2]" />
+                  Facebook
                 </button>
               </div>
             </>
           )}
 
           <div className="mt-6 text-center">
-            <button 
-              onClick={() => setTab(tab === 'login' ? 'register' : 'login')} 
-              className="text-[11px] font-bold text-slate-500 hover:text-amber-500 transition-colors flex items-center justify-center gap-1.5 mx-auto cursor-pointer"
+            <button
+              type="button"
+              onClick={() => setTab(isRegister ? 'login' : 'register')}
+              className="text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors cursor-pointer"
             >
-              <span>{tab === 'login' ? "ยังไม่มีบัญชีใช่ไหม?" : "มีบัญชีอยู่แล้ว?"}</span>
-              <span className="text-amber-500">{tab === 'login' ? "สมัครสมาชิกที่นี่" : "เข้าสู่ระบบเลย"}</span>
+              {isRegister ? 'มีบัญชีอยู่แล้ว? ' : 'ยังไม่มีบัญชีใช่ไหม? '}
+              <span className="text-amber-600 dark:text-amber-400 font-bold">{isRegister ? 'เข้าสู่ระบบ' : 'สมัครสมาชิกที่นี่'}</span>
             </button>
           </div>
         </div>
-        
-        {/* Sleek Close Button */}
-        <button 
-          onClick={onClose} 
-          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-800 dark:hover:text-slate-200 transition-all cursor-pointer"
+
+        {/* Close */}
+        <button
+          onClick={onClose}
+          aria-label="ปิด"
+          className="absolute top-3.5 right-3.5 w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
         >
           <X size={16} />
         </button>
@@ -326,56 +369,81 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
       <style jsx>{`
         .input-minimal {
           width: 100%;
-          background: rgba(255, 255, 255, 0.5);
+          background: #fff;
           border: 1px solid #e2e8f0;
-          padding: 0.65rem 1rem;
-          border-radius: 0.75rem;
+          padding: 0.6rem 0.85rem;
+          border-radius: 0.7rem;
           font-weight: 600;
           font-size: 0.875rem;
+          line-height: 1.25rem;
           outline: none;
-          transition: all 0.2s;
-          color: #1e293b;
+          transition: border-color 0.15s, box-shadow 0.15s;
+          color: #0f172a;
         }
         :global(.dark) .input-minimal {
-          background: rgba(15, 23, 42, 0.5);
+          background: rgba(15, 23, 42, 0.6);
           border-color: #334155;
           color: #f8fafc;
         }
         .input-minimal:focus {
           border-color: #f59e0b;
-          box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
-          background: #ffffff;
+          box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
         }
-        :global(.dark) .input-minimal:focus {
-          background: #0f172a;
-          box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
-        }
-        .input-minimal::placeholder {
-          color: #94a3b8;
-          font-weight: 500;
-        }
-        :global(.dark) .input-minimal::placeholder {
-          color: #64748b;
-        }
+        .input-minimal::placeholder { color: #94a3b8; font-weight: 500; }
+        :global(.dark) .input-minimal::placeholder { color: #64748b; }
         .label-minimal {
           display: block;
           text-align: left;
           font-size: 10px;
           font-weight: 700;
+          letter-spacing: 0.02em;
           color: #64748b;
-          margin-bottom: 0.35rem;
-          margin-left: 0.25rem;
+          margin-bottom: 0.3rem;
+          margin-left: 0.15rem;
         }
-        :global(.dark) .label-minimal {
+        :global(.dark) .label-minimal { color: #94a3b8; }
+        .pass-toggle {
+          position: absolute;
+          top: 50%;
+          right: 0.5rem;
+          transform: translateY(-50%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 1.75rem;
+          height: 1.75rem;
+          border-radius: 0.5rem;
           color: #94a3b8;
+          cursor: pointer;
+          transition: color 0.15s, background 0.15s;
         }
+        .pass-toggle:hover { color: #f59e0b; background: rgba(245, 158, 11, 0.08); }
+        .social-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          height: 44px;
+          border: 1px solid #e2e8f0;
+          border-radius: 0.7rem;
+          font-weight: 700;
+          font-size: 12.5px;
+          color: #334155;
+          background: #fff;
+          transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+          cursor: pointer;
+        }
+        .social-btn:hover { border-color: #cbd5e1; background: #f8fafc; box-shadow: 0 1px 3px rgba(15,23,42,0.06); }
+        :global(.dark) .social-btn { background: rgba(15,23,42,0.4); border-color: #334155; color: #cbd5e1; }
+        :global(.dark) .social-btn:hover { background: #1e293b; border-color: #475569; }
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
           25% { transform: translateX(-4px); }
           75% { transform: translateX(4px); }
         }
-        .animate-shake {
-          animation: shake 0.2s ease-in-out 0s 2;
+        .animate-shake { animation: shake 0.2s ease-in-out 0s 2; }
+        @media (prefers-reduced-motion: reduce) {
+          .animate-shake { animation: none; }
         }
       `}</style>
     </div>

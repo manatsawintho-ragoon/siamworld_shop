@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import { LANDING_PAGES, CLUSTERS } from '@/lib/seo/keywords';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 const BASE = 'https://panel.siamsite.shop';
 
@@ -56,7 +57,7 @@ export default function SolutionsHub() {
           {byCluster.map((c) => (
             <section key={c.key}>
               <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
-                <i className={`fas ${c.meta.icon} text-primary`} /> {c.meta.label}
+                <Icon name={c.meta.icon as IconName} className="text-primary" /> {c.meta.label}
               </h2>
               <div className="grid sm:grid-cols-2 gap-3">
                 {c.pages.map((p) => (

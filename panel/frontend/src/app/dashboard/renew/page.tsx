@@ -9,6 +9,7 @@ import { useToast } from '@/components/Toast';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 interface Package { months: number; price: number; label: string; save: number }
 interface IntroPromo { price: number; regularPrice: number }
@@ -100,7 +101,7 @@ function RenewContent() {
         <div className="flex items-center gap-4">
           <Button variant="outline" size="icon" className="rounded-full cursor-pointer h-10 w-10 border-border" asChild>
             <Link href="/dashboard">
-              <i className="fas fa-arrow-left text-muted-foreground" />
+              <Icon name="arrow-left" className="text-muted-foreground" />
             </Link>
           </Button>
           <div>
@@ -115,7 +116,7 @@ function RenewContent() {
           <Card className="text-center max-w-md mx-auto shadow-md border-emerald-500/30">
             <CardContent className="p-10 flex flex-col items-center">
               <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-3xl mb-6">
-                <i className="fas fa-check" />
+                <Icon name="check" />
               </div>
               <h2 className="text-2xl font-bold text-foreground mb-2">ต่ออายุสำเร็จแล้ว!</h2>
               <p className="text-sm text-muted-foreground mb-8">
@@ -123,7 +124,7 @@ function RenewContent() {
               </p>
               <Button className="w-full rounded-full cursor-pointer" asChild>
                 <Link href="/dashboard">
-                  <i className="fas fa-gauge-high mr-2" /> กลับไปยังแดชบอร์ด
+                  <Icon name="gauge-high" className="mr-2" /> กลับไปยังแดชบอร์ด
                 </Link>
               </Button>
             </CardContent>
@@ -137,7 +138,7 @@ function RenewContent() {
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                      <i className="fas fa-store" />
+                      <Icon name="store" />
                     </div>
                     เลือกร้านค้า
                   </CardTitle>
@@ -145,7 +146,7 @@ function RenewContent() {
                 <CardContent>
                   {subs.length === 0 ? (
                     <div className="text-center py-8 text-sm text-muted-foreground">
-                      <i className="fas fa-store-slash text-3xl mb-3 opacity-50 block" />
+                      <Icon name="store-slash" className="text-3xl mb-3 opacity-50 block" />
                       ยังไม่มีร้านค้าให้เลือก
                     </div>
                   ) : (
@@ -163,7 +164,7 @@ function RenewContent() {
                               : 'bg-background border-border hover:border-primary/50'}`}>
                             <div className="flex items-center gap-4 w-full">
                               <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${isActive ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>
-                                <i className="fas fa-cube text-sm" />
+                                <Icon name="cube" className="text-sm" />
                               </div>
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2">
@@ -173,13 +174,13 @@ function RenewContent() {
                                   )}
                                 </div>
                                 <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1 font-semibold">
-                                  <i className="fas fa-globe text-[10px]" />{sub.domain}
+                                  <Icon name="globe" className="text-[10px]" />{sub.domain}
                                   <span className="opacity-50">·</span>
-                                  <i className="fas fa-calendar text-[10px]" />
+                                  <Icon name="calendar" className="text-[10px]" />
                                   {new Date(sub.expires_at).toLocaleDateString('th-TH')}
                                 </div>
                               </div>
-                              {isActive && <i className="fas fa-check-circle text-primary text-lg flex-shrink-0" />}
+                              {isActive && <Icon name="check-circle" className="text-primary text-lg flex-shrink-0" />}
                             </div>
                           </div>
                         );
@@ -194,7 +195,7 @@ function RenewContent() {
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-secondary text-foreground flex items-center justify-center">
-                      <i className="fas fa-box-open" />
+                      <Icon name="box-open" />
                     </div>
                     เลือกระยะเวลา
                   </CardTitle>
@@ -209,7 +210,7 @@ function RenewContent() {
                           : 'bg-background border-emerald-500/30 hover:border-emerald-500/60 hover:bg-emerald-500/5'
                       }`}>
                       <div className="w-12 h-12 rounded-xl bg-emerald-500 text-white flex items-center justify-center text-xl flex-shrink-0 shadow-sm shadow-emerald-500/30">
-                        <i className="fas fa-tag" />
+                        <Icon name="tag" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
@@ -221,7 +222,7 @@ function RenewContent() {
                         </p>
                         <p className="text-xs font-semibold text-muted-foreground">ประหยัด ฿{introPromo.regularPrice - introPromo.price} · เฉพาะร้านที่กำลังทดลอง</p>
                       </div>
-                      {selection?.kind === 'intro' && <i className="fas fa-check-circle text-emerald-600 text-lg flex-shrink-0" />}
+                      {selection?.kind === 'intro' && <Icon name="check-circle" className="text-emerald-600 text-lg flex-shrink-0" />}
                     </div>
                   )}
 
@@ -255,7 +256,7 @@ function RenewContent() {
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                      <i className="fas fa-receipt" />
+                      <Icon name="receipt" />
                     </div>
                     สรุปรายการ
                   </CardTitle>
@@ -291,7 +292,7 @@ function RenewContent() {
                 <CardFooter className="flex-col gap-3">
                   {insufficient && (
                     <div className="w-full text-xs text-destructive mb-1 flex items-start gap-2 bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-3 font-semibold">
-                      <i className="fas fa-triangle-exclamation mt-0.5 flex-shrink-0" />
+                      <Icon name="triangle-exclamation" className="mt-0.5 flex-shrink-0" />
                       <span>
                         ยอดเงินคงเหลือไม่เพียงพอ{' '}
                         <Link href="/dashboard/topup" className="underline font-bold hover:opacity-80">เติมเงินเข้ากระเป๋า</Link>
@@ -301,7 +302,7 @@ function RenewContent() {
 
                   {error && (
                     <div className="w-full flex items-center gap-2 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3 font-semibold mb-1">
-                      <i className="fas fa-circle-exclamation flex-shrink-0" />{error}
+                      <Icon name="circle-exclamation" className="flex-shrink-0" />{error}
                     </div>
                   )}
 
@@ -311,8 +312,8 @@ function RenewContent() {
                     disabled={!selectedSub || !selection || insufficient || submitting}
                     onClick={handleRenew}>
                     {submitting
-                      ? <><i className="fas fa-spinner fa-spin mr-2" /> กำลังดำเนินการ...</>
-                      : <><i className="fas fa-rotate-right mr-2" /> ยืนยันการต่ออายุ</>}
+                      ? <><Icon name="spinner" className="mr-2 animate-spin" /> กำลังดำเนินการ...</>
+                      : <><Icon name="rotate-right" className="mr-2" /> ยืนยันการต่ออายุ</>}
                   </Button>
                 </CardFooter>
               </Card>

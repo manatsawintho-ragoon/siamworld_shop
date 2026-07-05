@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SkeletonStat } from '@/components/SkeletonLoader';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 interface Ticket {
   id: number;
@@ -26,10 +27,10 @@ interface Message {
 }
 
 const STATUS_TABS = [
-  { value: 'all', label: 'ทั้งหมด', icon: 'fa-list' },
-  { value: 'open', label: 'รอดำเนินการ', icon: 'fa-clock' },
-  { value: 'answered', label: 'ตอบแล้ว', icon: 'fa-check' },
-  { value: 'closed', label: 'ปิดแล้ว', icon: 'fa-circle-xmark' },
+  { value: 'all', label: 'ทั้งหมด', icon: 'list' },
+  { value: 'open', label: 'รอดำเนินการ', icon: 'clock' },
+  { value: 'answered', label: 'ตอบแล้ว', icon: 'check' },
+  { value: 'closed', label: 'ปิดแล้ว', icon: 'circle-xmark' },
 ];
 
 export default function AdminSupportPage() {
@@ -117,7 +118,7 @@ export default function AdminSupportPage() {
           <div className="flex items-center gap-4 mb-1">
             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg bg-secondary/50 hover:bg-secondary transition-all" asChild>
               <Link href="/admin">
-                <i className="fas fa-arrow-left text-xs" />
+                <Icon name="arrow-left" className="text-xs" />
               </Link>
             </Button>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
@@ -125,14 +126,14 @@ export default function AdminSupportPage() {
             </h1>
           </div>
           <p className="text-muted-foreground font-medium text-sm flex items-center gap-2">
-            <i className="fas fa-headset text-primary text-xs" />
+            <Icon name="headset" className="text-primary text-xs" />
             ระบบจัดการตั๋วแจ้งปัญหาและช่วยเหลือลูกค้า (Customer Support)
           </p>
         </motion.div>
         
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
            <Button size="default" onClick={loadTickets} className="rounded-xl font-bold gap-2 h-11 px-6 shadow-md shadow-primary/10 active:scale-95 transition-all">
-             <i className={`fas fa-arrows-rotate ${loading ? 'animate-spin' : ''}`} /> รีเฟรชตั๋ว
+             <Icon name="arrows-rotate" className={`${loading ? 'animate-spin' : ''}`} /> รีเฟรชตั๋ว
            </Button>
         </motion.div>
       </div>
@@ -152,7 +153,7 @@ export default function AdminSupportPage() {
                       : 'text-muted-foreground hover:bg-white hover:text-foreground hover:shadow-sm'
                   }`}
                 >
-                  <i className={`fas ${tab.icon} ${filter === tab.value ? 'opacity-100' : 'opacity-40'}`} />
+                  <Icon name={tab.icon as IconName} className={`${filter === tab.value ? 'opacity-100' : 'opacity-40'}`} />
                   {tab.label}
                   {tab.value !== 'all' && (
                     <span className={`ml-2 px-1.5 py-0.5 rounded text-[9px] font-bold ${filter === tab.value ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-background/50 text-muted-foreground'}`}>
@@ -178,7 +179,7 @@ export default function AdminSupportPage() {
             <CardHeader className="px-6 py-6 border-b border-border/60 bg-secondary/10 flex flex-row items-center justify-between space-y-0">
               <div className="flex items-center gap-3">
                  <div className="w-8 h-8 rounded-lg bg-white border border-border flex items-center justify-center text-muted-foreground shadow-sm">
-                   <i className="fas fa-inbox text-sm" />
+                   <Icon name="inbox" className="text-sm" />
                  </div>
                  <CardTitle className="text-base font-bold tracking-tight uppercase">Ticket List</CardTitle>
               </div>
@@ -193,7 +194,7 @@ export default function AdminSupportPage() {
               ) : filteredTickets.length === 0 ? (
                 <div className="py-20 text-center space-y-4">
                   <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center mx-auto text-muted-foreground/30 text-2xl">
-                    <i className="fas fa-folder-open" />
+                    <Icon name="folder-open" />
                   </div>
                   <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">No tickets found</p>
                 </div>
@@ -226,7 +227,7 @@ export default function AdminSupportPage() {
                          {t.user_email}
                       </p>
                       <div className={`mt-2 flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-widest ${selectedTicket?.id === t.id ? 'text-white/40' : 'text-muted-foreground/30'}`}>
-                        <i className="fas fa-clock text-[7px]" />
+                        <Icon name="clock" className="text-[7px]" />
                         {new Date(t.updated_at).toLocaleDateString('th-TH', { day: '2-digit', month: 'short' })}
                       </div>
                     </motion.div>
@@ -248,7 +249,7 @@ export default function AdminSupportPage() {
             <Card className="rounded-3xl border-border border-dashed border-2 shadow-sm h-[700px] flex items-center justify-center bg-secondary/5">
               <div className="text-center p-8 space-y-4">
                 <div className="w-20 h-20 rounded-3xl bg-white border border-border shadow-xl flex items-center justify-center mx-auto text-primary animate-bounce-slow">
-                  <i className="fas fa-comments text-3xl" />
+                  <Icon name="comments" className="text-3xl" />
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-foreground tracking-tight">Select a ticket to begin</h3>
@@ -262,7 +263,7 @@ export default function AdminSupportPage() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl bg-white border border-border shadow-sm flex items-center justify-center text-primary flex-shrink-0">
-                      <i className="fas fa-ticket-alt text-base" />
+                      <Icon name="ticket-alt" className="text-base" />
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
@@ -281,7 +282,7 @@ export default function AdminSupportPage() {
                     </Button>
                   )}
                   <button onClick={() => setSelectedTicket(null)} className="xl:hidden w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shadow-sm active:scale-90">
-                    <i className="fas fa-times text-sm" />
+                    <Icon name="times" className="text-sm" />
                   </button>
                 </div>
               </CardHeader>
@@ -335,14 +336,14 @@ export default function AdminSupportPage() {
                       disabled={!newMessage.trim() || sending} 
                       className="h-[46px] w-[46px] rounded-xl shrink-0 cursor-pointer shadow-lg shadow-primary/20 active:scale-90 transition-all"
                     >
-                      {sending ? <i className="fas fa-spinner fa-spin text-sm" /> : <i className="fas fa-paper-plane text-sm" />}
+                      {sending ? <Icon name="spinner" className="text-sm animate-spin" /> : <Icon name="paper-plane" className="text-sm" />}
                     </Button>
                   </form>
                 </div>
               ) : (
                 <div className="p-6 border-t border-border/60 bg-secondary/10 text-center">
                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-2">
-                     <i className="fas fa-lock opacity-30" />
+                     <Icon name="lock" className="opacity-30" />
                      Ticket has been closed and archived
                    </p>
                 </div>

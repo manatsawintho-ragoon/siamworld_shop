@@ -6,6 +6,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useRef, Suspense } from 'react';
 import AuthModal from './AuthModal';
 import { Button } from './ui/button';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 function NavbarContent() {
   const { user, logout } = useAuth();
@@ -147,14 +148,14 @@ function NavbarContent() {
 
           <div className="hidden md:flex items-center gap-4">
             <button onClick={toggleDark} className="text-muted-foreground hover:text-foreground transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-secondary cursor-pointer">
-              <i className={`fas ${isDark ? 'fa-sun' : 'fa-moon'} text-sm`} />
+              <Icon name={isDark ? 'sun' : 'moon'} className={`text-sm`} />
             </button>
             
             {user ? (
               <div className="flex items-center gap-4">
                 <Button variant="outline" size="sm" asChild className="gap-2 rounded-full h-8 cursor-pointer">
                   <Link href="/dashboard/topup">
-                    <i className="fas fa-wallet text-primary text-xs" />
+                    <Icon name="wallet" className="text-primary text-xs" />
                     <span className="font-semibold text-xs">฿{Number(user.walletBalance).toLocaleString()}</span>
                   </Link>
                 </Button>
@@ -170,7 +171,7 @@ function NavbarContent() {
                     <span className="text-xs font-semibold text-foreground max-w-[90px] truncate hidden sm:block">
                       {user.displayName}
                     </span>
-                    <i className={`fas fa-chevron-down text-[10px] text-muted-foreground transition-transform duration-200 ${profileOpen ? 'rotate-180' : ''}`} />
+                    <Icon name="chevron-down" className={`text-[10px] text-muted-foreground transition-transform duration-200 ${profileOpen ? 'rotate-180' : ''}`} />
                   </button>
 
                   {profileOpen && (
@@ -181,23 +182,23 @@ function NavbarContent() {
                       </div>
                       <div className="py-1">
                         <Link href="/dashboard" onClick={() => setProfileOpen(false)} className="flex items-center gap-2.5 px-4 py-2 text-sm font-medium hover:bg-secondary transition-colors cursor-pointer">
-                          <i className="fas fa-gauge-high w-4 text-center text-muted-foreground" />
+                          <Icon name="gauge-high" className="w-4 text-center text-muted-foreground" />
                           แดชบอร์ด
                         </Link>
                         <Link href="/dashboard/profile" onClick={() => setProfileOpen(false)} className="flex items-center gap-2.5 px-4 py-2 text-sm font-medium hover:bg-secondary transition-colors cursor-pointer">
-                          <i className="fas fa-user w-4 text-center text-muted-foreground" />
+                          <Icon name="user" className="w-4 text-center text-muted-foreground" />
                           โปรไฟล์ส่วนตัว
                         </Link>
                         {user.role === 'admin' && (
                           <Link href="/admin" onClick={() => setProfileOpen(false)} className="flex items-center gap-2.5 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer">
-                            <i className="fas fa-shield-halved w-4 text-center" />
+                            <Icon name="shield-halved" className="w-4 text-center" />
                             แผงควบคุมแอดมิน
                           </Link>
                         )}
                       </div>
                       <div className="border-t border-border py-1">
                         <button onClick={handleLogout} className="w-full flex items-center gap-2.5 px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors text-left cursor-pointer">
-                          <i className="fas fa-sign-out-alt w-4 text-center" />
+                          <Icon name="sign-out-alt" className="w-4 text-center" />
                           ออกจากระบบ
                         </button>
                       </div>
@@ -219,10 +220,10 @@ function NavbarContent() {
 
           <div className="md:hidden flex items-center gap-3">
             <button onClick={toggleDark} className="text-muted-foreground w-8 h-8 flex items-center justify-center cursor-pointer">
-              <i className={`fas ${isDark ? 'fa-sun' : 'fa-moon'} text-sm`} />
+              <Icon name={isDark ? 'sun' : 'moon'} className={`text-sm`} />
             </button>
             <button className="w-8 h-8 text-foreground cursor-pointer" onClick={() => setMobileOpen(!mobileOpen)}>
-              <i className={`fas ${mobileOpen ? 'fa-xmark' : 'fa-bars'} text-lg`} />
+              <Icon name={mobileOpen ? 'xmark' : 'bars'} className={`text-lg`} />
             </button>
           </div>
         </div>

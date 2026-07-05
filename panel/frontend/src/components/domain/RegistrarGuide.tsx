@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 /**
  * Per-registrar CNAME setup guide. Pure presentational: given the customer's chosen
@@ -46,7 +47,7 @@ function CopyBtn({ value }: { value: string }) {
       onClick={() => { navigator.clipboard.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
       className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border cursor-pointer flex-shrink-0 transition-colors ${copied ? 'border-emerald-500 text-emerald-600 bg-emerald-500/10' : 'border-border text-muted-foreground hover:bg-secondary'}`}
     >
-      <i className={`fas ${copied ? 'fa-check' : 'fa-copy'} mr-1`} />{copied ? 'คัดลอก' : 'คัดลอก'}
+      <Icon name={copied ? 'check' : 'copy'} className={`mr-1`} />{copied ? 'คัดลอก' : 'คัดลอก'}
     </button>
   );
 }
@@ -105,7 +106,7 @@ export default function RegistrarGuide({ host, cname }: { host: string; cname: s
 
       {reg.note && (
         <div className={`flex items-start gap-2 text-xs font-semibold rounded-lg px-3 py-2 ${reg.warn ? 'bg-amber-500/10 text-amber-700 border border-amber-500/30' : 'bg-secondary/50 text-muted-foreground'}`}>
-          <i className={`fas ${reg.warn ? 'fa-triangle-exclamation' : 'fa-circle-info'} mt-0.5`} />
+          <Icon name={reg.warn ? 'triangle-exclamation' : 'circle-info'} className={`mt-0.5`} />
           <span>{reg.note}</span>
         </div>
       )}

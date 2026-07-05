@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 interface User {
   id: number; email: string; display_name: string; phone: string;
@@ -32,9 +33,9 @@ const fmtDateTime = (d: string) => new Date(d).toLocaleString('th-TH', { dateSty
 type RoleFilter = 'all' | 'customer' | 'admin';
 
 const ROLE_TABS: { value: RoleFilter; label: string; icon: string }[] = [
-  { value: 'all', label: 'ทั้งหมด', icon: 'fa-users' },
-  { value: 'customer', label: 'ลูกค้า', icon: 'fa-user' },
-  { value: 'admin', label: 'แอดมิน', icon: 'fa-user-shield' },
+  { value: 'all', label: 'ทั้งหมด', icon: 'users' },
+  { value: 'customer', label: 'ลูกค้า', icon: 'user' },
+  { value: 'admin', label: 'แอดมิน', icon: 'user-shield' },
 ];
 
 const PAGE_SIZE = 20;
@@ -181,7 +182,7 @@ function Content() {
           <div className="flex items-center gap-4 mb-1">
             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg bg-secondary/50 hover:bg-secondary transition-all" asChild>
               <Link href="/admin">
-                <i className="fas fa-arrow-left text-xs" />
+                <Icon name="arrow-left" className="text-xs" />
               </Link>
             </Button>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
@@ -189,14 +190,14 @@ function Content() {
             </h1>
           </div>
           <p className="text-muted-foreground font-medium text-sm flex items-center gap-2">
-            <i className="fas fa-user-group text-primary text-xs" />
+            <Icon name="user-group" className="text-primary text-xs" />
             บริหารจัดการบัญชีผู้ใช้งานและยอดเงินคงเหลือในระบบ
           </p>
         </motion.div>
         
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
            <Button size="default" onClick={load} className="rounded-xl font-bold gap-2 h-11 px-6 shadow-md shadow-primary/10 active:scale-95 transition-all">
-             <i className={`fas fa-arrows-rotate ${loading ? 'animate-spin' : ''}`} /> รีเฟรชข้อมูล
+             <Icon name="arrows-rotate" className={`${loading ? 'animate-spin' : ''}`} /> รีเฟรชข้อมูล
            </Button>
         </motion.div>
       </div>
@@ -206,28 +207,28 @@ function Content() {
         <SummaryCard 
           label="Total Users" 
           value={summary.total} 
-          icon="fa-users" 
+          icon="users" 
           color="primary" 
           delay={0.1}
         />
         <SummaryCard 
           label="Customers" 
           value={summary.customers} 
-          icon="fa-user" 
+          icon="user" 
           color="emerald" 
           delay={0.2}
         />
         <SummaryCard 
           label="Admins" 
           value={summary.admins} 
-          icon="fa-user-shield" 
+          icon="user-shield" 
           color="blue" 
           delay={0.3}
         />
         <SummaryCard 
           label="Total Deposits" 
           value={fmtBaht(summary.walletTotal)} 
-          icon="fa-coins" 
+          icon="coins" 
           color="amber" 
           delay={0.4}
         />
@@ -249,14 +250,14 @@ function Content() {
                         : 'text-muted-foreground hover:bg-white hover:text-foreground hover:shadow-sm'
                     }`}
                   >
-                    <i className={`fas ${tab.icon} ${roleFilter === tab.value ? 'opacity-100' : 'opacity-40'}`} />
+                    <Icon name={tab.icon as IconName} className={`${roleFilter === tab.value ? 'opacity-100' : 'opacity-40'}`} />
                     {tab.label}
                   </button>
                 ))}
               </div>
               <div className="flex gap-2">
                 <div className="relative flex-1 xl:w-[320px] group">
-                  <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-xs group-focus-within:text-primary transition-colors" />
+                  <Icon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-xs group-focus-within:text-primary transition-colors" />
                   <input 
                     type="text" 
                     placeholder="ค้นหาชื่อ หรืออีเมล..." 
@@ -267,7 +268,7 @@ function Content() {
                   />
                 </div>
                 <Button onClick={submitSearch} className="h-[42px] w-[42px] rounded-xl cursor-pointer shadow-md shadow-primary/10 active:scale-95 transition-all">
-                  <i className="fas fa-magnifying-glass text-xs" />
+                  <Icon name="magnifying-glass" className="text-xs" />
                 </Button>
               </div>
             </div>
@@ -283,7 +284,7 @@ function Content() {
           </Card>
         ) : users.length === 0 ? (
           <Card className="rounded-3xl border-border shadow-sm p-16 bg-white dark:bg-card">
-            <EmptyState icon="fa-users" title="ไม่พบข้อมูลผู้ใช้งาน" description="ลองเปลี่ยนเงื่อนไขการค้นหาของคุณ" />
+            <EmptyState icon="users" title="ไม่พบข้อมูลผู้ใช้งาน" description="ลองเปลี่ยนเงื่อนไขการค้นหาของคุณ" />
           </Card>
         ) : (
           <Card className="rounded-3xl border-border shadow-sm overflow-hidden bg-white dark:bg-card">
@@ -344,7 +345,7 @@ function Content() {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <Button variant="outline" onClick={() => openEdit(u)} className="h-9 px-4 rounded-xl font-bold text-[10px] uppercase tracking-wider gap-2 bg-white border-2 hover:bg-slate-50 active:scale-95 transition-all shadow-sm">
-                            <i className="fas fa-user-gear text-primary" /> Manage
+                            <Icon name="user-gear" className="text-primary" /> Manage
                           </Button>
                         </td>
                       </motion.tr>
@@ -367,7 +368,7 @@ function Content() {
                     onClick={() => setPage(p => Math.max(1, p - 1))} 
                     className="h-8 w-8 rounded-lg active:scale-95 disabled:opacity-30 transition-all"
                   >
-                    <i className="fas fa-chevron-left text-[10px]" />
+                    <Icon name="chevron-left" className="text-[10px]" />
                   </Button>
                   <div className="px-3 flex items-center gap-1.5">
                     <span className="text-xs font-bold text-foreground">{page}</span>
@@ -381,7 +382,7 @@ function Content() {
                     onClick={() => setPage(p => Math.min(pages, p + 1))} 
                     className="h-8 w-8 rounded-lg active:scale-95 disabled:opacity-30 transition-all"
                   >
-                    <i className="fas fa-chevron-right text-[10px]" />
+                    <Icon name="chevron-right" className="text-[10px]" />
                   </Button>
                 </div>
               </div>
@@ -430,7 +431,7 @@ function SummaryCard({ label, value, icon, color, delay }: any) {
           <div className={`absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-5 group-hover:scale-150 transition-transform duration-700 ${colorMap[color].split(' ')[0]}`} />
           <div className="flex items-center gap-4 relative z-10">
             <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-base border shadow-sm group-hover:rotate-12 transition-transform duration-500 ${colorMap[color]}`}>
-              <i className={`fas ${icon}`} />
+              <Icon name={icon} />
             </div>
             <div className="min-w-0">
               <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-1">{label}</p>
@@ -516,7 +517,7 @@ function UserEditModal({
             onClick={onClose} 
             className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer active:scale-90 shadow-sm"
           >
-            <i className="fas fa-times text-sm" />
+            <Icon name="times" className="text-sm" />
           </button>
         </div>
 
@@ -552,10 +553,10 @@ function UserEditModal({
                     <option value="customer">ลูกค้า (Customer)</option>
                     <option value="admin">แอดมิน (Authorized Admin)</option>
                   </select>
-                  <i className="fas fa-chevron-down absolute right-5 top-[38px] text-muted-foreground/40 pointer-events-none text-[10px]" />
+                  <Icon name="chevron-down" className="absolute right-5 top-[38px] text-muted-foreground/40 pointer-events-none text-[10px]" />
                 </div>
                 <Button className="w-full h-14 rounded-2xl font-bold text-[10px] uppercase tracking-wider mt-2 shadow-lg shadow-primary/20 active:scale-95 transition-all" onClick={onSubmitProfile} disabled={savingProfile}>
-                  {savingProfile ? <i className="fas fa-spinner fa-spin mr-2" /> : <i className="fas fa-check-double mr-2" />}
+                  {savingProfile ? <Icon name="spinner" className="mr-2 animate-spin" /> : <Icon name="check-double" className="mr-2" />}
                   Save Profile Changes
                 </Button>
               </motion.div>
@@ -581,14 +582,14 @@ function UserEditModal({
                   <button onClick={() => onWalletFormChange({...walletForm, type: 'credit'})}
                     className={`flex flex-col items-center justify-center gap-2 py-4 px-3 rounded-2xl border-2 font-bold text-[9px] uppercase tracking-wider transition-all active:scale-90 cursor-pointer ${walletForm.type === 'credit' ? 'border-emerald-500 bg-emerald-500/5 text-emerald-600 shadow-md shadow-emerald-500/10' : 'border-border bg-white text-muted-foreground hover:border-emerald-500/20'}`}>
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg transition-all ${walletForm.type === 'credit' ? 'bg-emerald-500 text-white' : 'bg-secondary/50 text-muted-foreground'}`}>
-                      <i className="fas fa-plus" />
+                      <Icon name="plus" />
                     </div>
                     Deposit
                   </button>
                   <button onClick={() => onWalletFormChange({...walletForm, type: 'debit'})}
                     className={`flex flex-col items-center justify-center gap-2 py-4 px-3 rounded-2xl border-2 font-bold text-[9px] uppercase tracking-wider transition-all active:scale-90 cursor-pointer ${walletForm.type === 'debit' ? 'border-rose-500 bg-rose-500/5 text-rose-600 shadow-md shadow-rose-500/10' : 'border-border bg-white text-muted-foreground hover:border-rose-500/20'}`}>
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg transition-all ${walletForm.type === 'debit' ? 'bg-rose-500 text-white' : 'bg-secondary/50 text-muted-foreground'}`}>
-                      <i className="fas fa-minus" />
+                      <Icon name="minus" />
                     </div>
                     Withdraw
                   </button>
@@ -603,14 +604,14 @@ function UserEditModal({
                   <input placeholder="Reference / Note" className="w-full px-5 py-3 bg-secondary/30 border-2 border-transparent rounded-xl text-[10px] font-bold outline-none focus:bg-white focus:border-primary/20 transition-all text-foreground placeholder:text-muted-foreground/40 uppercase tracking-widest"
                     value={walletForm.description} onChange={e => onWalletFormChange({...walletForm, description: e.target.value})} />
                   <Button className={`w-full h-14 rounded-2xl font-bold text-[10px] uppercase tracking-wider shadow-md transition-all active:scale-95 ${walletForm.type === 'debit' ? 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/20' : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20'}`} onClick={onSubmitWallet} disabled={savingWallet || !walletForm.amount}>
-                    {savingWallet ? <i className="fas fa-spinner fa-spin mr-2" /> : <i className="fas fa-arrow-right-arrow-left mr-2" />}
+                    {savingWallet ? <Icon name="spinner" className="mr-2 animate-spin" /> : <Icon name="arrow-right-arrow-left" className="mr-2" />}
                     Confirm
                   </Button>
                 </div>
 
                 <div className="pt-5 border-t border-border/60">
                   <h4 className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
-                     <i className="fas fa-clock-rotate-left opacity-40" />
+                     <Icon name="clock-rotate-left" className="opacity-40" />
                      Recent Activity
                   </h4>
                   {historyLoading ? (

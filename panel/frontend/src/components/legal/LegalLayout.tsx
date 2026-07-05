@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import { LEGAL_DOCS, LEGAL_UPDATED_TH, LEGAL_VERSION, CONTACT, OPERATOR } from '@/lib/legal';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 interface LegalLayoutProps {
   /** slug of the current document (matches LEGAL_DOCS[].slug) — empty for /contact */
@@ -22,14 +23,14 @@ export default function LegalLayout({ current, title, subtitle, children }: Lega
         {/* Header */}
         <header className="mb-8">
           <Link href="/" className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-primary transition-colors mb-5">
-            <i className="fas fa-chevron-left text-[10px]" /> กลับหน้าแรก
+            <Icon name="chevron-left" className="text-[10px]" /> กลับหน้าแรก
           </Link>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary mb-2">เอกสารทางกฎหมาย</p>
           <h1 className="text-3xl sm:text-4xl font-black text-foreground tracking-tight leading-tight">{title}</h1>
           <p className="mt-3 text-base text-muted-foreground font-medium max-w-2xl leading-relaxed">{subtitle}</p>
           <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground font-semibold">
-            <span><i className="fas fa-calendar-day mr-1.5 text-primary/70" /> ปรับปรุงล่าสุด: {LEGAL_UPDATED_TH}</span>
-            <span><i className="fas fa-code-branch mr-1.5 text-primary/70" /> เวอร์ชัน {LEGAL_VERSION}</span>
+            <span><Icon name="calendar-day" className="mr-1.5 text-primary/70" /> ปรับปรุงล่าสุด: {LEGAL_UPDATED_TH}</span>
+            <span><Icon name="code-branch" className="mr-1.5 text-primary/70" /> เวอร์ชัน {LEGAL_VERSION}</span>
           </div>
         </header>
 
@@ -47,7 +48,7 @@ export default function LegalLayout({ current, title, subtitle, children }: Lega
                     : 'border-border bg-card hover:border-primary/30 hover:bg-primary/[0.03]'
                 }`}
               >
-                <i className={`fas fa-file-contract mt-0.5 ${active ? 'text-primary' : 'text-muted-foreground'}`} />
+                <Icon name="file-contract" className={`mt-0.5 ${active ? 'text-primary' : 'text-muted-foreground'}`} />
                 <span className="min-w-0">
                   <span className={`block text-sm font-bold ${active ? 'text-primary' : 'text-foreground'}`}>{d.title}</span>
                   <span className="block text-xs text-muted-foreground font-medium leading-snug">{d.short}</span>
@@ -70,28 +71,28 @@ export default function LegalLayout({ current, title, subtitle, children }: Lega
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <a href={`mailto:${CONTACT.email}`} className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3.5 hover:border-primary/40 transition-colors">
-              <i className="fas fa-envelope text-primary w-5 text-center" />
+              <Icon name="envelope" className="text-primary w-5 text-center" />
               <span className="min-w-0">
                 <span className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">อีเมลหลัก</span>
                 <span className="block text-sm font-bold text-foreground truncate">{CONTACT.email}</span>
               </span>
             </a>
             <a href={`mailto:${CONTACT.altEmail}`} className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3.5 hover:border-primary/40 transition-colors">
-              <i className="fas fa-envelope-open text-primary w-5 text-center" />
+              <Icon name="envelope-open" className="text-primary w-5 text-center" />
               <span className="min-w-0">
                 <span className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">อีเมลสำรอง</span>
                 <span className="block text-sm font-bold text-foreground truncate">{CONTACT.altEmail}</span>
               </span>
             </a>
             <a href={CONTACT.facebook} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3.5 hover:border-primary/40 transition-colors">
-              <i className="fab fa-facebook-f text-primary w-5 text-center" />
+              <Icon name="facebook-f" className="text-primary w-5 text-center" />
               <span className="min-w-0">
                 <span className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Facebook</span>
                 <span className="block text-sm font-bold text-foreground truncate">{CONTACT.facebookLabel}</span>
               </span>
             </a>
             <a href={CONTACT.discord} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3.5 hover:border-primary/40 transition-colors">
-              <i className="fab fa-discord text-primary w-5 text-center" />
+              <Icon name="discord" className="text-primary w-5 text-center" />
               <span className="min-w-0">
                 <span className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Discord</span>
                 <span className="block text-sm font-bold text-foreground truncate">{CONTACT.discordLabel}</span>
@@ -136,7 +137,7 @@ export function UL({ children }: { children: React.ReactNode }) {
 export function LI({ children }: { children: React.ReactNode }) {
   return (
     <li className="flex gap-2.5">
-      <i className="fas fa-circle text-[5px] text-primary mt-2.5 flex-shrink-0" />
+      <Icon name="circle" className="text-[5px] text-primary mt-2.5 flex-shrink-0" />
       <span>{children}</span>
     </li>
   );
@@ -150,7 +151,7 @@ export function Notice({ children, tone = 'amber' }: { children: React.ReactNode
       : 'border-amber-500/20 bg-amber-500/5 [&_strong]:text-amber-700 dark:[&_strong]:text-amber-400';
   return (
     <div className={`rounded-2xl border p-4 text-[15px] leading-relaxed text-foreground/90 font-medium ${cls}`}>
-      <i className={`fas fa-circle-info mr-2 ${tone === 'red' ? 'text-red-500' : 'text-amber-500'}`} />
+      <Icon name="circle-info" className={`mr-2 ${tone === 'red' ? 'text-red-500' : 'text-amber-500'}`} />
       {children}
     </div>
   );

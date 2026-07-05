@@ -31,13 +31,13 @@ export interface LandingPage {
 }
 
 export const CLUSTERS: Record<string, { label: string; icon: string }> = {
-  core:      { label: 'บริการเช่าเว็บร้านค้า', icon: 'fa-store' },
-  payment:   { label: 'ระบบเติมเงิน',          icon: 'fa-wallet' },
-  delivery:  { label: 'ส่งของอัตโนมัติ (RCON)', icon: 'fa-bolt' },
-  features:  { label: 'ฟีเจอร์ร้านค้า',         icon: 'fa-cubes' },
-  servers:   { label: 'ตามประเภทเซิร์ฟเวอร์',   icon: 'fa-server' },
-  alternative: { label: 'ทางเลือกแทน Tebex',   icon: 'fa-right-left' },
-  guide:     { label: 'คู่มือเปิดร้าน/ทำเงิน',  icon: 'fa-graduation-cap' },
+  core:      { label: 'บริการเช่าเว็บร้านค้า', icon: 'store' },
+  payment:   { label: 'ระบบเติมเงิน',          icon: 'wallet' },
+  delivery:  { label: 'ส่งของอัตโนมัติ (RCON)', icon: 'bolt' },
+  features:  { label: 'ฟีเจอร์ร้านค้า',         icon: 'cubes' },
+  servers:   { label: 'ตามประเภทเซิร์ฟเวอร์',   icon: 'server' },
+  alternative: { label: 'ทางเลือกแทน Tebex',   icon: 'right-left' },
+  guide:     { label: 'คู่มือเปิดร้าน/ทำเงิน',  icon: 'graduation-cap' },
 };
 
 const TRIAL = 'เริ่มทดลองฟรี 7 วัน หรือเดือนแรกเพียง ฿99 ไม่ต้องผูกบัตร';

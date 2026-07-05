@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 interface Voucher {
   id: number;
@@ -134,7 +135,7 @@ function Content() {
           <div className="flex items-center gap-4 mb-1">
             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg bg-secondary/50 hover:bg-secondary transition-all" asChild>
               <Link href="/admin">
-                <i className="fas fa-arrow-left text-xs" />
+                <Icon name="arrow-left" className="text-xs" />
               </Link>
             </Button>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
@@ -142,14 +143,14 @@ function Content() {
             </h1>
           </div>
           <p className="text-muted-foreground font-medium text-sm flex items-center gap-2">
-            <i className="fas fa-ticket text-primary text-xs" />
+            <Icon name="ticket" className="text-primary text-xs" />
             สร้างและจัดการโค้ดโปรโมชั่นเพิ่มเงินสำหรับลูกค้า
           </p>
         </motion.div>
         
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
            <Button size="default" onClick={load} className="rounded-xl font-bold gap-2 h-11 px-6 shadow-md shadow-primary/10 active:scale-95 transition-all">
-             <i className={`fas fa-arrows-rotate ${loading ? 'animate-spin' : ''}`} /> รีเฟรชโค้ด
+             <Icon name="arrows-rotate" className={`${loading ? 'animate-spin' : ''}`} /> รีเฟรชโค้ด
            </Button>
         </motion.div>
       </div>
@@ -161,7 +162,7 @@ function Content() {
             <CardHeader className="px-6 py-6 border-b border-border/60 bg-secondary/10">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shadow-sm">
-                  <i className="fas fa-plus-circle text-sm" />
+                  <Icon name="plus-circle" className="text-sm" />
                 </div>
                 <CardTitle className="text-base font-bold tracking-tight uppercase">Generate New</CardTitle>
               </div>
@@ -186,7 +187,7 @@ function Content() {
                   value={createForm.maxUses} onChange={e => setCreateForm({...createForm, maxUses: e.target.value})} />
               </div>
               <Button className="w-full h-12 rounded-xl font-bold text-[10px] uppercase tracking-wider mt-2 shadow-md shadow-primary/20 active:scale-95 transition-all" onClick={handleCreate} disabled={creating}>
-                {creating ? <i className="fas fa-spinner fa-spin mr-2" /> : <i className="fas fa-magic mr-2" />}
+                {creating ? <Icon name="spinner" className="mr-2 animate-spin" /> : <Icon name="magic" className="mr-2" />}
                 Create Voucher
               </Button>
             </CardContent>
@@ -201,7 +202,7 @@ function Content() {
             </Card>
           ) : vouchers.length === 0 ? (
             <Card className="rounded-3xl border-border shadow-sm p-16 bg-white dark:bg-card">
-              <EmptyState icon="fa-ticket" title="ยังไม่มี Voucher" description="เริ่มต้นด้วยการสร้างโค้ดโปรโมชั่นใหม่จากฟอร์มด้านซ้าย" />
+              <EmptyState icon="ticket" title="ยังไม่มี Voucher" description="เริ่มต้นด้วยการสร้างโค้ดโปรโมชั่นใหม่จากฟอร์มด้านซ้าย" />
             </Card>
           ) : (
             <Card className="rounded-3xl border-border shadow-sm overflow-hidden bg-white dark:bg-card">
@@ -228,7 +229,7 @@ function Content() {
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded-xl bg-primary/10 border-2 border-primary/20 text-primary flex items-center justify-center group-hover:rotate-12 transition-transform duration-500 shadow-sm">
-                                <i className="fas fa-ticket text-base" />
+                                <Icon name="ticket" className="text-base" />
                               </div>
                               <div>
                                 <p className="font-bold text-foreground text-xs tracking-[0.1em] uppercase group-hover:text-primary transition-colors">{v.code}</p>
@@ -249,10 +250,10 @@ function Content() {
                           <td className="px-6 py-4 text-right">
                             <div className="flex justify-end items-center gap-2">
                               <Button variant="outline" size="sm" className="h-9 px-4 rounded-xl font-bold text-[10px] uppercase tracking-wider bg-white border-2 hover:bg-slate-50 active:scale-95 transition-all shadow-sm gap-2" onClick={() => openRedemptions(v)}>
-                                <i className="fas fa-users-viewfinder text-primary" /> Redemptions
+                                <Icon name="users-viewfinder" className="text-primary" /> Redemptions
                               </Button>
                               <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl text-rose-500 border-rose-500/20 bg-rose-500/5 hover:bg-rose-500 hover:text-white transition-all active:scale-90 shadow-sm" onClick={() => handleDelete(v.id)}>
-                                <i className="fas fa-trash text-[10px]" />
+                                <Icon name="trash" className="text-[10px]" />
                               </Button>
                             </div>
                           </td>
@@ -276,7 +277,7 @@ function Content() {
                       onClick={() => setPage(p => Math.max(1, p - 1))} 
                       className="h-8 w-8 rounded-lg active:scale-95 disabled:opacity-30 transition-all"
                     >
-                      <i className="fas fa-chevron-left text-[10px]" />
+                      <Icon name="chevron-left" className="text-[10px]" />
                     </Button>
                     <div className="px-3 flex items-center gap-1.5">
                       <span className="text-xs font-bold text-foreground">{page}</span>
@@ -290,7 +291,7 @@ function Content() {
                       onClick={() => setPage(p => Math.min(pages, p + 1))} 
                       className="h-8 w-8 rounded-lg active:scale-95 disabled:opacity-30 transition-all"
                     >
-                      <i className="fas fa-chevron-right text-[10px]" />
+                      <Icon name="chevron-right" className="text-[10px]" />
                     </Button>
                   </div>
                 </div>
@@ -320,7 +321,7 @@ function Content() {
               <CardHeader className="flex flex-row items-center justify-between px-8 py-8 border-b border-border/60 bg-secondary/10">
                 <div className="flex items-center gap-5">
                   <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-lg shadow-primary/5">
-                    <i className="fas fa-users" />
+                    <Icon name="users" />
                   </div>
                   <div>
                     <CardTitle className="text-xl font-black tracking-tight leading-tight">Redemption History</CardTitle>
@@ -331,19 +332,19 @@ function Content() {
                   onClick={() => setViewRedemptions(null)} 
                   className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer active:scale-90"
                 >
-                  <i className="fas fa-times" />
+                  <Icon name="times" />
                 </button>
               </CardHeader>
               <CardContent className="p-0 max-h-[500px] overflow-y-auto custom-scrollbar">
                 {loadingRedemptions ? (
                   <div className="p-20 text-center flex flex-col items-center gap-4">
-                    <i className="fas fa-circle-notch fa-spin text-primary text-3xl" />
+                    <Icon name="circle-notch" className="text-primary text-3xl animate-spin" />
                     <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Accessing records...</p>
                   </div>
                 ) : redemptions.length === 0 ? (
                   <div className="p-20 text-center space-y-4">
                     <div className="w-16 h-16 rounded-[2rem] bg-secondary flex items-center justify-center mx-auto text-muted-foreground/30 text-2xl">
-                      <i className="fas fa-ghost" />
+                      <Icon name="ghost" />
                     </div>
                     <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">No redemptions found</p>
                   </div>

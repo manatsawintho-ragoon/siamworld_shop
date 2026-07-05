@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 interface Sub {
   id: number; shop_name: string; domain: string; status: string;
@@ -34,11 +35,11 @@ const customDomainMeta = (status?: string | null) =>
   CUSTOM_DOMAIN_META[status || ''] || { label: 'รอตรวจสอบ', badge: 'bg-secondary text-secondary-foreground border-border hover:bg-slate-900 hover:text-white' };
 
 const FILTER_TABS = [
-  { value: '',           label: 'ทั้งหมด',        icon: 'fa-list' },
-  { value: 'active',     label: 'ใช้งานอยู่',     icon: 'fa-circle-check' },
-  { value: 'deploying',  label: 'กำลังติดตั้ง',  icon: 'fa-rocket' },
-  { value: 'suspended',  label: 'ถูกระงับ',     icon: 'fa-ban' },
-  { value: 'expired',    label: 'หมดอายุ',      icon: 'fa-clock' },
+  { value: '',           label: 'ทั้งหมด',        icon: 'list' },
+  { value: 'active',     label: 'ใช้งานอยู่',     icon: 'circle-check' },
+  { value: 'deploying',  label: 'กำลังติดตั้ง',  icon: 'rocket' },
+  { value: 'suspended',  label: 'ถูกระงับ',     icon: 'ban' },
+  { value: 'expired',    label: 'หมดอายุ',      icon: 'clock' },
 ];
 
 const PAGE_SIZE = 30;
@@ -225,7 +226,7 @@ function Content() {
           <div className="flex items-center gap-4 mb-1">
             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg bg-secondary/50 hover:bg-secondary transition-all" asChild>
               <Link href="/admin">
-                <i className="fas fa-arrow-left text-xs" />
+                <Icon name="arrow-left" className="text-xs" />
               </Link>
             </Button>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
@@ -234,7 +235,7 @@ function Content() {
           </div>
           <div className="flex items-center gap-3">
             <p className="text-muted-foreground font-medium text-sm flex items-center gap-2">
-              <i className="fas fa-shop text-primary text-xs" />
+              <Icon name="shop" className="text-primary text-xs" />
               จัดการร้านค้าลูกค้าทั้งหมด {total.toLocaleString('th-TH')} ร้าน
             </p>
             <Badge className="bg-emerald-500/10 text-emerald-600 border-none font-bold text-[9px] uppercase tracking-wider h-5 flex items-center gap-1.5">
@@ -246,10 +247,10 @@ function Content() {
         
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-2">
           <Button variant="outline" size="icon" onClick={() => load(true)} disabled={refreshing} className="h-11 w-11 rounded-xl bg-card border-border shadow-sm active:scale-95 transition-all">
-            <i className={`fas fa-arrows-rotate text-xs ${refreshing ? 'animate-spin' : ''}`} />
+            <Icon name="arrows-rotate" className={`text-xs ${refreshing ? 'animate-spin' : ''}`} />
           </Button>
           <Button variant="outline" onClick={exportPDF} className="h-11 px-5 rounded-xl bg-card border-border shadow-sm font-bold text-sm gap-2 active:scale-95 transition-all">
-            <i className="fas fa-file-pdf text-red-500" />
+            <Icon name="file-pdf" className="text-red-500" />
             พิมพ์รายงาน
           </Button>
         </motion.div>
@@ -271,14 +272,14 @@ function Content() {
                         : 'text-muted-foreground hover:bg-white hover:text-foreground'
                     }`}
                   >
-                    <i className={`fas ${tab.icon} ${status === tab.value ? 'opacity-100' : 'opacity-40'}`} />
+                    <Icon name={tab.icon as IconName} className={`${status === tab.value ? 'opacity-100' : 'opacity-40'}`} />
                     {tab.label}
                   </button>
                 ))}
               </div>
               <div className="flex gap-2">
                 <div className="relative flex-1 xl:w-[320px] group">
-                  <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-xs group-focus-within:text-primary transition-colors" />
+                  <Icon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-xs group-focus-within:text-primary transition-colors" />
                   <input 
                     type="text" 
                     placeholder="ค้นหาร้าน / โดเมน / อีเมล..." 
@@ -289,7 +290,7 @@ function Content() {
                   />
                 </div>
                 <Button onClick={submitSearch} className="h-[42px] w-[42px] rounded-xl cursor-pointer shadow-md shadow-primary/10 active:scale-95 transition-all">
-                  <i className="fas fa-magnifying-glass text-xs" />
+                  <Icon name="magnifying-glass" className="text-xs" />
                 </Button>
               </div>
             </div>
@@ -310,7 +311,7 @@ function Content() {
               <CardContent className="p-3 flex items-center justify-between">
                 <div className="flex items-center gap-3 ml-2">
                   <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shadow-md animate-bounce-slow">
-                     <i className="fas fa-check-double text-[10px]" />
+                     <Icon name="check-double" className="text-[10px]" />
                   </div>
                   <span className="text-primary text-xs font-bold uppercase tracking-wider">เลือก {selectedIds.length} ร้านค้า</span>
                 </div>
@@ -339,7 +340,7 @@ function Content() {
           </Card>
         ) : subs.length === 0 ? (
           <Card className="rounded-3xl border-border shadow-sm p-16 bg-white dark:bg-card">
-            <EmptyState icon="fa-store-slash" title="ไม่พบข้อมูลร้านค้า" description="ลองเปลี่ยนเงื่อนไขการค้นหาหรือเพิ่มร้านค้าใหม่" actionLabel="กลับหน้าหลัก" actionHref="/admin" />
+            <EmptyState icon="store-slash" title="ไม่พบข้อมูลร้านค้า" description="ลองเปลี่ยนเงื่อนไขการค้นหาหรือเพิ่มร้านค้าใหม่" actionLabel="กลับหน้าหลัก" actionHref="/admin" />
           </Card>
         ) : (
           <Card className="rounded-3xl border-border shadow-sm overflow-hidden bg-white dark:bg-card">
@@ -391,7 +392,7 @@ function Content() {
                                 ${isExpiringSoon
                                   ? 'bg-rose-500/10 border-rose-500/20 text-rose-500 animate-pulse'
                                   : 'bg-primary/10 border-primary/20 text-primary group-hover:bg-primary group-hover:text-primary-foreground group-hover:rotate-6 shadow-primary/10'}`}>
-                                <i className="fas fa-server" />
+                                <Icon name="server" />
                               </div>
                               <div className="min-w-0">
                                 <p className="font-bold text-foreground text-xs truncate max-w-[180px] tracking-tight group-hover:text-primary transition-colors">{sub.shop_name}</p>
@@ -412,7 +413,7 @@ function Content() {
                             </button>
                             <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-secondary text-secondary-foreground rounded-lg text-[9px] font-bold border border-border shadow-sm">
-                                <i className="fas fa-plug text-primary/60" />
+                                <Icon name="plug" className="text-primary/60" />
                                 {sub.frontend_port}
                               </span>
                               <button
@@ -423,7 +424,7 @@ function Content() {
                                     : 'bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500 hover:text-white'
                                 }`}
                               >
-                                <i className="fas fa-shield-halved" />
+                                <Icon name="shield-halved" />
                                 {sub.mc_ip || 'FIREWALL OFF'}
                               </button>
                             </div>
@@ -434,7 +435,7 @@ function Content() {
                                   title={`โดเมนของลูกค้า: ${sub.custom_domain} (${customDomainMeta(sub.custom_domain_status).label})`}
                                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-bold transition-all border shadow-sm cursor-pointer max-w-full ${customDomainMeta(sub.custom_domain_status).badge}`}
                                 >
-                                  <i className="fas fa-globe flex-shrink-0" />
+                                  <Icon name="globe" className="flex-shrink-0" />
                                   <span className="truncate">{sub.custom_domain}</span>
                                   <span className="opacity-60 flex-shrink-0">• {customDomainMeta(sub.custom_domain_status).label}</span>
                                 </button>
@@ -443,7 +444,7 @@ function Content() {
                                   title="ลูกค้ายังไม่ได้ตั้งโดเมนของตัวเอง"
                                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-bold border border-border/60 bg-secondary/40 text-muted-foreground shadow-sm"
                                 >
-                                  <i className="fas fa-globe opacity-40" />
+                                  <Icon name="globe" className="opacity-40" />
                                   ไม่มีโดเมนเอง
                                 </span>
                               )}
@@ -462,15 +463,15 @@ function Content() {
                           <td className="px-6 py-4 text-right">
                             <div className="flex justify-end items-center gap-2">
                               <Button variant="secondary" size="icon" onClick={() => viewLogs(sub)} title="ดู Logs & Stats" className="h-8 w-8 rounded-lg bg-card border border-border hover:bg-slate-900 hover:text-emerald-400 transition-all cursor-pointer shadow-sm">
-                                <i className="fas fa-terminal text-[10px]" />
+                                <Icon name="terminal" className="text-[10px]" />
                               </Button>
                               <Button variant="outline" size="icon" asChild title="ข้อมูลล็อกอิน" className="h-8 w-8 rounded-lg bg-card border border-border hover:border-primary/40 hover:text-primary transition-all cursor-pointer shadow-sm">
                                 <Link href={`/dashboard/credentials?id=${sub.id}`}>
-                                  <i className="fas fa-key text-[10px]" />
+                                  <Icon name="key" className="text-[10px]" />
                                 </Link>
                               </Button>
                               <Button onClick={() => setManageSub(sub)} disabled={actionLoading === sub.id} className="h-9 px-4 rounded-xl cursor-pointer font-bold text-[10px] uppercase tracking-wider gap-2 shadow-md shadow-primary/10 active:scale-95 transition-all">
-                                {actionLoading === sub.id ? <i className="fas fa-spinner fa-spin" /> : <><i className="fas fa-gear text-[10px] opacity-40" /> Manage</>}
+                                {actionLoading === sub.id ? <Icon name="spinner" className="animate-spin" /> : <><Icon name="gear" className="text-[10px] opacity-40" /> Manage</>}
                               </Button>
                             </div>
                           </td>
@@ -496,7 +497,7 @@ function Content() {
                     onClick={() => setPage(p => Math.max(1, p - 1))} 
                     className="h-8 w-8 rounded-lg active:scale-95 disabled:opacity-30 transition-all"
                   >
-                    <i className="fas fa-chevron-left text-[10px]" />
+                    <Icon name="chevron-left" className="text-[10px]" />
                   </Button>
                   <div className="px-3 flex items-center gap-1.5">
                     <span className="text-xs font-bold text-foreground">{page}</span>
@@ -510,7 +511,7 @@ function Content() {
                     onClick={() => setPage(p => Math.min(pages, p + 1))} 
                     className="h-8 w-8 rounded-lg active:scale-95 disabled:opacity-30 transition-all"
                   >
-                    <i className="fas fa-chevron-right text-[10px]" />
+                    <Icon name="chevron-right" className="text-[10px]" />
                   </Button>
                 </div>
               </div>
@@ -553,7 +554,7 @@ function Content() {
               <div className="flex items-center justify-between px-10 py-8 border-b border-slate-800 bg-slate-900/50 flex-shrink-0">
                 <div className="flex items-center gap-5">
                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-xl border border-emerald-500/20 shadow-lg shadow-emerald-500/5">
-                      <i className="fas fa-terminal" />
+                      <Icon name="terminal" />
                    </div>
                    <div>
                     <h2 className="text-xl font-black text-white tracking-tight">System Terminal</h2>
@@ -564,7 +565,7 @@ function Content() {
                   onClick={() => setShowLogsModal(false)} 
                   className="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-800 hover:bg-rose-500 text-slate-400 hover:text-white transition-all cursor-pointer shadow-lg active:scale-90"
                 >
-                  <i className="fas fa-times" />
+                  <Icon name="times" />
                 </button>
               </div>
               <div className="flex-1 overflow-auto p-10 space-y-10 custom-scrollbar">
@@ -655,7 +656,7 @@ function ManageModal({
         <div className="flex items-center justify-between gap-4 p-6 border-b border-border flex-shrink-0 bg-secondary/10">
           <div className="flex items-center gap-4 min-w-0 flex-1">
             <div className="w-12 h-12 rounded-xl bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0 shadow-md shadow-primary/20">
-              <i className="fas fa-gear text-lg" />
+              <Icon name="gear" className="text-lg" />
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-bold text-foreground text-lg tracking-tight truncate leading-tight">{sub.shop_name}</p>
@@ -668,7 +669,7 @@ function ManageModal({
             onClick={onClose} 
             className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-border text-muted-foreground hover:text-foreground hover:shadow-sm transition-all cursor-pointer active:scale-90"
           >
-            <i className="fas fa-times text-sm" />
+            <Icon name="times" className="text-sm" />
           </button>
         </div>
 
@@ -676,13 +677,13 @@ function ManageModal({
           <div className="grid grid-cols-2 gap-3">
             <Button variant="outline" className="h-14 text-[10px] font-bold uppercase tracking-wider rounded-xl gap-2 cursor-pointer shadow-sm hover:bg-secondary transition-all" asChild>
               <a href={`https://${sub.domain}/admin`} target="_blank" rel="noopener noreferrer">
-                <i className="fas fa-arrow-up-right-from-square text-primary text-[10px]" />
+                <Icon name="arrow-up-right-from-square" className="text-primary text-[10px]" />
                 เปิดหน้าร้าน
               </a>
             </Button>
             <Button variant="outline" className="h-14 text-[10px] font-bold uppercase tracking-wider rounded-xl gap-2 cursor-pointer shadow-sm hover:bg-secondary transition-all" asChild>
               <Link href={`/dashboard/credentials?id=${sub.id}`}>
-                <i className="fas fa-key text-primary text-[10px]" />
+                <Icon name="key" className="text-primary text-[10px]" />
                 ข้อมูลล็อกอิน
               </Link>
             </Button>
@@ -690,7 +691,7 @@ function ManageModal({
 
           <div className="p-5 bg-secondary/50 border border-border rounded-2xl group transition-all focus-within:bg-white focus-within:border-primary/20">
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-3 flex items-center gap-2">
-              <i className="fas fa-shield-halved text-primary/60" /> MC Server IP
+              <Icon name="shield-halved" className="text-primary/60" /> MC Server IP
             </p>
             <div className="flex gap-2">
               <input 
@@ -714,7 +715,7 @@ function ManageModal({
               </Button>
             </div>
             {!mcIpValid && mcIpInput && (
-              <p className="text-[9px] font-bold text-rose-500 mt-2 uppercase tracking-wider"><i className="fas fa-circle-exclamation mr-1.5" /> รูปแบบ IP ไม่ถูกต้อง</p>
+              <p className="text-[9px] font-bold text-rose-500 mt-2 uppercase tracking-wider"><Icon name="circle-exclamation" className="mr-1.5" /> รูปแบบ IP ไม่ถูกต้อง</p>
             )}
           </div>
 
@@ -723,13 +724,13 @@ function ManageModal({
           <div className="space-y-3">
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">การควบคุมระบบ</p>
             <div className="grid grid-cols-3 gap-2">
-              <ActionTile icon="fa-rotate" color="emerald" label="รีสตาร์ท" disabled={loading} onClick={() => onAction('restart')} />
-              <ActionTile icon="fa-play" color="blue" label="เริ่มระบบ" disabled={loading} onClick={() => onAction('start')} />
-              <ActionTile icon="fa-stop" color="amber" label="หยุดระบบ" disabled={loading} onClick={() => onAction('stop')} />
-              <ActionTile icon="fa-wand-magic-sparkles" color="purple" label="ซ่อม NPM" disabled={loading} onClick={() => onAction('fix-npm')} />
-              <ActionTile icon="fa-rocket" color="indigo" label="Redeploy" disabled={loading} onClick={() => onAction('redeploy')} />
+              <ActionTile icon="rotate" color="emerald" label="รีสตาร์ท" disabled={loading} onClick={() => onAction('restart')} />
+              <ActionTile icon="play" color="blue" label="เริ่มระบบ" disabled={loading} onClick={() => onAction('start')} />
+              <ActionTile icon="stop" color="amber" label="หยุดระบบ" disabled={loading} onClick={() => onAction('stop')} />
+              <ActionTile icon="wand-magic-sparkles" color="purple" label="ซ่อม NPM" disabled={loading} onClick={() => onAction('fix-npm')} />
+              <ActionTile icon="rocket" color="indigo" label="Redeploy" disabled={loading} onClick={() => onAction('redeploy')} />
               <ActionTile
-                icon="fa-shield-halved" color="cyan" label="กัน DDoS (CF Proxy)"
+                icon="shield-halved" color="cyan" label="กัน DDoS (CF Proxy)"
                 disabled={loading}
                 onClick={() => {
                   if (confirm(
@@ -744,16 +745,16 @@ function ManageModal({
                 }}
               />
               <ActionTile
-                icon="fa-shield-xmark" color="slate" label="ปลดกัน (DNS-only)"
+                icon="shield-xmark" color="slate" label="ปลดกัน (DNS-only)"
                 disabled={loading}
                 onClick={() => {
                   if (confirm('คืน DNS เป็น DNS-only (เปิด MySQL port กลับมา)?\n\nใช้สำหรับลูกค้าที่ยังใช้ AuthMe direct')) onAction('dns-unharden');
                 }}
               />
               {isSuspended ? (
-                <ActionTile icon="fa-circle-check" color="teal" label="ปลดระงับ" disabled={loading} onClick={() => onAction('unsuspend')} />
+                <ActionTile icon="circle-check" color="teal" label="ปลดระงับ" disabled={loading} onClick={() => onAction('unsuspend')} />
               ) : (
-                <ActionTile icon="fa-ban" color="orange" label="ระงับใช้งาน" disabled={loading} onClick={() => onAction('suspend')} />
+                <ActionTile icon="ban" color="orange" label="ระงับใช้งาน" disabled={loading} onClick={() => onAction('suspend')} />
               )}
             </div>
           </div>
@@ -764,7 +765,7 @@ function ManageModal({
             disabled={loading}
             className="w-full h-14 rounded-2xl border-2 border-rose-500/20 bg-rose-500/5 text-rose-500 font-bold text-[10px] uppercase tracking-widest hover:bg-rose-500 hover:text-white hover:border-rose-500 transition-all active:scale-95 shadow-sm"
           >
-            <i className="fas fa-trash mr-2" /> ลบร้านค้าถาวร
+            <Icon name="trash" className="mr-2" /> ลบร้านค้าถาวร
           </Button>
         </div>
 
@@ -774,7 +775,7 @@ function ManageModal({
             animate={{ opacity: 1, y: 0 }}
             className="p-3 bg-primary text-primary-foreground text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-2"
           >
-            <i className="fas fa-spinner fa-spin text-xs" /> 
+            <Icon name="spinner" className="text-xs animate-spin" /> 
             กำลังดำเนินการ...
           </motion.div>
         )}
@@ -851,7 +852,7 @@ function AdjustTimeSection({
   return (
     <div className="p-5 bg-secondary/50 border border-border rounded-2xl space-y-4">
       <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-        <i className="fas fa-clock-rotate-left text-primary/60" /> ปรับเวลา (ชดเชย / โปรโมชั่น)
+        <Icon name="clock-rotate-left" className="text-primary/60" /> ปรับเวลา (ชดเชย / โปรโมชั่น)
       </p>
 
       <div className="grid grid-cols-3 gap-2">
@@ -929,7 +930,7 @@ function AdjustTimeSection({
         disabled={loading || delta === 0}
         className="w-full h-11 rounded-xl cursor-pointer font-bold text-[10px] uppercase tracking-widest shadow-md shadow-primary/20 active:scale-95"
       >
-        <i className="fas fa-check mr-2" /> ยืนยันปรับเวลา
+        <Icon name="check" className="mr-2" /> ยืนยันปรับเวลา
       </Button>
 
       {history.length > 0 && (
@@ -943,7 +944,7 @@ function AdjustTimeSection({
                   {h.delta_days > 0 ? '+' : ''}{h.delta_days} วัน
                 </span>
                 {cat && <span className={`px-1.5 py-0.5 rounded border text-[9px] font-bold ${cat.badge}`}>{cat.label}</span>}
-                {h.notify_customer ? <i className="fas fa-bell text-primary/50 text-[9px]" title="แจ้งลูกค้าแล้ว" /> : null}
+                {h.notify_customer ? <Icon name="bell" className="text-primary/50 text-[9px]" aria-label="แจ้งลูกค้าแล้ว" /> : null}
                 {h.reason && <span className="text-muted-foreground truncate flex-1">{h.reason}</span>}
                 <span className="text-muted-foreground/50 ml-auto whitespace-nowrap">{fmtDate(h.created_at)}</span>
               </div>
@@ -958,7 +959,7 @@ function AdjustTimeSection({
 function ActionTile({
   icon, color, label, disabled, onClick,
 }: {
-  icon: string; color: string; label: string;
+  icon: IconName; color: string; label: string;
   disabled: boolean; onClick: () => void;
 }) {
   const c = COLOR_MAP[color] || COLOR_MAP.amber;
@@ -969,7 +970,7 @@ function ActionTile({
       className={`group flex flex-col items-center justify-center gap-2 py-4 px-1 rounded-2xl border border-border bg-white transition-all active:scale-90 cursor-pointer hover:border-current/30 hover:shadow-lg hover:shadow-current/5 disabled:opacity-30 disabled:grayscale disabled:pointer-events-none`}
     >
       <div className={`w-10 h-10 rounded-xl ${c.bg} ${c.icon} flex items-center justify-center flex-shrink-0 transition-all duration-500 group-hover:scale-110 group-hover:rotate-6 shadow-sm`}>
-        <i className={`fas ${icon} text-base`} />
+        <Icon name={icon} className="text-base" />
       </div>
       <span className={`text-[9px] font-bold text-muted-foreground tracking-wider ${c.hoverText} truncate max-w-full`}>{label}</span>
     </button>

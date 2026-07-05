@@ -8,6 +8,7 @@ import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Icon, type IconName } from '@/components/ui/icon';
 
 interface Package { months: number; price: number; label: string; save: number; kind?: 'regular' | 'trial' | 'intro' }
 interface Promo {
@@ -119,7 +120,7 @@ function OrderContent() {
 
   if (loading || !eligibilityLoaded) return (
     <div className="min-h-screen flex items-center justify-center bg-background">
-      <i className="fas fa-spinner fa-spin text-3xl text-primary" />
+      <Icon name="spinner" className="text-3xl text-primary animate-spin" />
     </div>
   );
 
@@ -128,7 +129,7 @@ function OrderContent() {
       <Navbar />
       <div className="max-w-lg mx-auto px-6 py-24 text-center">
         <div className="w-20 h-20 rounded-[2rem] bg-secondary border-2 border-border text-muted-foreground flex items-center justify-center mx-auto text-3xl mb-6">
-          <i className="fas fa-check" />
+          <Icon name="check" />
         </div>
         <h2 className="text-2xl font-black text-foreground mb-3 tracking-tight">ใช้สิทธิ์ทดลองฟรีไปแล้ว</h2>
         <p className="text-sm text-muted-foreground font-semibold mb-8 leading-relaxed">
@@ -138,11 +139,11 @@ function OrderContent() {
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           {introPromo && !usedIntro && (
             <Button className="rounded-full px-8 h-12 font-bold" onClick={() => setOrderKind('intro')}>
-              <i className="fas fa-tag mr-2" /> เดือนแรก ฿{introPromo.price}
+              <Icon name="tag" className="mr-2" /> เดือนแรก ฿{introPromo.price}
             </Button>
           )}
           <Button variant="secondary" className="rounded-full px-8 h-12 font-bold border border-border" onClick={() => setOrderKind('regular')}>
-            <i className="fas fa-box-open mr-2" /> ซื้อแพ็กเกจปกติ
+            <Icon name="box-open" className="mr-2" /> ซื้อแพ็กเกจปกติ
           </Button>
         </div>
       </div>
@@ -154,7 +155,7 @@ function OrderContent() {
       <Navbar />
       <div className="max-w-lg mx-auto px-6 py-24 text-center">
         <div className="w-20 h-20 rounded-[2rem] bg-secondary border-2 border-border text-muted-foreground flex items-center justify-center mx-auto text-3xl mb-6">
-          <i className="fas fa-check" />
+          <Icon name="check" />
         </div>
         <h2 className="text-2xl font-black text-foreground mb-3 tracking-tight">ใช้โปรเดือนแรกไปแล้ว</h2>
         <p className="text-sm text-muted-foreground font-semibold mb-8 leading-relaxed">
@@ -162,7 +163,7 @@ function OrderContent() {
           คุณสามารถเลือกซื้อแพ็กเกจปกติได้
         </p>
         <Button variant="secondary" className="rounded-full px-8 h-12 font-bold border border-border" onClick={() => setOrderKind('regular')}>
-          <i className="fas fa-box-open mr-2" /> ซื้อแพ็กเกจปกติ
+          <Icon name="box-open" className="mr-2" /> ซื้อแพ็กเกจปกติ
         </Button>
       </div>
     </div>
@@ -175,7 +176,7 @@ function OrderContent() {
         <div className="flex items-center gap-4 mb-8">
           <Button variant="outline" size="icon" className="rounded-full cursor-pointer h-10 w-10 border-border" asChild>
             <button onClick={() => router.back()}>
-              <i className="fas fa-arrow-left text-muted-foreground" />
+              <Icon name="arrow-left" className="text-muted-foreground" />
             </button>
           </Button>
           <div>
@@ -188,7 +189,7 @@ function OrderContent() {
           <Card className="text-center max-w-lg mx-auto shadow-lg border-primary/50 bg-primary/5">
             <CardContent className="p-10 flex flex-col items-center">
               <div className="w-20 h-20 rounded-full bg-primary/20 text-primary flex items-center justify-center text-4xl mb-6">
-                <i className="fas fa-rocket animate-bounce" />
+                <Icon name="rocket" className="animate-bounce" />
               </div>
               <h2 className="text-2xl font-bold text-foreground mb-3 tracking-tight">ส่งคำสั่งซื้อสำเร็จ!</h2>
               <p className="text-sm text-muted-foreground mb-8 leading-relaxed font-semibold">
@@ -197,7 +198,7 @@ function OrderContent() {
               </p>
               <Button className="w-full rounded-full cursor-pointer h-12 text-base shadow-sm" asChild>
                 <Link href="/dashboard">
-                  <i className="fas fa-gauge-high mr-2" /> เข้าสู่แดชบอร์ด
+                  <Icon name="gauge-high" className="mr-2" /> เข้าสู่แดชบอร์ด
                 </Link>
               </Button>
             </CardContent>
@@ -207,7 +208,7 @@ function OrderContent() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-xl">
                 <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                  <i className="fas fa-clipboard-check" />
+                  <Icon name="clipboard-check" />
                 </div>
                 ยืนยันการสั่งซื้อ
               </CardTitle>
@@ -215,13 +216,13 @@ function OrderContent() {
             <CardContent>
               <div className="bg-secondary/50 rounded-2xl p-5 space-y-4 mb-6 border border-border">
                 {[
-                  { label: 'ชื่อร้านค้า',   value: shopName, icon: 'fa-store' },
-                  { label: 'โดเมน',     value: `${shopName}.siamsite.shop`, icon: 'fa-globe' },
-                  { label: 'แพ็กเกจ',    value: orderLabel, icon: 'fa-box-open' },
+                  { label: 'ชื่อร้านค้า',   value: shopName, icon: 'store' },
+                  { label: 'โดเมน',     value: `${shopName}.siamsite.shop`, icon: 'globe' },
+                  { label: 'แพ็กเกจ',    value: orderLabel, icon: 'box-open' },
                 ].map(row => (
                   <div key={row.label} className="flex justify-between items-center pb-2 border-b border-border/50 last:border-0 last:pb-0">
                     <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                      <i className={`fas ${row.icon} text-primary/70`} /> {row.label}
+                      <Icon name={row.icon as IconName} className="text-primary/70" /> {row.label}
                     </span>
                     <span className="text-sm font-bold text-foreground">{row.value}</span>
                   </div>
@@ -245,7 +246,7 @@ function OrderContent() {
                 ย้อนกลับ
               </Button>
               <Button data-track="order_submit" className="flex-1 rounded-full cursor-pointer h-12 font-bold shadow-sm hover:shadow-md transition-all" onClick={handleOrder} disabled={submitting}>
-                {submitting ? <><i className="fas fa-spinner fa-spin mr-2" /> กำลังดำเนินการ...</> : 'ยืนยันและชำระเงิน'}
+                {submitting ? <><Icon name="spinner" className="mr-2 animate-spin" /> กำลังดำเนินการ...</> : 'ยืนยันและชำระเงิน'}
               </Button>
             </CardFooter>
           </Card>
@@ -256,7 +257,7 @@ function OrderContent() {
                 <Card className={`border ${orderKind === 'trial' ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-primary/50 bg-primary/5'}`}>
                   <CardContent className="p-5 flex items-center gap-5">
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-xl shadow-sm flex-shrink-0 ${orderKind === 'trial' ? 'bg-emerald-500' : 'bg-primary'}`}>
-                      <i className={`fas ${orderKind === 'trial' ? 'fa-rocket' : 'fa-tag'}`} />
+                      <Icon name={orderKind === 'trial' ? 'rocket' : 'tag'} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">
@@ -283,7 +284,7 @@ function OrderContent() {
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                      <i className="fas fa-box-open" />
+                      <Icon name="box-open" />
                     </div>
                     1. เลือกแพ็กเกจ
                   </CardTitle>
@@ -331,7 +332,7 @@ function OrderContent() {
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-secondary text-foreground flex items-center justify-center">
-                      <i className="fas fa-store" />
+                      <Icon name="store" />
                     </div>
                     {orderKind === 'regular' ? '2.' : '1.'} ตั้งชื่อร้านค้า
                   </CardTitle>
@@ -340,7 +341,7 @@ function OrderContent() {
                   <div>
                     <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Subdomain ของร้าน</label>
                     <div className="relative">
-                      <i className="fas fa-link absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      <Icon name="link" className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
                       <input
                         className="w-full bg-background border border-border rounded-xl pl-10 pr-4 py-3.5 text-base font-bold outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-foreground placeholder:text-muted-foreground lowercase"
                         placeholder="เช่น: siamsite"
@@ -353,12 +354,12 @@ function OrderContent() {
                     </div>
                     {nameError && (
                       <div className="mt-2 flex items-center gap-2 text-xs font-semibold text-destructive bg-destructive/10 px-3 py-2 rounded-lg border border-destructive/20">
-                        <i className="fas fa-triangle-exclamation flex-shrink-0" /> {nameError}
+                        <Icon name="triangle-exclamation" className="flex-shrink-0" /> {nameError}
                       </div>
                     )}
                     <div className="mt-3 bg-secondary/50 rounded-xl p-4 border border-border flex items-center gap-4">
                       <div className="w-10 h-10 rounded-lg bg-background flex items-center justify-center text-primary shadow-sm border border-border flex-shrink-0">
-                        <i className="fas fa-globe text-lg" />
+                        <Icon name="globe" className="text-lg" />
                       </div>
                       <div className="min-w-0">
                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-0.5">ที่อยู่ร้านค้า (URL)</p>
@@ -379,14 +380,14 @@ function OrderContent() {
                     {hasPublicIp === null && (
                       <div className="mb-4 p-5 rounded-2xl border border-primary/20 bg-primary/5">
                         <p className="text-sm font-bold text-foreground mb-4 flex items-center">
-                          <i className="fas fa-circle-question mr-2 text-primary text-lg" /> เซิร์ฟเวอร์ของคุณมี IP สาธารณะหรือไม่?
+                          <Icon name="circle-question" className="mr-2 text-primary text-lg" /> เซิร์ฟเวอร์ของคุณมี IP สาธารณะหรือไม่?
                         </p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <Button variant="default" onClick={() => setHasPublicIp('yes')} className="h-12 font-bold cursor-pointer rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white">
-                            <i className="fas fa-check mr-2" /> มี (VPS / Dedicated)
+                            <Icon name="check" className="mr-2" /> มี (VPS / Dedicated)
                           </Button>
                           <Button variant="outline" onClick={() => setHasPublicIp('no')} className="h-12 font-bold cursor-pointer rounded-xl hover:bg-secondary">
-                            <i className="fas fa-question mr-2" /> ไม่มี / ไม่แน่ใจ
+                            <Icon name="question" className="mr-2" /> ไม่มี / ไม่แน่ใจ
                           </Button>
                         </div>
                       </div>
@@ -396,14 +397,14 @@ function OrderContent() {
                       <div className="mb-4 p-5 rounded-2xl border border-destructive/20 bg-destructive/5 space-y-4">
                         <div className="flex items-start justify-between gap-3">
                           <p className="text-sm font-bold text-foreground flex items-center">
-                            <i className="fas fa-lightbulb mr-2 text-destructive" /> ทางเลือกสำหรับเซิร์ฟเวอร์ที่อยู่หลัง NAT
+                            <Icon name="lightbulb" className="mr-2 text-destructive" /> ทางเลือกสำหรับเซิร์ฟเวอร์ที่อยู่หลัง NAT
                           </p>
                           <button onClick={() => setHasPublicIp(null)} className="text-xs font-bold text-muted-foreground hover:text-foreground underline cursor-pointer">เปลี่ยนคำตอบ</button>
                         </div>
                         <ul className="space-y-3 text-xs font-medium text-muted-foreground">
-                          <li className="flex gap-3"><i className="fas fa-server text-primary mt-0.5" /><span><b className="text-foreground">เช่า VPS:</b> ย้ายเซิร์ฟเวอร์ไป VPS เพื่อได้ IP สาธารณะถาวร (แนะนำที่สุด)</span></li>
-                          <li className="flex gap-3"><i className="fas fa-cloud text-primary mt-0.5" /><span><b className="text-foreground">Cloudflare Tunnel:</b> ติดตั้ง cloudflared บนเครื่อง MC ของคุณ และเปิดเส้น TCP กลับมา</span></li>
-                          <li className="flex gap-3"><i className="fas fa-house-signal text-primary mt-0.5" /><span><b className="text-foreground">Port Forwarding:</b> ตั้งค่า router ให้ forward port 25565 + RCON ออกอินเทอร์เน็ต</span></li>
+                          <li className="flex gap-3"><Icon name="server" className="text-primary mt-0.5" /><span><b className="text-foreground">เช่า VPS:</b> ย้ายเซิร์ฟเวอร์ไป VPS เพื่อได้ IP สาธารณะถาวร (แนะนำที่สุด)</span></li>
+                          <li className="flex gap-3"><Icon name="cloud" className="text-primary mt-0.5" /><span><b className="text-foreground">Cloudflare Tunnel:</b> ติดตั้ง cloudflared บนเครื่อง MC ของคุณ และเปิดเส้น TCP กลับมา</span></li>
+                          <li className="flex gap-3"><Icon name="house-signal" className="text-primary mt-0.5" /><span><b className="text-foreground">Port Forwarding:</b> ตั้งค่า router ให้ forward port 25565 + RCON ออกอินเทอร์เน็ต</span></li>
                         </ul>
                         <p className="text-xs font-bold text-primary italic border-t border-destructive/10 pt-3">
                           เมื่อพร้อมใช้แล้ว เลือก &quot;มี (VPS / Dedicated)&quot; และกรอก IP เพื่อดำเนินการต่อ
@@ -421,12 +422,12 @@ function OrderContent() {
                         />
                         {mcIpError && (
                           <div className="mt-2 flex items-center gap-2 text-xs font-semibold text-destructive bg-destructive/10 px-3 py-2 rounded-lg border border-destructive/20">
-                            <i className="fas fa-triangle-exclamation flex-shrink-0" /> {mcIpError}
+                            <Icon name="triangle-exclamation" className="flex-shrink-0" /> {mcIpError}
                           </div>
                         )}
                         {!mcIpError && mcIp && (
                           <div className="mt-2 flex items-center gap-2 text-xs font-semibold text-emerald-600 bg-emerald-500/10 px-3 py-2 rounded-lg border border-emerald-500/20">
-                            <i className="fas fa-shield-halved flex-shrink-0" /> ระบบจะอนุญาตเฉพาะ IP นี้เชื่อมต่อ
+                            <Icon name="shield-halved" className="flex-shrink-0" /> ระบบจะอนุญาตเฉพาะ IP นี้เชื่อมต่อ
                           </div>
                         )}
                       </>
@@ -442,7 +443,7 @@ function OrderContent() {
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                      <i className="fas fa-receipt" />
+                      <Icon name="receipt" />
                     </div>
                     สรุปรายการ
                   </CardTitle>
@@ -475,11 +476,11 @@ function OrderContent() {
                     )}
                     <div className="bg-secondary/50 border border-border rounded-xl p-3 mt-4">
                       <p className="text-[10px] font-semibold text-muted-foreground leading-relaxed">
-                        <i className="fas fa-circle-info mr-1.5 text-primary" />
+                        <Icon name="circle-info" className="mr-1.5 text-primary" />
                         ราคาแพ็กเกจไม่รวมค่าธรรมเนียม EasySlip API ฿{easyslipFee} ต่อรายการเติมเงิน
                       </p>
                       <p className="text-[10px] font-bold text-emerald-600 leading-relaxed mt-1.5">
-                        <i className="fas fa-wallet mr-1.5" />
+                        <Icon name="wallet" className="mr-1.5" />
                         ใหม่! รองรับเติมเงินผ่าน TrueMoney อั่งเปา ใช้ฟรี ไม่มีค่าธรรมเนียมเพิ่ม
                       </p>
                     </div>
@@ -524,7 +525,7 @@ export default function OrderPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <i className="fas fa-spinner fa-spin text-3xl text-primary" />
+        <Icon name="spinner" className="text-3xl text-primary animate-spin" />
       </div>
     }>
       <OrderContent />
