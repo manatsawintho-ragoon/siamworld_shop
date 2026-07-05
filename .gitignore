@@ -54,6 +54,7 @@ fix_theme.js
 easy_slip_plan.png
 
 # ── Operational / sensitive infra files ───────────────────────
+BUSINESS.md
 network_investigation_report.txt
 deploy/customers.json
 deploy/certs/
