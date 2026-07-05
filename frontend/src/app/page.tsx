@@ -4,6 +4,7 @@ import Link from 'next/link';
 import MainLayout from '@/components/MainLayout';
 import HeroCarousel from '@/components/HeroCarousel';
 import ProductCard from '@/components/ProductCard';
+import AutoScrollCarousel from '@/components/AutoScrollCarousel';
 import { useSettings } from '@/context/SettingsContext';
 import { api } from '@/lib/api';
 import { getRarity } from '@/lib/rarity';
@@ -62,6 +63,29 @@ function SectionHeader({ Icon, tint, title, count, href, btnLabel }: {
 }
 
 const CARD_CLS = 'theme-card';
+
+/**
+ * Product section body: up to 6 items render as a static grid; 7-10 items
+ * flow through the auto-scrolling marquee carousel (free drag + loop).
+ */
+function ProductSectionBody({ products, servers }: { products: Product[]; servers: Server[] }) {
+  if (products.length <= 6) {
+    return (
+      <div className="p-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+          {products.map(p => <ProductCard key={p.id} product={p} servers={servers} />)}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="p-3">
+      <AutoScrollCarousel itemClassName="w-[44%] sm:w-[30%] md:w-[24%] xl:w-[19%]">
+        {products.map(p => <ProductCard key={p.id} product={p} servers={servers} />)}
+      </AutoScrollCarousel>
+    </div>
+  );
+}
 
 function Countdown({ endTime }: { endTime: string }) {
   const calc = () => Math.max(0, Math.floor((new Date(endTime).getTime() - Date.now()) / 1000));
@@ -393,13 +417,13 @@ export default function HomePage() {
           {(settings.show_popular_widget ?? '1') === '1' && popularItems.length > 0 && (
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5, delay: 0.2 }} className="theme-card">
               <div className="px-4 py-3 border-b border-border-muted"><SectionHeader Icon={Flame} tint="239 68 68" title="ITEMS สินค้ายอดนิยม" count={popularItems.length} href="/shop" btnLabel="ดูทั้งหมด" /></div>
-              <div className="p-3"><div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">{popularItems.map(p => <ProductCard key={p.id} product={p} servers={servers} />)}</div></div>
+              <ProductSectionBody products={popularItems} servers={servers} />
             </motion.div>
           )}
           {(settings.show_new_arrivals ?? '1') === '1' && newArrivals.length > 0 && (
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5, delay: 0.3 }} className="theme-card">
               <div className="px-4 py-3 border-b border-border-muted"><SectionHeader Icon={Star} tint="59 130 246" title="ไอเท็มมาใหม่" count={newArrivals.length} href="/shop" btnLabel="ดูทั้งหมด" /></div>
-              <div className="p-3"><div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">{newArrivals.map(p => <ProductCard key={p.id} product={p} servers={servers} />)}</div></div>
+              <ProductSectionBody products={newArrivals} servers={servers} />
             </motion.div>
           )}
         </motion.div>

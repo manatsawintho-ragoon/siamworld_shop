@@ -84,13 +84,13 @@ router.get('/products/popular', async (_req: Request, res: Response, next: NextF
        WHERE p.active = 1
        GROUP BY p.id
        ORDER BY sold_count DESC, p.created_at DESC
-       LIMIT 4`
+       LIMIT 10`
     );
     res.json({ success: true, products: rows });
   } catch (err) { next(err); }
 });
 
-// 4 newest products
+// 10 newest products
 router.get('/products/new-arrivals', async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const [rows] = await pool.execute(
@@ -101,7 +101,7 @@ router.get('/products/new-arrivals', async (_req: Request, res: Response, next: 
        LEFT JOIN categories c ON p.category_id = c.id
        WHERE p.active = 1
        ORDER BY p.created_at DESC
-       LIMIT 4`
+       LIMIT 10`
     );
     res.json({ success: true, products: rows });
   } catch (err) { next(err); }

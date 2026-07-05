@@ -179,7 +179,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     <div className="flex flex-col min-h-screen frontend-page" style={{ backgroundColor: 'rgb(var(--color-background))' }}>
       <Navbar />
 
-      <div className="flex-1 max-w-[1300px] mx-auto w-full px-4 sm:px-6 pt-6 pb-24 md:pb-6 flex flex-col lg:flex-row gap-6">
+      <div className="flex-1 max-w-[1536px] mx-auto w-full px-4 sm:px-6 pt-6 pb-24 md:pb-6 flex flex-col lg:flex-row gap-6">
 
         {/* ── Sidebar ── */}
         <aside className="w-full lg:w-[280px] flex-shrink-0 order-last lg:order-first">
