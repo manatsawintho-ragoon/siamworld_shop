@@ -5,6 +5,12 @@ import { api, getToken } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { useAdminAlert } from '@/components/AdminAlert';
 import { useRouter } from 'next/navigation';
+import {
+  User, Shield, UserCheck, Mail, Calendar, Coins, ArrowDown, ArrowUp,
+  ShoppingBag, Key, Lock, CheckCircle2, Loader2, Save, History, Receipt,
+  Clock, X, ChevronLeft, ChevronRight, Ticket, RotateCcw, Circle,
+  type LucideIcon,
+} from 'lucide-react';
 
 interface UserProfile {
   id: number;
@@ -34,12 +40,12 @@ interface Pagination {
   total: number;
 }
 
-const TX_CONFIG: Record<string, { label: string; icon: string; color: string; bg: string }> = {
-  topup:        { label: 'เติมเงิน',     icon: 'fa-arrow-down',        color: 'text-green-600',  bg: 'bg-green-50' },
-  purchase:     { label: 'ซื้อของ',      icon: 'fa-arrow-up',          color: 'text-red-500',    bg: 'bg-red-50' },
-  refund:       { label: 'คืนเงิน',      icon: 'fa-rotate-left',       color: 'text-amber-500',  bg: 'bg-amber-50' },
-  redeem_code:  { label: 'ใช้โค้ด',      icon: 'fa-ticket-alt',        color: 'text-blue-500',   bg: 'bg-blue-50' },
-  admin_adjust: { label: 'Admin',        icon: 'fa-shield-alt',         color: 'text-purple-500', bg: 'bg-purple-50' },
+const TX_CONFIG: Record<string, { label: string; Icon: LucideIcon; tint: string }> = {
+  topup:        { label: 'เติมเงิน', Icon: ArrowDown, tint: '34 197 94' },
+  purchase:     { label: 'ซื้อของ',  Icon: ArrowUp,   tint: '239 68 68' },
+  refund:       { label: 'คืนเงิน',  Icon: RotateCcw, tint: '245 158 11' },
+  redeem_code:  { label: 'ใช้โค้ด',  Icon: Ticket,    tint: '59 130 246' },
+  admin_adjust: { label: 'Admin',    Icon: Shield,    tint: '168 85 247' },
 };
 
 const CARD = 'bg-surface rounded-2xl shadow-theme-sm border border-border/70 overflow-hidden';
@@ -113,9 +119,21 @@ export default function ProfilePage() {
     }
   };
 
-  const inputCls = 'w-full pl-9 pr-3.5 py-2.5 rounded-lg border border-border text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-foreground-subtle bg-surface';
+  const inputCls = 'w-full pl-9 pr-3.5 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-foreground-subtle bg-surface';
 
   const isPositive = (type: string) => type === 'topup' || type === 'refund';
+
+  const stats = profile ? [
+    { Icon: ArrowDown,   tint: '34 197 94',  label: 'เติมเงินรวม', value: `฿${profile.total_topup.toLocaleString()}` },
+    { Icon: ArrowUp,     tint: '239 68 68',  label: 'ใช้จ่ายรวม',  value: `฿${profile.total_spent.toLocaleString()}` },
+    { Icon: ShoppingBag, tint: '245 158 11', label: 'รายการซื้อ',  value: `${profile.purchase_count} ครั้ง` },
+  ] : [];
+
+  const pwFields: { label: string; Icon: LucideIcon; value: string; setter: (v: string) => void; placeholder: string }[] = [
+    { label: 'รหัสผ่านปัจจุบัน', Icon: Lock, value: currentPw, setter: setCurrentPw, placeholder: 'รหัสผ่านที่ใช้อยู่' },
+    { label: 'รหัสผ่านใหม่',     Icon: Key,  value: newPw,     setter: setNewPw,     placeholder: 'อย่างน้อย 8 ตัวอักษร' },
+    { label: 'ยืนยันรหัสผ่านใหม่', Icon: CheckCircle2, value: confirmPw, setter: setConfirmPw, placeholder: 'พิมพ์รหัสผ่านใหม่อีกครั้ง' },
+  ];
 
   return (
     <MainLayout>
@@ -124,7 +142,7 @@ export default function ProfilePage() {
         {/* Page Header */}
         <div>
           <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <i className="fas fa-user text-[#f97316]" /> โปรไฟล์
+            <User className="w-5 h-5 text-orange-500" strokeWidth={2.25} /> โปรไฟล์
           </h1>
           <p className="text-xs text-foreground-subtle mt-0.5">ข้อมูลบัญชีและประวัติธุรกรรม</p>
         </div>
@@ -135,7 +153,7 @@ export default function ProfilePage() {
             <div className="flex items-end justify-between gap-4 flex-wrap">
               {/* Avatar + name */}
               <div className="flex items-end gap-4">
-                <div className="w-16 h-16 rounded-2xl border-4 border-white shadow-md overflow-hidden flex-shrink-0 bg-green-50">
+                <div className="w-16 h-16 rounded-2xl border-4 border-surface shadow-md overflow-hidden flex-shrink-0 bg-primary/10">
                   {profileLoading ? (
                     <div className="w-full h-full bg-surface-hover animate-pulse" />
                   ) : (
@@ -157,21 +175,21 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     {profile?.role === 'admin' ? (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold bg-orange-500 text-white">
-                        <i className="fas fa-shield-alt text-[8px]" /> Admin
+                        <Shield className="w-2 h-2" strokeWidth={2.5} /> Admin
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold bg-green-500 text-white">
-                        <i className="fas fa-user-check text-[8px]" /> Member
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold bg-primary text-primary-foreground">
+                        <UserCheck className="w-2 h-2" strokeWidth={2.5} /> Member
                       </span>
                     )}
                     {profile?.email && (
                       <span className="text-xs text-foreground-subtle flex items-center gap-1">
-                        <i className="fas fa-envelope text-[10px]" /> {profile.email}
+                        <Mail className="w-2.5 h-2.5" strokeWidth={2.25} /> {profile.email}
                       </span>
                     )}
                     {profile?.created_at && (
                       <span className="text-xs text-foreground-subtle flex items-center gap-1">
-                        <i className="fas fa-calendar text-[10px]" />
+                        <Calendar className="w-2.5 h-2.5" strokeWidth={2.25} />
                         สมาชิกตั้งแต่ {new Date(profile.created_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'short' })}
                       </span>
                     )}
@@ -181,9 +199,9 @@ export default function ProfilePage() {
 
               {/* Wallet balance highlight */}
               {!profileLoading && profile && (
-                <div className="bg-[#168d41] rounded-xl px-4 py-3 text-white shadow-[0_4px_0_#0f6530] border border-[#1faa4f]/30 flex items-center gap-3 flex-shrink-0">
+                <div className="theme-wallet-card rounded-xl px-4 py-3 text-white shadow-[0_4px_0_rgb(var(--color-primary-shadow))] border border-white/15 flex items-center gap-3 flex-shrink-0">
                   <div className="w-9 h-9 bg-black/15 border border-white/20 rounded-xl flex items-center justify-center">
-                    <i className="fas fa-coins text-white text-sm" />
+                    <Coins className="w-4 h-4 text-white" strokeWidth={2.25} />
                   </div>
                   <div>
                     <p className="text-white/70 text-[9px] font-bold uppercase tracking-widest">ยอดเงินคงเหลือ</p>
@@ -199,14 +217,10 @@ export default function ProfilePage() {
             {/* Stats row */}
             {!profileLoading && profile && (
               <div className="grid grid-cols-3 gap-3 mt-4">
-                {[
-                  { icon: 'fa-arrow-down', bg: 'bg-green-50', ic: 'text-green-600', label: 'เติมเงินรวม', value: `฿${profile.total_topup.toLocaleString()}` },
-                  { icon: 'fa-arrow-up',   bg: 'bg-red-50',   ic: 'text-red-500',   label: 'ใช้จ่ายรวม',  value: `฿${profile.total_spent.toLocaleString()}` },
-                  { icon: 'fa-bag-shopping', bg: 'bg-amber-50', ic: 'text-amber-500', label: 'รายการซื้อ', value: `${profile.purchase_count} ครั้ง` },
-                ].map((s, i) => (
+                {stats.map((s, i) => (
                   <div key={i} className="bg-surface rounded-xl border border-border p-3 flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-lg ${s.bg} flex items-center justify-center flex-shrink-0`}>
-                      <i className={`fas ${s.icon} ${s.ic} text-sm`} />
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `rgb(${s.tint} / 0.12)` }}>
+                      <s.Icon className="w-4 h-4" strokeWidth={2.25} style={{ color: `rgb(${s.tint})` }} />
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-black text-foreground tabular-nums truncate">{s.value}</p>
@@ -222,8 +236,8 @@ export default function ProfilePage() {
         {/* ── Change Password ── */}
         <div className={CARD}>
           <div className={SECTION_HEADER}>
-            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
-              <i className="fas fa-key text-amber-500 text-xs" />
+            <div className="w-8 h-8 rounded-lg bg-amber-500/12 flex items-center justify-center flex-shrink-0">
+              <Key className="w-3.5 h-3.5 text-amber-500" strokeWidth={2.25} />
             </div>
             <div>
               <h3 className="font-bold text-foreground text-sm">เปลี่ยนรหัสผ่าน</h3>
@@ -232,16 +246,12 @@ export default function ProfilePage() {
           </div>
           <form onSubmit={handleChangePassword} className="p-5">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {[
-                { label: 'รหัสผ่านปัจจุบัน', icon: 'fa-lock', value: currentPw, setter: setCurrentPw, placeholder: 'รหัสผ่านที่ใช้อยู่' },
-                { label: 'รหัสผ่านใหม่',     icon: 'fa-key',  value: newPw,     setter: setNewPw,     placeholder: 'อย่างน้อย 8 ตัวอักษร' },
-                { label: 'ยืนยันรหัสผ่านใหม่', icon: 'fa-check-circle', value: confirmPw, setter: setConfirmPw, placeholder: 'พิมพ์รหัสผ่านใหม่อีกครั้ง' },
-              ].map(f => (
+              {pwFields.map(f => (
                 <div key={f.label}>
                   <label className="block text-xs font-bold text-foreground-subtle mb-1.5">{f.label}</label>
                   <div className="relative">
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-subtle">
-                      <i className={`fas ${f.icon} text-sm`} />
+                      <f.Icon className="w-4 h-4" strokeWidth={2} />
                     </div>
                     <input
                       type="password"
@@ -257,10 +267,10 @@ export default function ProfilePage() {
             </div>
             <div className="flex justify-end mt-4">
               <button type="submit" disabled={pwSaving}
-                className="flex items-center gap-2 px-5 py-2.5 bg-[#16a34a] disabled:opacity-50 text-white text-[13px] font-bold rounded-lg shadow-[0_4px_0_#0d6b2e] hover:brightness-110 transition-all active:shadow-[0_2px_0_#0d6b2e] active:translate-y-[2px]">
+                className="flex items-center gap-2 px-5 py-2.5 bg-primary disabled:opacity-50 text-primary-foreground text-[13px] font-bold rounded-lg shadow-[0_4px_0_rgb(var(--color-primary-shadow))] hover:brightness-110 transition-all active:shadow-[0_2px_0_rgb(var(--color-primary-shadow))] active:translate-y-[2px]">
                 {pwSaving
-                  ? <><i className="fas fa-spinner fa-spin text-[12px]" /> กำลังบันทึก...</>
-                  : <><i className="fas fa-save text-[12px]" /> บันทึกรหัสผ่าน</>}
+                  ? <><Loader2 className="w-3 h-3 animate-spin" strokeWidth={2.5} /> กำลังบันทึก...</>
+                  : <><Save className="w-3 h-3" strokeWidth={2.25} /> บันทึกรหัสผ่าน</>}
               </button>
             </div>
           </form>
@@ -270,8 +280,8 @@ export default function ProfilePage() {
         <div className={CARD}>
           <div className={`${SECTION_HEADER} justify-between`}>
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
-                <i className="fas fa-clock-rotate-left text-green-600 text-xs" />
+              <div className="w-8 h-8 rounded-lg bg-primary/12 flex items-center justify-center flex-shrink-0">
+                <History className="w-3.5 h-3.5 text-primary" strokeWidth={2.25} />
               </div>
               <div>
                 <h3 className="font-bold text-foreground text-sm">ประวัติธุรกรรม</h3>
@@ -282,11 +292,11 @@ export default function ProfilePage() {
 
           {txLoading ? (
             <div className="flex items-center justify-center py-16">
-              <i className="fas fa-spinner fa-spin text-2xl text-green-500" />
+              <Loader2 className="w-7 h-7 text-primary animate-spin" strokeWidth={2.5} />
             </div>
           ) : transactions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-foreground-subtle">
-              <i className="fas fa-receipt text-3xl mb-3 text-foreground-subtle" />
+              <Receipt className="w-8 h-8 mb-3 opacity-50" strokeWidth={1.75} />
               <p className="text-sm font-medium">ยังไม่มีธุรกรรม</p>
             </div>
           ) : (
@@ -303,7 +313,8 @@ export default function ProfilePage() {
                   </thead>
                   <tbody className="divide-y divide-border">
                     {transactions.map(tx => {
-                      const cfg = TX_CONFIG[tx.type] || { label: tx.type, icon: 'fa-circle', color: 'text-foreground-subtle', bg: 'bg-surface-hover' };
+                      const cfg = TX_CONFIG[tx.type] || { label: tx.type, Icon: Circle, tint: '148 163 184' };
+                      const TxIcon = cfg.Icon;
                       const isPending = tx.status === 'pending';
                       const isFailed  = tx.status === 'failed' || tx.status === 'refunded';
                       const positive  = isPositive(tx.type) && !isPending && !isFailed;
@@ -311,24 +322,24 @@ export default function ProfilePage() {
                         <tr key={tx.id} className={`hover:bg-surface-hover/60 transition-colors ${isPending ? 'opacity-60' : ''}`}>
                           <td className="px-5 py-3">
                             <div className="flex flex-col gap-1">
-                              <span className={`inline-flex items-center gap-1.5 text-[12px] font-bold px-2.5 py-1 rounded-md ${cfg.bg} ${cfg.color}`}>
-                                <i className={`fas ${cfg.icon} text-[10px]`} />
+                              <span className="inline-flex items-center gap-1.5 text-[12px] font-bold px-2.5 py-1 rounded-md w-fit" style={{ backgroundColor: `rgb(${cfg.tint} / 0.12)`, color: `rgb(${cfg.tint})` }}>
+                                <TxIcon className="w-2.5 h-2.5" strokeWidth={2.5} />
                                 {cfg.label}
                               </span>
                               {isPending && (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-yellow-50 text-yellow-600 w-fit">
-                                  <i className="fas fa-clock text-[9px]" /> รอดำเนินการ
+                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-warning/10 text-warning w-fit">
+                                  <Clock className="w-2 h-2" strokeWidth={2.5} /> รอดำเนินการ
                                 </span>
                               )}
                               {isFailed && (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-red-50 text-red-500 w-fit">
-                                  <i className="fas fa-times text-[9px]" /> {tx.status === 'refunded' ? 'คืนเงิน' : 'ไม่สำเร็จ'}
+                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-error/10 text-error w-fit">
+                                  <X className="w-2 h-2" strokeWidth={2.5} /> {tx.status === 'refunded' ? 'คืนเงิน' : 'ไม่สำเร็จ'}
                                 </span>
                               )}
                             </div>
                           </td>
                           <td className="px-5 py-3">
-                            <span className={`font-black text-sm tabular-nums ${isPending ? 'text-foreground-subtle' : positive ? 'text-green-600' : 'text-red-500'}`}>
+                            <span className={`font-black text-sm tabular-nums ${isPending ? 'text-foreground-subtle' : positive ? 'text-success' : 'text-error'}`}>
                               {isPending ? '' : positive ? '+' : '-'}฿{Math.abs(parseFloat(String(tx.amount))).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                             </span>
                           </td>
@@ -357,8 +368,9 @@ export default function ProfilePage() {
                     <button
                       disabled={pagination.page <= 1}
                       onClick={() => loadTx(pagination.page - 1)}
+                      aria-label="หน้าก่อนหน้า"
                       className="w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center text-foreground-subtle shadow-sm hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
-                      <i className="fas fa-chevron-left text-[11px]" />
+                      <ChevronLeft className="w-3 h-3" strokeWidth={2.5} />
                     </button>
                     {Array.from({ length: Math.min(pagination.totalPages, 5) }, (_, i) => {
                       const p = pagination.totalPages <= 5
@@ -372,7 +384,7 @@ export default function ProfilePage() {
                         <button key={p} onClick={() => loadTx(p)}
                           className={`w-8 h-8 rounded-lg text-[12px] font-bold transition-all ${
                             p === pagination.page
-                              ? 'bg-[#16a34a] text-white shadow-[0_3px_0_#0d6b2e]'
+                              ? 'bg-primary text-primary-foreground shadow-[0_3px_0_rgb(var(--color-primary-shadow))]'
                               : 'bg-surface border border-border text-foreground-subtle shadow-sm hover:brightness-95'
                           }`}>
                           {p}
@@ -382,8 +394,9 @@ export default function ProfilePage() {
                     <button
                       disabled={pagination.page >= pagination.totalPages}
                       onClick={() => loadTx(pagination.page + 1)}
+                      aria-label="หน้าถัดไป"
                       className="w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center text-foreground-subtle shadow-sm hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
-                      <i className="fas fa-chevron-right text-[11px]" />
+                      <ChevronRight className="w-3 h-3" strokeWidth={2.5} />
                     </button>
                   </div>
                 </div>

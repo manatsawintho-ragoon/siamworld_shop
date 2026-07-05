@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useSettings } from '@/context/SettingsContext';
 import { useAdminAlert } from '@/components/AdminAlert';
+import { Zap, QrCode, Wallet, ChevronRight, AlertTriangle } from 'lucide-react';
 
 // Per-method bonus resolver (mirrors backend resolveTopupBonus, with legacy fallback).
 function methodBonus(settings: Record<string, string>, method: 'promptpay' | 'truemoney') {
@@ -38,7 +39,7 @@ export default function TopupSelectPage() {
       <div className="max-w-4xl mx-auto space-y-4 pb-8 font-prompt">
 
         {/* Header */}
-        <div className="bg-surface border-2 border-green-200 rounded-xl p-4 shadow-theme-sm">
+        <div className="bg-surface border-2 border-primary/30 rounded-xl p-4 shadow-theme-sm">
           <h1 className="text-lg font-black text-foreground leading-none">เติมเงินเข้าระบบ</h1>
           <p className="text-xs font-bold text-foreground-subtle mt-1.5">เลือกช่องทางที่ต้องการเติมเงิน</p>
         </div>
@@ -51,16 +52,16 @@ export default function TopupSelectPage() {
             onClick={() => ppEnabled && router.push('/topup/promptpay')}
             disabled={!ppEnabled}
             className={`group relative bg-surface rounded-2xl border-2 overflow-hidden flex flex-col shadow-theme-sm transition-all duration-300 text-center h-[300px] ${
-              ppEnabled ? 'border-green-200 hover:border-[#003b80] hover:shadow-lg' : 'border-border grayscale opacity-70 cursor-not-allowed'
+              ppEnabled ? 'border-primary/30 hover:border-[#003b80] hover:shadow-lg' : 'border-border grayscale opacity-70 cursor-not-allowed'
             }`}
           >
             {ppEnabled && ppMult > 1 && (
               <span className="absolute top-3 left-3 z-20 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-orange-500 text-white text-[10px] font-black shadow-sm">
-                <i className="fas fa-bolt text-[9px]" /> โบนัส x{ppMult}
+                <Zap className="w-2.5 h-2.5" strokeWidth={2.5} /> โบนัส x{ppMult}
               </span>
             )}
             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-              <i className="fas fa-qrcode text-7xl text-[#003b80]"></i>
+              <QrCode className="w-16 h-16 text-[#003b80]" strokeWidth={1.5} />
             </div>
             <div className="flex-1 flex flex-col items-center justify-center p-6 gap-4 relative z-10">
               <div className="relative">
@@ -77,8 +78,8 @@ export default function TopupSelectPage() {
                 </p>
               </div>
             </div>
-            <div className={`py-3.5 text-white font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 transition-colors ${ppEnabled ? 'bg-[#003b80] group-hover:bg-[#004ba3]' : 'bg-gray-300'}`}>
-              {ppEnabled ? <>เลือกช่องทางนี้ <i className="fas fa-chevron-right text-[9px] group-hover:translate-x-1 transition-transform"></i></> : 'ไม่พร้อมใช้งาน'}
+            <div className={`py-3.5 text-white font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 transition-colors ${ppEnabled ? 'bg-[#003b80] group-hover:bg-[#004ba3]' : 'bg-border'}`}>
+              {ppEnabled ? <>เลือกช่องทางนี้ <ChevronRight className="w-2.5 h-2.5 group-hover:translate-x-1 transition-transform" strokeWidth={2.5} /></> : 'ไม่พร้อมใช้งาน'}
             </div>
           </button>
 
@@ -87,16 +88,16 @@ export default function TopupSelectPage() {
             onClick={() => tmnEnabled && router.push('/topup/truemoney')}
             disabled={!tmnEnabled}
             className={`group relative bg-surface rounded-2xl border-2 overflow-hidden flex flex-col shadow-theme-sm transition-all duration-300 text-center h-[300px] ${
-              tmnEnabled ? 'border-green-200 hover:border-[#ed1c24] hover:shadow-lg' : 'border-border grayscale opacity-70 cursor-not-allowed'
+              tmnEnabled ? 'border-primary/30 hover:border-[#ed1c24] hover:shadow-lg' : 'border-border grayscale opacity-70 cursor-not-allowed'
             }`}
           >
             {tmnEnabled && tmnMult > 1 && (
               <span className="absolute top-3 left-3 z-20 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-orange-500 text-white text-[10px] font-black shadow-sm">
-                <i className="fas fa-bolt text-[9px]" /> โบนัส x{tmnMult}
+                <Zap className="w-2.5 h-2.5" strokeWidth={2.5} /> โบนัส x{tmnMult}
               </span>
             )}
             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-              <i className="fas fa-wallet text-7xl text-[#ed1c24]"></i>
+              <Wallet className="w-16 h-16 text-[#ed1c24]" strokeWidth={1.5} />
             </div>
             <div className="flex-1 flex flex-col items-center justify-center p-6 gap-4 relative z-10">
               <div className="relative">
@@ -113,16 +114,16 @@ export default function TopupSelectPage() {
                 </p>
               </div>
             </div>
-            <div className={`py-3.5 text-white font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 transition-colors ${tmnEnabled ? 'bg-[#ed1c24] group-hover:bg-[#c81118]' : 'bg-gray-300'}`}>
-              {tmnEnabled ? <>เลือกช่องทางนี้ <i className="fas fa-chevron-right text-[9px] group-hover:translate-x-1 transition-transform"></i></> : 'ไม่พร้อมใช้งาน'}
+            <div className={`py-3.5 text-white font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 transition-colors ${tmnEnabled ? 'bg-[#ed1c24] group-hover:bg-[#c81118]' : 'bg-border'}`}>
+              {tmnEnabled ? <>เลือกช่องทางนี้ <ChevronRight className="w-2.5 h-2.5 group-hover:translate-x-1 transition-transform" strokeWidth={2.5} /></> : 'ไม่พร้อมใช้งาน'}
             </div>
           </button>
         </div>
 
         {!ppEnabled && !tmnEnabled && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-2.5">
-            <i className="fas fa-triangle-exclamation text-amber-500 text-sm" />
-            <p className="text-[12px] font-bold text-amber-800">ขณะนี้ร้านยังไม่เปิดรับการเติมเงิน กรุณาติดต่อผู้ดูแลระบบ</p>
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 flex items-center gap-2.5">
+            <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" strokeWidth={2.25} />
+            <p className="text-[12px] font-bold text-amber-600">ขณะนี้ร้านยังไม่เปิดรับการเติมเงิน กรุณาติดต่อผู้ดูแลระบบ</p>
           </div>
         )}
       </div>

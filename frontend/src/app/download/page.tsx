@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { api } from '@/lib/api';
 import { motion } from 'framer-motion';
+import { FileText, Download, Info } from 'lucide-react';
 
 interface Download {
   id: number;
@@ -50,7 +51,7 @@ export default function DownloadPage() {
         <div className="space-y-3 min-h-[300px]">
           {loading ? (
             Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-16 bg-white rounded-lg border border-border animate-pulse" />
+              <div key={i} className="h-16 bg-surface rounded-lg border border-border animate-pulse" />
             ))
           ) : (
             downloads.map((dl, idx) => (
@@ -63,7 +64,7 @@ export default function DownloadPage() {
               >
                 {/* Minimal Icon Slot */}
                 <div className="w-10 h-10 shrink-0 bg-background rounded-lg border border-border flex items-center justify-center text-primary/60">
-                  <i className="fas fa-file-alt text-lg"></i>
+                  <FileText className="w-5 h-5" strokeWidth={2} />
                 </div>
 
                 {/* Info */}
@@ -92,9 +93,9 @@ export default function DownloadPage() {
                     href={dl.download_url} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="btn-primary !px-4 !py-1.5 !text-[10px] uppercase tracking-widest"
+                    className="btn-primary !px-4 !py-1.5 !text-[10px] uppercase tracking-widest inline-flex items-center gap-1"
                   >
-                    <i className="fas fa-download mr-1"></i>
+                    <Download className="w-3 h-3" strokeWidth={2.5} />
                     GET
                   </a>
                 </div>
@@ -111,7 +112,7 @@ export default function DownloadPage() {
 
         {/* ── Disclaimer ── */}
         <div className="mt-8 flex items-center gap-2 justify-center text-[10px] font-bold text-foreground-subtle uppercase tracking-widest opacity-60">
-          <i className="fas fa-info-circle text-primary"></i>
+          <Info className="w-3 h-3 text-primary" strokeWidth={2.25} />
           <span>Files are scanned for safety before upload</span>
         </div>
 

@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Slide {
   id: number;
@@ -80,14 +81,14 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
             className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white text-gray-800 shadow-lg flex items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 hover:shadow-xl"
             aria-label="Previous slide"
           >
-            <i className="fas fa-chevron-left text-sm"></i>
+            <ChevronLeft className="w-4 h-4" strokeWidth={2.5} />
           </button>
           <button
             onClick={goNext}
             className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white text-gray-800 shadow-lg flex items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 hover:shadow-xl"
             aria-label="Next slide"
           >
-            <i className="fas fa-chevron-right text-sm"></i>
+            <ChevronRight className="w-4 h-4" strokeWidth={2.5} />
           </button>
         </>
       )}

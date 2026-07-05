@@ -5,6 +5,11 @@ import { useAuth } from '@/context/AuthContext';
 import { api, getToken } from '@/lib/api';
 import { useAdminAlert } from '@/components/AdminAlert';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Tag, Box, Flame, Info, ShoppingCart, AlignLeft, X, Check, Lock,
+  Wallet, Server, Layers, Minus, Plus, Gift, AlertTriangle,
+  CheckCircle2, AlertCircle, Loader2, RotateCcw,
+} from 'lucide-react';
 
 interface Product {
   id: number;
@@ -119,14 +124,14 @@ export default function ProductCard({ product, servers }: { product: Product; se
   return (
     <>
       {/* Card */}
-      <motion.article 
+      <motion.article
         whileHover={{ y: -4, scale: 1.01 }}
         whileTap={{ scale: 0.99 }}
-        className="group relative flex flex-col bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-amber-300 transition-all duration-200 hover:shadow-xl"
+        className="group relative flex flex-col bg-surface border border-border rounded-xl overflow-hidden hover:border-primary/40 transition-all duration-200 hover:shadow-theme-lg"
       >
 
         {/* Image area */}
-        <div className="relative aspect-[3/4] bg-gray-100 overflow-hidden">
+        <div className="relative aspect-[3/4] bg-surface-hover overflow-hidden">
 
           {/* Category badge — top left (on image) */}
           {product.category_name && (
@@ -138,16 +143,16 @@ export default function ProductCard({ product, servers }: { product: Product; se
 
           {/* Discount badge — top right (on image) */}
           {discount > 0 && (
-            <span className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-red-500 text-white text-[11px] font-black px-2 py-0.5 rounded-md shadow-lg">
-              <i className="fas fa-tag text-[9px]" />
+            <span className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-error text-white text-[11px] font-black px-2 py-0.5 rounded-md shadow-lg">
+              <Tag className="w-2.5 h-2.5" strokeWidth={2.5} />
               -{discount}%
             </span>
           )}
 
           {/* Image / Carousel */}
           {images.length === 0 ? (
-            <div className="w-full h-full flex items-center justify-center bg-amber-50">
-              <i className="fas fa-cube text-5xl text-amber-200 group-hover:text-amber-300 transition-colors" aria-hidden="true" />
+            <div className="w-full h-full flex items-center justify-center bg-surface-hover">
+              <Box className="w-12 h-12 text-foreground-subtle/40 group-hover:text-primary/40 transition-colors" strokeWidth={1.5} aria-hidden="true" />
             </div>
           ) : images.length === 1 ? (
             <img
@@ -194,12 +199,12 @@ export default function ProductCard({ product, servers }: { product: Product; se
         </div>
 
         {/* Info below image — flex-1 so button always pins to bottom */}
-        <div className="p-3 flex flex-col flex-1 bg-white relative z-10">
-          <p className="text-gray-900 font-bold text-sm leading-tight line-clamp-1 group-hover:text-amber-600 transition-colors">{product.name}</p>
+        <div className="p-3 flex flex-col flex-1 bg-surface relative z-10">
+          <p className="text-foreground font-bold text-sm leading-tight line-clamp-1 group-hover:text-primary transition-colors">{product.name}</p>
 
-          <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-50 border border-orange-200 w-fit">
-            <i className="fas fa-fire text-orange-500 text-[10px]" />
-            <span className="text-[11px] font-bold text-orange-700">
+          <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-500/10 border border-orange-500/20 w-fit">
+            <Flame className="w-2.5 h-2.5 text-orange-500" strokeWidth={2.25} />
+            <span className="text-[11px] font-bold text-orange-600">
               ขายแล้ว <span className="tabular-nums font-black">{(product.sold_count ?? 0).toLocaleString()}</span> ชิ้น
             </span>
           </div>
@@ -210,7 +215,7 @@ export default function ProductCard({ product, servers }: { product: Product; se
             className="inline-flex items-center gap-1 mt-1.5 mb-1 text-[10px] font-bold transition-colors hover:brightness-110"
             style={{ color: 'rgb(var(--color-primary))' }}
           >
-            <i className="fas fa-info-circle text-[9px]" /> ดูคำอธิบายสินค้า
+            <Info className="w-2.5 h-2.5" strokeWidth={2.25} /> ดูคำอธิบายสินค้า
           </button>
 
           <motion.button
@@ -219,7 +224,7 @@ export default function ProductCard({ product, servers }: { product: Product; se
             onClick={() => setShowBuy(true)}
             className="btn-buy w-full mt-auto pt-3 pb-2.5 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 min-h-[40px] shadow-lg hover:shadow-xl transition-all"
           >
-            <i className="fas fa-shopping-cart text-[11px]" /> ซื้อเลย!
+            <ShoppingCart className="w-3 h-3" strokeWidth={2.5} /> ซื้อเลย!
           </motion.button>
         </div>
       </motion.article>
@@ -245,53 +250,54 @@ export default function ProductCard({ product, servers }: { product: Product; se
                 onClick={e => e.stopPropagation()}
               >
                 {/* Header */}
-                <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3 flex-shrink-0">
+                <div className="px-5 py-4 border-b border-border-muted flex items-center gap-3 flex-shrink-0">
                   {imgSrc ? (
-                    <div className="w-10 h-10 rounded-lg bg-white border border-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
+                    <div className="w-10 h-10 rounded-lg bg-surface border border-border-muted flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
                       <img src={imgSrc} alt={product.name} className="w-9 h-9 object-contain" style={{ imageRendering: 'pixelated' }} />
                     </div>
                   ) : (
-                    <div className="w-10 h-10 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center flex-shrink-0">
-                      <i className="fas fa-cube text-amber-300 text-lg" />
+                    <div className="w-10 h-10 rounded-lg bg-surface-hover border border-border-muted flex items-center justify-center flex-shrink-0">
+                      <Box className="w-5 h-5 text-foreground-subtle/50" strokeWidth={1.75} />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-gray-900 text-sm leading-tight truncate">{product.name}</h3>
+                    <h3 className="font-bold text-foreground text-sm leading-tight truncate">{product.name}</h3>
                     {product.category_name && (
-                      <p className="text-[10px] text-gray-400 mt-0.5">{product.category_name}</p>
+                      <p className="text-[10px] text-foreground-subtle mt-0.5">{product.category_name}</p>
                     )}
                   </div>
                   <button
                     onClick={() => setShowDesc(false)}
                     className="btn-close"
+                    aria-label="ปิด"
                   >
-                    <i className="fas fa-times text-xs" />
+                    <X className="w-3.5 h-3.5" strokeWidth={2.5} />
                   </button>
                 </div>
 
                 {/* Body */}
                 <div className="p-5 overflow-y-auto flex-1 min-h-0">
                   <div className="flex items-center gap-1.5 mb-3">
-                    <i className="fas fa-align-left text-[12px]" style={{ color: 'rgb(var(--color-primary))' }} />
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">คำอธิบายสินค้า</span>
+                    <AlignLeft className="w-3 h-3" strokeWidth={2.25} style={{ color: 'rgb(var(--color-primary))' }} />
+                    <span className="text-xs font-bold text-foreground-muted uppercase tracking-wide">คำอธิบายสินค้า</span>
                   </div>
                   {product.description ? (
-                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{product.description}</p>
+                    <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{product.description}</p>
                   ) : (
-                    <div className="flex flex-col items-center justify-center text-center py-6 text-gray-400">
-                      <i className="fas fa-circle-info text-2xl mb-2 opacity-40" />
+                    <div className="flex flex-col items-center justify-center text-center py-6 text-foreground-subtle">
+                      <Info className="w-7 h-7 mb-2 opacity-40" strokeWidth={1.75} />
                       <p className="text-sm font-medium">ยังไม่มีคำอธิบายเพิ่มเติมสำหรับสินค้านี้</p>
                     </div>
                   )}
                 </div>
 
                 {/* Footer */}
-                <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/30 flex-shrink-0">
+                <div className="px-5 py-3.5 border-t border-border-muted bg-surface-hover/40 flex-shrink-0">
                   <button
                     onClick={() => setShowDesc(false)}
-                    className="btn-primary w-full py-2.5 text-[13px]"
+                    className="btn-primary w-full py-2.5 text-[13px] flex items-center justify-center gap-1.5"
                   >
-                    <i className="fas fa-check text-[11px] mr-1.5" /> ปิด
+                    <Check className="w-3 h-3" strokeWidth={2.5} /> ปิด
                   </button>
                 </div>
               </motion.div>
@@ -323,19 +329,20 @@ export default function ProductCard({ product, servers }: { product: Product; se
                 onClick={e => e.stopPropagation()}
               >
                 {/* Header */}
-                <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3 flex-shrink-0">
+                <div className="px-5 py-4 border-b border-border-muted flex items-center gap-3 flex-shrink-0">
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(var(--color-primary), 0.1)', color: 'rgb(var(--color-primary))' }}>
-                    <i className="fas fa-shopping-cart text-xs" />
+                    <ShoppingCart className="w-3.5 h-3.5" strokeWidth={2.25} />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-bold text-gray-900 text-sm leading-none">ยืนยันการซื้อสินค้า</h3>
-                    <p className="text-[11px] text-gray-400 mt-0.5">ตรวจสอบรายละเอียดก่อนยืนยัน</p>
+                    <h3 className="font-bold text-foreground text-sm leading-none">ยืนยันการซื้อสินค้า</h3>
+                    <p className="text-[11px] text-foreground-subtle mt-0.5">ตรวจสอบรายละเอียดก่อนยืนยัน</p>
                   </div>
                   <button
                     onClick={() => { if (!buying) resetModal(); }}
                     className="btn-close"
+                    aria-label="ปิด"
                   >
-                    <i className="fas fa-times text-xs" />
+                    <X className="w-3.5 h-3.5" strokeWidth={2.5} />
                   </button>
                 </div>
 
@@ -343,35 +350,35 @@ export default function ProductCard({ product, servers }: { product: Product; se
                 <div className="p-5 space-y-3 overflow-y-auto flex-1 min-h-0">
 
                   {/* Product block */}
-                  <div className="flex items-start gap-3 bg-gray-50/50 rounded-xl p-3 border border-gray-100">
+                  <div className="flex items-start gap-3 bg-surface-hover/60 rounded-xl p-3 border border-border-muted">
                     {imgSrc ? (
-                      <div className="w-14 h-14 rounded-lg bg-white border border-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
+                      <div className="w-14 h-14 rounded-lg bg-surface border border-border-muted flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
                         <img src={imgSrc} alt={product.name} className="w-12 h-12 object-contain" style={{ imageRendering: 'pixelated' }} />
                       </div>
                     ) : (
-                      <div className="w-14 h-14 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center flex-shrink-0">
-                        <i className="fas fa-cube text-amber-300 text-xl" />
+                      <div className="w-14 h-14 rounded-lg bg-surface-hover border border-border-muted flex items-center justify-center flex-shrink-0">
+                        <Box className="w-6 h-6 text-foreground-subtle/50" strokeWidth={1.75} />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-gray-900 text-sm leading-tight truncate">{product.name}</p>
+                      <p className="font-bold text-foreground text-sm leading-tight truncate">{product.name}</p>
                       {product.category_name && (
-                        <p className="text-[10px] text-gray-400 mt-0.5">{product.category_name}</p>
+                        <p className="text-[10px] text-foreground-subtle mt-0.5">{product.category_name}</p>
                       )}
                       <button
                         onClick={() => setShowDesc(true)}
                         className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold transition-colors"
                         style={{ color: 'rgb(var(--color-primary))' }}
                       >
-                        <i className="fas fa-info-circle text-[9px]" /> ดูคำอธิบายสินค้า
+                        <Info className="w-2.5 h-2.5" strokeWidth={2.25} /> ดูคำอธิบายสินค้า
                       </button>
                       <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                         {discount > 0 && product.original_price && (
-                          <span className="text-gray-400 text-xs line-through tabular-nums">{product.original_price.toLocaleString()} ฿</span>
+                          <span className="text-foreground-subtle text-xs line-through tabular-nums">{product.original_price.toLocaleString()} ฿</span>
                         )}
                         <span className="font-black text-base tabular-nums leading-none theme-price-text">{product.price.toLocaleString()} ฿</span>
                         {discount > 0 && (
-                          <span className="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-md shadow-sm">-{discount}%</span>
+                          <span className="bg-error text-white text-[9px] font-black px-1.5 py-0.5 rounded-md shadow-sm">-{discount}%</span>
                         )}
                       </div>
                     </div>
@@ -379,9 +386,9 @@ export default function ProductCard({ product, servers }: { product: Product; se
 
                   {/* Not logged in */}
                   {!user && (
-                    <div className="flex items-center gap-2 bg-red-50 border border-red-100 rounded-xl px-3 py-2.5">
-                      <i className="fas fa-lock text-red-400 text-sm flex-shrink-0" />
-                      <span className="text-xs font-bold text-red-500">กรุณาเข้าสู่ระบบก่อนทำรายการ</span>
+                    <div className="flex items-center gap-2 bg-error/10 border border-error/20 rounded-xl px-3 py-2.5">
+                      <Lock className="w-4 h-4 text-error flex-shrink-0" strokeWidth={2.25} />
+                      <span className="text-xs font-bold text-error">กรุณาเข้าสู่ระบบก่อนทำรายการ</span>
                     </div>
                   )}
 
@@ -390,17 +397,17 @@ export default function ProductCard({ product, servers }: { product: Product; se
                     const bal = user.wallet_balance ?? 0;
                     const enough = bal >= totalPrice;
                     return (
-                      <div className={`flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-bold transition-colors ${enough ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'}`}>
-                        <span className={enough ? 'text-green-600' : 'text-red-500'}>
-                          <i className={`fas fa-wallet mr-1.5 text-[10px]`} />
+                      <div className={`flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-bold transition-colors ${enough ? 'bg-success/10 border-success/25' : 'bg-error/10 border-error/25'}`}>
+                        <span className={`flex items-center gap-1.5 ${enough ? 'text-success' : 'text-error'}`}>
+                          <Wallet className="w-3 h-3" strokeWidth={2.25} />
                           ยอดเงินคงเหลือ
                         </span>
                         <div className="flex items-center gap-2">
-                          <span className={`font-black tabular-nums ${enough ? 'text-green-700' : 'text-red-600'}`}>
+                          <span className={`font-black tabular-nums ${enough ? 'text-success' : 'text-error'}`}>
                             {bal.toLocaleString()} ฿
                           </span>
                           {!enough && (
-                            <span className="text-[10px] font-bold text-red-400 bg-red-100 px-1.5 py-0.5 rounded">
+                            <span className="text-[10px] font-bold text-error bg-error/15 px-1.5 py-0.5 rounded">
                               ไม่พอ -{(totalPrice - bal).toLocaleString()} ฿
                             </span>
                           )}
@@ -414,8 +421,8 @@ export default function ProductCard({ product, servers }: { product: Product; se
                     <>
                       {servers.length > 0 && (
                         <div>
-                          <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wide">
-                            <i className="fas fa-server text-[10px] mr-1" style={{ color: 'rgb(var(--color-primary))' }} />
+                          <label className="flex items-center gap-1 text-[11px] font-bold text-foreground-muted mb-1.5 uppercase tracking-wide">
+                            <Server className="w-2.5 h-2.5" strokeWidth={2.25} style={{ color: 'rgb(var(--color-primary))' }} />
                             เลือกเซิร์ฟเวอร์ปลายทาง
                           </label>
                           <select
@@ -432,17 +439,18 @@ export default function ProductCard({ product, servers }: { product: Product; se
 
                       {/* Quantity */}
                       <div>
-                        <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wide">
-                          <i className="fas fa-layer-group text-[10px] mr-1" style={{ color: 'rgb(var(--color-primary))' }} />
+                        <label className="flex items-center gap-1 text-[11px] font-bold text-foreground-muted mb-1.5 uppercase tracking-wide">
+                          <Layers className="w-2.5 h-2.5" strokeWidth={2.25} style={{ color: 'rgb(var(--color-primary))' }} />
                           จำนวนที่ต้องการซื้อ
                         </label>
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => setQuantity(q => Math.max(1, q - 1))}
                             disabled={buying || quantity <= 1}
-                            className="w-10 h-10 rounded-lg border border-border bg-surface text-foreground font-bold text-lg flex items-center justify-center hover:bg-surface-hover disabled:opacity-40 transition-all shadow-sm"
+                            aria-label="ลดจำนวน"
+                            className="w-10 h-10 rounded-lg border border-border bg-surface text-foreground flex items-center justify-center hover:bg-surface-hover disabled:opacity-40 transition-all shadow-sm"
                           >
-                            <i className="fas fa-minus text-[11px]" />
+                            <Minus className="w-3 h-3" strokeWidth={2.5} />
                           </button>
                           <input
                             type="number"
@@ -457,9 +465,10 @@ export default function ProductCard({ product, servers }: { product: Product; se
                           <button
                             onClick={() => setQuantity(q => Math.min(99, q + 1))}
                             disabled={buying || quantity >= 99}
-                            className="w-10 h-10 rounded-lg border border-border bg-surface text-foreground font-bold text-lg flex items-center justify-center hover:bg-surface-hover disabled:opacity-40 transition-all shadow-sm"
+                            aria-label="เพิ่มจำนวน"
+                            className="w-10 h-10 rounded-lg border border-border bg-surface text-foreground flex items-center justify-center hover:bg-surface-hover disabled:opacity-40 transition-all shadow-sm"
                           >
-                            <i className="fas fa-plus text-[11px]" />
+                            <Plus className="w-3 h-3" strokeWidth={2.5} />
                           </button>
                           {quantity > 1 && (
                             <span className="theme-price-text font-black text-sm tabular-nums whitespace-nowrap ml-1">
@@ -476,23 +485,23 @@ export default function ProductCard({ product, servers }: { product: Product; se
                           disabled={buying}
                           className={`flex items-center gap-2.5 w-full px-3.5 py-2.5 rounded-lg border text-sm font-bold transition-all shadow-sm ${
                             isGift
-                              ? 'bg-pink-50 border-pink-300 text-pink-600'
-                              : 'bg-white border-gray-200 text-gray-500 hover:border-pink-300 hover:text-pink-500'
+                              ? 'bg-pink-500/10 border-pink-500/40 text-pink-500'
+                              : 'bg-surface border-border text-foreground-muted hover:border-pink-500/40 hover:text-pink-500'
                           }`}
                         >
-                          <i className={`fas fa-gift text-[12px] ${isGift ? 'text-pink-500' : 'text-gray-400'}`} />
+                          <Gift className={`w-3.5 h-3.5 ${isGift ? 'text-pink-500' : 'text-foreground-subtle'}`} strokeWidth={2.25} />
                           <span>{isGift ? 'ส่งของขวัญให้เพื่อน' : 'ส่งเป็นของขวัญ'}</span>
-                          <div className={`ml-auto w-8 h-4 rounded-full transition-colors ${isGift ? 'bg-pink-500' : 'bg-gray-200'}`}>
-                            <div className={`w-3 h-3 bg-white rounded-full shadow mt-0.5 transition-transform ${isGift ? 'translate-x-4.5 ml-0.5' : 'ml-0.5'}`} style={{ transform: isGift ? 'translateX(18px)' : 'translateX(2px)' }} />
+                          <div className={`ml-auto w-8 h-4 rounded-full transition-colors ${isGift ? 'bg-pink-500' : 'bg-border'}`}>
+                            <div className={`w-3 h-3 bg-white rounded-full shadow mt-0.5 transition-transform`} style={{ transform: isGift ? 'translateX(18px)' : 'translateX(2px)' }} />
                           </div>
                         </button>
 
                         <AnimatePresence>
                           {isGift && (
-                            <motion.div 
-                              initial={{ opacity: 0, height: 0 }} 
-                              animate={{ opacity: 1, height: 'auto' }} 
-                              exit={{ opacity: 0, height: 0 }} 
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
                               className="mt-2 overflow-hidden"
                             >
                               <input
@@ -502,10 +511,10 @@ export default function ProductCard({ product, servers }: { product: Product; se
                                 onChange={e => setGiftUsername(e.target.value)}
                                 disabled={buying}
                                 maxLength={64}
-                                className="w-full px-3.5 py-2.5 rounded-lg border border-pink-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400/30 focus:border-pink-400 bg-white shadow-sm transition-all"
+                                className="w-full px-3.5 py-2.5 rounded-lg border border-pink-500/30 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-pink-400/30 focus:border-pink-400 bg-surface shadow-sm transition-all"
                               />
                               <p className="text-[10px] text-pink-500 mt-1 flex items-center gap-1 font-medium">
-                                <i className="fas fa-info-circle text-[9px]" />
+                                <Info className="w-2.5 h-2.5" strokeWidth={2.25} />
                                 เพื่อนต้องออนไลน์อยู่ในเซิร์ฟเวอร์เดียวกัน
                               </p>
                             </motion.div>
@@ -513,9 +522,9 @@ export default function ProductCard({ product, servers }: { product: Product; se
                         </AnimatePresence>
                       </div>
 
-                      <div className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
-                        <i className="fas fa-exclamation-triangle text-amber-500 text-sm mt-0.5 flex-shrink-0" />
-                        <span className="text-[11px] text-amber-700 font-medium leading-relaxed">
+                      <div className="flex items-start gap-2 bg-warning/10 border border-warning/20 rounded-xl px-3 py-2.5">
+                        <AlertTriangle className="w-4 h-4 text-warning mt-0.5 flex-shrink-0" strokeWidth={2.25} />
+                        <span className="text-[11px] text-foreground-muted font-medium leading-relaxed">
                           {isGift
                             ? 'ทั้งคุณและผู้รับต้องออนไลน์อยู่ในเกม และอยู่ในเซิร์ฟเวอร์ก่อนกดยืนยัน'
                             : 'กรุณาออนไลน์ในเกม และอยู่ในเซิร์ฟเวอร์ก่อนกดซื้อ เพื่อรับไอเท็มทันที'}
@@ -527,17 +536,19 @@ export default function ProductCard({ product, servers }: { product: Product; se
                   {/* Result message */}
                   <AnimatePresence>
                     {result && (
-                      <motion.div 
-                        initial={{ opacity: 0, y: 5 }} 
-                        animate={{ opacity: 1, y: 0 }} 
+                      <motion.div
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 5 }}
                         className={`flex items-start gap-2 rounded-xl px-3 py-2.5 border text-xs font-bold ${
                           result.success
-                            ? 'bg-green-50 border-green-200 text-green-700 shadow-[0_2px_0_#bbf7d0]'
-                            : 'bg-red-50 border-red-200 text-red-600 shadow-[0_2px_0_#fecaca]'
+                            ? 'bg-success/10 border-success/25 text-success'
+                            : 'bg-error/10 border-error/25 text-error'
                         }`}
                       >
-                        <i className={`fas ${result.success ? 'fa-check-circle' : 'fa-exclamation-circle'} mt-0.5 flex-shrink-0 text-sm`} />
+                        {result.success
+                          ? <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" strokeWidth={2.25} />
+                          : <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" strokeWidth={2.25} />}
                         <span className="leading-relaxed">{result.message}</span>
                       </motion.div>
                     )}
@@ -545,29 +556,29 @@ export default function ProductCard({ product, servers }: { product: Product; se
                 </div>
 
                 {/* Footer */}
-                <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/30 flex items-center gap-2 flex-shrink-0">
+                <div className="px-5 py-3.5 border-t border-border-muted bg-surface-hover/40 flex items-center gap-2 flex-shrink-0">
                   <button
                     onClick={() => { if (!buying) resetModal(); }}
                     disabled={buying}
-                    className="flex-1 btn-ghost py-2.5 text-[13px]"
+                    className="flex-1 btn-ghost py-2.5 text-[13px] flex items-center justify-center gap-1.5"
                   >
-                    <i className="fas fa-times text-[11px] mr-1.5" /> ยกเลิก
+                    <X className="w-3 h-3" strokeWidth={2.5} /> ยกเลิก
                   </button>
                   {user && (
                     <button
                       onClick={result?.success ? () => setResult(null) : handleBuy}
                       disabled={buying || (user.wallet_balance ?? 0) < totalPrice}
-                      className={`flex-[2] py-2.5 text-[13px] rounded-lg font-bold transition-all ${
+                      className={`flex-[2] py-2.5 text-[13px] rounded-lg font-bold transition-all flex items-center justify-center gap-1.5 ${
                         result?.success ? 'btn-primary' : isGift ? 'btn px-4 bg-pink-500 text-white shadow-[0_4px_0_#be185d] hover:brightness-110 active:translate-y-[2px] active:shadow-[0_2px_0_#be185d]' : 'btn-buy'
                       }`}
                     >
                       {buying
-                        ? <><i className="fas fa-spinner fa-spin text-[12px] mr-1.5" /> กำลังดำเนินการ...</>
+                        ? <><Loader2 className="w-3 h-3 animate-spin" strokeWidth={2.5} /> กำลังดำเนินการ...</>
                         : result?.success
-                          ? <><i className="fas fa-redo text-[12px] mr-1.5" /> ซื้ออีกครั้ง</>
+                          ? <><RotateCcw className="w-3 h-3" strokeWidth={2.5} /> ซื้ออีกครั้ง</>
                           : isGift
-                            ? <><i className="fas fa-gift text-[12px] mr-1.5" /> ยืนยันส่งของขวัญ</>
-                            : <><i className="fas fa-shopping-cart text-[12px] mr-1.5" /> ยืนยันซื้อ {quantity > 1 ? `(${quantity})` : ''}</>}
+                            ? <><Gift className="w-3 h-3" strokeWidth={2.5} /> ยืนยันส่งของขวัญ</>
+                            : <><ShoppingCart className="w-3 h-3" strokeWidth={2.5} /> ยืนยันซื้อ {quantity > 1 ? `(${quantity})` : ''}</>}
                     </button>
                   )}
                 </div>

@@ -4,6 +4,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useSettings } from '@/context/SettingsContext';
+import {
+  Home, ShoppingCart, PackageOpen, Coins, Download,
+  Menu, X, PlusCircle, User, UserCircle, type LucideIcon,
+} from 'lucide-react';
 
 export default function Navbar() {
   const { user } = useAuth();
@@ -69,20 +73,20 @@ export default function Navbar() {
 
             {/* Desktop Nav Links */}
             <nav className="hidden md:flex items-center w-full justify-center">
-              <NavLink href="/"         icon="fa-home"          label="Home"      subLabel="หน้าแรก"       pathname={pathname} />
-              <NavLink href="/shop"     icon="fa-shopping-cart" label="Itemshop"  subLabel="ร้านค้าไอเท็ม" pathname={pathname} />
-              {showLootbox  && <NavLink href="/lootbox"  icon="fa-box-open"      label="Gacha"     subLabel="กล่องสุ่ม"     pathname={pathname} />}
-              <NavLink href="/topup"    icon="fa-coins"         label="Topup"     subLabel="เติมเงิน"       pathname={pathname} />
-              {showDownload && <NavLink href="/download" icon="fa-download"      label="Download"  subLabel="ดาวน์โหลด"     pathname={pathname} />}
+              <NavLink href="/"         Icon={Home}          label="Home"      subLabel="หน้าแรก"       pathname={pathname} />
+              <NavLink href="/shop"     Icon={ShoppingCart}  label="Itemshop"  subLabel="ร้านค้าไอเท็ม" pathname={pathname} />
+              {showLootbox  && <NavLink href="/lootbox"  Icon={PackageOpen} label="Gacha"     subLabel="กล่องสุ่ม"     pathname={pathname} />}
+              <NavLink href="/topup"    Icon={Coins}         label="Topup"     subLabel="เติมเงิน"       pathname={pathname} />
+              {showDownload && <NavLink href="/download" Icon={Download}     label="Download"  subLabel="ดาวน์โหลด"     pathname={pathname} />}
             </nav>
 
             {/* Mobile Toggle */}
             <div className="md:hidden flex w-full justify-between items-center py-3">
               <span className="font-bold text-sm tracking-wide uppercase" style={{ color: 'rgb(var(--color-primary))' }}>เมนูหลัก</span>
-              <button onClick={() => setMobileOpen(!mobileOpen)}
+              <button onClick={() => setMobileOpen(!mobileOpen)} aria-label={mobileOpen ? 'ปิดเมนู' : 'เปิดเมนู'}
                 className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors"
                 style={{ backgroundColor: 'rgb(var(--color-surface-hover))', color: 'rgb(var(--color-foreground-muted))', border: '1px solid rgb(var(--color-border))' }}>
-                <i className={`fas ${mobileOpen ? 'fa-times' : 'fa-bars'}`} />
+                {mobileOpen ? <X className="w-5 h-5" strokeWidth={2.25} /> : <Menu className="w-5 h-5" strokeWidth={2.25} />}
               </button>
             </div>
 
@@ -124,25 +128,25 @@ export default function Navbar() {
                     <Link href="/topup" onClick={() => setMobileOpen(false)}
                       className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-white text-[10px] font-black"
                       style={{ backgroundColor: 'rgb(var(--color-primary))', boxShadow: '0 2px 0 rgb(var(--color-primary-hover))' }}>
-                      <i className="fas fa-plus-circle" /> เติมเงิน
+                      <PlusCircle className="w-3.5 h-3.5" /> เติมเงิน
                     </Link>
                     <Link href="/profile" onClick={() => setMobileOpen(false)}
                       className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-black border"
                       style={{ backgroundColor: 'rgb(var(--color-surface))', borderColor: 'rgb(var(--color-border))', color: 'rgb(var(--color-foreground-muted))', boxShadow: '0 2px 0 rgb(var(--color-border))' }}>
-                      <i className="fas fa-user" /> โปรไฟล์
+                      <User className="w-3.5 h-3.5" /> โปรไฟล์
                     </Link>
                   </div>
                 </div>
               )}
 
               <div className="space-y-1 pb-2">
-                <MobileLink href="/"         icon="fa-home"          pathname={pathname}>หน้าแรก</MobileLink>
-                <MobileLink href="/shop"     icon="fa-shopping-cart" pathname={pathname}>ไอเท็มชอป</MobileLink>
-                {showLootbox  && <MobileLink href="/lootbox"  icon="fa-box-open"      pathname={pathname}>กล่องสุ่ม</MobileLink>}
-                <MobileLink href="/topup"    icon="fa-coins"         pathname={pathname}>เติมเงิน</MobileLink>
-                {showDownload && <MobileLink href="/download" icon="fa-download"      pathname={pathname}>ดาวน์โหลด</MobileLink>}
-                {user && <MobileLink href="/inventory" icon="fa-box-open"    pathname={pathname}>คลังไอเท็ม</MobileLink>}
-                {user && <MobileLink href="/profile"   icon="fa-user-circle" pathname={pathname}>จัดการโปรไฟล์</MobileLink>}
+                <MobileLink href="/"         Icon={Home}          pathname={pathname}>หน้าแรก</MobileLink>
+                <MobileLink href="/shop"     Icon={ShoppingCart}  pathname={pathname}>ไอเท็มชอป</MobileLink>
+                {showLootbox  && <MobileLink href="/lootbox"  Icon={PackageOpen}   pathname={pathname}>กล่องสุ่ม</MobileLink>}
+                <MobileLink href="/topup"    Icon={Coins}         pathname={pathname}>เติมเงิน</MobileLink>
+                {showDownload && <MobileLink href="/download" Icon={Download}      pathname={pathname}>ดาวน์โหลด</MobileLink>}
+                {user && <MobileLink href="/inventory" Icon={PackageOpen}   pathname={pathname}>คลังไอเท็ม</MobileLink>}
+                {user && <MobileLink href="/profile"   Icon={UserCircle}    pathname={pathname}>จัดการโปรไฟล์</MobileLink>}
               </div>
 
             </div>
@@ -150,21 +154,21 @@ export default function Navbar() {
         )}
       </div>
 
-      {/* Mobile Bottom Navigation Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[100] bg-surface/95 backdrop-blur-md border-t border-border px-2 py-2 flex items-center justify-around shadow-[0_-4px_16px_rgba(0,0,0,0.05)]">
-        <MobileBottomLink href="/" icon="fa-home" label="หน้าแรก" active={pathname === '/'} />
-        <MobileBottomLink href="/shop" icon="fa-shopping-cart" label="ร้านค้า" active={pathname.startsWith('/shop')} />
-        {showLootbox && <MobileBottomLink href="/lootbox" icon="fa-box-open" label="กล่องสุ่ม" active={pathname.startsWith('/lootbox')} />}
-        <MobileBottomLink href="/topup" icon="fa-coins" label="เติมเงิน" active={pathname.startsWith('/topup')} />
-        <MobileBottomLink href={user ? "/profile" : "/"} icon="fa-user" label={user ? "โปรไฟล์" : "ล็อกอิน"} active={pathname.startsWith('/profile')} />
+      {/* Mobile Bottom Navigation Bar — thumb-reachable primary nav */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[100] bg-surface/95 backdrop-blur-md border-t border-border px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center justify-around shadow-[0_-4px_16px_rgba(0,0,0,0.05)]">
+        <MobileBottomLink href="/" Icon={Home} label="หน้าแรก" active={pathname === '/'} />
+        <MobileBottomLink href="/shop" Icon={ShoppingCart} label="ร้านค้า" active={pathname.startsWith('/shop')} />
+        {showLootbox && <MobileBottomLink href="/lootbox" Icon={PackageOpen} label="กล่องสุ่ม" active={pathname.startsWith('/lootbox')} />}
+        <MobileBottomLink href="/topup" Icon={Coins} label="เติมเงิน" active={pathname.startsWith('/topup')} />
+        <MobileBottomLink href={user ? "/profile" : "/"} Icon={User} label={user ? "โปรไฟล์" : "ล็อกอิน"} active={pathname.startsWith('/profile')} />
       </nav>
     </header>
   );
 }
 
-function MobileBottomLink({ href, icon, label, active }: { href: string; icon: string; label: string; active: boolean }) {
+function MobileBottomLink({ href, Icon, label, active }: { href: string; Icon: LucideIcon; label: string; active: boolean }) {
   return (
-    <Link href={href} className="flex flex-col items-center justify-center gap-1 min-w-[64px] transition-all">
+    <Link href={href} className="flex flex-col items-center justify-center gap-1 min-w-[64px] min-h-[44px] transition-all">
       <div
         className="w-11 h-8 rounded-full flex items-center justify-center transition-all"
         style={active
@@ -172,7 +176,7 @@ function MobileBottomLink({ href, icon, label, active }: { href: string; icon: s
           : { color: 'rgb(var(--color-foreground-muted))' }
         }
       >
-        <i className={`fas ${icon} text-sm`} />
+        <Icon className="w-[18px] h-[18px]" strokeWidth={active ? 2.5 : 2} />
       </div>
       <span
         className="text-[10px] font-black tracking-wide"
@@ -184,7 +188,7 @@ function MobileBottomLink({ href, icon, label, active }: { href: string; icon: s
   );
 }
 
-function NavLink({ href, icon, label, subLabel, pathname }: { href: string; icon: string; label: string; subLabel: string; pathname: string }) {
+function NavLink({ href, Icon, label, subLabel, pathname }: { href: string; Icon: LucideIcon; label: string; subLabel: string; pathname: string }) {
   const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
   return (
     <Link
@@ -193,7 +197,7 @@ function NavLink({ href, icon, label, subLabel, pathname }: { href: string; icon
       style={isActive ? { backgroundColor: 'rgb(var(--color-primary) / 0.12)' } : undefined}
     >
       <div className="flex items-center gap-2 mb-1">
-        <i className={`fas ${icon} text-sm`} />
+        <Icon className="w-[18px] h-[18px]" strokeWidth={2} />
         <span className="font-black text-[15px]">{label}</span>
       </div>
       <span className="text-[10px] font-bold opacity-80">{subLabel}</span>
@@ -201,18 +205,17 @@ function NavLink({ href, icon, label, subLabel, pathname }: { href: string; icon
   );
 }
 
-function MobileLink({ href, icon, pathname, children }: { href: string; icon: string; pathname: string; children: React.ReactNode }) {
+function MobileLink({ href, Icon, pathname, children }: { href: string; Icon: LucideIcon; pathname: string; children: React.ReactNode }) {
   const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
-  const accentStyle = { color: 'rgb(var(--color-primary))' };
   const activeBgStyle = { backgroundColor: 'rgb(var(--color-primary) / 0.1)', color: 'rgb(var(--color-primary))' };
   const defaultStyle = { color: 'rgb(var(--color-foreground-muted))' };
   return (
     <Link
       href={href}
-      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-colors ${isActive ? '' : 'hover:bg-gray-50'}`}
+      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-colors ${isActive ? '' : 'hover:bg-surface-hover'}`}
       style={isActive ? activeBgStyle : defaultStyle}
     >
-      <i className={`fas ${icon} w-5 text-center`} style={accentStyle} />
+      <Icon className="w-5 h-5 flex-shrink-0" strokeWidth={2} style={{ color: 'rgb(var(--color-primary))' }} />
       {children}
     </Link>
   );

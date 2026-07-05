@@ -8,6 +8,10 @@ import { api, getToken } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getRarity as rc } from '@/lib/rarity';
+import {
+  Loader2, ArrowLeft, Trophy, Box, Package, Clock, AlertCircle,
+  Pause, Lock, Zap, Layers, Gift, X, RotateCw,
+} from 'lucide-react';
 
 /* ── Types ─────────────────────────────────────────────────── */
 interface LootBoxItem {
@@ -38,7 +42,7 @@ const CARD_H    = REEL_H - REEL_PAD * 2; // card height inside frame = 132px
 // Rarity order lowest→highest
 const RARITY_ORDER = ['common','uncommon','rare','epic','legendary','mythic'];
 
-const CARD = 'bg-surface rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-border overflow-hidden';
+const CARD = 'bg-surface rounded-2xl shadow-[0_4px_0_rgb(var(--color-border)),0_2px_24px_rgba(0,0,0,0.10)] border border-border overflow-hidden';
 
 /* ── Reel builder (with near-miss suspense) ─────────────────── */
 function buildReel(items: LootBoxItem[], winner: WonItem): LootBoxItem[] {
@@ -231,7 +235,7 @@ function ItemCard({
                   : `drop-shadow(0 2px 6px rgba(0,0,0,0.18)) drop-shadow(0 0 4px ${r.color}44)`,
                 transform: highlight ? 'scale(1.12)' : 'scale(1)',
               }} />
-          : <i className="fas fa-cube relative z-10 text-3xl" style={{ color: r.color }} />}
+          : <Box className="relative z-10 w-8 h-8" strokeWidth={1.5} style={{ color: r.color }} />}
       </div>
 
       {/* Footer — rarity-tinted panel */}
@@ -440,7 +444,7 @@ export default function LootBoxOpenPage() {
   if (loading) return (
     <MainLayout>
       <div className="flex items-center justify-center min-h-[60vh]">
-        <i className="fas fa-spinner fa-spin text-2xl text-green-500" />
+        <Loader2 className="w-7 h-7 text-primary animate-spin" strokeWidth={2.5} />
       </div>
     </MainLayout>
   );
@@ -460,8 +464,8 @@ export default function LootBoxOpenPage() {
       <div className="flex flex-col gap-4">
 
         {/* Back */}
-        <Link href="/lootbox" className="inline-flex items-center gap-1.5 text-foreground-subtle hover:text-green-600 text-xs font-bold transition-colors group w-fit">
-          <i className="fas fa-arrow-left text-[10px] group-hover:-translate-x-0.5 transition-transform" /> กลับกล่องสุ่มทั้งหมด
+        <Link href="/lootbox" className="inline-flex items-center gap-1.5 text-foreground-subtle hover:text-primary text-xs font-bold transition-colors group w-fit">
+          <ArrowLeft className="w-2.5 h-2.5 group-hover:-translate-x-0.5 transition-transform" strokeWidth={2.5} /> กลับกล่องสุ่มทั้งหมด
         </Link>
 
         {/* ── Recent Drops ── */}
@@ -469,7 +473,7 @@ export default function LootBoxOpenPage() {
           <div className={CARD}>
             <div className="px-4 py-2.5 border-b border-border bg-surface-hover/60 flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
-                <i className="fas fa-trophy text-accent text-[10px]" />
+                <Trophy className="w-3 h-3 text-accent" strokeWidth={2.25} />
               </div>
               <span className="font-bold text-foreground text-sm">โชคดีรายล่าสุด</span>
               <span className="ml-auto text-foreground-subtle text-[10px] font-bold tabular-nums">{drops.length} รายการ</span>
@@ -483,7 +487,7 @@ export default function LootBoxOpenPage() {
                     <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-surface-hover rounded-lg border border-border overflow-hidden">
                       {drop.item_image
                         ? <img src={drop.item_image} alt="" className="w-full h-full object-contain p-0.5" />
-                        : <i className="fas fa-cube text-foreground-subtle text-sm" />}
+                        : <Box className="w-4 h-4 text-foreground-subtle" strokeWidth={1.75} />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-foreground text-[10px] font-bold truncate">{drop.username}</p>
@@ -508,8 +512,8 @@ export default function LootBoxOpenPage() {
 
                 {/* Hero — white/green/amber */}
                 <div className="relative overflow-hidden">
-                  {/* Green top accent bar */}
-                  <div className="h-1 bg-gradient-to-r from-green-500 via-green-400 to-emerald-400" />
+                  {/* Primary top accent bar */}
+                  <div className="h-1" style={{ background: 'linear-gradient(to right, rgb(var(--color-primary)), rgb(var(--color-primary-light)), rgb(var(--color-primary)))' }} />
 
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5 px-4 sm:px-6 py-4 sm:py-5">
                     {/* Box image */}
@@ -527,23 +531,23 @@ export default function LootBoxOpenPage() {
                       }}
                     >
                       {discount > 0 && (
-                        <span className="absolute -top-2 -right-2 z-10 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-[0_2px_0_#b91c1c]">
+                        <span className="absolute -top-2 -right-2 z-10 bg-error text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-[0_2px_0_rgb(0_0_0/0.2)]">
                           -{discount}%
                         </span>
                       )}
-                      <div className="w-24 h-24 rounded-2xl bg-green-50 border border-green-100 flex items-center justify-center overflow-hidden shadow-[0_2px_0_#bbf7d0] relative">
+                      <div className="w-24 h-24 rounded-2xl bg-primary/8 border border-primary/15 flex items-center justify-center overflow-hidden shadow-[0_2px_0_rgb(var(--color-primary-muted))] relative">
                         {preparing && (
-                          <motion.div 
+                          <motion.div
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: [0.2, 0.5, 0.2], scale: [1, 1.2, 1] }}
                             transition={{ repeat: Infinity, duration: 1 }}
-                            className="absolute inset-0 bg-green-400 blur-xl rounded-full"
+                            className="absolute inset-0 bg-primary blur-xl rounded-full"
                           />
                         )}
                         {box.image
                           ? <img src={box.image} alt={box.name}
                               className="w-full h-full object-contain p-1.5 transition-transform duration-500 group-hover/box:scale-105 relative z-10" />
-                          : <i className="fas fa-box text-4xl text-green-400 relative z-10" />}
+                          : <Package className="w-10 h-10 text-primary relative z-10" strokeWidth={1.5} />}
                       </div>
                     </motion.div>
 
@@ -551,12 +555,12 @@ export default function LootBoxOpenPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
                         {(isActive || isUnlimited) && !isSoldOut && (
-                          <span className="inline-flex items-center gap-1 text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-green-500 text-white shadow-[0_2px_0_#0d6b2e]">
+                          <span className="inline-flex items-center gap-1 text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-primary text-primary-foreground shadow-[0_2px_0_rgb(var(--color-primary-shadow))]">
                             <span className="w-1 h-1 rounded-full bg-white animate-pulse" /> ขายอยู่
                           </span>
                         )}
                         {isPaused  && <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-orange-500 text-white">PAUSED</span>}
-                        {isSoldOut && <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-red-500 text-white">SOLD OUT</span>}
+                        {isSoldOut && <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-error text-white">SOLD OUT</span>}
                       </div>
                       <h1 className="text-foreground font-black text-xl uppercase tracking-wide leading-tight line-clamp-1">{box.name}</h1>
                       {box.description && <p className="text-foreground-muted text-[11px] line-clamp-1 mt-0.5">{box.description}</p>}
@@ -574,30 +578,30 @@ export default function LootBoxOpenPage() {
                     {/* Stats */}
                     <div className="flex-shrink-0 flex flex-col gap-2 items-start sm:items-end w-full sm:w-auto">
                       <div className="flex gap-2">
-                        <div className="flex flex-col items-center px-3 py-2 rounded-xl bg-surface border border-border shadow-[0_2px_0_#e5e7eb] min-w-[52px]">
+                        <div className="flex flex-col items-center px-3 py-2 rounded-xl bg-surface border border-border shadow-[0_2px_0_rgb(var(--color-border))] min-w-[52px]">
                           <span className="text-foreground-subtle text-[7px] font-black uppercase tracking-widest">ITEMS</span>
                           <span className="text-foreground font-black text-sm tabular-nums">{box.items.length}</span>
                         </div>
-                        <div className="flex flex-col items-center px-3 py-2 rounded-xl bg-green-50 border border-green-100 shadow-[0_2px_0_#bbf7d0] min-w-[52px]">
-                          <span className="text-green-600/60 text-[7px] font-black uppercase tracking-widest">OPENS</span>
-                          <span className="text-green-600 font-black text-sm tabular-nums">{(box.sold_count ?? 0).toLocaleString()}</span>
+                        <div className="flex flex-col items-center px-3 py-2 rounded-xl bg-primary/8 border border-primary/15 shadow-[0_2px_0_rgb(var(--color-primary-muted))] min-w-[52px]">
+                          <span className="text-primary/60 text-[7px] font-black uppercase tracking-widest">OPENS</span>
+                          <span className="text-primary font-black text-sm tabular-nums">{(box.sold_count ?? 0).toLocaleString()}</span>
                         </div>
                       </div>
                       {remaining !== null && box.stock_limit! > 0 && (
                         <div className="w-full min-w-[112px] space-y-1">
                           <div className="flex justify-between text-[7px] font-black uppercase tracking-widest">
-                            <span className={isSoldOut ? 'text-red-500' : stockPct >= 80 ? 'text-orange-500' : 'text-gray-400'}>STOCK</span>
-                            <span className="text-gray-400">{stockPct}%</span>
+                            <span className={isSoldOut ? 'text-error' : stockPct >= 80 ? 'text-orange-500' : 'text-foreground-subtle'}>STOCK</span>
+                            <span className="text-foreground-subtle">{stockPct}%</span>
                           </div>
-                          <div className="h-1.5 rounded-full overflow-hidden bg-gray-100">
-                            <div className={`h-full rounded-full transition-all ${isSoldOut ? 'bg-red-500' : stockPct >= 80 ? 'bg-red-500' : stockPct >= 60 ? 'bg-orange-400' : 'bg-green-500'}`}
+                          <div className="h-1.5 rounded-full overflow-hidden bg-surface-hover">
+                            <div className={`h-full rounded-full transition-all ${isSoldOut ? 'bg-error' : stockPct >= 80 ? 'bg-error' : stockPct >= 60 ? 'bg-orange-400' : 'bg-primary'}`}
                               style={{ width: `${Math.min(100, Math.max(0, stockPct))}%` }} />
                           </div>
                         </div>
                       )}
                       {isActive && (
                         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent/10 border border-accent/30 shadow-[0_2px_0_rgb(var(--color-accent)/0.25)]">
-                          <i className="fas fa-clock text-accent text-[9px]" />
+                          <Clock className="w-2.5 h-2.5 text-accent" strokeWidth={2.5} />
                           <span className="text-accent font-black text-xs tabular-nums">{fmt(saleSecsLeft)}</span>
                         </div>
                       )}
@@ -608,9 +612,9 @@ export default function LootBoxOpenPage() {
                   <AnimatePresence>
                     {preparing && (
                       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-white/90 backdrop-blur-sm">
-                        <div className="w-10 h-10 rounded-full border-[3px] border-gray-200 border-t-green-500 animate-spin mb-3" />
-                        <p className="text-gray-600 font-black text-xs uppercase tracking-[0.25em]">กำลังเตรียม...</p>
+                        className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-surface/90 backdrop-blur-sm">
+                        <div className="w-10 h-10 rounded-full border-[3px] border-border border-t-primary animate-spin mb-3" />
+                        <p className="text-foreground-muted font-black text-xs uppercase tracking-[0.25em]">กำลังเตรียม...</p>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -619,27 +623,27 @@ export default function LootBoxOpenPage() {
                 {/* Open button */}
                 <div className="px-5 py-4 border-t border-border bg-surface-hover/40">
                   {error && (
-                    <div className="text-red-600 text-xs bg-red-50 px-3 py-2 rounded-lg border border-red-100 flex items-center gap-1.5 mb-3">
-                      <i className="fas fa-exclamation-circle" /> {error}
+                    <div className="text-error text-xs bg-error/10 px-3 py-2 rounded-lg border border-error/20 flex items-center gap-1.5 mb-3">
+                      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={2.25} /> {error}
                     </div>
                   )}
                   <button onClick={openBox} disabled={preparing || isLocked}
                     className="w-full flex items-center justify-center gap-2.5 font-black text-sm uppercase tracking-[0.2em] rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
                     style={{
                       height: '52px',
-                      background: preparing || isLocked ? '#e5e7eb' : 'linear-gradient(135deg, rgb(var(--color-accent)) 0%, rgb(var(--color-accent-hover)) 100%)',
-                      color: preparing || isLocked ? '#9ca3af' : 'rgb(var(--color-accent-foreground))',
+                      background: preparing || isLocked ? 'rgb(var(--color-surface-hover))' : 'linear-gradient(135deg, rgb(var(--color-accent)) 0%, rgb(var(--color-accent-hover)) 100%)',
+                      color: preparing || isLocked ? 'rgb(var(--color-foreground-subtle))' : 'rgb(var(--color-accent-foreground))',
                       boxShadow: preparing || isLocked ? 'none' : '0 6px 0 rgb(var(--color-accent-hover)), 0 12px 20px rgb(var(--color-accent) / 0.35)',
                     }}>
                     {!preparing && !isLocked && (
                       <div className="absolute inset-0 -skew-x-12 -translate-x-full group-hover:translate-x-[200%] bg-white/25 transition-transform duration-700 pointer-events-none" />
                     )}
-                    <i className={`fas text-base ${isPaused ? 'fa-pause' : isSoldOut ? 'fa-lock' : isExpired ? 'fa-lock' : 'fa-bolt'}`} />
-                    <span>{isPaused ? 'PAUSED' : isSoldOut ? 'SOLD OUT' : isExpired ? 'EXPIRED' : <>OPEN &mdash; ฿{parseFloat(String(box.price)).toLocaleString()}</>}</span>
+                    {isPaused ? <Pause className="w-4 h-4" strokeWidth={2.5} /> : isSoldOut || isExpired ? <Lock className="w-4 h-4" strokeWidth={2.5} /> : <Zap className="w-4 h-4" strokeWidth={2.5} />}
+                    <span>{isPaused ? 'PAUSED' : isSoldOut ? 'SOLD OUT' : isExpired ? 'EXPIRED' : <>OPEN - ฿{parseFloat(String(box.price)).toLocaleString()}</>}</span>
                   </button>
                   {!user && !isLocked && (
-                    <p className="text-center text-foreground-subtle text-[10px] font-bold uppercase tracking-widest mt-2">
-                      <i className="fas fa-lock text-[9px] mr-1" />กรุณาเข้าสู่ระบบก่อน
+                    <p className="text-center text-foreground-subtle text-[10px] font-bold uppercase tracking-widest mt-2 flex items-center justify-center gap-1">
+                      <Lock className="w-2.5 h-2.5" strokeWidth={2.5} />กรุณาเข้าสู่ระบบก่อน
                     </p>
                   )}
                 </div>
@@ -707,17 +711,17 @@ export default function LootBoxOpenPage() {
                 </div>
 
                 {/* Button */}
-                <div className="px-5 py-4 bg-gray-50/60 flex justify-center">
+                <div className="px-5 py-4 bg-surface-hover/60 flex justify-center">
                   <button onClick={openBox} disabled={spinning || isLocked}
                     className="flex items-center justify-center gap-2.5 font-black text-[11px] uppercase tracking-[0.25em] rounded-xl transition-all disabled:opacity-50 h-11 px-8"
                     style={{
                       minWidth: '200px',
-                      background: spinning || isLocked ? '#e5e7eb' : 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)',
-                      color: spinning || isLocked ? '#9ca3af' : '#fff',
+                      background: spinning || isLocked ? 'rgb(var(--color-surface-hover))' : 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)',
+                      color: spinning || isLocked ? 'rgb(var(--color-foreground-subtle))' : '#fff',
                       boxShadow: spinning || isLocked ? 'none' : '0 4px 0 #92400e, 0 8px 16px rgba(217,119,6,0.2)',
                     }}>
-                    <i className={`fas text-sm ${spinning ? 'fa-spinner fa-spin' : isLocked ? 'fa-lock' : 'fa-bolt'}`} />
-                    <span>{spinning ? 'กำลังหมุน...' : isPaused ? 'PAUSED' : isSoldOut ? 'SOLD OUT' : isExpired ? 'EXPIRED' : <>OPEN อีกครั้ง &mdash; ฿{parseFloat(String(box.price)).toLocaleString()}</>}</span>
+                    {spinning ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2.5} /> : isLocked ? <Lock className="w-4 h-4" strokeWidth={2.5} /> : <Zap className="w-4 h-4" strokeWidth={2.5} />}
+                    <span>{spinning ? 'กำลังหมุน...' : isPaused ? 'PAUSED' : isSoldOut ? 'SOLD OUT' : isExpired ? 'EXPIRED' : <>OPEN อีกครั้ง - ฿{parseFloat(String(box.price)).toLocaleString()}</>}</span>
                   </button>
                 </div>
               </div>
@@ -728,14 +732,14 @@ export default function LootBoxOpenPage() {
         {/* ── Items in box ── */}
         <div className={CARD}>
           <div className="px-5 py-3.5 border-b border-border bg-surface-hover/60 flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
-              <i className="fas fa-layer-group text-green-600 text-[10px]" />
+            <div className="w-7 h-7 rounded-lg bg-primary/12 flex items-center justify-center flex-shrink-0">
+              <Layers className="w-3 h-3 text-primary" strokeWidth={2.25} />
             </div>
             <div>
               <h3 className="font-bold text-foreground text-sm">ไอเท็มที่สุ่มได้ในกล่องนี้</h3>
               <p className="text-[11px] text-foreground-subtle">กด OPEN เพื่อลุ้นรับไอเท็มด้านล่าง</p>
             </div>
-            <span className="ml-auto inline-flex items-center justify-center w-6 h-6 rounded-lg bg-green-500 text-white text-[10px] font-black shadow-[0_2px_0_#0d6b2e]">
+            <span className="ml-auto inline-flex items-center justify-center w-6 h-6 rounded-lg bg-primary text-primary-foreground text-[10px] font-black shadow-[0_2px_0_rgb(var(--color-primary-shadow))]">
               {box.items.length}
             </span>
           </div>
@@ -777,15 +781,15 @@ export default function LootBoxOpenPage() {
                 {/* Header */}
                 <div className="relative px-5 py-3.5 border-b border-border bg-surface-hover/60 flex items-center">
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: r.color + '18' }}>
-                    <i className="fas fa-gift text-xs" style={{ color: r.color }} />
+                    <Gift className="w-3.5 h-3.5" strokeWidth={2.25} style={{ color: r.color }} />
                   </div>
                   <div className="flex-1 text-center">
                     <h3 className="font-bold text-foreground text-base">ได้รับไอเท็ม!</h3>
                     <p className="text-[11px] text-foreground-subtle">ระบบส่งไอเท็มให้คุณแล้ว</p>
                   </div>
-                  <button onClick={() => setShowResult(false)}
-                    className="w-8 h-8 rounded-lg bg-red-500 border border-red-600 flex items-center justify-center text-white shadow-[0_4px_0_#b91c1c] hover:brightness-110 transition-all active:shadow-[0_1px_0_#b91c1c] active:translate-y-[2px] flex-shrink-0">
-                    <i className="fas fa-times text-xs" />
+                  <button onClick={() => setShowResult(false)} aria-label="ปิด"
+                    className="w-8 h-8 rounded-lg bg-error flex items-center justify-center text-white shadow-[0_4px_0_rgb(0_0_0/0.2)] hover:brightness-110 transition-all active:shadow-none active:translate-y-[2px] flex-shrink-0">
+                    <X className="w-3.5 h-3.5" strokeWidth={2.5} />
                   </button>
                 </div>
                 {/* Body */}
@@ -838,7 +842,7 @@ export default function LootBoxOpenPage() {
                           transition={{ delay: 0.3, duration: 0.5 }}
                           className="relative w-40 h-40 rounded-2xl flex items-center justify-center border-2 z-10"
                           style={{ borderColor: r.color + '44', backgroundColor: r.color + '0d' }}>
-                          <i className="fas fa-cube text-7xl" style={{ color: r.color + '88' }} />
+                          <Box className="w-16 h-16" strokeWidth={1.5} style={{ color: r.color + '88' }} />
                         </motion.div>}
                   </div>
 
@@ -865,12 +869,12 @@ export default function LootBoxOpenPage() {
                 {/* Footer */}
                 <div className="px-5 py-3.5 border-t border-border bg-surface-hover/60 flex items-center justify-end gap-2">
                   <button onClick={() => setShowResult(false)}
-                    className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-surface border border-border text-foreground shadow-[0_4px_0_#d1d5db] hover:brightness-95 transition-all active:shadow-[0_1px_0_#d1d5db] active:translate-y-[2px]">
-                    <i className="fas fa-times text-[12px]" /> ปิด
+                    className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-surface border border-border text-foreground shadow-[0_4px_0_rgb(var(--color-border))] hover:brightness-95 transition-all active:shadow-[0_1px_0_rgb(var(--color-border))] active:translate-y-[2px]">
+                    <X className="w-3 h-3" strokeWidth={2.5} /> ปิด
                   </button>
                   <button onClick={() => { setShowResult(false); openBox(); }} disabled={spinning || isLocked}
                     className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground disabled:opacity-50 text-[13px] font-bold rounded-lg shadow-[0_4px_0_rgb(var(--color-primary-shadow))] hover:brightness-110 transition-all active:shadow-[0_2px_0_rgb(var(--color-primary-shadow))] active:translate-y-[2px]">
-                    <i className="fas fa-rotate-right text-[12px]" /> สุ่มอีกครั้ง
+                    <RotateCw className="w-3 h-3" strokeWidth={2.5} /> สุ่มอีกครั้ง
                   </button>
                 </div>
               </motion.div>

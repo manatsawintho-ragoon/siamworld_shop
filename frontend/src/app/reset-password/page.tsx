@@ -5,6 +5,7 @@ import Link from 'next/link';
 import MainLayout from '@/components/MainLayout';
 import { api } from '@/lib/api';
 import { useAdminAlert } from '@/components/AdminAlert';
+import { Loader2, Check } from 'lucide-react';
 
 function ResetPasswordInner() {
   const search = useSearchParams();
@@ -54,13 +55,13 @@ function ResetPasswordInner() {
   };
 
   const inputCls =
-    'w-full bg-gray-50 border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-500/10 focus:outline-none text-gray-800 placeholder:text-gray-300 text-sm rounded-xl px-3.5 py-3 transition-colors';
+    'w-full bg-surface-hover border border-border focus:border-primary focus:ring-2 focus:ring-primary/15 focus:outline-none text-foreground placeholder:text-foreground-subtle text-sm rounded-xl px-3.5 py-3 transition-colors';
 
   return (
     <div className="max-w-md mx-auto mt-12 px-4">
-      <div className="bg-white rounded-2xl shadow-lg p-8">
-        <h1 className="text-xl font-black text-gray-800 mb-2">ตั้งรหัสผ่านใหม่</h1>
-        <p className="text-sm text-gray-500 mb-6">กรอกรหัส OTP 6 หลักจากอีเมลและตั้งรหัสผ่านใหม่</p>
+      <div className="bg-surface border border-border rounded-2xl shadow-theme-lg p-8">
+        <h1 className="text-xl font-black text-foreground mb-2">ตั้งรหัสผ่านใหม่</h1>
+        <p className="text-sm text-foreground-muted mb-6">กรอกรหัส OTP 6 หลักจากอีเมลและตั้งรหัสผ่านใหม่</p>
         <form onSubmit={submit} className="space-y-3">
           <input
             type="email"
@@ -102,15 +103,15 @@ function ResetPasswordInner() {
           <button
             type="submit"
             disabled={busy}
-            className="w-full py-3 bg-green-600 hover:bg-green-500 text-white text-sm font-black rounded-xl transition-all shadow-[0_4px_0_#14532d] hover:shadow-[0_2px_0_#14532d] hover:translate-y-[2px] active:shadow-none active:translate-y-[4px]"
+            className="w-full py-3 bg-primary hover:brightness-110 text-primary-foreground text-sm font-black rounded-xl transition-all shadow-[0_4px_0_rgb(var(--color-primary-shadow))] hover:shadow-[0_2px_0_rgb(var(--color-primary-shadow))] hover:translate-y-[2px] active:shadow-none active:translate-y-[4px] flex items-center justify-center gap-2"
           >
-            {busy ? <i className="fas fa-spinner fa-spin" /> : <><i className="fas fa-check mr-2" />ตั้งรหัสผ่านใหม่</>}
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2.5} /> : <><Check className="w-4 h-4" strokeWidth={2.5} />ตั้งรหัสผ่านใหม่</>}
           </button>
         </form>
-        <div className="mt-6 text-center text-xs text-gray-400 space-x-4">
-          <Link href="/forgot-password" className="hover:text-green-600 font-bold">ขอ OTP ใหม่</Link>
+        <div className="mt-6 text-center text-xs text-foreground-subtle space-x-4">
+          <Link href="/forgot-password" className="hover:text-primary font-bold">ขอ OTP ใหม่</Link>
           <span>·</span>
-          <Link href="/" className="hover:text-green-600 font-bold">หน้าหลัก</Link>
+          <Link href="/" className="hover:text-primary font-bold">หน้าหลัก</Link>
         </div>
       </div>
     </div>
@@ -120,7 +121,7 @@ function ResetPasswordInner() {
 export default function ResetPasswordPage() {
   return (
     <MainLayout>
-      <Suspense fallback={<div className="text-center py-12 text-gray-400 text-sm">กำลังโหลด...</div>}>
+      <Suspense fallback={<div className="text-center py-12 text-foreground-subtle text-sm">กำลังโหลด...</div>}>
         <ResetPasswordInner />
       </Suspense>
     </MainLayout>

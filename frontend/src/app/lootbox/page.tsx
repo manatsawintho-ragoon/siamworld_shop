@@ -3,6 +3,11 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import MainLayout from '@/components/MainLayout';
 import { api } from '@/lib/api';
+import {
+  Gem, Flame, Tag, Pause, Package, Clock, PackageOpen, Hourglass,
+  Infinity as InfinityIcon, Info, Search, X, Layers, LayoutGrid,
+  type LucideIcon,
+} from 'lucide-react';
 
 interface LootBox {
   id: number;
@@ -31,12 +36,12 @@ function Countdown({ endTime }: { endTime: string }) {
     const t = setInterval(() => setSecs(calc()), 1000);
     return () => clearInterval(t);
   }, [endTime]);
-  if (secs <= 0) return <span className="text-red-500 font-black text-[10px]">หมดเวลา</span>;
+  if (secs <= 0) return <span className="text-error font-black text-[10px]">หมดเวลา</span>;
   const d = Math.floor(secs / 86400), h = Math.floor((secs % 86400) / 3600);
   const m = Math.floor((secs % 3600) / 60), s = secs % 60;
   if (d > 0) return <span className="tabular-nums font-black text-[10px] text-white">{d}ว {h}ช {m}น</span>;
   if (h > 0) return <span className="tabular-nums font-black text-[10px] text-white">{h}ช {m}น {s}ว</span>;
-  return <span className="tabular-nums font-black text-[10px] text-red-500">{String(m).padStart(2,'0')}:{String(s).padStart(2,'0')}</span>;
+  return <span className="tabular-nums font-black text-[10px] text-white">{String(m).padStart(2,'0')}:{String(s).padStart(2,'0')}</span>;
 }
 
 // ─── BoxCard ──────────────────────────────────────────────────────────────────
@@ -59,8 +64,8 @@ function BoxCard({ box }: { box: LootBox }) {
   const isHotBox     = !isPaused && !box.sale_end && box.stock_limit == null && (box.sold_count ?? 0) > 0;
 
   return (
-    <div className={`group relative flex flex-col bg-surface border rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md ${
-      isPaused ? 'border-orange-200 opacity-80' :
+    <div className={`group relative flex flex-col bg-surface border rounded-xl overflow-hidden transition-all duration-200 hover:shadow-theme-md ${
+      isPaused ? 'border-warning/40 opacity-80' :
       soldOut || expired ? 'border-border opacity-60' :
       'border-border hover:border-accent/50'
     }`}>
@@ -71,12 +76,12 @@ function BoxCard({ box }: { box: LootBox }) {
         {/* Type badge — top left (priority: LIMITED > HOT > category) */}
         {isLimitedBox && (
           <span className="absolute top-1.5 left-1.5 z-10 flex items-center gap-0.5 bg-violet-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-sm leading-none">
-            <i className="fas fa-gem text-[7px]" /> LIMITED
+            <Gem className="w-2 h-2" strokeWidth={2.5} /> LIMITED
           </span>
         )}
         {!isLimitedBox && isHotBox && (
           <span className="absolute top-1.5 left-1.5 z-10 flex items-center gap-0.5 bg-amber-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-sm leading-none">
-            <i className="fas fa-fire text-[7px]" /> HOT
+            <Flame className="w-2 h-2" strokeWidth={2.5} /> HOT
           </span>
         )}
         {!isLimitedBox && !isHotBox && box.category_name && (
@@ -95,30 +100,30 @@ function BoxCard({ box }: { box: LootBox }) {
 
         {/* Discount badge — top right */}
         {hasPromo && !soldOut && !isPaused && (
-          <span className="absolute top-1.5 right-1.5 z-10 flex items-center gap-0.5 bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-md shadow-md leading-none">
-            <i className="fas fa-tag text-[8px]" />-{discPct}%
+          <span className="absolute top-1.5 right-1.5 z-10 flex items-center gap-0.5 bg-error text-white text-[10px] font-black px-1.5 py-0.5 rounded-md shadow-md leading-none">
+            <Tag className="w-2 h-2" strokeWidth={2.5} />-{discPct}%
           </span>
         )}
 
         {/* Overlays */}
         {isPaused && (
           <div className="absolute inset-0 z-10 bg-black/45 flex items-center justify-center">
-            <div className="bg-orange-500 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg">
-              <i className="fas fa-pause text-[8px] mr-1" /> หยุดชั่วคราว
+            <div className="bg-warning text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg flex items-center gap-1">
+              <Pause className="w-2 h-2" strokeWidth={2.5} /> หยุดชั่วคราว
             </div>
           </div>
         )}
         {soldOut && !isPaused && (
           <div className="absolute inset-0 z-10 bg-black/55 flex items-center justify-center">
-            <div className="bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg rotate-[-8deg]">
-              <i className="fas fa-box text-[8px] mr-1" /> หมดแล้ว
+            <div className="bg-error text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg rotate-[-8deg] flex items-center gap-1">
+              <Package className="w-2 h-2" strokeWidth={2.5} /> หมดแล้ว
             </div>
           </div>
         )}
         {expired && !soldOut && (
           <div className="absolute inset-0 z-10 bg-black/40 flex items-center justify-center">
-            <div className="bg-gray-700 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg">
-              <i className="fas fa-clock text-[8px] mr-1" /> หมดเวลา
+            <div className="bg-foreground/80 text-background text-[10px] font-black px-3 py-1 rounded-full shadow-lg flex items-center gap-1">
+              <Clock className="w-2 h-2" strokeWidth={2.5} /> หมดเวลา
             </div>
           </div>
         )}
@@ -128,7 +133,7 @@ function BoxCard({ box }: { box: LootBox }) {
           <img src={box.image} alt={box.name} className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-300" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <i className="fas fa-box text-5xl text-accent/30 group-hover:text-accent/50 transition-colors" />
+            <Package className="w-12 h-12 text-accent/30 group-hover:text-accent/50 transition-colors" strokeWidth={1.5} />
           </div>
         )}
 
@@ -147,25 +152,25 @@ function BoxCard({ box }: { box: LootBox }) {
 
       {/* Sale info bar */}
       {(isPaused || active || unlimited || (remaining !== null && box.stock_limit! > 0)) && (
-        <div className={`px-2.5 py-1.5 border-t text-[10px] ${isPaused ? 'bg-orange-50 border-orange-100' : soldOut ? 'bg-red-50 border-red-100' : expired ? 'bg-gray-50 border-gray-100' : 'bg-accent/10 border-accent/20'}`}>
-          {isPaused && <span className="flex items-center gap-1 font-bold text-orange-600"><i className="fas fa-pause text-[9px]" /> หยุดจำหน่าย</span>}
+        <div className={`px-2.5 py-1.5 border-t text-[10px] ${isPaused ? 'bg-warning/8 border-warning/20' : soldOut ? 'bg-error/8 border-error/20' : expired ? 'bg-surface-hover border-border-muted' : 'bg-accent/10 border-accent/20'}`}>
+          {isPaused && <span className="flex items-center gap-1 font-bold text-warning"><Pause className="w-2.5 h-2.5" strokeWidth={2.5} /> หยุดจำหน่าย</span>}
           {/* Timer + stock on same row when both present */}
           {(active || unlimited) && (
             <div className="flex items-center justify-between gap-1">
               {active && (
                 <span className="bg-accent text-accent-foreground font-black px-1.5 py-0.5 rounded tabular-nums shadow-[0_1px_0_rgb(var(--color-accent-hover))] flex items-center gap-1 flex-shrink-0">
-                  <i className="fas fa-hourglass-half text-[8px]" />
+                  <Hourglass className="w-2 h-2" strokeWidth={2.5} />
                   <Countdown endTime={box.sale_end!} />
                 </span>
               )}
               {unlimited && !soldOut && (
-                <span className="flex items-center gap-1 font-bold text-green-600 flex-shrink-0">
-                  <i className="fas fa-infinity text-[9px]" /> ไม่จำกัดเวลา
+                <span className="flex items-center gap-1 font-bold text-primary flex-shrink-0">
+                  <InfinityIcon className="w-2.5 h-2.5" strokeWidth={2.5} /> ไม่จำกัดเวลา
                 </span>
               )}
               {remaining !== null && box.stock_limit! > 0 && (
-                <span className={`flex items-center gap-0.5 font-black tabular-nums ml-auto flex-shrink-0 ${soldOut ? 'text-red-500' : stockPct <= 20 ? 'text-orange-500' : 'text-gray-500'}`}>
-                  <i className="fas fa-box text-[8px]" />
+                <span className={`flex items-center gap-0.5 font-black tabular-nums ml-auto flex-shrink-0 ${soldOut ? 'text-error' : stockPct <= 20 ? 'text-orange-500' : 'text-foreground-muted'}`}>
+                  <Package className="w-2 h-2" strokeWidth={2.5} />
                   {(box.sold_count ?? 0).toLocaleString()}/{box.stock_limit!.toLocaleString()}
                 </span>
               )}
@@ -174,16 +179,16 @@ function BoxCard({ box }: { box: LootBox }) {
           {/* Stock only (no sale timer) */}
           {!active && !unlimited && remaining !== null && box.stock_limit! > 0 && (
             <div className="flex items-center justify-between">
-              <span className={`flex items-center gap-1 font-bold ${soldOut ? 'text-red-500' : stockPct <= 20 ? 'text-orange-500' : 'text-gray-500'}`}>
-                <i className="fas fa-box text-[9px]" />{soldOut ? 'หมดแล้ว' : `เหลือ ${remaining.toLocaleString()}`}
+              <span className={`flex items-center gap-1 font-bold ${soldOut ? 'text-error' : stockPct <= 20 ? 'text-orange-500' : 'text-foreground-muted'}`}>
+                <Package className="w-2.5 h-2.5" strokeWidth={2.5} />{soldOut ? 'หมดแล้ว' : `เหลือ ${remaining.toLocaleString()}`}
               </span>
-              <span className="text-gray-400 tabular-nums font-bold">{(box.sold_count ?? 0).toLocaleString()}/{box.stock_limit!.toLocaleString()}</span>
+              <span className="text-foreground-subtle tabular-nums font-bold">{(box.sold_count ?? 0).toLocaleString()}/{box.stock_limit!.toLocaleString()}</span>
             </div>
           )}
           {/* Progress bar */}
           {remaining !== null && box.stock_limit! > 0 && (
-            <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden mt-1">
-              <div className={`h-full rounded-full ${soldOut ? 'bg-red-400' : stockPct <= 20 ? 'bg-orange-400' : 'bg-green-400'}`} style={{ width: `${Math.max(0, stockPct)}%` }} />
+            <div className="h-1.5 bg-border-muted rounded-full overflow-hidden mt-1">
+              <div className={`h-full rounded-full ${soldOut ? 'bg-error' : stockPct <= 20 ? 'bg-orange-400' : 'bg-primary'}`} style={{ width: `${Math.max(0, stockPct)}%` }} />
             </div>
           )}
         </div>
@@ -197,12 +202,12 @@ function BoxCard({ box }: { box: LootBox }) {
         <Link href={`/lootbox/${box.id}`}
           className={`w-full mt-auto pt-2 pb-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 min-h-[34px] ${
             isPaused
-              ? 'bg-orange-400 text-white shadow-[0_3px_0_#c2410c] cursor-not-allowed pointer-events-none'
+              ? 'bg-warning text-white shadow-[0_3px_0_#b45309] cursor-not-allowed pointer-events-none'
               : soldOut || expired
-              ? 'bg-gray-400 text-white shadow-[0_3px_0_#9ca3af] cursor-not-allowed'
+              ? 'bg-foreground-subtle text-white cursor-not-allowed'
               : 'bg-accent text-accent-foreground hover:brightness-105 shadow-[0_3px_0_rgb(var(--color-accent-hover))] hover:shadow-[0_1px_0_rgb(var(--color-accent-hover))] hover:translate-y-[2px] active:shadow-none active:translate-y-[3px]'
           }`}>
-          <i className={`fas ${isPaused ? 'fa-pause' : soldOut || expired ? 'fa-info-circle' : 'fa-box-open'} text-[10px]`} />
+          {isPaused ? <Pause className="w-2.5 h-2.5" strokeWidth={2.5} /> : soldOut || expired ? <Info className="w-2.5 h-2.5" strokeWidth={2.5} /> : <PackageOpen className="w-2.5 h-2.5" strokeWidth={2.5} />}
           {isPaused ? 'หยุดจำหน่าย' : soldOut || expired ? 'ดูรายละเอียด' : 'เปิดกล่อง'}
         </Link>
       </div>
@@ -211,11 +216,11 @@ function BoxCard({ box }: { box: LootBox }) {
 }
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
-const TYPE_FILTERS: { key: TypeFilter; label: string; icon: string; color: string; activeBg: string; activeShadow: string; themed?: boolean }[] = [
-  { key: 'all',     label: 'ทั้งหมด',   icon: 'fa-layer-group', color: 'text-primary',  activeBg: '',              activeShadow: '',                          themed: true },
-  { key: 'limited', label: 'LIMITED',   icon: 'fa-gem',          color: 'text-violet-500', activeBg: 'bg-violet-500', activeShadow: 'shadow-[0_3px_0_#5b21b6]' },
-  { key: 'hot',     label: 'ยอดนิยม',   icon: 'fa-fire',         color: 'text-amber-500',  activeBg: 'bg-amber-500',  activeShadow: 'shadow-[0_3px_0_#b45309]' },
-  { key: 'normal',  label: 'กล่องปกติ', icon: 'fa-box',          color: 'text-foreground-subtle',   activeBg: 'bg-gray-800',  activeShadow: 'shadow-[0_3px_0_#1f2937]' },
+const TYPE_FILTERS: { key: TypeFilter; label: string; Icon: LucideIcon; color: string; activeBg: string; activeShadow: string; activeText: string; themed?: boolean }[] = [
+  { key: 'all',     label: 'ทั้งหมด',   Icon: Layers,  color: 'text-primary',          activeBg: '',              activeShadow: '',                          activeText: '', themed: true },
+  { key: 'limited', label: 'LIMITED',   Icon: Gem,     color: 'text-violet-500',       activeBg: 'bg-violet-500', activeShadow: 'shadow-[0_3px_0_#5b21b6]', activeText: 'text-white' },
+  { key: 'hot',     label: 'ยอดนิยม',   Icon: Flame,   color: 'text-amber-500',        activeBg: 'bg-amber-500',  activeShadow: 'shadow-[0_3px_0_#b45309]', activeText: 'text-white' },
+  { key: 'normal',  label: 'กล่องปกติ', Icon: Package, color: 'text-foreground-subtle', activeBg: 'bg-foreground',  activeShadow: '',                         activeText: 'text-background' },
 ];
 
 export default function LootBoxListPage() {
@@ -295,14 +300,14 @@ export default function LootBoxListPage() {
         {/* Page header */}
         <div>
           <h1 className="text-xl font-black text-foreground flex items-center gap-2">
-            <i className="fas fa-box-open text-accent text-lg" />
+            <PackageOpen className="w-5 h-5 text-accent" strokeWidth={2.25} />
             GACHA กล่องสุ่ม
           </h1>
           <p className="text-foreground-subtle text-xs mt-0.5">สุ่มไอเท็มและรับของเข้าเกมทันที</p>
         </div>
 
         {/* ── Main card ── */}
-        <div className="bg-surface rounded-2xl shadow-[0_4px_0_#d1d5db,0_2px_20px_rgba(0,0,0,0.06)] border border-border overflow-hidden">
+        <div className="bg-surface rounded-2xl shadow-[0_4px_0_rgb(var(--color-border)),0_2px_20px_rgba(0,0,0,0.06)] border border-border overflow-hidden">
 
           {/* ── Row 1: Type filters ── */}
           <div className="px-4 py-2.5 border-b border-border flex items-center gap-2 flex-wrap">
@@ -312,18 +317,18 @@ export default function LootBoxListPage() {
                 onClick={() => { setTypeFilter(f.key); setCategoryFilter(null); }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all active:translate-y-[1px] ${
                   typeFilter === f.key
-                    ? `${f.themed ? 'text-primary-foreground' : `${f.activeBg} ${f.activeShadow} text-white`}`
-                    : `bg-white border border-gray-200 ${f.color} hover:border-gray-300`
+                    ? `${f.themed ? 'text-primary-foreground' : `${f.activeBg} ${f.activeShadow} ${f.activeText}`}`
+                    : `bg-surface border border-border ${f.color} hover:border-primary/40`
                 }`}
                 style={typeFilter === f.key && f.themed ? {
                   backgroundColor: 'rgb(var(--color-primary))',
                   boxShadow: '0 3px 0 rgb(var(--color-primary-hover))',
                 } : undefined}
               >
-                <i className={`fas ${f.icon} text-[10px]`} />
+                <f.Icon className="w-2.5 h-2.5" strokeWidth={2.5} />
                 {f.label}
                 <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
-                  typeFilter === f.key ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-gray-100 text-gray-400'
+                  typeFilter === f.key ? 'bg-white/20 text-current' : 'bg-surface-hover text-foreground-subtle'
                 }`}>
                   {loading ? '…' : counts[f.key]}
                 </span>
@@ -332,15 +337,15 @@ export default function LootBoxListPage() {
 
             <div className="ml-auto flex items-center gap-2 flex-shrink-0">
               <div className="relative">
-                <i className="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground-subtle text-[10px]" />
+                <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground-subtle" strokeWidth={2.5} />
                 <input
                   type="text" value={search} onChange={e => setSearch(e.target.value)}
                   placeholder="ค้นหากล่อง..."
                   className="pl-7 pr-7 py-1.5 rounded-lg border border-border bg-surface text-xs text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-foreground-subtle w-32 sm:w-40"
                 />
                 {search && (
-                  <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-foreground-subtle hover:text-foreground-muted transition-colors">
-                    <i className="fas fa-times text-[10px]" />
+                  <button onClick={() => setSearch('')} aria-label="ล้างการค้นหา" className="absolute right-2 top-1/2 -translate-y-1/2 text-foreground-subtle hover:text-foreground-muted transition-colors">
+                    <X className="w-3 h-3" strokeWidth={2.5} />
                   </button>
                 )}
               </div>
@@ -350,19 +355,19 @@ export default function LootBoxListPage() {
 
           {/* ── Row 2: Category filters (แสดงเมื่อมี category) ── */}
           {allCategories.length > 0 && (
-            <div className="px-4 py-2 border-b border-gray-100 bg-gray-50/40 flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex-shrink-0 mr-1">หมวด</span>
+            <div className="px-4 py-2 border-b border-border-muted bg-surface-hover/40 flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] font-black text-foreground-subtle uppercase tracking-widest flex-shrink-0 mr-1">หมวด</span>
 
               {/* ทุกหมวด */}
               <button
                 onClick={() => setCategoryFilter(null)}
                 className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all active:translate-y-[1px] ${
                   categoryFilter === null
-                    ? 'bg-[#1e2735] shadow-[0_2px_0_#38404d] text-white'
-                    : 'bg-white border border-gray-200 text-gray-500 hover:border-gray-300'
+                    ? 'bg-foreground text-background'
+                    : 'bg-surface border border-border text-foreground-muted hover:border-primary/40'
                 }`}
               >
-                <i className="fas fa-th-large text-[9px]" /> ทุกหมวด
+                <LayoutGrid className="w-2.5 h-2.5" strokeWidth={2.5} /> ทุกหมวด
               </button>
 
               {allCategories.map(cat => {
@@ -374,13 +379,13 @@ export default function LootBoxListPage() {
                     onClick={() => setCategoryFilter(active ? null : cat.name)}
                     className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all active:translate-y-[1px] ${
                       active
-                        ? 'bg-gray-700 shadow-[0_2px_0_#374151] text-white'
-                        : 'bg-white border border-gray-200 text-gray-500 hover:border-gray-300'
+                        ? 'bg-foreground text-background'
+                        : 'bg-surface border border-border text-foreground-muted hover:border-primary/40'
                     }`}
                   >
                     <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
                     {cat.name}
-                    <span className={`text-[9px] font-black ${active ? 'text-white/70' : cnt === 0 ? 'text-gray-300' : 'text-gray-400'}`}>
+                    <span className={`text-[9px] font-black ${active ? 'text-background/70' : 'text-foreground-subtle'}`}>
                       {cnt}
                     </span>
                   </button>
@@ -391,9 +396,9 @@ export default function LootBoxListPage() {
               {categoryFilter && (
                 <button
                   onClick={() => setCategoryFilter(null)}
-                  className="ml-1 flex items-center gap-1 text-[10px] font-bold text-red-400 hover:text-red-600 transition-colors"
+                  className="ml-1 flex items-center gap-1 text-[10px] font-bold text-error hover:brightness-110 transition-colors"
                 >
-                  <i className="fas fa-times text-[9px]" /> ล้าง
+                  <X className="w-2.5 h-2.5" strokeWidth={2.5} /> ล้าง
                 </button>
               )}
             </div>
@@ -404,16 +409,16 @@ export default function LootBoxListPage() {
             {loading ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2.5">
                 {[...Array(15)].map((_, i) => (
-                  <div key={i} className="aspect-[3/4] rounded-xl bg-gray-100 animate-pulse" />
+                  <div key={i} className="aspect-[3/4] rounded-xl bg-surface-hover animate-pulse" />
                 ))}
               </div>
             ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mb-3">
-                  <i className="fas fa-box-open text-2xl text-gray-300" />
+                <div className="w-14 h-14 rounded-2xl bg-surface-hover flex items-center justify-center mb-3">
+                  <PackageOpen className="w-7 h-7 text-foreground-subtle/60" strokeWidth={1.75} />
                 </div>
-                <p className="text-gray-600 font-bold text-sm">ไม่มีกล่องในหมวดนี้</p>
-                <p className="text-gray-400 text-xs mt-1">ลองเปลี่ยน filter หรือรอโปรโมชั่นใหม่</p>
+                <p className="text-foreground font-bold text-sm">ไม่มีกล่องในหมวดนี้</p>
+                <p className="text-foreground-subtle text-xs mt-1">ลองเปลี่ยน filter หรือรอโปรโมชั่นใหม่</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2.5">

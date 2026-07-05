@@ -4,6 +4,7 @@ import MainLayout from '@/components/MainLayout';
 import ProductCard from '@/components/ProductCard';
 import { api } from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Store, Search, X, PackageOpen } from 'lucide-react';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -74,7 +75,7 @@ export default function ShopPage() {
         {/* Page header */}
         <div>
           <h1 className="text-xl font-black text-foreground flex items-center gap-2">
-            <i className="fas fa-store text-primary text-lg" />
+            <Store className="w-5 h-5 text-primary" strokeWidth={2.25} />
             ITEMSHOP
           </h1>
           <p className="text-foreground-subtle text-xs mt-0.5">ร้านค้าไอเท็มและยศ</p>
@@ -92,7 +93,7 @@ export default function ShopPage() {
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all active:translate-y-[1px] ${
                   catId === t.id
                     ? 'text-primary-foreground'
-                    : 'bg-white border border-gray-200 text-green-600 hover:border-gray-300'
+                    : 'bg-surface border border-border text-primary hover:border-primary/40'
                 }`}
                 style={catId === t.id ? {
                   backgroundColor: 'rgb(var(--color-primary))',
@@ -102,7 +103,7 @@ export default function ShopPage() {
                 <i className={`fas ${t.icon} text-[10px]`} />
                 {t.name}
                 <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
-                  catId === t.id ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-gray-100 text-gray-400'
+                  catId === t.id ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-surface-hover text-foreground-subtle'
                 }`}>
                   {loading ? '…' : t.count
                 }</span>
@@ -123,15 +124,15 @@ export default function ShopPage() {
                 <option value="newest">ใหม่ล่าสุด</option>
               </select>
               <div className="relative">
-                <i className="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground-subtle text-[10px]" />
+                <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground-subtle" strokeWidth={2.5} />
                 <input
                   type="text" value={search} onChange={e => setSearch(e.target.value)}
                   placeholder="ค้นหาสินค้า..."
                   className="pl-7 pr-7 py-1.5 rounded-lg border border-border bg-surface text-xs text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-foreground-subtle w-36 sm:w-44"
                 />
                 {search && (
-                  <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-foreground-subtle hover:text-foreground-muted transition-colors">
-                    <i className="fas fa-times text-[10px]" />
+                  <button onClick={() => setSearch('')} aria-label="ล้างการค้นหา" className="absolute right-2 top-1/2 -translate-y-1/2 text-foreground-subtle hover:text-foreground-muted transition-colors">
+                    <X className="w-3 h-3" strokeWidth={2.5} />
                   </button>
                 )}
               </div>
@@ -153,7 +154,7 @@ export default function ShopPage() {
                   className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-4"
                 >
                   {[...Array(18)].map((_, i) => (
-                    <div key={i} className="aspect-[3/4] rounded-xl bg-gray-100 animate-pulse" />
+                    <div key={i} className="aspect-[3/4] rounded-xl bg-surface-hover animate-pulse" />
                   ))}
                 </motion.div>
               ) : filtered.length === 0 ? (
@@ -164,11 +165,11 @@ export default function ShopPage() {
                   exit={{ opacity: 0, scale: 0.9 }}
                   className="flex flex-col items-center justify-center py-20 text-center"
                 >
-                  <div className="w-16 h-16 rounded-3xl bg-gray-50 border border-gray-100 flex items-center justify-center mb-4">
-                    <i className="fas fa-box-open text-3xl text-gray-200" />
+                  <div className="w-16 h-16 rounded-3xl bg-surface-hover border border-border-muted flex items-center justify-center mb-4">
+                    <PackageOpen className="w-8 h-8 text-foreground-subtle/50" strokeWidth={1.75} />
                   </div>
-                  <p className="text-gray-600 font-black text-lg">ไม่พบสินค้า</p>
-                  <p className="text-gray-400 text-sm mt-1">ลองค้นหาด้วยคำอื่น หรือเลือกหมวดหมู่อีกครั้ง</p>
+                  <p className="text-foreground font-black text-lg">ไม่พบสินค้า</p>
+                  <p className="text-foreground-subtle text-sm mt-1">ลองค้นหาด้วยคำอื่น หรือเลือกหมวดหมู่อีกครั้ง</p>
                 </motion.div>
               ) : (
                 <motion.div 
