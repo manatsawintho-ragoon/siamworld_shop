@@ -4,15 +4,16 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useSettings } from '@/context/SettingsContext';
+import { useAuthModal } from '@/components/AuthModal';
 import {
   Home, ShoppingCart, PackageOpen, Coins, Download,
-  Menu, X, PlusCircle, User, UserCircle, type LucideIcon,
+  User, LogIn, type LucideIcon,
 } from 'lucide-react';
 
 export default function Navbar() {
   const { user } = useAuth();
   const { settings } = useSettings();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const { open: openAuth } = useAuthModal();
   const [isScrolled, setIsScrolled] = useState(false);
   const navRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -47,14 +48,14 @@ export default function Navbar() {
             <Link href="/" className="group relative flex flex-col items-center max-w-full">
               {logoUrl ? (
                 <div className="logo-float transition-all duration-500 transform group-hover:scale-110">
-                  <img src={logoUrl} alt={shopName} className="h-32 md:h-48 lg:h-56 w-auto object-contain drop-shadow-[0_10px_40px_rgba(0,0,0,0.5)]" />
+                  <img src={logoUrl} alt={shopName} className="h-28 sm:h-32 md:h-48 lg:h-56 w-auto object-contain drop-shadow-[0_10px_40px_rgba(0,0,0,0.5)]" />
                 </div>
               ) : (
                 <div className="logo-float flex flex-col items-center transition-all duration-300">
-                  <div className="text-5xl lg:text-7xl font-black tracking-tighter text-white drop-shadow-[0_0_30px_rgba(0,0,0,0.6)] text-center">
+                  <div className="text-4xl sm:text-5xl lg:text-7xl font-black tracking-tighter text-white drop-shadow-[0_0_30px_rgba(0,0,0,0.6)] text-center">
                     {shopName}
                   </div>
-                  <div className="text-base lg:text-lg font-bold mt-2 tracking-[0.3em] uppercase text-center w-full"
+                  <div className="text-sm sm:text-base lg:text-lg font-bold mt-2 tracking-[0.3em] uppercase text-center w-full"
                     style={{ color: 'rgb(var(--color-primary-light))' }}>{shopSubtitle}</div>
                 </div>
               )}
@@ -63,95 +64,20 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Horizontal Navigation Bar — sticky, no gap */}
+      {/* Desktop Navigation Bar — sticky. Hidden on mobile (bottom nav takes over). */}
       <div ref={navRef}
-        className={`w-full relative sticky top-0 z-50 transition-shadow duration-300 ${isScrolled ? 'shadow-md' : 'shadow-sm'}`}
+        className={`hidden md:block w-full relative sticky top-0 z-50 transition-shadow duration-300 ${isScrolled ? 'shadow-md' : 'shadow-sm'}`}
         style={{ background: 'rgb(var(--color-surface))', borderBottom: '1px solid rgb(var(--color-border))' }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex justify-between items-center">
-
-            {/* Desktop Nav Links */}
-            <nav className="hidden md:flex items-center w-full justify-center">
-              <NavLink href="/"         Icon={Home}          label="Home"      subLabel="หน้าแรก"       pathname={pathname} />
-              <NavLink href="/shop"     Icon={ShoppingCart}  label="Itemshop"  subLabel="ร้านค้าไอเท็ม" pathname={pathname} />
-              {showLootbox  && <NavLink href="/lootbox"  Icon={PackageOpen} label="Gacha"     subLabel="กล่องสุ่ม"     pathname={pathname} />}
-              <NavLink href="/topup"    Icon={Coins}         label="Topup"     subLabel="เติมเงิน"       pathname={pathname} />
-              {showDownload && <NavLink href="/download" Icon={Download}     label="Download"  subLabel="ดาวน์โหลด"     pathname={pathname} />}
-            </nav>
-
-            {/* Mobile Toggle */}
-            <div className="md:hidden flex w-full justify-between items-center py-3">
-              <span className="font-bold text-sm tracking-wide uppercase" style={{ color: 'rgb(var(--color-primary))' }}>เมนูหลัก</span>
-              <button onClick={() => setMobileOpen(!mobileOpen)} aria-label={mobileOpen ? 'ปิดเมนู' : 'เปิดเมนู'}
-                className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors"
-                style={{ backgroundColor: 'rgb(var(--color-surface-hover))', color: 'rgb(var(--color-foreground-muted))', border: '1px solid rgb(var(--color-border))' }}>
-                {mobileOpen ? <X className="w-5 h-5" strokeWidth={2.25} /> : <Menu className="w-5 h-5" strokeWidth={2.25} />}
-              </button>
-            </div>
-
-          </div>
+          <nav className="flex items-center w-full justify-center">
+            <NavLink href="/"         Icon={Home}          label="Home"      subLabel="หน้าแรก"       pathname={pathname} />
+            <NavLink href="/shop"     Icon={ShoppingCart}  label="Itemshop"  subLabel="ร้านค้าไอเท็ม" pathname={pathname} />
+            {showLootbox  && <NavLink href="/lootbox"  Icon={PackageOpen} label="Gacha"     subLabel="กล่องสุ่ม"     pathname={pathname} />}
+            <NavLink href="/topup"    Icon={Coins}         label="Topup"     subLabel="เติมเงิน"       pathname={pathname} />
+            {showDownload && <NavLink href="/download" Icon={Download}     label="Download"  subLabel="ดาวน์โหลด"     pathname={pathname} />}
+          </nav>
         </div>
-
-        {/* Mobile Dropdown — absolute overlay below nav bar */}
-        {mobileOpen && (
-          <div className="md:hidden absolute left-0 right-0 top-full z-50 shadow-xl"
-            style={{ background: 'rgb(var(--color-surface))', borderTop: '1px solid rgb(var(--color-border))' }}>
-            <div className="max-w-7xl mx-auto px-3 py-4 space-y-4 max-h-[80vh] overflow-y-auto">
-
-              {/* User Info in Mobile Menu */}
-              {user && (
-                <div className="px-4 py-3 rounded-2xl mx-1 border shadow-sm"
-                  style={{ backgroundColor: 'rgb(var(--color-surface-hover))', borderColor: 'rgb(var(--color-border-muted))' }}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-lg border-2 overflow-hidden shadow-sm"
-                      style={{ borderColor: 'rgb(var(--color-border))', backgroundColor: 'rgb(var(--color-surface))' }}>
-                      <img
-                        src={`https://mc-heads.net/avatar/${user.username}/40`}
-                        alt={user.username}
-                        className="w-full h-full"
-                        style={{ imageRendering: 'pixelated' }}
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-black text-sm truncate leading-none" style={{ color: 'rgb(var(--color-foreground))' }}>{user.username}</p>
-                      <p className="font-bold text-[10px] mt-1 uppercase tracking-wider" style={{ color: 'rgb(var(--color-primary))' }}>ยินดีต้อนรับ</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[9px] font-bold uppercase tracking-widest leading-none mb-1" style={{ color: 'rgb(var(--color-foreground-subtle))' }}>ยอดเงิน</p>
-                      <p className="font-black text-sm tabular-nums" style={{ color: 'rgb(var(--color-primary))' }}>
-                        {user.wallet_balance?.toLocaleString('th-TH')} <span className="text-[10px]">฿</span>
-                      </p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Link href="/topup" onClick={() => setMobileOpen(false)}
-                      className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-white text-[10px] font-black"
-                      style={{ backgroundColor: 'rgb(var(--color-primary))', boxShadow: '0 2px 0 rgb(var(--color-primary-hover))' }}>
-                      <PlusCircle className="w-3.5 h-3.5" /> เติมเงิน
-                    </Link>
-                    <Link href="/profile" onClick={() => setMobileOpen(false)}
-                      className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-black border"
-                      style={{ backgroundColor: 'rgb(var(--color-surface))', borderColor: 'rgb(var(--color-border))', color: 'rgb(var(--color-foreground-muted))', boxShadow: '0 2px 0 rgb(var(--color-border))' }}>
-                      <User className="w-3.5 h-3.5" /> โปรไฟล์
-                    </Link>
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-1 pb-2">
-                <MobileLink href="/"         Icon={Home}          pathname={pathname}>หน้าแรก</MobileLink>
-                <MobileLink href="/shop"     Icon={ShoppingCart}  pathname={pathname}>ไอเท็มชอป</MobileLink>
-                {showLootbox  && <MobileLink href="/lootbox"  Icon={PackageOpen}   pathname={pathname}>กล่องสุ่ม</MobileLink>}
-                <MobileLink href="/topup"    Icon={Coins}         pathname={pathname}>เติมเงิน</MobileLink>
-                {showDownload && <MobileLink href="/download" Icon={Download}      pathname={pathname}>ดาวน์โหลด</MobileLink>}
-                {user && <MobileLink href="/inventory" Icon={PackageOpen}   pathname={pathname}>คลังไอเท็ม</MobileLink>}
-                {user && <MobileLink href="/profile"   Icon={UserCircle}    pathname={pathname}>จัดการโปรไฟล์</MobileLink>}
-              </div>
-
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Mobile Bottom Navigation Bar — thumb-reachable primary nav */}
@@ -160,15 +86,17 @@ export default function Navbar() {
         <MobileBottomLink href="/shop" Icon={ShoppingCart} label="ร้านค้า" active={pathname.startsWith('/shop')} />
         {showLootbox && <MobileBottomLink href="/lootbox" Icon={PackageOpen} label="กล่องสุ่ม" active={pathname.startsWith('/lootbox')} />}
         <MobileBottomLink href="/topup" Icon={Coins} label="เติมเงิน" active={pathname.startsWith('/topup')} />
-        <MobileBottomLink href={user ? "/profile" : "/"} Icon={User} label={user ? "โปรไฟล์" : "ล็อกอิน"} active={pathname.startsWith('/profile')} />
+        {user
+          ? <MobileBottomLink href="/profile" Icon={User} label="โปรไฟล์" active={pathname.startsWith('/profile')} />
+          : <MobileBottomLink onClick={openAuth} Icon={LogIn} label="ล็อกอิน" active={false} />}
       </nav>
     </header>
   );
 }
 
-function MobileBottomLink({ href, Icon, label, active }: { href: string; Icon: LucideIcon; label: string; active: boolean }) {
-  return (
-    <Link href={href} className="flex flex-col items-center justify-center gap-1 min-w-[64px] min-h-[44px] transition-all">
+function MobileBottomLink({ href, onClick, Icon, label, active }: { href?: string; onClick?: () => void; Icon: LucideIcon; label: string; active: boolean }) {
+  const inner = (
+    <>
       <div
         className="w-11 h-8 rounded-full flex items-center justify-center transition-all"
         style={active
@@ -184,8 +112,13 @@ function MobileBottomLink({ href, Icon, label, active }: { href: string; Icon: L
       >
         {label}
       </span>
-    </Link>
+    </>
   );
+  const cls = 'flex flex-col items-center justify-center gap-1 min-w-[64px] min-h-[44px] transition-all';
+  if (onClick) {
+    return <button onClick={onClick} className={cls} aria-label={label}>{inner}</button>;
+  }
+  return <Link href={href!} className={cls}>{inner}</Link>;
 }
 
 function NavLink({ href, Icon, label, subLabel, pathname }: { href: string; Icon: LucideIcon; label: string; subLabel: string; pathname: string }) {
@@ -201,22 +134,6 @@ function NavLink({ href, Icon, label, subLabel, pathname }: { href: string; Icon
         <span className="font-black text-[15px]">{label}</span>
       </div>
       <span className="text-[10px] font-bold opacity-80">{subLabel}</span>
-    </Link>
-  );
-}
-
-function MobileLink({ href, Icon, pathname, children }: { href: string; Icon: LucideIcon; pathname: string; children: React.ReactNode }) {
-  const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
-  const activeBgStyle = { backgroundColor: 'rgb(var(--color-primary) / 0.1)', color: 'rgb(var(--color-primary))' };
-  const defaultStyle = { color: 'rgb(var(--color-foreground-muted))' };
-  return (
-    <Link
-      href={href}
-      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-colors ${isActive ? '' : 'hover:bg-surface-hover'}`}
-      style={isActive ? activeBgStyle : defaultStyle}
-    >
-      <Icon className="w-5 h-5 flex-shrink-0" strokeWidth={2} style={{ color: 'rgb(var(--color-primary))' }} />
-      {children}
     </Link>
   );
 }
