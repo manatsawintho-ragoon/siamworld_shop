@@ -427,7 +427,7 @@ export default function HomePage() {
             </motion.div>
           )}
         </motion.div>
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }} className="flex flex-col gap-3 lg:w-[230px] flex-shrink-0 self-start">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }} className="flex flex-col gap-3 lg:w-[230px] flex-shrink-0 lg:self-start">
           {(settings.show_server_status_widget ?? '1') === '1' && (
             <ServerStatusWidget serverIp={settings.server_ip} dbServers={servers} />
           )}

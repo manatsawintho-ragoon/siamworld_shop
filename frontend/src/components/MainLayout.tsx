@@ -74,8 +74,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
       <div className="flex-1 max-w-[1536px] mx-auto w-full px-3 sm:px-6 pt-6 pb-24 md:pb-6 grid grid-cols-1 gap-5 lg:gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:items-start">
 
-        {/* ── Account / Login — order 1 on mobile (top), top-left on desktop ── */}
-        <div className="order-1 lg:col-start-1 lg:row-start-1 lg:sticky lg:top-4">
+        {/* ── Account / Login — order 1 on mobile (top), top-left on desktop.
+            On mobile, only render when logged in (the account card is useful);
+            when logged out, the login form is hidden here and reached via the
+            bottom-nav AuthModal instead. Not sticky on desktop so it never
+            overlaps the content below when the page scrolls. ── */}
+        <div className={`order-1 lg:col-start-1 lg:row-start-1 ${user ? '' : 'hidden lg:block'}`}>
 
             {/* ── Member Card ── */}
             <div className={CARD}>
