@@ -5,7 +5,7 @@ import { logger } from '../utils/logger';
 const SESSION_TTL_SEC    = 24 * 60 * 60; // 24h — matches JWT expiry ceiling
 const INACTIVITY_TTL_SEC = 40 * 60;      // 40 minutes
 
-export type SessionStatus = 'valid' | 'kicked' | 'expired';
+export type SessionStatus = 'valid' | 'kicked' | 'expired' | 'degraded';
 
 /**
  * Create a new session for a user (overwrites any existing session, kicking the old device).
@@ -27,12 +27,13 @@ export async function createSession(userId: number): Promise<string> {
 
 /**
  * Validate a session on every authenticated request.
- * - 'kicked'  → a newer login replaced this session
- * - 'expired' → inactivity timeout or session not found
- * - 'valid'   → session is active; caller should call touchSession()
- *
- * If Redis is unavailable, returns 'valid' (graceful degradation).
- * JWT signature is still verified — this only skips single-session enforcement.
+ * - 'kicked'   → a newer login replaced this session
+ * - 'expired'  → inactivity timeout or session not found
+ * - 'valid'    → session is active; caller should call touchSession()
+ * - 'degraded' → Redis unavailable; single-session enforcement could not run.
+ *                The caller decides the policy (e.g. allow normal users but
+ *                fail closed for admins). JWT signature is still verified either
+ *                way — this only signals that session state is unknown.
  */
 export async function validateSession(userId: number, jti: string): Promise<SessionStatus> {
   try {
@@ -55,10 +56,11 @@ export async function validateSession(userId: number, jti: string): Promise<Sess
 
     return 'valid';
   } catch (err) {
-    // Redis is down — degrade gracefully so auth doesn't block all requests.
-    // JWT signature is still verified by the caller; only session enforcement is skipped.
-    logger.warn('Redis unavailable — session validation skipped (graceful degradation)', { userId });
-    return 'valid';
+    // Redis is down — report 'degraded' and let the caller apply policy. We do
+    // NOT silently return 'valid': that would let a kicked/expired admin session
+    // keep working for the JWT's full lifetime whenever Redis is unavailable.
+    logger.warn('Redis unavailable — session state unknown (degraded)', { userId });
+    return 'degraded';
   }
 }
 

@@ -35,6 +35,11 @@ interface ApiOptions {
   method?: string;
   body?: unknown;
   token?: string; // Accepted but ignored — auth is via cookie
+  // Cache mode for the underlying fetch. Defaults to 'no-store' for writes and
+  // 'default' for GETs, so the browser HTTP cache can honour the backend's
+  // Cache-Control on public catalog endpoints instead of re-hitting the API on
+  // every page navigation. Pass 'no-store' explicitly to force a fresh read.
+  cache?: RequestCache;
 }
 
 interface ApiError extends Error {
@@ -54,12 +59,19 @@ export async function api<T = unknown>(endpoint: string, options: ApiOptions = {
   // token option deliberately ignored — cookie handles auth automatically
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 
+  // Writes must never be cached. GETs default to 'default' so the browser can
+  // reuse a response that the backend marked cacheable (public catalog data);
+  // authenticated endpoints send Cache-Control: no-store from the backend, so
+  // they are never cached even under 'default'.
+  const isWrite = method !== 'GET' && method !== 'HEAD';
+  const cacheMode: RequestCache = options.cache ?? (isWrite ? 'no-store' : 'default');
+
   const res = await fetch(`${API_URL}${endpoint}`, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
     credentials: 'include', // sends auth_token cookie on every request
-    cache: 'no-store',
+    cache: cacheMode,
   });
 
   const data = await res.json();

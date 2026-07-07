@@ -26,11 +26,16 @@ class AdminStatsService {
       monthTopups: "SELECT COALESCE(SUM(amount),0) as v FROM transactions WHERE type='topup' AND status='success' AND MONTH(created_at)=MONTH(CURDATE()) AND YEAR(created_at)=YEAR(CURDATE())",
     };
 
+    // Run the scalar aggregates concurrently instead of ~21 serial round trips.
+    // They are independent single-value reads, so the pool executes them in
+    // parallel and total latency drops to roughly the slowest single query.
     const results: Record<string, number> = {};
-    for (const [key, sql] of Object.entries(queries)) {
-      const [rows] = await pool.execute<RowDataPacket[]>(sql);
-      results[key] = parseFloat(rows[0].v) || 0;
-    }
+    await Promise.all(
+      Object.entries(queries).map(async ([key, sql]) => {
+        const [rows] = await pool.execute<RowDataPacket[]>(sql);
+        results[key] = parseFloat(rows[0].v) || 0;
+      })
+    );
 
     // Top products
     const [topProducts] = await pool.execute<RowDataPacket[]>(
@@ -229,12 +234,16 @@ class AdminStatsService {
     };
 
     const comparison: Record<string, ReturnType<typeof buildCmp>> = {};
-    for (const [key, sql] of Object.entries(compareDefs)) {
-      const [rows] = await pool.execute<RowDataPacket[]>(sql);
-      comparison[key] = buildCmp(rows[0].this_month, rows[0].last_month);
-    }
-    const [spentRows] = await pool.execute<RowDataPacket[]>(spentSql);
-    comparison.spent = buildCmp(spentRows[0].this_month, spentRows[0].last_month);
+    await Promise.all([
+      ...Object.entries(compareDefs).map(async ([key, sql]) => {
+        const [rows] = await pool.execute<RowDataPacket[]>(sql);
+        comparison[key] = buildCmp(rows[0].this_month, rows[0].last_month);
+      }),
+      (async () => {
+        const [spentRows] = await pool.execute<RowDataPacket[]>(spentSql);
+        comparison.spent = buildCmp(spentRows[0].this_month, spentRows[0].last_month);
+      })(),
+    ]);
 
     // Activity feed (union of recent activities)
     const [activityFeed] = await pool.execute<RowDataPacket[]>(

@@ -1,8 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authenticate } from '../middleware/auth';
-import { validate } from '../middleware/validate';
 import { walletService } from '../services/wallet.service';
-import { topupSchema } from '../validators/schemas';
 
 const router = Router();
 
@@ -13,12 +11,10 @@ router.get('/', authenticate, async (req: Request, res: Response, next: NextFunc
   } catch (err) { next(err); }
 });
 
-router.post('/topup', authenticate, validate(topupSchema), async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const wallet = await walletService.topup(req.user!.userId, req.body.amount, 'manual', undefined, req.body.description);
-    res.json({ success: true, message: 'Top-up successful', wallet });
-  } catch (err) { next(err); }
-});
+// NOTE: There is intentionally NO self-service /topup route. Crediting a wallet
+// must go through a verified payment path (payment.service: PromptPay slip /
+// TrueMoney) or an admin adjustment (admin.routes). A raw authenticated /topup
+// let any logged-in user grant themselves unlimited balance — removed.
 
 router.get('/transactions', authenticate, async (req: Request, res: Response, next: NextFunction) => {
   try {

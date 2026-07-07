@@ -96,7 +96,10 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],   // Next.js inline scripts
+      // This CSP is served on backend (API) responses only, which return JSON —
+      // no inline scripts are ever needed here. The Next.js frontend sets its own
+      // policy. Keeping scriptSrc strict costs nothing and hardens direct hits.
+      scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'https:'],
       connectSrc: ["'self'", ...(allowedOrigins === '*' ? ['*'] : allowedOrigins)],
@@ -121,6 +124,14 @@ app.use((req, _res, next) => {
   if (req.path !== '/api/health') {
     logger.debug('Request', { method: req.method, path: req.path });
   }
+  next();
+});
+
+// Default every API response to no-store so authenticated data (profile, wallet,
+// admin) is never cached by the browser or an intermediary. Public read routes
+// opt back into caching by overriding Cache-Control in their handlers.
+app.use('/api/', (_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
   next();
 });
 
@@ -163,8 +174,15 @@ process.on('uncaughtException', (err: Error) => {
     error: err.message,
     stack: err.stack,
   });
-  // Optional: Graceful shutdown if error is critical
-  // if (!err.message.includes('RCON')) process.exit(1);
+  // RCON socket errors are noisy but recoverable — the RconManager handles its
+  // own reconnection, so don't take the whole process down for those. Any other
+  // uncaught exception may have left state corrupt (half-open DB tx, leaked
+  // locks); exit and let Docker's `restart: unless-stopped` bring up a clean
+  // process rather than serving requests from a poisoned one.
+  if (!err.message.includes('RCON')) {
+    logger.error('Fatal uncaught exception — exiting for a clean restart');
+    process.exit(1);
+  }
 });
 
 // Initialize services

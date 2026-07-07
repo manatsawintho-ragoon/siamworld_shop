@@ -14,18 +14,40 @@ function maybeDecrypt(key: string, value: string): string {
   return value; // legacy plain-text — pass through until next save
 }
 
+// Short-lived in-memory cache of the whole settings table. Settings are read on
+// virtually every request path (public /settings on each page load, plus payment
+// and email flows that call get() repeatedly) but change only when an admin saves.
+// A brief TTL collapses that read storm into ~1 query per window per container,
+// and every write invalidates it so admin changes still show up promptly.
+const CACHE_TTL_MS = 15_000;
+let cacheData: Record<string, string> | null = null;
+let cacheExpiresAt = 0;
+
 class SettingsService {
-  async getAll(): Promise<Record<string, string>> {
+  private async loadAll(): Promise<Record<string, string>> {
+    if (cacheData && Date.now() < cacheExpiresAt) return cacheData;
     const [rows] = await pool.execute<RowDataPacket[]>('SELECT `key`, `value` FROM settings');
     const settings: Record<string, string> = {};
     for (const row of rows) { settings[row.key] = maybeDecrypt(row.key, row.value); }
+    cacheData = settings;
+    cacheExpiresAt = Date.now() + CACHE_TTL_MS;
     return settings;
   }
 
+  /** Drop the cache so the next read reflects a just-written value. */
+  private invalidate() {
+    cacheData = null;
+    cacheExpiresAt = 0;
+  }
+
+  async getAll(): Promise<Record<string, string>> {
+    // Return a shallow copy so callers can't mutate the shared cached object.
+    return { ...(await this.loadAll()) };
+  }
+
   async get(key: string): Promise<string | null> {
-    const [rows] = await pool.execute<RowDataPacket[]>('SELECT `value` FROM settings WHERE `key` = ?', [key]);
-    if (rows.length === 0) return null;
-    return maybeDecrypt(key, rows[0].value);
+    const all = await this.loadAll();
+    return Object.prototype.hasOwnProperty.call(all, key) ? all[key] : null;
   }
 
   async set(key: string, value: string) {
@@ -34,12 +56,14 @@ class SettingsService {
       'INSERT INTO settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = ?',
       [key, stored, stored]
     );
+    this.invalidate();
   }
 
   async setMultiple(settings: Record<string, string>) {
     for (const [key, value] of Object.entries(settings)) {
       await this.set(key, value);
     }
+    this.invalidate();
   }
 
   // Slides

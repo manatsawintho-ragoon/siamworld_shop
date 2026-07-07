@@ -42,7 +42,10 @@ router.post('/logout', authenticate, async (req: Request, res: Response, next: N
 // Always returns 200 so attackers can't probe which emails are registered.
 router.post('/forgot-password', validate(forgotPasswordSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || undefined;
+    // Use req.ip (derived from the configured 'trust proxy' setting) rather than
+    // reading X-Forwarded-For directly — the raw header is client-spoofable and
+    // would let an attacker rotate it to bypass the per-IP reset throttle.
+    const ip = req.ip || req.socket.remoteAddress || undefined;
     await passwordResetService.requestReset(req.body.email, ip);
     res.json({ success: true, message: 'หากอีเมลถูกต้อง ระบบจะส่งรหัส OTP ให้ภายในไม่กี่นาที' });
   } catch (err) { next(err); }

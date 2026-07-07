@@ -12,7 +12,7 @@ const envSchema = z.object({
   REDIS_PORT: z.string().default('6379'),
   JWT_SECRET: z.string().min(32),
   JWT_EXPIRES_IN: z.string().default('24h'),
-  ENCRYPTION_KEY: z.string().min(32).optional(),
+  ENCRYPTION_KEY: z.string().min(32),
   BACKEND_PORT: z.string().default('4000'),
   NODE_ENV: z.string().default('production'),
   CORS_ORIGIN: z.string().default('*'),
@@ -38,6 +38,17 @@ const envSchema = z.object({
     return !!(e.BRIDGE_SUBSCRIPTION_ID && e.PANEL_BRIDGE_URL && e.PANEL_BRIDGE_KEY);
   },
   { message: 'BRIDGE_ENABLED=true requires BRIDGE_SUBSCRIPTION_ID, PANEL_BRIDGE_URL, PANEL_BRIDGE_KEY' }
+).refine(
+  // ENCRYPTION_KEY and JWT_SECRET protect different trust domains (data-at-rest
+  // vs. token signing). Reusing one value for both means a leak of either
+  // compromises the other, so require them to differ.
+  (e) => e.ENCRYPTION_KEY !== e.JWT_SECRET,
+  { message: 'ENCRYPTION_KEY must be different from JWT_SECRET', path: ['ENCRYPTION_KEY'] }
+).refine(
+  // A shop that leaves CORS wide open in production exposes its API to every
+  // origin. Allow '*' only outside production (local dev).
+  (e) => e.NODE_ENV !== 'production' || e.CORS_ORIGIN !== '*',
+  { message: 'CORS_ORIGIN must not be "*" when NODE_ENV=production', path: ['CORS_ORIGIN'] }
 );
 
 const parsed = envSchema.safeParse(process.env);

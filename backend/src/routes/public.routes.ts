@@ -9,6 +9,16 @@ const positiveIntParam = z.string().regex(/^\d+$/).transform(Number).optional();
 
 const router = Router();
 
+// Cache-Control helpers for public read endpoints. These override the global
+// no-store default (see server.ts). `stale-while-revalidate` lets the browser
+// serve the cached copy instantly while refreshing in the background, which is
+// what kills the "every navigation re-fetches the whole catalog" latency.
+//   catalog  → slow-changing (products, settings, slides): 60s fresh + 5min SWR
+//   activity → fast feeds (online players, recent buys): 10s fresh + 30s SWR
+const CATALOG_CACHE  = 'public, max-age=60, stale-while-revalidate=300';
+const ACTIVITY_CACHE = 'public, max-age=10, stale-while-revalidate=30';
+const cache = (res: Response, value: string) => res.setHeader('Cache-Control', value);
+
 // Public settings (no auth required)
 router.get('/settings', async (_req: Request, res: Response, next: NextFunction) => {
   try {
@@ -31,6 +41,7 @@ router.get('/settings', async (_req: Request, res: Response, next: NextFunction)
         settings[key] = value;
       }
     }
+    cache(res, CATALOG_CACHE);
     res.json({ success: true, settings });
   } catch (err) { next(err); }
 });
@@ -39,6 +50,7 @@ router.get('/slides', async (_req: Request, res: Response, next: NextFunction) =
   try {
     const slides = await settingsService.getSlides();
     const activeSlides = slides.filter((s: any) => s.active);
+    cache(res, CATALOG_CACHE);
     res.json({ success: true, slides: activeSlides });
   } catch (err) { next(err); }
 });
@@ -46,6 +58,7 @@ router.get('/slides', async (_req: Request, res: Response, next: NextFunction) =
 router.get('/categories', async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const categories = await shopService.getCategories();
+    cache(res, CATALOG_CACHE);
     res.json({ success: true, categories });
   } catch (err) { next(err); }
 });
@@ -60,6 +73,7 @@ router.get('/products', async (req: Request, res: Response, next: NextFunction) 
     if (categoryId) {
       products = products.filter((p: any) => p.category_id === categoryId);
     }
+    cache(res, CATALOG_CACHE);
     res.json({ success: true, products });
   } catch (err) { next(err); }
 });
@@ -67,6 +81,7 @@ router.get('/products', async (req: Request, res: Response, next: NextFunction) 
 router.get('/products/featured', async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const products = await shopService.getFeaturedProducts();
+    cache(res, CATALOG_CACHE);
     res.json({ success: true, products });
   } catch (err) { next(err); }
 });
@@ -86,6 +101,7 @@ router.get('/products/popular', async (_req: Request, res: Response, next: NextF
        ORDER BY sold_count DESC, p.created_at DESC
        LIMIT 10`
     );
+    cache(res, CATALOG_CACHE);
     res.json({ success: true, products: rows });
   } catch (err) { next(err); }
 });
@@ -103,6 +119,7 @@ router.get('/products/new-arrivals', async (_req: Request, res: Response, next: 
        ORDER BY p.created_at DESC
        LIMIT 10`
     );
+    cache(res, CATALOG_CACHE);
     res.json({ success: true, products: rows });
   } catch (err) { next(err); }
 });
@@ -119,6 +136,7 @@ router.get('/servers', async (_req: Request, res: Response, next: NextFunction) 
       max_players: s.max_players,
       is_enabled: s.is_enabled
     }));
+    cache(res, CATALOG_CACHE);
     res.json({ success: true, servers: publicServers });
   } catch (err) { next(err); }
 });
@@ -127,6 +145,7 @@ router.get('/online-players', async (req: Request, res: Response, next: NextFunc
   try {
     const playerTracker = req.app.get('playerTracker');
     const data = await playerTracker.getOnlinePlayers();
+    cache(res, ACTIVITY_CACHE);
     res.json({ success: true, ...data });
   } catch (err) { next(err); }
 });
@@ -142,6 +161,7 @@ router.get('/topup-ranking', async (_req: Request, res: Response, next: NextFunc
       ORDER BY total_topup DESC 
       LIMIT 10
     `);
+    cache(res, ACTIVITY_CACHE);
     res.json({ success: true, ranking: rows });
   } catch (err) { next(err); }
 });
@@ -149,6 +169,7 @@ router.get('/topup-ranking', async (_req: Request, res: Response, next: NextFunc
 router.get('/downloads', async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const [rows] = await pool.execute('SELECT * FROM downloads WHERE active = 1 ORDER BY sort_order ASC, created_at DESC');
+    cache(res, CATALOG_CACHE);
     res.json({ success: true, downloads: rows });
   } catch (err) { next(err); }
 });
@@ -165,6 +186,7 @@ router.get('/recent-purchases', async (_req: Request, res: Response, next: NextF
       ORDER BY p.created_at DESC
       LIMIT 8
     `);
+    cache(res, ACTIVITY_CACHE);
     res.json({ success: true, purchases: rows });
   } catch (err) { next(err); }
 });
@@ -182,6 +204,7 @@ router.get('/daily-topup', async (_req: Request, res: Response, next: NextFuncti
       ORDER BY last_topup DESC
       LIMIT 5
     `);
+    cache(res, ACTIVITY_CACHE);
     res.json({ success: true, daily: rows });
   } catch (err) { next(err); }
 });
@@ -201,6 +224,7 @@ router.get('/recent-lootbox', async (req: Request, res: Response, next: NextFunc
     const [rows] = boxId
       ? await pool.execute(query, [boxId])
       : await pool.execute(query);
+    cache(res, ACTIVITY_CACHE);
     res.json({ success: true, openings: rows });
   } catch (err) { next(err); }
 });

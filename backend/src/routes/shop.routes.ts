@@ -8,10 +8,15 @@ import { buyProductSchema, openLootBoxSchema } from '../validators/schemas';
 
 const router = Router();
 
+// Public catalog reads override the global no-store default (server.ts) so the
+// browser can reuse them across navigations. 60s fresh + 5min stale-while-revalidate.
+const CATALOG_CACHE = 'public, max-age=60, stale-while-revalidate=300';
+
 router.get('/products', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const serverId = req.query.serverId ? parseInt(req.query.serverId as string) : undefined;
     const products = await shopService.getProducts(serverId);
+    res.setHeader('Cache-Control', CATALOG_CACHE);
     res.json({ success: true, products });
   } catch (err) { next(err); }
 });
@@ -20,6 +25,7 @@ router.get('/products/:id', async (req: Request, res: Response, next: NextFuncti
   try {
     const id = parseInt(req.params.id);
     const product = await shopService.getProduct(id);
+    res.setHeader('Cache-Control', CATALOG_CACHE);
     res.json({ success: true, product });
   } catch (err) { next(err); }
 });
@@ -27,6 +33,7 @@ router.get('/products/:id', async (req: Request, res: Response, next: NextFuncti
 router.get('/categories', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const categories = await shopService.getCategories();
+    res.setHeader('Cache-Control', CATALOG_CACHE);
     res.json({ success: true, categories });
   } catch (err) { next(err); }
 });
@@ -34,6 +41,7 @@ router.get('/categories', async (req: Request, res: Response, next: NextFunction
 router.get('/featured', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const products = await shopService.getFeaturedProducts();
+    res.setHeader('Cache-Control', CATALOG_CACHE);
     res.json({ success: true, products });
   } catch (err) { next(err); }
 });
@@ -64,6 +72,7 @@ router.post('/buy', authenticate, purchaseCooldown(3), validate(buyProductSchema
 router.get('/lootboxes', async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const boxes = await lootBoxService.getLootBoxes();
+    res.setHeader('Cache-Control', CATALOG_CACHE);
     res.json({ success: true, boxes });
   } catch (err) { next(err); }
 });
@@ -71,6 +80,7 @@ router.get('/lootboxes', async (_req: Request, res: Response, next: NextFunction
 router.get('/lootboxes/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const box = await lootBoxService.getLootBox(parseInt(req.params.id));
+    res.setHeader('Cache-Control', CATALOG_CACHE);
     res.json({ success: true, box });
   } catch (err) { next(err); }
 });

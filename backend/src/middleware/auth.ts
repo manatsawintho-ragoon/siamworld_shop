@@ -48,14 +48,21 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
     if (rows.length === 0) return next(new AuthenticationError('User not found'));
 
     // Single-session + inactivity check
+    const role = rows[0].role;
     const status = await validateSession(decoded.userId, decoded.jti);
     if (status === 'kicked')  return next(new SessionKickedError());
     if (status === 'expired') return next(new SessionExpiredError());
+    if (status === 'degraded') {
+      // Redis is down and session state can't be confirmed. Admins fail closed —
+      // a privileged token must never bypass single-session enforcement. Normal
+      // users are allowed through (availability), JWT signature already verified.
+      if (role === 'admin') return next(new AuthenticationError('Session verification unavailable, please try again'));
+    }
 
     // Refresh the 40-min inactivity window (fire-and-forget — never blocks the request)
     touchSession(decoded.userId).catch(() => {});
 
-    req.user = { ...decoded, role: rows[0].role };
+    req.user = { ...decoded, role };
     next();
   } catch (err) {
     if (err instanceof AuthenticationError || err instanceof SessionKickedError || err instanceof SessionExpiredError) {

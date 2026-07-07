@@ -142,19 +142,35 @@ class SetupService {
    * Returns the plaintext credentials ONCE so the setup wizard can display them.
    */
   async initAdminAuto(): Promise<{ token: string; username: string; password: string }> {
-    const status = await this.getSetupStatus();
-    if (status.hasAdmin) {
-      throw new ValidationError('An admin account already exists');
+    // Serialize the check-then-create across concurrent requests with a MySQL
+    // advisory lock (connection-scoped). Without it, two simultaneous calls could
+    // both pass the hasAdmin check and each provision an admin.
+    const lockConn = await pool.getConnection();
+    try {
+      const [lockRows] = await lockConn.execute<RowDataPacket[]>("SELECT GET_LOCK('init_admin', 10) AS locked");
+      if (lockRows[0]?.locked !== 1) {
+        throw new ValidationError('Setup is busy, please try again in a moment');
+      }
+      try {
+        const status = await this.getSetupStatus();
+        if (status.hasAdmin) {
+          throw new ValidationError('An admin account already exists');
+        }
+
+        const { userId, username, password } = await adminCredentialService.provision();
+
+        const jti = await createSession(userId);
+        const payload = { userId, username, role: 'admin', jti };
+        const token = jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn as jwt.SignOptions['expiresIn'] });
+
+        logger.info('Initial dedicated admin created via setup wizard', { userId, username });
+        return { token, username, password };
+      } finally {
+        await lockConn.execute("SELECT RELEASE_LOCK('init_admin')").catch(() => {});
+      }
+    } finally {
+      lockConn.release();
     }
-
-    const { userId, username, password } = await adminCredentialService.provision();
-
-    const jti = await createSession(userId);
-    const payload = { userId, username, role: 'admin', jti };
-    const token = jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn as jwt.SignOptions['expiresIn'] });
-
-    logger.info('Initial dedicated admin created via setup wizard', { userId, username });
-    return { token, username, password };
   }
 
   /**
