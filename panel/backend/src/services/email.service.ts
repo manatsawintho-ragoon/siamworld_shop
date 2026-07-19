@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import axios from 'axios';
 import https from 'https';
 import { settingsService } from './settings.service';
@@ -253,11 +254,11 @@ class EmailService {
   async sendDeployWelcome(sub: SubscriptionRow, user: UserRow): Promise<void> {
     const cfg = await this.getClient();
     if (!cfg) {
-      console.log('[Email] Resend not configured — skipping welcome email for', sub.shop_name);
+      logger.info('[Email] Resend not configured — skipping welcome email for', sub.shop_name);
       return;
     }
     if (!user.email) {
-      console.log('[Email] User has no email — skipping welcome email');
+      logger.info('[Email] User has no email — skipping welcome email');
       return;
     }
     const s = await settingsService.getAll();
@@ -279,10 +280,10 @@ class EmailService {
       };
       if (cfg.replyTo) payload.reply_to = cfg.replyTo;
       const result = await resendSend(cfg.apiKey, payload);
-      console.log(`[Email] Welcome email sent to ${user.email} for shop ${sub.shop_name} (id: ${result.id})`);
+      logger.info(`[Email] Welcome email sent to ${user.email} for shop ${sub.shop_name} (id: ${result.id})`);
     } catch (err) {
       const e = err as { response?: { status?: number; data?: unknown }; message?: string };
-      console.error('[Email] sendDeployWelcome failed:', e.response?.status ?? '', JSON.stringify(e.response?.data ?? {}) || e.message);
+      logger.error('[Email] sendDeployWelcome failed:', e.response?.status ?? '', JSON.stringify(e.response?.data ?? {}) || e.message);
     }
   }
 
@@ -426,11 +427,11 @@ class EmailService {
   ): Promise<void> {
     const cfg = await this.getClient();
     if (!cfg) {
-      console.log('[Email] Resend not configured — skipping', opts.mode, 'email for', data.shopName);
+      logger.info('[Email] Resend not configured — skipping', opts.mode, 'email for', data.shopName);
       return;
     }
     if (!data.email) {
-      console.log('[Email] No email on file — skipping', opts.mode, 'email for', data.shopName);
+      logger.info('[Email] No email on file — skipping', opts.mode, 'email for', data.shopName);
       return;
     }
     const s = await settingsService.getAll();
@@ -454,10 +455,10 @@ class EmailService {
       };
       if (cfg.replyTo) payload.reply_to = cfg.replyTo;
       const result = await resendSend(cfg.apiKey, payload);
-      console.log(`[Email] ${opts.mode} email sent to ${data.email} for shop ${data.shopName} (id: ${result.id})`);
+      logger.info(`[Email] ${opts.mode} email sent to ${data.email} for shop ${data.shopName} (id: ${result.id})`);
     } catch (err) {
       const e = err as { response?: { status?: number; data?: unknown }; message?: string };
-      console.error(`[Email] send ${opts.mode} failed:`, e.response?.status ?? '', JSON.stringify(e.response?.data ?? {}) || e.message);
+      logger.error(`[Email] send ${opts.mode} failed:`, e.response?.status ?? '', JSON.stringify(e.response?.data ?? {}) || e.message);
     }
   }
 
@@ -483,7 +484,7 @@ class EmailService {
   async sendRegistrationWelcome(toEmail: string, displayName?: string): Promise<void> {
     const cfg = await this.getClient();
     if (!cfg) {
-      console.log('[Email] Resend not configured — skipping registration welcome for', toEmail);
+      logger.info('[Email] Resend not configured — skipping registration welcome for', toEmail);
       return;
     }
     if (!toEmail) return;
@@ -562,10 +563,10 @@ class EmailService {
       };
       if (cfg.replyTo) payload.reply_to = cfg.replyTo;
       const result = await resendSend(cfg.apiKey, payload);
-      console.log(`[Email] Registration welcome sent to ${toEmail} (id: ${result.id})`);
+      logger.info(`[Email] Registration welcome sent to ${toEmail} (id: ${result.id})`);
     } catch (err) {
       const e = err as { response?: { status?: number; data?: unknown }; message?: string };
-      console.error('[Email] sendRegistrationWelcome failed:', e.response?.status ?? '', JSON.stringify(e.response?.data ?? {}) || e.message);
+      logger.error('[Email] sendRegistrationWelcome failed:', e.response?.status ?? '', JSON.stringify(e.response?.data ?? {}) || e.message);
     }
   }
 

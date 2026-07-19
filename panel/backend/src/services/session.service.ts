@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import crypto from 'crypto';
 import { redis } from '../database/redis';
 
@@ -48,7 +49,7 @@ export async function validateSession(userId: number, jti: string): Promise<Sess
       redis.get(`panel_activity:${userId}`),
     ]);
   } catch (err) {
-    console.error('[Redis] Session validation failed:', (err as Error).message);
+    logger.error('[Redis] Session validation failed:', (err as Error).message);
     return 'unavailable';
   }
 

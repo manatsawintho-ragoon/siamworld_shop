@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { pool } from '../database/connection';
 import { ValidationError, NotFoundError } from '../utils/errors';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
@@ -50,7 +51,7 @@ class VoucherService {
   async redeemVoucher(userId: number, code: string): Promise<number> {
     const conn = await pool.getConnection();
     const upperCode = code.trim().toUpperCase();
-    console.log(`[Voucher] User ${userId} attempting to redeem: "${upperCode}"`);
+    logger.info(`[Voucher] User ${userId} attempting to redeem: "${upperCode}"`);
     try {
       await conn.beginTransaction();
 
@@ -60,13 +61,13 @@ class VoucherService {
         [upperCode]
       );
       if (!vRows[0]) {
-        console.log(`[Voucher] Code "${upperCode}" not found in database`);
+        logger.info(`[Voucher] Code "${upperCode}" not found in database`);
         await conn.rollback();
         throw new NotFoundError('ไม่พบโค้ดนี้ หรือโค้ดไม่ถูกต้อง');
       }
 
       const voucher = vRows[0];
-      console.log(`[Voucher] Found: id=${voucher.id}, uses=${voucher.current_uses}/${voucher.max_uses}`);
+      logger.info(`[Voucher] Found: id=${voucher.id}, uses=${voucher.current_uses}/${voucher.max_uses}`);
       if (voucher.current_uses >= voucher.max_uses) {
         await conn.rollback();
         throw new ValidationError('โค้ดนี้ถูกใช้งานครบตามจำนวนที่กำหนดแล้ว');

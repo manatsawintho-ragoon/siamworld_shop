@@ -1,0 +1,46 @@
+name: CI
+
+# Typecheck, test, and audit every package on push / PR so regressions are
+# caught before a customer rebuild ships them. Each package is independent.
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - backend
+          - frontend
+          - panel/backend
+          - panel/frontend
+    defaults:
+      run:
+        working-directory: ${{ matrix.package }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: ${{ matrix.package }}/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Test
+        # Only backends define a jest "test" script; skip cleanly where absent.
+        run: npm test --if-present
+        env:
+          SKIP_ENV_VALIDATION: '1'
+
+      - name: Audit (high severity, non-blocking)
+        run: npm audit --omit=dev --audit-level=high || true

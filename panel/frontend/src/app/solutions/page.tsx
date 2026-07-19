@@ -42,7 +42,7 @@ export default function SolutionsHub() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] dark:bg-background">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList).replace(/</g, '\\u003c') }} />
       <Navbar />
 
       <main className="max-w-5xl mx-auto px-6 py-12">

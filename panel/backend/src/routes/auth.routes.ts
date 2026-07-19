@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { Router } from 'express';
 import passport from 'passport';
 import https from 'https';
@@ -82,7 +83,7 @@ router.get('/facebook/callback', asyncRoute(async (req, res) => {
   const { code, error, error_description } = req.query;
   
   if (error || !code) {
-    console.error('Facebook Auth Error:', error, error_description);
+    logger.error('Facebook Auth Error:', error, error_description);
     return res.redirect(`${config.urls.frontend}/?error=auth_failed`);
   }
 
@@ -129,7 +130,7 @@ router.get('/facebook/callback', asyncRoute(async (req, res) => {
     const exchangeCode = await createOAuthExchangeCode(result.token);
     res.redirect(`${config.urls.frontend}/?code=${encodeURIComponent(exchangeCode)}`);
   } catch (err: any) {
-    console.error('Facebook OAuth Manual Error:', err?.message || err);
+    logger.error('Facebook OAuth Manual Error:', err?.message || err);
     res.redirect(`${config.urls.frontend}/?error=auth_failed`);
   }
 }));

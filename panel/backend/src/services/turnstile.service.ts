@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 /**
  * Cloudflare Turnstile (CAPTCHA) verification.
  * https://developers.cloudflare.com/turnstile/get-started/server-side-validation/
@@ -68,7 +69,7 @@ async function postForm(url: string, form: URLSearchParams): Promise<TurnstileRe
       if (attempt === 2 || !TRANSIENT.has(code)) {
         throw err;
       }
-      console.warn(`[Turnstile] attempt ${attempt} ${code} — retrying`);
+      logger.warn(`[Turnstile] attempt ${attempt} ${code} — retrying`);
       // brief backoff so we don't hit the same flaky route immediately
       await new Promise(r => setTimeout(r, 300));
     }
@@ -112,14 +113,14 @@ class TurnstileService {
       result = await postForm(VERIFY_URL, form);
     } catch (err) {
       const e = err as { code?: string; message?: string };
-      console.error('[Turnstile] verify network error:', e.code || '?', e.message || '(no message)');
+      logger.error('[Turnstile] verify network error:', e.code || '?', e.message || '(no message)');
       // Fail closed — we'd rather block one user than let bots through during an outage.
       throw new ValidationError('ระบบยืนยันตัวตนไม่ตอบสนอง กรุณาลองใหม่อีกครั้ง');
     }
 
     if (!result.success) {
       const codes = (result['error-codes'] || []).join(',');
-      console.warn('[Turnstile] rejected:', codes);
+      logger.warn('[Turnstile] rejected:', codes);
       // Codes like `timeout-or-duplicate` are recoverable by re-solving; surface a generic message.
       throw new ValidationError('การยืนยัน CAPTCHA ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
     }

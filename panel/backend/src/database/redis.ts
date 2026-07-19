@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import Redis from 'ioredis';
 import { config } from '../config';
 
@@ -8,5 +9,5 @@ export const redis = new Redis({
 });
 
 redis.on('error', (err) => {
-  console.error('[Redis]', err.message);
+  logger.error('[Redis]', err.message);
 });

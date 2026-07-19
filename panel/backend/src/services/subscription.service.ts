@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import fsp from 'fs/promises';
@@ -298,7 +299,7 @@ class SubscriptionService {
         // Restore the custom domain that was detached from NPM on suspend.
         await customDomainService.onResume(sub.domain, sub.custom_domain, sub.custom_domain_status);
       } catch (err) {
-        console.error(`[renew] startShop failed for ${sub.shop_name}, falling back to redeploy:`, (err as Error).message);
+        logger.error(`[renew] startShop failed for ${sub.shop_name}, falling back to redeploy:`, (err as Error).message);
         deployService.deployAsync(subscriptionId, sub.shop_name, sub.domain, sub.mc_ip || undefined);
       }
     }
@@ -487,7 +488,7 @@ class SubscriptionService {
         execAsync(
           `docker compose --project-name "sw-${sub.shop_name}" --env-file "${envFile}" -f "${composeFile}" up -d --build frontend`,
           { timeout: 10 * 60 * 1000 }
-        ).catch(err => console.error(`[adminUpdate] docker rebuild failed for ${sub.shop_name}:`, err));
+        ).catch(err => logger.error(`[adminUpdate] docker rebuild failed for ${sub.shop_name}:`, err));
       }
     }
 
@@ -562,7 +563,7 @@ class SubscriptionService {
         await customDomainService.onResume(sub.domain, sub.custom_domain, sub.custom_domain_status);
         await pool.execute('UPDATE subscriptions SET status="active" WHERE id=?', [subscriptionId]);
       } catch (err) {
-        console.error(`[adjustTime] resume failed for sub ${subscriptionId}:`, (err as Error).message);
+        logger.error(`[adjustTime] resume failed for sub ${subscriptionId}:`, (err as Error).message);
       }
     }
 
@@ -705,7 +706,7 @@ class SubscriptionService {
         [userId, action, targetType || null, targetId || null, details || null, ip || null]
       );
     } catch (e) {
-      console.error('Failed to log audit:', e);
+      logger.error('Failed to log audit:', e);
     }
   }
 

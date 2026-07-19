@@ -75,7 +75,7 @@ export default function LandingPageView({ params }: { params: { slug: string } }
 
   return (
     <div className="min-h-screen bg-[#f8fafc] dark:bg-background">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
       <Navbar />
 
       <article className="max-w-3xl mx-auto px-6 py-12">
