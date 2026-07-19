@@ -1,4 +1,5 @@
 import { logger } from '../utils/logger';
+import { isIPv4 } from 'net';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import fsp from 'fs/promises';
@@ -80,7 +81,7 @@ class SubscriptionService {
     if (!/^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/.test(shopName)) {
       throw new ValidationError('ชื่อร้านต้องเป็นตัวพิมพ์เล็ก a-z 0-9 ขีด ความยาว 3-30 ตัวอักษร');
     }
-    if (mcIp && !/^(\d{1,3}\.){3}\d{1,3}$/.test(mcIp)) {
+    if (mcIp && !isIPv4(mcIp)) {
       throw new ValidationError('รูปแบบ IP ไม่ถูกต้อง');
     }
 

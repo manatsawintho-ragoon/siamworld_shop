@@ -1,4 +1,5 @@
 import { logger } from '../utils/logger';
+import { isIPv4 } from 'net';
 import { Router } from 'express';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -293,7 +294,7 @@ router.patch('/subscriptions/:id/mc-ip', asyncRoute(async (req, res) => {
   const subId = parseInt(req.params.id);
   const { mcIp } = req.body;
 
-  if (mcIp && !/^(\d{1,3}\.){3}\d{1,3}$/.test(mcIp)) {
+  if (mcIp && !isIPv4(mcIp)) {
     throw new ValidationError('รูปแบบ IP ไม่ถูกต้อง');
   }
 

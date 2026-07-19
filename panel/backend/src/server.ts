@@ -139,4 +139,27 @@ httpServer.listen(config.port, () => {
     logger.error('[Reconcile] startup reconcile failed:', (err as Error).message));
 });
 
+// Graceful shutdown — stop accepting connections (also closes the bridge WS
+// server) then drain the DB/Redis pools, with a hard timeout as a backstop.
+let shuttingDown = false;
+async function gracefulShutdown(signal: string) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logger.info(`${signal} received, shutting down...`);
+  const forceExit = setTimeout(() => process.exit(1), 10000);
+  forceExit.unref();
+  try {
+    await new Promise<void>((resolve) => httpServer.close(() => resolve()));
+    await pool.end().catch(() => {});
+    await redis.quit().catch(() => {});
+  } catch (err) {
+    logger.error('Error during shutdown:', (err as Error).message);
+  } finally {
+    clearTimeout(forceExit);
+    process.exit(0);
+  }
+}
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
 export default app;
