@@ -120,12 +120,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         "priceCurrency": "THB",
         "availability": "https://schema.org/InStock"
       }
-    ],
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.9",
-      "reviewCount": "20"
-    }
+    ]
+    // NOTE: no aggregateRating here. Google's review snippet policy disallows
+    // self-serving ratings that aren't backed by real, user-submitted reviews
+    // shown on the page. Re-add only when genuine reviews are collected and
+    // rendered.
   };
 
   const faqSchema = {

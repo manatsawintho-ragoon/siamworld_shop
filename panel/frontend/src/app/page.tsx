@@ -2,8 +2,8 @@
 import { useEffect, useState, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
+import AuthCodeExchange from '@/components/AuthCodeExchange';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -161,34 +161,6 @@ function LandingContent() {
   const [showEasySlipPlan, setShowEasySlipPlan] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showcase, setShowcase] = useState<ShowcaseSlide[]>(DEFAULT_SHOWCASE);
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    // Newer flow: one-time opaque `?code=` (preferred — JWT never enters the URL).
-    // Older flow: `?exchange_token=` carrying the JWT directly (kept for one release).
-    const code = searchParams.get('code');
-    const legacyToken = searchParams.get('exchange_token');
-    if (!code && !legacyToken) return;
-
-    (async () => {
-      try {
-        const body = code ? { code } : { token: legacyToken };
-        const res = await fetch('/api/auth/exchange', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-          credentials: 'include',
-        });
-        if (res.ok) {
-          window.location.href = '/dashboard';
-        } else {
-          window.location.replace('/?error=auth_failed');
-        }
-      } catch {
-        window.location.replace('/?error=auth_failed');
-      }
-    })();
-  }, [searchParams]);
 
   useEffect(() => {
     api.get('/api/subscriptions/packages').then(r => {
@@ -280,14 +252,16 @@ function LandingContent() {
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-6 items-center relative z-10">
           <div className="animate-fade-in-up">
             <h1 className="relative text-5xl md:text-6xl lg:text-7xl font-extrabold leading-[1.1] mb-8 tracking-tight">
-              {/* Invisible placeholder to reserve exact space */}
-              <div className="opacity-0 pointer-events-none select-none" aria-hidden="true">
+              {/* Real heading text: reserves the exact space, and is what
+                  crawlers and screen readers read. The typed layer below is
+                  decoration only. */}
+              <div className="opacity-0 pointer-events-none select-none">
                 <span className="block">ยกระดับเซิร์ฟเวอร์มายคราฟสู่ธุรกิจ</span>
                 <span className="block mt-2">ระดับมืออาชีพ</span>
               </div>
-              
-              {/* Actual typing text */}
-              <div className="absolute top-0 left-0 w-full h-full text-foreground">
+
+              {/* Animated typing overlay (decorative duplicate of the text above) */}
+              <div aria-hidden="true" className="absolute top-0 left-0 w-full h-full text-foreground">
                 <span className="text-foreground">
                   {typedSegments[0]?.text}
                   {charIndex <= segments[0].text.length && (
@@ -732,29 +706,15 @@ function LandingContent() {
   );
 }
 
-function PageSkeleton() {
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="h-16 border-b border-border bg-background animate-pulse" />
-      <div className="max-w-7xl mx-auto px-6 pt-16">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div className="h-8 bg-secondary rounded-full w-48 animate-pulse" />
-            <div className="h-16 bg-secondary rounded-xl w-3/4 animate-pulse" />
-            <div className="h-16 bg-secondary rounded-xl w-full animate-pulse" />
-            <div className="h-24 bg-secondary rounded-xl w-2/3 animate-pulse mt-8" />
-          </div>
-          <div className="h-[400px] bg-secondary rounded-[2rem] animate-pulse" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function LandingPage() {
   return (
-    <Suspense fallback={<PageSkeleton />}>
+    <>
+      {/* Only the search-param reader sits behind Suspense, so the page itself
+          still prerenders to static HTML for crawlers. */}
+      <Suspense fallback={null}>
+        <AuthCodeExchange />
+      </Suspense>
       <LandingContent />
-    </Suspense>
+    </>
   );
 }
