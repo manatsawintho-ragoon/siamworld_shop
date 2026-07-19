@@ -37,7 +37,7 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
 
   if (!rawToken) return next(new AuthError());
   try {
-    const decoded = jwt.verify(rawToken, config.jwtSecret) as JwtPayload;
+    const decoded = jwt.verify(rawToken, config.jwtSecret, { algorithms: ['HS256'] }) as JwtPayload;
 
     // Reject tokens that pre-date session enforcement (no jti)
     if (!decoded.jti) return next(new AuthError('Token invalid, please log in again'));

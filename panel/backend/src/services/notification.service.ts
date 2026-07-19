@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 /**
  * Subscription expiry notifications, delivered by email (Resend).
  * Replaces the retired LINE Notify integration (LINE shut the Notify API down in 2025).
@@ -80,7 +81,7 @@ class NotificationService {
           displayName: sub.display_name,
         }, deleteAt);
       } catch (err) {
-        console.error('[Suspend]', sub.shop_name, (err as Error).message);
+        logger.error('[Suspend]', sub.shop_name, (err as Error).message);
       }
     }
   }
@@ -115,7 +116,7 @@ class NotificationService {
         await customDomainService.onTeardown(sub.custom_hostname_id);
         // Drop the subscription record last (point of no return).
         await pool.execute('DELETE FROM subscriptions WHERE id=?', [sub.id]);
-        console.log(`[Delete] Permanently removed expired shop ${sub.shop_name} (id ${sub.id})`);
+        logger.info(`[Delete] Permanently removed expired shop ${sub.shop_name} (id ${sub.id})`);
 
         await emailService.sendDeletionNotice({
           shopName: sub.shop_name,
@@ -125,7 +126,7 @@ class NotificationService {
           displayName: sub.display_name,
         });
       } catch (err) {
-        console.error('[Delete]', sub.shop_name, (err as Error).message);
+        logger.error('[Delete]', sub.shop_name, (err as Error).message);
       }
     }
   }

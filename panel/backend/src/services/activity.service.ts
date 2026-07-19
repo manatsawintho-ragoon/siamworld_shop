@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { pool } from '../database/connection';
 import { RowDataPacket } from 'mysql2';
 import { IncomingEvent, sanitizeEvents } from '../utils/activity-events';
@@ -26,7 +27,7 @@ export const activityService = {
       );
       return rows.length;
     } catch (e) {
-      console.error('Failed to record activity:', e);
+      logger.error('Failed to record activity:', e);
       return 0;
     }
   },

@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import crypto from 'crypto';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -102,7 +103,7 @@ class BridgeService {
       await hostExec(`/usr/sbin/netfilter-persistent save 2>/dev/null || true`);
       return { port, applied: true, reason: 'inserted' };
     } catch (e: any) {
-      console.warn(`[Bridge] hardenMysqlPort(sub=${subscriptionId}, port=${port}) failed:`, e.message);
+      logger.warn(`[Bridge] hardenMysqlPort(sub=${subscriptionId}, port=${port}) failed:`, e.message);
       return { port, applied: false, reason: `error: ${e.message}` };
     }
   }
@@ -177,9 +178,9 @@ class BridgeService {
       timeout: 10 * 60 * 1000,
       cwd: config.deployDir,
     }).then(() => {
-      console.log(`[Bridge] provisionShopBridge sub=${subscriptionId}: rebuild finished`);
+      logger.info(`[Bridge] provisionShopBridge sub=${subscriptionId}: rebuild finished`);
     }).catch((err) => {
-      console.error(`[Bridge] provisionShopBridge sub=${subscriptionId}: rebuild failed:`, err.message);
+      logger.error(`[Bridge] provisionShopBridge sub=${subscriptionId}: rebuild failed:`, err.message);
     });
 
     return { provisioned: true, keyPrefix: prefix, rebuildStarted: true };
@@ -284,7 +285,7 @@ class BridgeService {
     });
 
     this.heartbeatTimer = setInterval(() => this.heartbeat(), DEFAULTS.HEARTBEAT_INTERVAL_MS);
-    console.log('[Bridge] WebSocket gateway attached at /bridge');
+    logger.info('[Bridge] WebSocket gateway attached at /bridge');
   }
 
   detach() {
@@ -342,16 +343,16 @@ class BridgeService {
 
       ws.on('message', (raw) => this.handleMessage(conn!, raw));
       ws.on('close', () => this.handleClose(conn!));
-      ws.on('error', (err) => console.error(`[Bridge] socket error sub=${conn!.subscriptionId}:`, err.message));
+      ws.on('error', (err) => logger.error(`[Bridge] socket error sub=${conn!.subscriptionId}:`, err.message));
       ws.on('pong', () => { conn!.lastSeen = Date.now(); });
 
       // Hello evt — plugin will respond with hello_ack
       this.sendFrame(ws, { id: crypto.randomUUID(), op: 'hello', kind: 'evt',
         data: { serverTime: Date.now(), subscriptionId: conn.subscriptionId } });
 
-      console.log(`[Bridge] connected sub=${conn.subscriptionId} v=${pluginVersion || '?'}`);
+      logger.info(`[Bridge] connected sub=${conn.subscriptionId} v=${pluginVersion || '?'}`);
     } catch (e) {
-      console.error('[Bridge] handshake error:', e);
+      logger.error('[Bridge] handshake error:', e);
       try { ws.close(1011, 'handshake error'); } catch { /* noop */ }
       if (conn) this.connections.delete(conn.subscriptionId);
     }
@@ -392,7 +393,7 @@ class BridgeService {
     if (frame.kind === 'evt' && frame.op === 'pong') return;
 
     // Unknown frame from plugin — log but don't disconnect
-    console.warn(`[Bridge] unexpected frame sub=${conn.subscriptionId}:`, frame.op, frame.kind);
+    logger.warn(`[Bridge] unexpected frame sub=${conn.subscriptionId}:`, frame.op, frame.kind);
   }
 
   private handleClose(conn: BridgeConnection) {
@@ -405,7 +406,7 @@ class BridgeService {
     if (this.connections.get(conn.subscriptionId) === conn) {
       this.connections.delete(conn.subscriptionId);
     }
-    console.log(`[Bridge] disconnected sub=${conn.subscriptionId}`);
+    logger.info(`[Bridge] disconnected sub=${conn.subscriptionId}`);
   }
 
   private heartbeat() {

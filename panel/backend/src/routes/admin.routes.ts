@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { Router } from 'express';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -254,7 +255,7 @@ router.post('/subscriptions/bulk-action', asyncRoute(async (req, res) => {
       succeeded.push(id);
     } catch (err) {
       const msg = (err as Error).message || 'unknown';
-      console.error(`Bulk action ${action} failed for id ${id}:`, err);
+      logger.error(`Bulk action ${action} failed for id ${id}:`, err);
       failed.push({ id, error: msg });
     }
   }
@@ -523,7 +524,7 @@ router.put('/settings', asyncRoute(async (req, res) => {
   const npmChanged = npmKeys.some(k => data[k] !== undefined && data[k] !== prev[k]);
   if (npmChanged) {
     npmService.reapplyAllProxyHosts().catch(err =>
-      console.error('[NPM] reapplyAllProxyHosts failed:', err)
+      logger.error('[NPM] reapplyAllProxyHosts failed:', err)
     );
   }
 
@@ -546,7 +547,7 @@ router.post('/settings/fix-panel-npm', asyncRoute(async (req, res) => {
 
 // Manual trigger notifications
 router.post('/notify/run', asyncRoute(async (_req, res) => {
-  notificationService.sendExpiryNotifications().catch(console.error);
+  notificationService.sendExpiryNotifications().catch(logger.error);
   res.json({ success: true, message: 'กำลังส่งการแจ้งเตือน...' });
 }));
 

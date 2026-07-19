@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import cron from 'node-cron';
 import { redis } from '../database/redis';
 import { notificationService } from './notification.service';
@@ -15,14 +16,14 @@ async function withRedisLock(lockKey: string, ttlSec: number, fn: () => Promise<
   try {
     const res = await redis.set(lockKey, `${process.pid}@${Date.now()}`, 'EX', ttlSec, 'NX');
     if (!res) {
-      console.log(`[Cron] Lock ${lockKey} held by another replica; skipping this run.`);
+      logger.info(`[Cron] Lock ${lockKey} held by another replica; skipping this run.`);
       return false;
     }
     acquired = true;
     await fn();
     return true;
   } catch (err) {
-    console.error(`[Cron] Job ${lockKey} failed:`, err);
+    logger.error(`[Cron] Job ${lockKey} failed:`, err);
     throw err;
   } finally {
     if (acquired) {
@@ -35,9 +36,9 @@ export function startCronJobs(): void {
   // Run daily at 09:00 — check expiry & send LINE notifications
   cron.schedule('0 9 * * *', () => {
     withRedisLock('panel_cron_lock:notify', 30 * 60, async () => {
-      console.log('[Cron] Running expiry notifications...');
+      logger.info('[Cron] Running expiry notifications...');
       await notificationService.sendExpiryNotifications();
-    }).catch(err => console.error('[Cron] notify failed:', err));
+    }).catch(err => logger.error('[Cron] notify failed:', err));
   });
 
   // Run hourly — suspend shops overdue past the (short) grace period. Hourly instead of
@@ -45,18 +46,18 @@ export function startCronJobs(): void {
   // day later. The Redis lock keeps multi-replica runs from double-suspending.
   cron.schedule('0 * * * *', () => {
     withRedisLock('panel_cron_lock:suspend', 10 * 60, async () => {
-      console.log('[Cron] Checking for expired shops to suspend...');
+      logger.info('[Cron] Checking for expired shops to suspend...');
       await notificationService.suspendExpired();
-    }).catch(err => console.error('[Cron] suspend failed:', err));
+    }).catch(err => logger.error('[Cron] suspend failed:', err));
   });
 
   // Run daily at 03:00 — permanently delete shops suspended and unrenewed past the
   // delete threshold (default 7 days). DESTRUCTIVE; guarded to status='suspended' only.
   cron.schedule('0 3 * * *', () => {
     withRedisLock('panel_cron_lock:delete', 30 * 60, async () => {
-      console.log('[Cron] Checking for long-suspended shops to permanently delete...');
+      logger.info('[Cron] Checking for long-suspended shops to permanently delete...');
       await notificationService.deleteExpired();
-    }).catch(err => console.error('[Cron] delete failed:', err));
+    }).catch(err => logger.error('[Cron] delete failed:', err));
   });
 
   // Run daily at 04:00 — prune old activity-telemetry rows from audit_logs.
@@ -64,11 +65,11 @@ export function startCronJobs(): void {
   cron.schedule('0 4 * * *', () => {
     withRedisLock('panel_cron_lock:prune_activity', 30 * 60, async () => {
       const removed = await activityService.pruneActivity(ACTIVITY_RETENTION_DAYS);
-      console.log(`[Cron] Pruned ${removed} activity rows older than ${ACTIVITY_RETENTION_DAYS}d.`);
-    }).catch(err => console.error('[Cron] prune_activity failed:', err));
+      logger.info(`[Cron] Pruned ${removed} activity rows older than ${ACTIVITY_RETENTION_DAYS}d.`);
+    }).catch(err => logger.error('[Cron] prune_activity failed:', err));
   });
 
-  console.log('[Cron] Jobs scheduled (notify: 09:00 daily, suspend: hourly, delete: 03:00 daily, prune-activity: 04:00 daily)');
+  logger.info('[Cron] Jobs scheduled (notify: 09:00 daily, suspend: hourly, delete: 03:00 daily, prune-activity: 04:00 daily)');
 }
 
 /** Exposed so other services (deploy port allocation, etc.) can reuse the same primitive. */

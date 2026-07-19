@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { pool } from '../database/connection';
 import { RowDataPacket } from 'mysql2';
 import { cloudflareService } from './cloudflare.service';
@@ -81,7 +82,7 @@ class CustomDomainService {
     try {
       await npmService.removeDomainFromProxyHost(shopDomain, customDomain);
     } catch (err) {
-      console.warn('[CustomDomain] onSuspend detach failed:', (err as Error).message);
+      logger.warn('[CustomDomain] onSuspend detach failed:', (err as Error).message);
     }
   }
 
@@ -94,7 +95,7 @@ class CustomDomainService {
     try {
       await npmService.addDomainToProxyHost(shopDomain, customDomain);
     } catch (err) {
-      console.warn('[CustomDomain] onResume reattach failed:', (err as Error).message);
+      logger.warn('[CustomDomain] onResume reattach failed:', (err as Error).message);
     }
   }
 
@@ -109,7 +110,7 @@ class CustomDomainService {
     try {
       await cloudflareService.deleteCustomHostname(customHostnameId);
     } catch (err) {
-      console.warn('[CustomDomain] onTeardown CF delete failed:', (err as Error).message);
+      logger.warn('[CustomDomain] onTeardown CF delete failed:', (err as Error).message);
     }
   }
 

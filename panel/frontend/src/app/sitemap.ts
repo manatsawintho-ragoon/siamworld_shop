@@ -6,13 +6,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const now = new Date();
   const core: MetadataRoute.Sitemap = [
+    // Only canonical, indexable URLs belong here. Fragment links (#promo,
+    // #pricing) and ?kind= variants are the same documents as / and /order,
+    // so listing them just splits signals across duplicates.
     { url: baseUrl,                  lastModified: now, changeFrequency: 'weekly',  priority: 1.0 },
-    { url: `${baseUrl}/#promo`,      lastModified: now, changeFrequency: 'weekly',  priority: 0.95 },
-    { url: `${baseUrl}/#pricing`,    lastModified: now, changeFrequency: 'weekly',  priority: 0.9 },
     { url: `${baseUrl}/solutions`,   lastModified: now, changeFrequency: 'weekly',  priority: 0.9 },
     { url: `${baseUrl}/order`,       lastModified: now, changeFrequency: 'monthly', priority: 0.85 },
-    { url: `${baseUrl}/order?kind=trial`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${baseUrl}/order?kind=intro`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${baseUrl}/privacy`,     lastModified: now, changeFrequency: 'yearly',  priority: 0.3 },
     { url: `${baseUrl}/terms`,       lastModified: now, changeFrequency: 'yearly',  priority: 0.3 },
     { url: `${baseUrl}/shop-owner-agreement`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },

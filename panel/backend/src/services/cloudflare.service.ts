@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import axios, { AxiosRequestConfig } from 'axios';
 import https from 'https';
 import { settingsService } from './settings.service';
@@ -90,9 +91,9 @@ class CloudflareService {
             proxied: false,
             ttl: 3600,
           });
-          console.log(`[CF] Updated ${subdomain} → ${cfg.serverIp} (DNS-only)`);
+          logger.info(`[CF] Updated ${subdomain} → ${cfg.serverIp} (DNS-only)`);
         } else {
-          console.log(`[CF] DNS-only record for ${subdomain} already exists`);
+          logger.info(`[CF] DNS-only record for ${subdomain} already exists`);
         }
         return;
       }
@@ -104,7 +105,7 @@ class CloudflareService {
         proxied: false,
         ttl:     3600,
       });
-      console.log(`[CF] Created DNS-only A record: ${subdomain} → ${cfg.serverIp}`);
+      logger.info(`[CF] Created DNS-only A record: ${subdomain} → ${cfg.serverIp}`);
     } catch (err) {
       throw new Error(this.extractError(err));
     }
@@ -138,9 +139,9 @@ class CloudflareService {
             proxied: true,
             ttl: 1,
           });
-          console.log(`[CF] Updated ${subdomain} → ${cfg.serverIp} (proxied)`);
+          logger.info(`[CF] Updated ${subdomain} → ${cfg.serverIp} (proxied)`);
         } else {
-          console.log(`[CF] Proxied record for ${subdomain} already exists`);
+          logger.info(`[CF] Proxied record for ${subdomain} already exists`);
         }
         return;
       }
@@ -152,7 +153,7 @@ class CloudflareService {
         proxied: true,
         ttl:     1,
       });
-      console.log(`[CF] Created proxied A record: ${subdomain} → ${cfg.serverIp}`);
+      logger.info(`[CF] Created proxied A record: ${subdomain} → ${cfg.serverIp}`);
     } catch (err) {
       throw new Error(this.extractError(err));
     }
@@ -169,7 +170,7 @@ class CloudflareService {
     try {
       const list = await this.request('get', `${base}?type=A&name=${encodeURIComponent(subdomain)}`, cfg);
       if (list.data.result?.length > 0) {
-        console.log(`[CF] DNS record for ${subdomain} already exists`);
+        logger.info(`[CF] DNS record for ${subdomain} already exists`);
         return;
       }
 
@@ -180,7 +181,7 @@ class CloudflareService {
         proxied: true,
         ttl:     1,
       });
-      console.log(`[CF] Created proxied A record: ${subdomain} → ${cfg.serverIp}`);
+      logger.info(`[CF] Created proxied A record: ${subdomain} → ${cfg.serverIp}`);
     } catch (err) {
       throw new Error(this.extractError(err));
     }
@@ -225,7 +226,7 @@ class CloudflareService {
         proxied: wantProxied,
         ttl: wantProxied ? 1 : 3600,
       });
-      console.log(`[CF] ${subdomain} → ${mode} (record ${record.id})`);
+      logger.info(`[CF] ${subdomain} → ${mode} (record ${record.id})`);
       return { changed: true, recordId: record.id };
     } catch (err) {
       throw new Error(this.extractError(err));
@@ -242,10 +243,10 @@ class CloudflareService {
       const list = await this.request('get', `${base}?type=A&name=${encodeURIComponent(subdomain)}`, cfg);
       for (const record of list.data.result || []) {
         await this.request('delete', `${base}/${record.id}`, cfg);
-        console.log(`[CF] Deleted DNS A record: ${subdomain} (id: ${record.id})`);
+        logger.info(`[CF] Deleted DNS A record: ${subdomain} (id: ${record.id})`);
       }
     } catch (err) {
-      console.warn(`[CF] deleteDnsRecord(${subdomain}) failed:`, this.extractError(err));
+      logger.warn(`[CF] deleteDnsRecord(${subdomain}) failed:`, this.extractError(err));
     }
   }
 
@@ -276,7 +277,7 @@ class CloudflareService {
         cfg,
         { origin: fallbackHost }
       );
-      console.log(`[CF] Fallback origin ensured: ${fallbackHost}`);
+      logger.info(`[CF] Fallback origin ensured: ${fallbackHost}`);
     } catch (err) {
       throw new Error(this.extractError(err));
     }
@@ -324,9 +325,9 @@ class CloudflareService {
     const base = `https://api.cloudflare.com/client/v4/zones/${cfg.zoneId}/custom_hostnames/${id}`;
     try {
       await this.request('delete', base, cfg);
-      console.log(`[CF] Deleted custom hostname ${id}`);
+      logger.info(`[CF] Deleted custom hostname ${id}`);
     } catch (err) {
-      console.warn(`[CF] deleteCustomHostname(${id}) failed:`, this.extractError(err));
+      logger.warn(`[CF] deleteCustomHostname(${id}) failed:`, this.extractError(err));
     }
   }
 }

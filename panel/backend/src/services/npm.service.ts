@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 /**
  * Nginx Proxy Manager API integration
  * Auto-creates proxy host + requests Let's Encrypt SSL
@@ -103,7 +104,7 @@ class NpmService {
     try {
       await this.applySSL(hostId, domain, forwardHost, frontendPort, backendPort);
     } catch (sslErr) {
-      console.warn('[NPM] SSL cert failed (non-critical):', (sslErr as Error).message);
+      logger.warn('[NPM] SSL cert failed (non-critical):', (sslErr as Error).message);
     }
 
     return hostId;
@@ -169,9 +170,9 @@ class NpmService {
     for (const row of rows) {
       try {
         await this.updateProxyHost(row.domain, row.frontend_port, row.backend_port);
-        console.log(`[NPM] Updated proxy for ${row.domain}`);
+        logger.info(`[NPM] Updated proxy for ${row.domain}`);
       } catch (err) {
-        console.error(`[NPM] Failed to update proxy for ${row.domain}:`, (err as Error).message);
+        logger.error(`[NPM] Failed to update proxy for ${row.domain}:`, (err as Error).message);
       }
     }
   }
@@ -240,7 +241,7 @@ class NpmService {
       locations: [],
       enabled: true,
     });
-    console.log(`[NPM] Attached ${customDomain} to proxy host ${existing.id} (${shopDomain})`);
+    logger.info(`[NPM] Attached ${customDomain} to proxy host ${existing.id} (${shopDomain})`);
   }
 
   /** Detach a custom domain from a shop proxy host. No-op if absent. */
@@ -271,7 +272,7 @@ class NpmService {
       locations: [],
       enabled: true,
     });
-    console.log(`[NPM] Detached ${customDomain} from proxy host ${existing.id} (${shopDomain})`);
+    logger.info(`[NPM] Detached ${customDomain} from proxy host ${existing.id} (${shopDomain})`);
   }
 
   async deleteProxyHost(domain: string): Promise<void> {

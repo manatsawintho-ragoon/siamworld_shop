@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
@@ -52,7 +53,7 @@ class DeployService {
 
     // Run in background
     this.runDeploy(subscriptionId, shopName, domain, mcIp).catch(async (err) => {
-      console.error('[Deploy]', err);
+      logger.error('[Deploy]', err);
       await this.updateStatus(subscriptionId, 'pending', `Deploy failed: ${(err as Error).message}`);
     });
   }
@@ -80,11 +81,11 @@ class DeployService {
         "SELECT id, shop_name, domain, frontend_port, backend_port FROM subscriptions WHERE status IN ('deploying','pending')"
       );
     } catch (err) {
-      console.error('[Reconcile] query failed:', (err as Error).message);
+      logger.error('[Reconcile] query failed:', (err as Error).message);
       return;
     }
     if (!rows.length) return;
-    console.log(`[Reconcile] checking ${rows.length} subscription(s) in deploying/pending...`);
+    logger.info(`[Reconcile] checking ${rows.length} subscription(s) in deploying/pending...`);
 
     for (const sub of rows) {
       const shopName: string = sub.shop_name;
@@ -98,7 +99,7 @@ class DeployService {
         // don't guess, leave it for an admin redeploy.
         let status = await this.getShopStatus(shopName);
         if (status === 'stopped') {
-          console.warn(`[Reconcile] ${shopName}: no container present, skipping (needs redeploy)`);
+          logger.warn(`[Reconcile] ${shopName}: no container present, skipping (needs redeploy)`);
           continue;
         }
         if (status !== 'running') {
@@ -106,14 +107,14 @@ class DeployService {
           status = await this.getShopStatus(shopName);
         }
         if (status !== 'running') {
-          console.warn(`[Reconcile] ${shopName}: container not running (${status}), skipping`);
+          logger.warn(`[Reconcile] ${shopName}: container not running (${status}), skipping`);
           continue;
         }
 
         const fp = Number(sub.frontend_port);
         const bp = Number(sub.backend_port);
         if (!fp || !bp) {
-          console.warn(`[Reconcile] ${shopName}: ports not assigned, skipping`);
+          logger.warn(`[Reconcile] ${shopName}: ports not assigned, skipping`);
           continue;
         }
 
@@ -134,16 +135,16 @@ class DeployService {
         try {
           await cloudflareService.ensureWebDnsRecord(domain);
         } catch (e) {
-          console.warn(`[Reconcile] ${shopName}: CF DNS check failed: ${(e as Error).message}`);
+          logger.warn(`[Reconcile] ${shopName}: CF DNS check failed: ${(e as Error).message}`);
         }
 
         await pool.execute(
           "UPDATE subscriptions SET status='active' WHERE id=? AND status IN ('deploying','pending')",
           [sub.id]
         );
-        console.log(`[Reconcile] ${shopName}: finished interrupted deploy -> active`);
+        logger.info(`[Reconcile] ${shopName}: finished interrupted deploy -> active`);
       } catch (err) {
-        console.error(`[Reconcile] ${shopName}: could not finish: ${(err as Error).message}`);
+        logger.error(`[Reconcile] ${shopName}: could not finish: ${(err as Error).message}`);
       }
     }
   }
@@ -318,7 +319,7 @@ class DeployService {
           );
         }
       } catch (emailErr) {
-        console.warn('[Deploy] Welcome email failed (non-critical):', (emailErr as Error).message);
+        logger.warn('[Deploy] Welcome email failed (non-critical):', (emailErr as Error).message);
       }
     } catch (err) {
       log += `\n[ERROR] ${(err as Error).message}`;
@@ -386,7 +387,7 @@ class DeployService {
     if (mcIp && mysqlExposedPort) {
       try {
         await ufwDelete(mcIp, mysqlExposedPort);
-        console.log(`[FW] Removed DOCKER-USER rule for ${shopName}: ${mcIp}:${mysqlExposedPort}`);
+        logger.info(`[FW] Removed DOCKER-USER rule for ${shopName}: ${mcIp}:${mysqlExposedPort}`);
       } catch { /* non-critical */ }
     }
   }

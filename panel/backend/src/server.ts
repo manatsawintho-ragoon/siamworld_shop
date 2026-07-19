@@ -1,3 +1,4 @@
+import { logger } from './utils/logger';
 import http from 'http';
 import dns from 'dns';
 import express from 'express';
@@ -135,7 +136,7 @@ httpServer.listen(config.port, () => {
   // Auto-complete any customer deploy that a previous panel restart/rebuild
   // interrupted (cert issued but not attached, status stuck deploying/pending).
   deployService.reconcileInterruptedDeploys().catch((err) =>
-    console.error('[Reconcile] startup reconcile failed:', (err as Error).message));
+    logger.error('[Reconcile] startup reconcile failed:', (err as Error).message));
 });
 
 export default app;

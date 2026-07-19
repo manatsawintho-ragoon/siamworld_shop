@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import https from 'https';
 import dns from 'dns';
 import { pool } from '../database/connection';
@@ -126,7 +127,7 @@ class PaymentService {
     // Reject early with a clear message instead of letting Node throw ERR_INVALID_CHAR
     // deep inside the https request, which surfaces to the user as a generic error.
     if (!/^[\x21-\x7e]+$/.test(apiKey)) {
-      console.error('[EasySlip] API key contains invalid characters — admin likely saved masked value. len=', apiKey.length);
+      logger.error('[EasySlip] API key contains invalid characters — admin likely saved masked value. len=', apiKey.length);
       throw new ValidationError('EasySlip API Key ในระบบเสียหาย กรุณาแจ้งผู้ดูแลระบบให้ตั้งค่าใหม่');
     }
 
@@ -157,11 +158,11 @@ class PaymentService {
       if (err instanceof ValidationError || err instanceof ConflictError) throw err;
       const code = (err as any)?.code ?? '';
       const networkCodes = ['ETIMEDOUT', 'ECONNABORTED', 'ECONNRESET', 'ENOTFOUND', 'ECONNREFUSED', 'ERR_NETWORK', 'ERR_HTTP2_STREAM_CANCEL', 'ERR_HTTP2_SESSION_ERROR', 'ERR_HTTP2_CONNECT_ERROR', 'ERR_HTTP2_GOAWAY_SESSION'];
-      console.error('[EasySlip] Error code:', code, 'message:', (err as any)?.message);
+      logger.error('[EasySlip] Error code:', code, 'message:', (err as any)?.message);
       if (networkCodes.includes(code)) {
         throw new ValidationError('ไม่สามารถเชื่อมต่อกับระบบตรวจสอบสลิปได้ กรุณาลองใหม่อีกครั้ง');
       }
-      console.error('[EasySlip] Unexpected error:', err);
+      logger.error('[EasySlip] Unexpected error:', err);
       throw new ValidationError('เกิดข้อผิดพลาดในการตรวจสอบสลิป กรุณาลองใหม่อีกครั้ง');
     }
 
@@ -179,7 +180,7 @@ class PaymentService {
       );
       if (existingSlip.length > 0) {
         // We already processed (or rejected) this slip ourselves — genuinely duplicate.
-        console.warn('EasySlip duplicate detected and confirmed in DB', { userId, transRef: transRefEarly });
+        logger.warn('EasySlip duplicate detected and confirmed in DB', { userId, transRef: transRefEarly });
         throw new ConflictError(
           existingSlip[0].status === 'verified'
             ? 'สลิปนี้เคยใช้งานแล้ว'
@@ -187,7 +188,7 @@ class PaymentService {
         );
       }
       // Not in our DB — previous attempt likely failed before DB insert. Allow retry.
-      console.warn('EasySlip duplicate but not in our DB — allowing retry', { userId, transRef: transRefEarly });
+      logger.warn('EasySlip duplicate but not in our DB — allowing retry', { userId, transRef: transRefEarly });
     }
 
     // ── Layer 3: Basic field validation ────────────────────────────────────
@@ -203,7 +204,7 @@ class PaymentService {
       if (isNaN(slipMs)) throw new ValidationError('วันที่ในสลิปไม่ถูกต้อง');
       const ageDays = (Date.now() - slipMs) / 86_400_000;
       if (ageDays > 90) {
-        console.warn('Slip too old', { userId, transRef, ageDays: ageDays.toFixed(1) });
+        logger.warn('Slip too old', { userId, transRef, ageDays: ageDays.toFixed(1) });
         throw new ValidationError('สลิปนี้หมดอายุแล้ว (เกิน 90 วัน)');
       }
     }
@@ -220,7 +221,7 @@ class PaymentService {
       rawSlip.receiver?.account?.bank?.account ??
       '';
     if (!receiverRaw) {
-      console.warn('Slip receiver account missing', { userId, transRef, receiver: rawSlip.receiver });
+      logger.warn('Slip receiver account missing', { userId, transRef, receiver: rawSlip.receiver });
       throw new ValidationError('สลิปนี้ไม่มีข้อมูลบัญชีผู้รับ ไม่สามารถยืนยันได้');
     }
     // Use masked-aware comparison: EasySlip returns "xxx-xxx-0553" — check suffix match
@@ -228,7 +229,7 @@ class PaymentService {
     const configNorm   = normalizeAccount(configuredId);
     const matched = receiverNorm === configNorm || maskedReceiverMatchesConfig(receiverRaw, configuredId);
     if (!matched) {
-      console.warn('Slip receiver mismatch', { userId, transRef, receiverRaw, configuredId });
+      logger.warn('Slip receiver mismatch', { userId, transRef, receiverRaw, configuredId });
       throw new ValidationError('สลิปนี้โอนไปยังบัญชีอื่น ไม่ใช่บัญชีของระบบนี้');
     }
 
@@ -294,7 +295,7 @@ class PaymentService {
       );
 
       await conn.commit();
-      console.info('Panel slip verified', { userId, slipAmount, transRef });
+      logger.info('Panel slip verified', { userId, slipAmount, transRef });
       return { balanceAfter, ref: transRef };
     } catch (err) {
       await conn.rollback();

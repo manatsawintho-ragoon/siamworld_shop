@@ -36,7 +36,7 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
   if (!rawToken) return next(new AuthenticationError('No token provided'));
 
   try {
-    const decoded = jwt.verify(rawToken, config.jwt.secret) as JwtPayload;
+    const decoded = jwt.verify(rawToken, config.jwt.secret, { algorithms: ['HS256'] }) as JwtPayload;
 
     // Reject tokens that pre-date session enforcement (no jti)
     if (!decoded.jti) return next(new AuthenticationError('Token invalid, please log in again'));
