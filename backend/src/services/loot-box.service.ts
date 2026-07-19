@@ -10,6 +10,7 @@ import { PlayerTracker } from './player-tracker';
 import { logger } from '../utils/logger';
 import { RowDataPacket } from 'mysql2';
 import { v4 as uuidv4 } from 'uuid';
+import { pickWeighted } from './loot-box.pick';
 
 class LootBoxService {
   // ─── Public / Shop ──────────────────────────────────────
@@ -57,13 +58,7 @@ class LootBoxService {
    * Frontend never touches odds.
    */
   private pickItem(items: RowDataPacket[]): RowDataPacket {
-    const totalWeight = items.reduce((sum, item) => sum + (item.weight as number), 0);
-    let random = Math.random() * totalWeight;
-    for (const item of items) {
-      random -= item.weight as number;
-      if (random <= 0) return item;
-    }
-    return items[items.length - 1]; // fallback (should not reach)
+    return pickWeighted(items as unknown as (RowDataPacket & { weight: number })[]);
   }
 
   /**
