@@ -101,6 +101,138 @@ const DEFAULT_SHOWCASE: ShowcaseSlide[] = [
   { src: '/images/theme_change.png', title: 'ปรับแต่งธีมได้อิสระ', desc: 'เปลี่ยนสีและรูปแบบของร้านค้าให้เข้ากับเซิร์ฟเวอร์ของคุณ' },
 ];
 
+/* ── Animated headline ───────────────────────────────────────────────── */
+
+/** Headline split into Thai word chunks. Thai has no inter-word spaces, so the
+ *  segmentation is declared here rather than derived from whitespace. */
+const HEADLINE_WORDS: { text: string; accent?: boolean }[] = [
+  { text: 'เปิด' },
+  { text: 'ร้านค้า' },
+  { text: 'มายคราฟ' },
+  { text: 'ขายได้', accent: true },
+  { text: 'ตั้งแต่', accent: true },
+  { text: 'วันนี้', accent: true },
+];
+
+const TYPE_MS = 260;
+const DELETE_MS = 130;
+const HOLD_FULL_MS = 2400;
+const HOLD_EMPTY_MS = 700;
+
+/**
+ * Types the headline in one word at a time, then erases it word by word.
+ *
+ * Every word stays in the DOM the whole time and is only toggled with
+ * `visibility`, so:
+ *   - the full H1 text is always present for crawlers and screen readers
+ *   - hidden words keep occupying their space, so the line never reflows (no CLS)
+ *   - the server-rendered HTML shows the complete headline; the animation only
+ *     starts after hydration, so there is no hydration mismatch
+ *
+ * Kept as its own component so its ~4 state updates per second re-render this
+ * heading alone, not the entire landing page.
+ */
+function TypewriterHeadline() {
+  const reduceMotion = useReducedMotion();
+  const [shown, setShown] = useState(HEADLINE_WORDS.length);
+  const [deleting, setDeleting] = useState(false);
+  const [animating, setAnimating] = useState(false);
+
+  // Start only on the client, and never when the user asked for less motion.
+  useEffect(() => {
+    if (reduceMotion) return;
+    setAnimating(true);
+    setShown(0);
+    setDeleting(false);
+  }, [reduceMotion]);
+
+  useEffect(() => {
+    if (!animating) return;
+    let delay: number;
+    if (!deleting) {
+      delay = shown < HEADLINE_WORDS.length ? TYPE_MS : HOLD_FULL_MS;
+    } else {
+      delay = shown > 0 ? DELETE_MS : HOLD_EMPTY_MS;
+    }
+    const t = setTimeout(() => {
+      if (!deleting) {
+        if (shown < HEADLINE_WORDS.length) setShown(s => s + 1);
+        else setDeleting(true);
+      } else {
+        if (shown > 0) setShown(s => s - 1);
+        else setDeleting(false);
+      }
+    }, delay);
+    return () => clearTimeout(t);
+  }, [animating, shown, deleting]);
+
+  const lead = HEADLINE_WORDS.filter(w => !w.accent);
+  const accent = HEADLINE_WORDS.filter(w => w.accent);
+  const leadCount = lead.length;
+  const caretAfter = Math.max(0, Math.min(shown, HEADLINE_WORDS.length)) - 1;
+
+  const Caret = () => (
+    <span
+      aria-hidden="true"
+      className="animate-caret inline-block w-[4px] md:w-[5px] h-[0.8em] bg-primary ml-1 align-middle rounded-full"
+    />
+  );
+
+  return (
+    <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.15] mb-6 tracking-tight text-foreground">
+      <span className="block">
+        {lead.map((w, i) => (
+          <span key={i} style={{ visibility: i < shown ? 'visible' : 'hidden' }}>
+            {w.text}
+          </span>
+        ))}
+        {/* caretAfter is -1 while the line is empty, which keeps the caret
+            parked at the start during the pause before typing restarts. */}
+        {animating && caretAfter < leadCount && <Caret />}
+      </span>
+
+      <span className="relative inline-block text-primary mt-2">
+        {accent.map((w, i) => (
+          <span key={i} style={{ visibility: leadCount + i < shown ? 'visible' : 'hidden' }}>
+            {w.text}
+          </span>
+        ))}
+        {animating && caretAfter >= leadCount && <Caret />}
+        <span
+          aria-hidden="true"
+          className="absolute left-0 -bottom-1 h-[6px] rounded-full bg-primary/25 transition-[width] duration-300 ease-out"
+          style={{ width: shown >= HEADLINE_WORDS.length ? '100%' : '0%' }}
+        />
+      </span>
+    </h1>
+  );
+}
+
+/* ── Count-up number ─────────────────────────────────────────────────── */
+
+/** Counts from 0 up to `value` once, when the number first becomes known. */
+function CountUp({ value, suffix = '' }: { value: number; suffix?: string }) {
+  const reduceMotion = useReducedMotion();
+  const [display, setDisplay] = useState(reduceMotion ? value : 0);
+
+  useEffect(() => {
+    if (reduceMotion) { setDisplay(value); return; }
+    let raf = 0;
+    const duration = 900;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - start) / duration);
+      // ease-out cubic: fast start, settles gently on the real number
+      setDisplay(Math.round(value * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value, reduceMotion]);
+
+  return <>{display.toLocaleString()}{suffix}</>;
+}
+
 /* ── Section heading ─────────────────────────────────────────────────── */
 
 function SectionHead({ eyebrow, title, sub, center = true }: { eyebrow: string; title: React.ReactNode; sub?: string; center?: boolean }) {
@@ -121,15 +253,23 @@ function PackageCard({
   pkg,
   isPromo = false,
   isTrial = false,
+  index = 0,
   easyslipFee,
   onShowEasySlip,
-}: { pkg: any; isPromo?: boolean; isTrial?: boolean; easyslipFee: number; onShowEasySlip: () => void }) {
+}: { pkg: any; isPromo?: boolean; isTrial?: boolean; index?: number; easyslipFee: number; onShowEasySlip: () => void }) {
+  const reduceMotion = useReducedMotion();
   return (
-    <div className={isPromo ? 'z-10' : ''}>
-      <Card className={`flex flex-col relative h-full transition-all duration-300 ${
+    <motion.div
+      className={isPromo ? 'z-10' : ''}
+      initial={reduceMotion ? false : { opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ delay: index * 0.1, duration: 0.45, ease: 'easeOut' }}
+    >
+      <Card className={`flex flex-col relative h-full transition-all duration-300 hover:-translate-y-1 ${
         isPromo
-          ? 'border-primary border-2 shadow-2xl shadow-primary/10 lg:scale-105 bg-card'
-          : 'border-border hover:border-primary/40 bg-card/60 shadow-sm'
+          ? 'border-primary border-2 shadow-2xl shadow-primary/10 lg:scale-105 hover:shadow-primary/20 bg-card'
+          : 'border-border hover:border-primary/40 hover:shadow-lg bg-card/60 shadow-sm'
       }`}>
         {isPromo && (
           <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
@@ -200,7 +340,7 @@ function PackageCard({
           )}
         </CardFooter>
       </Card>
-    </div>
+    </motion.div>
   );
 }
 
@@ -208,6 +348,7 @@ function PackageCard({
 
 function FaqSection() {
   const [open, setOpen] = useState<number | null>(0);
+  const reduceMotion = useReducedMotion();
 
   return (
     <section id="faq" className="py-20 md:py-24 bg-background border-t border-border">
@@ -218,7 +359,14 @@ function FaqSection() {
           {FAQ.map((item, i) => {
             const isOpen = open === i;
             return (
-              <div key={i} className={`rounded-2xl border transition-colors ${isOpen ? 'border-primary/40 bg-card' : 'border-border bg-card/50'}`}>
+              <motion.div
+                key={i}
+                initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ delay: i * 0.05, duration: 0.35, ease: 'easeOut' }}
+                className={`rounded-2xl border transition-colors ${isOpen ? 'border-primary/40 bg-card' : 'border-border bg-card/50 hover:border-primary/25'}`}
+              >
                 <h3>
                   <button
                     onClick={() => setOpen(isOpen ? null : i)}
@@ -229,20 +377,24 @@ function FaqSection() {
                     <span className="font-bold text-foreground text-[15px] leading-snug">{item.q}</span>
                     <Icon
                       name="chevron-down"
-                      className={`text-muted-foreground shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180 text-primary' : ''}`}
+                      className={`text-muted-foreground shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180 text-primary' : ''}`}
                     />
                   </button>
                 </h3>
-                {/* Answers stay in the DOM so the text is always crawlable and
-                    findable with in-page search, not just when expanded. */}
+                {/* Collapsed with a 0fr -> 1fr grid row rather than unmounting,
+                    so the answer text stays in the DOM for crawlers and in-page
+                    search while still animating open smoothly. */}
                 <div
                   id={`faq-panel-${i}`}
-                  hidden={!isOpen}
-                  className="px-5 pb-5 -mt-1 text-[14px] text-muted-foreground leading-relaxed font-medium"
+                  className={`grid transition-[grid-template-rows] duration-300 ease-out ${isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
                 >
-                  {item.a}
+                  <div className="overflow-hidden">
+                    <p className="px-5 pb-5 -mt-1 text-[14px] text-muted-foreground leading-relaxed font-medium">
+                      {item.a}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
@@ -292,12 +444,13 @@ function LandingContent() {
   }, [showcase.length]);
 
   /* Live counters. Rendered as skeletons until the API answers, so the
-     prerendered HTML never advertises "0 customers" to crawlers. */
-  const stats: { label: string; value: string | null; icon: IconName }[] = useMemo(() => [
-    { label: 'ร้านค้าที่เปิดใช้งาน', value: statsData ? `${(statsData.total_shops || 0).toLocaleString()}+` : null, icon: 'store' },
-    { label: 'สมาชิกในระบบ',        value: statsData ? `${(statsData.total_users || 0).toLocaleString()}+` : null, icon: 'users' },
-    { label: 'ติดตั้งเสร็จภายใน',    value: statsData?.delivery_speed || null, icon: 'bolt' },
-    { label: 'รับเงินอัตโนมัติ',      value: '24 ชม.', icon: 'qrcode' },
+     prerendered HTML never advertises "0 customers" to crawlers.
+     `num` counts up on arrival; `text` is shown as-is. */
+  const stats: { label: string; num?: number; text?: string; icon: IconName }[] = useMemo(() => [
+    { label: 'ร้านค้าที่เปิดใช้งาน', num: statsData ? (statsData.total_shops || 0) : undefined, icon: 'store' },
+    { label: 'สมาชิกในระบบ',        num: statsData ? (statsData.total_users || 0) : undefined, icon: 'users' },
+    { label: 'ติดตั้งเสร็จภายใน',    text: statsData?.delivery_speed || undefined, icon: 'bolt' },
+    { label: 'รับเงินอัตโนมัติ',      text: '24 ชม.', icon: 'qrcode' },
   ], [statsData]);
 
   const trialPromo = promos.find(p => p.kind === 'trial');
@@ -317,22 +470,14 @@ function LandingContent() {
 
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <section className="relative pt-12 pb-16 md:pt-16 md:pb-20 overflow-hidden">
-        <div className="absolute top-0 right-0 -translate-y-1/4 translate-x-1/4 w-[800px] h-[800px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="animate-blob-drift absolute top-0 right-0 -translate-y-1/4 translate-x-1/4 w-[800px] h-[800px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="animate-blob-drift absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/3 w-[520px] h-[520px] bg-emerald-500/5 rounded-full blur-[110px] pointer-events-none" style={{ animationDelay: '-9s' }} />
 
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center relative z-10">
           <div>
-            <div className="hero-pop-1 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-[12px] font-bold mb-6">
-              <Icon name="wallet" className="text-sm" />
-              ใหม่: เติมผ่าน TrueMoney อั่งเปา ฟรี ไม่มีค่าธรรมเนียม
+            <div className="hero-pop-1">
+              <TypewriterHeadline />
             </div>
-
-            <h1 className="hero-pop-1 text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.15] mb-6 tracking-tight text-foreground">
-              เปิดร้านค้ามายคราฟ
-              <span className="relative inline-block text-primary ml-2">
-                ขายได้ตั้งแต่วันนี้
-                <span aria-hidden="true" className="absolute left-0 -bottom-1 h-[6px] w-full rounded-full bg-primary/25" />
-              </span>
-            </h1>
 
             <p className="hero-pop-2 text-lg md:text-xl text-muted-foreground leading-relaxed mb-8 max-w-xl font-medium">
               ระบบร้านค้าสำเร็จรูปสำหรับเซิร์ฟเวอร์ไทย ผู้เล่นเติมเงินเอง ของส่งเข้าเกมอัตโนมัติ
@@ -340,7 +485,7 @@ function LandingContent() {
             </p>
 
             <div className="hero-pop-2 flex flex-col sm:flex-row gap-3 mb-5">
-              <Button size="lg" className="h-14 px-8 text-base font-black rounded-full shadow-lg hover:shadow-xl transition-all cursor-pointer" asChild>
+              <Button size="lg" className="cta-sweep relative overflow-hidden h-14 px-8 text-base font-black rounded-full shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer" asChild>
                 <Link href={PRIMARY_CTA.href}>
                   <Icon name="rocket" className="mr-2" /> {PRIMARY_CTA.label}
                 </Link>
@@ -365,27 +510,30 @@ function LandingContent() {
                   <Icon name="heart" className="text-primary" />
                   เซิร์ฟเวอร์ที่เปิดร้านกับเราแล้ว
                 </p>
-                <div className="relative w-full overflow-hidden h-10">
-                  <motion.div
-                    className="flex gap-3 absolute whitespace-nowrap items-center"
-                    animate={reduceMotion ? undefined : { x: ['0%', '-50%'] }}
-                    transition={{ duration: 22, repeat: Infinity, ease: 'linear' }}
-                  >
-                    {[...shops, ...shops, ...shops].map((s, i) => (
+                {/* Marquee: the list is rendered twice inside the track and the
+                    CSS shifts it by exactly -50%, so the loop is seamless.
+                    Hovering pauses it so the links stay clickable. */}
+                <div className="marquee-viewport relative w-full overflow-hidden">
+                  <div className="marquee-track flex w-max gap-3 items-center py-1">
+                    {[...shops, ...shops].map((s, i) => (
                       <a
                         key={i}
                         href={`https://${s.domain}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 bg-secondary/50 px-4 py-1.5 rounded-full border border-border hover:border-primary/40 hover:bg-secondary transition-all cursor-pointer group/shop"
+                        aria-hidden={i >= shops.length}
+                        tabIndex={i >= shops.length ? -1 : undefined}
+                        className="flex shrink-0 items-center gap-2 bg-secondary/50 px-4 py-1.5 rounded-full border border-border hover:border-primary/40 hover:bg-secondary transition-all cursor-pointer group/shop"
                       >
-                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                        <span className="text-sm font-bold text-muted-foreground tracking-tight group-hover/shop:text-primary transition-colors">{s.name}</span>
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-soft-ping" />
+                        <span className="text-sm font-bold text-muted-foreground tracking-tight whitespace-nowrap group-hover/shop:text-primary transition-colors">
+                          {s.name}
+                        </span>
                       </a>
                     ))}
-                  </motion.div>
-                  <div className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-background to-transparent z-10" />
-                  <div className="absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-background to-transparent z-10" />
+                  </div>
+                  <div className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+                  <div className="absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
                 </div>
               </div>
             )}
@@ -423,19 +571,28 @@ function LandingContent() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-10">
             {stats.map((stat, i) => (
-              <div key={i} className="flex items-center gap-3 md:gap-4 justify-center">
-                <div className="w-11 h-11 rounded-xl bg-background shadow-sm flex items-center justify-center text-primary border border-border shrink-0">
+              <motion.div
+                key={i}
+                initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.4 }}
+                transition={{ delay: i * 0.07, duration: 0.35, ease: 'easeOut' }}
+                className="flex items-center gap-3 md:gap-4 justify-center group"
+              >
+                <div className="w-11 h-11 rounded-xl bg-background shadow-sm flex items-center justify-center text-primary border border-border shrink-0 group-hover:scale-110 group-hover:border-primary/40 transition-all duration-300">
                   <Icon name={stat.icon} className="text-lg" />
                 </div>
                 <div className="min-w-0">
-                  {stat.value === null ? (
+                  {stat.num === undefined && stat.text === undefined ? (
                     <span className="block h-7 w-20 rounded-md bg-muted animate-pulse" aria-hidden="true" />
                   ) : (
-                    <span className="block text-xl md:text-2xl font-black text-foreground tabular-nums leading-tight">{stat.value}</span>
+                    <span className="block text-xl md:text-2xl font-black text-foreground tabular-nums leading-tight">
+                      {stat.num !== undefined ? <CountUp value={stat.num} suffix="+" /> : stat.text}
+                    </span>
                   )}
                   <span className="block text-[11px] md:text-xs font-bold text-muted-foreground tracking-wide">{stat.label}</span>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
@@ -657,11 +814,18 @@ function LandingContent() {
               </thead>
               <tbody>
                 {COMPARISON.map((row, i) => (
-                  <tr key={i}>
-                    <th scope="row" className="p-4 text-sm font-bold text-foreground border-t border-border align-middle">
+                  <motion.tr
+                    key={i}
+                    initial={reduceMotion ? false : { opacity: 0, x: -12 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true, amount: 0.5 }}
+                    transition={{ delay: i * 0.05, duration: 0.3, ease: 'easeOut' }}
+                    className="group/row"
+                  >
+                    <th scope="row" className="p-4 text-sm font-bold text-foreground border-t border-border align-middle group-hover/row:text-primary transition-colors">
                       {row.label}
                     </th>
-                    <td className="p-4 text-center text-sm font-bold text-foreground bg-primary/5 border-t border-primary/20 align-middle">
+                    <td className="p-4 text-center text-sm font-bold text-foreground bg-primary/5 border-t border-primary/20 align-middle group-hover/row:bg-primary/10 transition-colors">
                       <span className="inline-flex items-center gap-1.5">
                         <Icon name="circle-check" className="text-primary shrink-0" />
                         {row.ours}
@@ -669,7 +833,7 @@ function LandingContent() {
                     </td>
                     <td className="p-4 text-center text-sm text-muted-foreground border-t border-border align-middle">{row.custom}</td>
                     <td className="p-4 text-center text-sm text-muted-foreground border-t border-border align-middle">{row.foreign}</td>
-                  </tr>
+                  </motion.tr>
                 ))}
               </tbody>
             </table>
@@ -688,13 +852,13 @@ function LandingContent() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch pt-4">
             {trialPromo && (
-              <PackageCard pkg={trialPromo} isTrial easyslipFee={easyslipFee} onShowEasySlip={() => setShowEasySlipPlan(true)} />
+              <PackageCard pkg={trialPromo} isTrial index={0} easyslipFee={easyslipFee} onShowEasySlip={() => setShowEasySlipPlan(true)} />
             )}
             {introPromo && (
-              <PackageCard pkg={introPromo} isPromo easyslipFee={easyslipFee} onShowEasySlip={() => setShowEasySlipPlan(true)} />
+              <PackageCard pkg={introPromo} isPromo index={1} easyslipFee={easyslipFee} onShowEasySlip={() => setShowEasySlipPlan(true)} />
             )}
             {packages.length > 0 && (
-              <PackageCard pkg={packages[1] || packages[0]} easyslipFee={easyslipFee} onShowEasySlip={() => setShowEasySlipPlan(true)} />
+              <PackageCard pkg={packages[1] || packages[0]} index={2} easyslipFee={easyslipFee} onShowEasySlip={() => setShowEasySlipPlan(true)} />
             )}
           </div>
 
@@ -748,7 +912,7 @@ function LandingContent() {
           <p className="text-muted-foreground text-lg mb-8 font-medium leading-relaxed">
             ทดลองฟรี 7 วัน ไม่ต้องผูกบัตร ถ้าไม่ชอบก็ปล่อยให้หมดอายุได้เลย
           </p>
-          <Button size="lg" className="h-14 px-10 text-base font-black rounded-full shadow-lg hover:shadow-xl transition-all cursor-pointer" asChild>
+          <Button size="lg" className="cta-sweep relative overflow-hidden h-14 px-10 text-base font-black rounded-full shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer" asChild>
             <Link href={PRIMARY_CTA.href}>
               <Icon name="rocket" className="mr-2" /> {PRIMARY_CTA.label}
             </Link>
