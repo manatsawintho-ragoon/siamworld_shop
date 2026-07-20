@@ -11,10 +11,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence, useReducedMotion, useScroll, useSpring } from 'framer-motion';
 import { Icon, type IconName } from '@/components/ui/icon';
+import { getTier, type TierKey } from '@/lib/rarity';
 
-/* Scroll progress: continuous motion that tracks the reader's own position
-   rather than animating on its own, so it adds life without competing for
-   attention. Hidden entirely under prefers-reduced-motion. */
+/* Scroll progress, styled as an XP bar: continuous motion that tracks the
+   reader's own position rather than animating on its own, so it adds life
+   without competing for attention. The notches come from a repeating
+   gradient (.xp-fill), not extra DOM. Hidden under prefers-reduced-motion. */
 function ScrollProgress() {
   const reduceMotion = useReducedMotion();
   const { scrollYProgress } = useScroll();
@@ -23,7 +25,7 @@ function ScrollProgress() {
   return (
     <motion.div
       style={{ scaleX }}
-      className="fixed top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-primary via-amber-400 to-primary origin-left z-[120] pointer-events-none"
+      className="xp-fill fixed top-0 left-0 right-0 h-[4px] bg-gradient-to-r from-primary via-amber-400 to-primary origin-left z-[120] pointer-events-none"
       aria-hidden="true"
     />
   );
@@ -52,6 +54,55 @@ const DEFAULT_PROMOS: Promo[] = [
 
 /** The single primary action on this page. Every hero/section CTA points here. */
 const PRIMARY_CTA = { href: '/order?kind=trial', label: 'เริ่มทดลองฟรี 7 วัน' };
+
+/* ── Package tiers ───────────────────────────────────────────────────
+   Every plan ships the same feature set, so repeating the full list in all
+   three cards just buries the prices. Instead each card states who it suits
+   and the few points that actually differ, and the shared list is rendered
+   once below the grid.
+
+   The tier ranking is deliberate: the recommended card is EPIC, not
+   LEGENDARY. It should read as the smart pick rather than the maxed-out one,
+   which leaves LEGENDARY meaningful for the longest plan. */
+interface TierCopy {
+  tier: TierKey;
+  /** Who this plan suits, one line, shown directly under the title. */
+  audience: string;
+  points: { icon: IconName; text: string; tone?: 'good' | 'muted' | 'off' }[];
+}
+
+const TIER_COPY: Record<'trial' | 'intro' | 'regular', TierCopy> = {
+  trial: {
+    tier: 'common',
+    audience: 'เหมาะกับคนที่อยากลองระบบจริงก่อนตัดสินใจ',
+    points: [
+      { icon: 'circle-check', text: 'ได้ฟีเจอร์พรีเมียมครบทุกอย่าง', tone: 'good' },
+      { icon: 'clock',        text: 'ใช้งานเต็มรูปแบบ 7 วัน ไม่ต้องผูกบัตร' },
+      { icon: 'wallet',       text: 'เติมผ่าน TrueMoney อั่งเปา ฟรี ไม่มีค่าธรรมเนียม', tone: 'good' },
+      { icon: 'circle-xmark', text: 'ยังไม่รวมตรวจสลิป PromptPay อัตโนมัติ', tone: 'off' },
+    ],
+  },
+  intro: {
+    tier: 'epic',
+    audience: 'เหมาะกับเซิร์ฟเวอร์ที่พร้อมเปิดขายจริงเดือนนี้',
+    points: [
+      { icon: 'circle-check', text: 'ได้ฟีเจอร์พรีเมียมครบทุกอย่าง', tone: 'good' },
+      { icon: 'qrcode',       text: 'ตรวจสลิป PromptPay อัตโนมัติ 24 ชม.' },
+      { icon: 'wallet',       text: 'เติมผ่าน TrueMoney อั่งเปา ฟรี ไม่มีค่าธรรมเนียม', tone: 'good' },
+      { icon: 'shield-check', text: 'ยกเลิกได้ทุกเมื่อ ไม่มีสัญญาผูกมัด' },
+    ],
+  },
+  regular: {
+    tier: 'legendary',
+    audience: 'เหมาะกับเซิร์ฟเวอร์ที่เปิดยาว อยากล็อกราคาไว้',
+    points: [
+      { icon: 'circle-check',   text: 'ได้ฟีเจอร์พรีเมียมครบทุกอย่าง', tone: 'good' },
+      { icon: 'qrcode',         text: 'ตรวจสลิป PromptPay อัตโนมัติ 24 ชม.' },
+      { icon: 'wallet',         text: 'เติมผ่าน TrueMoney อั่งเปา ฟรี ไม่มีค่าธรรมเนียม', tone: 'good' },
+      { icon: 'arrows-rotate',  text: 'จ่ายทีเดียว ไม่ต้องต่ออายุทุกเดือน' },
+    ],
+  },
+};
 
 const STEPS: { icon: IconName; title: string; desc: string }[] = [
   {
@@ -275,21 +326,35 @@ function PackageCard({
   onShowEasySlip,
 }: { pkg: any; isPromo?: boolean; isTrial?: boolean; index?: number; easyslipFee: number; onShowEasySlip: () => void }) {
   const reduceMotion = useReducedMotion();
+  // Touch devices have no hover, so the glow is armed when the card scrolls
+  // into view instead. CSS picks whichever applies via @media (hover: …).
+  const [armed, setArmed] = useState(false);
+
+  const copy = TIER_COPY[isTrial ? 'trial' : isPromo ? 'intro' : 'regular'];
+  const tier = getTier(copy.tier);
+
   return (
     <motion.div
       className={isPromo ? 'z-10' : ''}
-      initial={reduceMotion ? false : { opacity: 0, y: 24 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      initial={reduceMotion ? false : { opacity: 0, y: 24, scale: 0.96 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
       viewport={{ once: true, amount: 0.2 }}
-      transition={{ delay: index * 0.1, duration: 0.45, ease: 'easeOut' }}
+      onViewportEnter={() => setArmed(true)}
+      transition={{ delay: index * 0.1, duration: 0.45, ease: [0.34, 1.3, 0.64, 1] }}
     >
-      <Card className={`flex flex-col relative h-full overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
-        isPromo
-          ? 'card-sheen border-primary border-2 shadow-2xl shadow-primary/10 lg:scale-105 hover:shadow-primary/20 bg-card'
-          : 'border-border hover:border-primary/40 hover:shadow-lg bg-card/60 shadow-sm'
-      }`}>
+      <Card
+        style={{ ['--tier' as string]: tier.color, ['--tier-glow' as string]: tier.glow }}
+        className={`landing-tier-card flex flex-col relative h-full overflow-hidden border-2 ${armed ? 'tier-armed' : ''} ${
+          isPromo
+            ? 'card-sheen landing-tier-featured shadow-2xl lg:scale-105 bg-card'
+            : 'bg-card/60 shadow-sm'
+        }`}
+      >
+        {/* Rarity strip: the tier colour reads before any text does. */}
+        <div className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: tier.color }} aria-hidden="true" />
+
         {isPromo && (
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
             <Badge className="bg-primary text-primary-foreground px-4 py-1 text-[10px] uppercase tracking-wider font-black shadow-lg border-none whitespace-nowrap">
               คุ้มที่สุด
             </Badge>
@@ -297,7 +362,17 @@ function PackageCard({
         )}
 
         <CardHeader className="pb-4 pt-8">
+          {/* Tier is stated in text as well as colour, so it survives both
+              colour-blindness and greyscale printing. */}
+          <span
+            className="inline-flex w-fit items-center gap-1.5 rounded-md px-2 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-white leading-none mb-3"
+            style={{ backgroundColor: tier.color }}
+          >
+            <Icon name={tier.icon} className="text-[10px]" />
+            {tier.label}
+          </span>
           <CardTitle className="text-lg font-black">{isTrial ? 'ทดลองใช้ฟรี' : pkg.label}</CardTitle>
+          <p className="text-[12px] font-semibold text-muted-foreground mt-1.5 leading-snug">{copy.audience}</p>
           <div className="flex items-baseline flex-wrap gap-x-2 gap-y-1 mt-3">
             {isPromo && pkg.regularPrice && (
               <span className="text-xl font-bold text-muted-foreground/60 line-through tabular-nums" aria-label={`ราคาปกติ ${pkg.regularPrice} บาท`}>
@@ -320,30 +395,31 @@ function PackageCard({
           {!isTrial && !isPromo && <p className="text-[13px] text-muted-foreground mt-2 font-medium">ราคาปกติ จ่ายทีเดียวคุ้มกว่า</p>}
         </CardHeader>
 
-        {/* Only what actually differs between plans lives in the card. The
-            shared feature list is rendered once below the grid, so the prices
-            stay the most legible thing in this section. */}
+        {/* Plan-specific points only. The list shared by every plan is
+            rendered once below the grid, so the prices stay the most legible
+            thing in this section. */}
         <CardContent className="flex-1 pb-6">
           <ul className="space-y-3">
-            <li className="flex items-start gap-2.5 text-sm font-bold text-foreground/90">
-              <Icon name="circle-check" className="text-primary text-base mt-0.5 shrink-0" />
-              ฟีเจอร์พรีเมียมครบทุกอย่าง
-            </li>
-            {isTrial ? (
-              <li className="flex items-start gap-2.5 text-[13px] font-medium text-muted-foreground/70">
-                <Icon name="circle-xmark" className="text-destructive/50 text-base mt-0.5 shrink-0" />
-                ยังไม่รวมตรวจสลิป PromptPay อัตโนมัติ
+            {copy.points.map(p => (
+              <li
+                key={p.text}
+                className={`flex items-start gap-2.5 ${
+                  p.tone === 'good'
+                    ? 'text-[13px] font-bold text-emerald-600'
+                    : p.tone === 'off'
+                      ? 'text-[13px] font-medium text-muted-foreground/70'
+                      : 'text-[13px] font-medium text-muted-foreground'
+                }`}
+              >
+                <Icon
+                  name={p.icon}
+                  className={`text-base mt-0.5 shrink-0 ${
+                    p.tone === 'good' ? 'text-emerald-500' : p.tone === 'off' ? 'text-destructive/50' : 'text-primary/60'
+                  }`}
+                />
+                <span>{p.text}</span>
               </li>
-            ) : (
-              <li className="flex items-start gap-2.5 text-[13px] font-medium text-muted-foreground">
-                <Icon name="qrcode" className="text-primary/60 text-base mt-0.5 shrink-0" />
-                ตรวจสลิป PromptPay อัตโนมัติ 24 ชม.
-              </li>
-            )}
-            <li className="flex items-start gap-2.5 text-[13px] font-bold text-emerald-600">
-              <Icon name="wallet" className="text-emerald-500 text-base mt-0.5 shrink-0" />
-              <span>เติมผ่าน TrueMoney อั่งเปา ฟรี ไม่มีค่าธรรมเนียม</span>
-            </li>
+            ))}
           </ul>
         </CardContent>
 
@@ -445,6 +521,8 @@ function LandingContent() {
   const [shops, setShops] = useState<{ name: string; domain: string }[]>([]);
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
   const [showEasySlipPlan, setShowEasySlipPlan] = useState(false);
+  // Fills the quest-chain line once the steps section is first reached.
+  const [questFilled, setQuestFilled] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showcase, setShowcase] = useState<ShowcaseSlide[]>(DEFAULT_SHOWCASE);
 
@@ -575,7 +653,7 @@ function LandingContent() {
       {shops.length > 0 && (
         <section className="relative py-8 md:py-9 bg-background border-t border-border overflow-hidden">
           <div className="max-w-7xl mx-auto px-6">
-            <p className="flex items-center justify-center gap-2 text-[13px] font-bold text-muted-foreground mb-5 text-center">
+            <p className="flex items-center justify-center gap-2 text-[13px] font-bold text-muted-foreground mb-3 text-center">
               <span className="relative flex h-2 w-2 shrink-0">
                 <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 animate-soft-ping" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
@@ -584,6 +662,22 @@ function LandingContent() {
                 <span className="text-foreground font-black tabular-nums">{shops.length}</span> เซิร์ฟเวอร์เปิดร้านกับเราแล้ว
               </span>
             </p>
+
+            {/* Decorative XP-style accent under the count. It fills once on
+                view and does not encode a quota, so it cannot misrepresent
+                the real number above it. */}
+            <motion.div
+              className="mx-auto mb-6 h-1.5 w-40 rounded-full bg-muted overflow-hidden"
+              aria-hidden="true"
+            >
+              <motion.div
+                className="xp-fill h-full rounded-full bg-gradient-to-r from-primary to-amber-400 origin-left"
+                initial={reduceMotion ? false : { scaleX: 0 }}
+                whileInView={{ scaleX: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 1, ease: 'easeOut' }}
+              />
+            </motion.div>
           </div>
 
           <div className="marquee-viewport relative w-full overflow-hidden">
@@ -596,12 +690,23 @@ function LandingContent() {
                   rel="noopener noreferrer"
                   aria-hidden={i >= shops.length}
                   tabIndex={i >= shops.length ? -1 : undefined}
-                  className="flex shrink-0 items-center gap-2.5 bg-card px-5 py-2.5 rounded-full border border-border shadow-sm hover:border-primary/50 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group/shop"
+                  className="flex shrink-0 items-center gap-2.5 bg-card px-4 py-3 rounded-xl border-2 border-border shadow-sm hover:border-primary/60 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer group/shop"
                 >
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                  {/* Blocky server-card mark: first letter as an item slot. */}
+                  <span
+                    className="grid place-items-center w-7 h-7 rounded-md bg-primary/10 text-primary text-[13px] font-black shrink-0 group-hover/shop:bg-primary group-hover/shop:text-primary-foreground transition-colors"
+                    aria-hidden="true"
+                  >
+                    {s.name.trim().charAt(0).toUpperCase()}
+                  </span>
                   <span className="text-sm md:text-[15px] font-bold text-foreground/80 tracking-tight whitespace-nowrap group-hover/shop:text-primary transition-colors">
                     {s.name}
                   </span>
+                  {/* Static dot on purpose: one pulsing indicator lives on the
+                      count above. Pulsing all ~28 pills would animate as many
+                      box-shadows at once, which is both visually noisy and off
+                      the compositor. */}
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" aria-hidden="true" />
                   <Icon name="arrow-up-right-from-square" className="text-[10px] text-muted-foreground/0 group-hover/shop:text-primary/70 transition-colors" />
                 </a>
               ))}
@@ -653,31 +758,47 @@ function LandingContent() {
             sub="ไม่ต้องมีความรู้ด้านเว็บ ไม่ต้องเช่าเซิร์ฟเวอร์เพิ่ม"
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
-            {STEPS.map((s, i) => (
-              <motion.div
-                key={i}
-                initial={reduceMotion ? false : { opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ delay: i * 0.08, duration: 0.4, ease: 'easeOut' }}
-              >
-                <Card className="h-full bg-card border-border hover:border-primary/40 transition-colors shadow-sm">
-                  <CardHeader>
-                    <div className="flex items-center gap-3 mb-3">
-                      <span className="w-9 h-9 rounded-xl bg-primary text-primary-foreground font-black flex items-center justify-center text-base tabular-nums shrink-0">
-                        {i + 1}
-                      </span>
-                      <Icon name={s.icon} className="text-2xl text-primary/40" />
-                    </div>
-                    <CardTitle className="text-lg leading-snug">{s.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
+          {/* Quest chain: the three steps are connected by a line that fills
+              once the section is in view, so they read as one sequence being
+              completed rather than three unrelated cards. The line is purely
+              decorative and sits behind the cards on desktop only. */}
+          <div className="relative">
+            <div
+              className="hidden md:block absolute top-[52px] left-[16.6%] right-[16.6%] h-1 rounded-full bg-muted overflow-hidden"
+              aria-hidden="true"
+            >
+              <div className={`quest-line xp-fill h-full rounded-full bg-gradient-to-r from-primary to-amber-400 ${questFilled ? 'quest-filled' : ''}`} />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
+              {STEPS.map((s, i) => (
+                <motion.div
+                  key={i}
+                  initial={reduceMotion ? false : { opacity: 0, y: 20, scale: 0.97 }}
+                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  onViewportEnter={i === 0 ? () => setQuestFilled(true) : undefined}
+                  transition={{ delay: i * 0.08, duration: 0.4, ease: [0.34, 1.3, 0.64, 1] }}
+                >
+                  <Card className="h-full bg-card border-border hover:border-primary/40 hover:-translate-y-1 transition-all duration-300 shadow-sm group/step">
+                    <CardHeader>
+                      <div className="flex items-center gap-3 mb-3">
+                        <span
+                          className={`quest-node w-9 h-9 rounded-xl bg-primary text-primary-foreground font-black flex items-center justify-center text-base tabular-nums shrink-0 ring-4 ring-background ${questFilled ? 'quest-reached' : ''}`}
+                        >
+                          {i + 1}
+                        </span>
+                        <Icon name={s.icon} className="text-2xl text-primary/40 group-hover/step:text-primary/70 transition-colors" />
+                      </div>
+                      <CardTitle className="text-lg leading-snug">{s.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </div>
       </section>

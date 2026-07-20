@@ -31,7 +31,7 @@ import {
   Mail, MailOpen, Calendar, CalendarDays, Clock, Bell, Flame, Heart, Ghost, Inbox, Lightbulb,
   Target, Megaphone, MessagesSquare, Headset, Phone, Globe, Dices, ChartArea, Circle,
   Ban, CircleStop, Play, CirclePause, Sun, Moon, Rocket, PackageOpen, QrCode,
-  GraduationCap,
+  GraduationCap, Gem, Crown, Trophy, Swords,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -119,6 +119,8 @@ export const ICONS = {
   'ban': Ban, 'stop': CircleStop, 'play': Play, 'circle-pause': CirclePause,
   'sun': Sun, 'moon': Moon, 'rocket': Rocket, 'box-open': PackageOpen, 'qrcode': QrCode,
   'right-left': ArrowLeftRight, 'graduation-cap': GraduationCap,
+  // rarity tiers (landing page package tiers)
+  'gem': Gem, 'crown': Crown, 'trophy': Trophy, 'swords': Swords,
   // brand marks
   'discord': Discord, 'facebook-f': Facebook, 'facebook': Facebook,
   'windows': Windows, 'linux': Linux, 'google-color': Google,
