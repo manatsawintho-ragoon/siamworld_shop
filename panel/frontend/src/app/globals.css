@@ -135,3 +135,66 @@
 .hero-pop-3 { animation: hero-pop 0.55s 0.32s ease-out both; }
 
 .animate-float-y { animation: float-y 5s ease-in-out infinite; }
+
+/* ── Landing page motion ─────────────────────────────────────────────
+   CSS-driven so these run on the compositor and never re-render React. */
+
+/* Seamless marquee: the track holds the list twice, so shifting it by
+   exactly -50% lands on an identical frame and the loop is invisible. */
+@keyframes marquee-x {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.marquee-track {
+  animation: marquee-x 40s linear infinite;
+  will-change: transform;
+}
+.marquee-viewport:hover .marquee-track,
+.marquee-viewport:focus-within .marquee-track {
+  animation-play-state: paused;
+}
+
+/* Typewriter caret */
+@keyframes caret-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+.animate-caret { animation: caret-blink 1.1s step-end infinite; }
+
+/* Slow drift for the hero background glow */
+@keyframes blob-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(-30px, 20px) scale(1.05); }
+  66%      { transform: translate(20px, -20px) scale(0.97); }
+}
+.animate-blob-drift { animation: blob-drift 18s ease-in-out infinite; }
+
+/* One-pass light sweep across the primary CTA */
+@keyframes cta-sweep {
+  0%        { transform: translateX(-120%) skewX(-20deg); }
+  60%, 100% { transform: translateX(320%) skewX(-20deg); }
+}
+.cta-sweep::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.28), transparent);
+  animation: cta-sweep 3.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Gentle pulse for "live" indicators */
+@keyframes soft-ping {
+  0%   { box-shadow: 0 0 0 0 rgb(16 185 129 / 0.5); }
+  70%  { box-shadow: 0 0 0 7px rgb(16 185 129 / 0); }
+  100% { box-shadow: 0 0 0 0 rgb(16 185 129 / 0); }
+}
+.animate-soft-ping { animation: soft-ping 2.4s ease-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track,
+  .animate-caret,
+  .animate-blob-drift,
+  .animate-soft-ping,
+  .animate-float-y { animation: none !important; }
+  .cta-sweep::after { display: none; }
+}

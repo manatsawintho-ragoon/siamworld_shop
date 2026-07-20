@@ -271,18 +271,33 @@ async function start() {
 
 start();
 
-// Graceful shutdown — close persistent RCON connections
-process.on('SIGTERM', async () => {
-  logger.info('SIGTERM received, shutting down...');
-  playerTracker.stop();
-  await rconManager.shutdown();
-  server.close();
-});
-process.on('SIGINT', async () => {
-  logger.info('SIGINT received, shutting down...');
-  playerTracker.stop();
-  await rconManager.shutdown();
-  server.close();
-});
+// Graceful shutdown — stop accepting connections, drain background work, then
+// close the DB/Redis pools so a redeploy never severs an in-flight purchase or
+// leaves sockets dangling. A hard timeout guarantees the process still exits.
+let shuttingDown = false;
+async function gracefulShutdown(signal: string) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logger.info(`${signal} received, shutting down...`);
+  const forceExit = setTimeout(() => {
+    logger.error('Graceful shutdown timed out, forcing exit');
+    process.exit(1);
+  }, 10000);
+  forceExit.unref();
+  try {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    playerTracker.stop();
+    await rconManager.shutdown();
+    await pool.end().catch(() => {});
+    await redis.quit().catch(() => {});
+  } catch (err) {
+    logger.error('Error during shutdown', { message: (err as Error).message });
+  } finally {
+    clearTimeout(forceExit);
+    process.exit(0);
+  }
+}
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 export { app, io, rconManager, playerTracker };

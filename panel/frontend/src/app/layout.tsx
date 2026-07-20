@@ -5,11 +5,12 @@ import { ToastProvider } from '@/components/Toast';
 import SessionToastBridge from '@/components/SessionToastBridge';
 import PageTitleManager from '@/components/PageTitle';
 import ActivityTracker from '@/components/ActivityTracker';
+import { FAQ } from '@/lib/faq';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://panel.siamsite.shop'),
   title: 'SIAMSITE STORE | เช่าเว็บร้านค้ามายคราฟ ทดลองฟรี 7 วัน เดือนแรก ฿99',
-  description: 'บริการเช่าเว็บร้านค้า Minecraft สำเร็จรูปที่ดีที่สุดในไทย เริ่มทดลองฟรี 7 วัน หรือเดือนแรกเพียง ฿99 รองรับ PromptPay + EasySlip ตรวจสลิปอัตโนมัติ เชื่อม RCON ตรงด้วย Bridge Plugin ไม่ต้องตั้ง VPN ติดตั้งจบใน 10 นาที',
+  description: 'บริการเช่าเว็บร้านค้า Minecraft สำเร็จรูปสำหรับเซิร์ฟเวอร์ไทย เริ่มทดลองฟรี 7 วัน หรือเดือนแรกเพียง ฿99 รองรับ PromptPay ตรวจสลิปอัตโนมัติ และ TrueMoney อั่งเปา ใช้ฟรีไม่มีค่าธรรมเนียม เชื่อม RCON ตรงด้วย Bridge Plugin ไม่ต้องตั้ง VPN ติดตั้งจบใน 10 นาที',
   keywords: [
     'เช่าเว็บมายคราฟ',
     'เช่าเว็บมายคราฟราคาถูก',
@@ -34,7 +35,7 @@ export const metadata: Metadata = {
   alternates: { canonical: '/' },
   openGraph: {
     title: 'SIAMSITE STORE | ทดลองฟรี 7 วัน · เดือนแรก ฿99 · ระบบเช่าร้านค้า Minecraft ครบวงจร',
-    description: 'ยกระดับเซิร์ฟเวอร์มายคราฟสู่ธุรกิจระดับมืออาชีพ เริ่มทดลองฟรี 7 วัน ไม่ต้องผูกบัตร PromptPay + EasySlip + RCON ติดตั้งจบใน 10 นาที',
+    description: 'ยกระดับเซิร์ฟเวอร์มายคราฟสู่ธุรกิจระดับมืออาชีพ เริ่มทดลองฟรี 7 วัน ไม่ต้องผูกบัตร PromptPay + TrueMoney อั่งเปา + RCON ติดตั้งจบใน 10 นาที',
     url: 'https://panel.siamsite.shop',
     siteName: 'SIAMSITE STORE',
     images: [
@@ -120,49 +121,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         "priceCurrency": "THB",
         "availability": "https://schema.org/InStock"
       }
-    ],
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.9",
-      "reviewCount": "20"
-    }
+    ]
+    // NOTE: no aggregateRating here. Google's review snippet policy disallows
+    // self-serving ratings that aren't backed by real, user-submitted reviews
+    // shown on the page. Re-add only when genuine reviews are collected and
+    // rendered.
   };
 
+  // Mirrors the FAQ rendered on the landing page. Both read FAQ from
+  // lib/faq.ts so the structured data can never describe questions that
+  // aren't actually visible on the page.
   const faqSchema = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    "mainEntity": [
-      {
-        "@type": "Question",
-        "name": "ทดลองฟรี 7 วัน ใช้ได้จริงไหม ต้องผูกบัตรหรือเปล่า?",
-        "acceptedAnswer": { "@type": "Answer", "text": "ใช้ได้จริงและไม่ต้องผูกบัตรใดๆ สมัครด้วยอีเมลแล้วเริ่มสร้างร้านได้เลย จำกัด 1 สิทธิ์ต่อบัญชีและต่อ IP เพื่อป้องกันการใช้ซ้ำ ครบ 7 วันระบบจะปิดร้านอัตโนมัติหากไม่อัปเกรด" }
-      },
-      {
-        "@type": "Question",
-        "name": "โปรเดือนแรก ฿99 หมดเขตเมื่อไหร่ และเดือนถัดไปคิดเท่าไหร่?",
-        "acceptedAnswer": { "@type": "Answer", "text": "โปรเดือนแรก ฿99 ใช้ได้กับลูกค้าใหม่ จำกัด 1 สิทธิ์ต่อบัญชี เดือนถัดไปคิดราคาปกติ ฿350 ต่อเดือน ยกเลิกได้ทุกเมื่อ ไม่มีสัญญาผูกมัด" }
-      },
-      {
-        "@type": "Question",
-        "name": "ต้องตั้ง VPN เพื่อเชื่อมเซิร์ฟเวอร์มายคราฟไหม?",
-        "acceptedAnswer": { "@type": "Answer", "text": "ไม่จำเป็น แนะนำใช้ Bridge Plugin ของเรา วางไฟล์ .jar ลงใน /plugins ใส่ token แล้วปลั๊กอินจะเชื่อมต่อกลับมาเองอัตโนมัติ ไม่ต้องเปิด port ไม่ต้องตั้ง VPN ใช้ได้กับเซิร์ฟเวอร์หลัง NAT หรือ ISP ทั่วไปได้เลย" }
-      },
-      {
-        "@type": "Question",
-        "name": "ราคารวมค่าธรรมเนียม EasySlip API ไหม?",
-        "acceptedAnswer": { "@type": "Answer", "text": "ราคาแพ็กเกจรายเดือนไม่รวมค่าธรรมเนียม EasySlip API ซึ่งคิดสูงสุด ฿0.396 ต่อรายการตรวจสลิป โดยจะหักจากยอดเติมเงินของลูกค้าเท่านั้น ไม่กระทบยอดค่าเช่ารายเดือน" }
-      },
-      {
-        "@type": "Question",
-        "name": "ติดตั้งเว็บร้านค้า Minecraft นานไหม?",
-        "acceptedAnswer": { "@type": "Answer", "text": "ระบบเป็นแบบอัตโนมัติเต็มรูปแบบ หลังชำระเงินเสร็จสิ้น เว็บไซต์ของคุณจะออนไลน์ภายใน 5-10 นาที" }
-      },
-      {
-        "@type": "Question",
-        "name": "รองรับการเติมเงินช่องทางไหนบ้าง?",
-        "acceptedAnswer": { "@type": "Answer", "text": "รองรับ PromptPay QR Code พร้อมระบบตรวจสอบสลิปอัตโนมัติด้วย EasySlip และ TrueMoney Gift Card" }
-      }
-    ]
+    "mainEntity": FAQ.map(item => ({
+      "@type": "Question",
+      "name": item.q,
+      "acceptedAnswer": { "@type": "Answer", "text": item.a },
+    })),
   };
 
   const orgSchema = {

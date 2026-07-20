@@ -54,6 +54,9 @@ services:
       network: host
     container_name: panel-backend
     restart: unless-stopped
+    # Generous cap — builds run in the host docker daemon (pid:host), not this
+    # cgroup, so the orchestrator itself stays light. Guards against a leak.
+    mem_limit: 1g
     environment:
       NODE_ENV: production
       NODE_OPTIONS: "--dns-result-order=ipv4first"
@@ -105,6 +108,7 @@ services:
         PANEL_BACKEND_INTERNAL_URL: http://panel-backend:5000
     container_name: panel-frontend
     restart: unless-stopped
+    mem_limit: 512m
     environment:
       PANEL_BACKEND_INTERNAL_URL: http://panel-backend:5000
     ports:

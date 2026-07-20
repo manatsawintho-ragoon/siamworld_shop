@@ -208,7 +208,7 @@ router.post('/exchange', asyncRoute(async (req, res) => {
 
   let decoded: JwtPayload;
   try {
-    decoded = jwt.verify(token, config.jwtSecret) as JwtPayload;
+    decoded = jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] }) as JwtPayload;
   } catch {
     throw new AuthError('Invalid or expired token');
   }
