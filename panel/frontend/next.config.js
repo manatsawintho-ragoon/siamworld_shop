@@ -21,7 +21,13 @@ const securityHeaders = [
       "img-src 'self' data: https:",
       "font-src 'self' data: https://fonts.gstatic.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "script-src 'self' 'unsafe-inline'",
+      // Cloudflare Turnstile loads its widget script AND renders an iframe from
+      // challenges.cloudflare.com, so it needs both script-src and frame-src.
+      // Without frame-src the iframe falls back to default-src 'self' and the
+      // widget silently never appears, which blocks login and register.
+      // Keep this in sync with the helmet policy in panel/backend/src/server.ts.
+      "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
+      "frame-src 'self' https://challenges.cloudflare.com",
       "connect-src 'self' https: wss:",
       "upgrade-insecure-requests",
     ].join('; '),
