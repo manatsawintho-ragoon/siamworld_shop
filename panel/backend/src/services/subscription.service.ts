@@ -19,6 +19,16 @@ const execAsync = promisify(exec);
 
 const PACKAGE_MONTHS: Record<number, string> = { 1: 'price_1month', 3: 'price_3months', 6: 'price_6months' };
 
+// Internal/staging tenants. They are real active subscriptions so they must keep
+// working everywhere else, but they must never appear in the public landing-page
+// marquee as if they were paying customers. Extend via PUBLIC_SHOP_EXCLUDE
+// (comma-separated) so a new test tenant does not need a code change.
+const INTERNAL_SHOP_NAMES = new Set(
+  ['testwebshop', ...(process.env.PUBLIC_SHOP_EXCLUDE ?? '').split(',')]
+    .map(s => s.trim().toLowerCase())
+    .filter(Boolean)
+);
+
 export type SubscriptionKind = 'regular' | 'trial' | 'intro';
 
 class SubscriptionService {
@@ -740,7 +750,9 @@ class SubscriptionService {
     const [rows] = await pool.execute<RowDataPacket[]>(
       `SELECT shop_name, domain FROM subscriptions WHERE status = 'active' ORDER BY created_at ASC`
     );
-    return rows.map(r => ({ name: r.shop_name as string, domain: r.domain as string }));
+    return rows
+      .filter(r => !INTERNAL_SHOP_NAMES.has(String(r.shop_name).toLowerCase()))
+      .map(r => ({ name: r.shop_name as string, domain: r.domain as string }));
   }
 }
 

@@ -9,8 +9,25 @@ import { FAQ, EASYSLIP_FEE_MAX } from '@/lib/faq';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion, useScroll, useSpring } from 'framer-motion';
 import { Icon, type IconName } from '@/components/ui/icon';
+
+/* Scroll progress: continuous motion that tracks the reader's own position
+   rather than animating on its own, so it adds life without competing for
+   attention. Hidden entirely under prefers-reduced-motion. */
+function ScrollProgress() {
+  const reduceMotion = useReducedMotion();
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, { stiffness: 120, damping: 26, restDelta: 0.001 });
+  if (reduceMotion) return null;
+  return (
+    <motion.div
+      style={{ scaleX }}
+      className="fixed top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-primary via-amber-400 to-primary origin-left z-[120] pointer-events-none"
+      aria-hidden="true"
+    />
+  );
+}
 
 interface Package { months: number; price: number; label: string; save: number; kind?: 'regular' | 'trial' | 'intro' }
 interface Promo {
@@ -266,9 +283,9 @@ function PackageCard({
       viewport={{ once: true, amount: 0.2 }}
       transition={{ delay: index * 0.1, duration: 0.45, ease: 'easeOut' }}
     >
-      <Card className={`flex flex-col relative h-full transition-all duration-300 hover:-translate-y-1 ${
+      <Card className={`flex flex-col relative h-full overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
         isPromo
-          ? 'border-primary border-2 shadow-2xl shadow-primary/10 lg:scale-105 hover:shadow-primary/20 bg-card'
+          ? 'card-sheen border-primary border-2 shadow-2xl shadow-primary/10 lg:scale-105 hover:shadow-primary/20 bg-card'
           : 'border-border hover:border-primary/40 hover:shadow-lg bg-card/60 shadow-sm'
       }`}>
         {isPromo && (
@@ -281,38 +298,51 @@ function PackageCard({
 
         <CardHeader className="pb-4 pt-8">
           <CardTitle className="text-lg font-black">{isTrial ? 'ทดลองใช้ฟรี' : pkg.label}</CardTitle>
-          <div className="flex items-baseline gap-1.5 mt-3">
+          <div className="flex items-baseline flex-wrap gap-x-2 gap-y-1 mt-3">
+            {isPromo && pkg.regularPrice && (
+              <span className="text-xl font-bold text-muted-foreground/60 line-through tabular-nums" aria-label={`ราคาปกติ ${pkg.regularPrice} บาท`}>
+                ฿{pkg.regularPrice}
+              </span>
+            )}
             <span className="text-5xl font-black tracking-tighter text-foreground tabular-nums">฿{pkg.price}</span>
             <span className="text-sm font-bold text-muted-foreground">
               /{pkg.days ? `${pkg.days} วัน` : (pkg.months === 1 ? 'เดือนแรก' : pkg.label)}
             </span>
           </div>
+          {isPromo && pkg.regularPrice > pkg.price && (
+            <span className="inline-flex w-fit items-center gap-1 mt-2 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-black text-emerald-600">
+              <Icon name="tag" className="text-[10px]" />
+              ประหยัด ฿{pkg.regularPrice - pkg.price} เดือนแรก
+            </span>
+          )}
           {isTrial && <p className="text-[13px] text-muted-foreground mt-2 font-medium">ไม่ต้องผูกบัตร ยกเลิกเองได้</p>}
           {isPromo && <p className="text-[13px] text-muted-foreground mt-2 font-medium">เดือนถัดไป ฿{pkg.regularPrice ?? 350}/เดือน ไม่มีสัญญาผูกมัด</p>}
           {!isTrial && !isPromo && <p className="text-[13px] text-muted-foreground mt-2 font-medium">ราคาปกติ จ่ายทีเดียวคุ้มกว่า</p>}
         </CardHeader>
 
-        <CardContent className="flex-1 pb-6 space-y-5">
+        {/* Only what actually differs between plans lives in the card. The
+            shared feature list is rendered once below the grid, so the prices
+            stay the most legible thing in this section. */}
+        <CardContent className="flex-1 pb-6">
           <ul className="space-y-3">
             <li className="flex items-start gap-2.5 text-sm font-bold text-foreground/90">
-              <Icon name="circle-check" className="text-primary text-base mt-0.5 shrink-0" /> ฟีเจอร์พรีเมียมครบทุกอย่าง
+              <Icon name="circle-check" className="text-primary text-base mt-0.5 shrink-0" />
+              ฟีเจอร์พรีเมียมครบทุกอย่าง
             </li>
-            <li className="flex items-start gap-2.5 text-[13px] font-medium text-muted-foreground">
-              <Icon name="box-open" className="text-primary/60 text-base mt-0.5 shrink-0" /> ระบบสุ่ม Loot Box แอนิเมชั่น CS:GO
-            </li>
-            <li className="flex items-start gap-2.5 text-[13px] font-medium text-muted-foreground">
-              <Icon name="archive" className="text-primary/60 text-base mt-0.5 shrink-0" /> ระบบคลังเว็บ (Web Inventory)
-            </li>
-            <li className={`flex items-start gap-2.5 text-[13px] font-medium ${isTrial ? 'text-muted-foreground/40' : 'text-muted-foreground'}`}>
-              <Icon name={isTrial ? 'circle-xmark' : 'qrcode'} className={`text-base mt-0.5 shrink-0 ${isTrial ? 'text-destructive/40' : 'text-primary/60'}`} />
-              ตรวจสลิป PromptPay อัตโนมัติ 24 ชม.
-            </li>
+            {isTrial ? (
+              <li className="flex items-start gap-2.5 text-[13px] font-medium text-muted-foreground/70">
+                <Icon name="circle-xmark" className="text-destructive/50 text-base mt-0.5 shrink-0" />
+                ยังไม่รวมตรวจสลิป PromptPay อัตโนมัติ
+              </li>
+            ) : (
+              <li className="flex items-start gap-2.5 text-[13px] font-medium text-muted-foreground">
+                <Icon name="qrcode" className="text-primary/60 text-base mt-0.5 shrink-0" />
+                ตรวจสลิป PromptPay อัตโนมัติ 24 ชม.
+              </li>
+            )}
             <li className="flex items-start gap-2.5 text-[13px] font-bold text-emerald-600">
               <Icon name="wallet" className="text-emerald-500 text-base mt-0.5 shrink-0" />
               <span>เติมผ่าน TrueMoney อั่งเปา ฟรี ไม่มีค่าธรรมเนียม</span>
-            </li>
-            <li className="flex items-start gap-2.5 text-[13px] font-medium text-muted-foreground">
-              <Icon name="arrows-rotate" className="text-primary/60 text-base mt-0.5 shrink-0" /> อัปเดตเวอร์ชันใหม่ฟรีตลอดการใช้งาน
             </li>
           </ul>
         </CardContent>
@@ -458,6 +488,8 @@ function LandingContent() {
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
+      <ScrollProgress />
+
       {/* Promo strip: the offer stays visible before anything else loads */}
       <div className="promo-strip-anim bg-gradient-to-r from-primary via-amber-500 to-primary text-primary-foreground">
         <div className="max-w-7xl mx-auto px-6 py-2 flex items-center justify-center gap-2 text-center text-[12px] md:text-[13px] font-bold">
@@ -504,39 +536,6 @@ function LandingContent() {
               ))}
             </ul>
 
-            {shops.length > 0 && (
-              <div className="mt-10 pt-8 border-t border-border">
-                <p className="font-bold text-sm text-foreground mb-4 flex items-center gap-2">
-                  <Icon name="heart" className="text-primary" />
-                  เซิร์ฟเวอร์ที่เปิดร้านกับเราแล้ว
-                </p>
-                {/* Marquee: the list is rendered twice inside the track and the
-                    CSS shifts it by exactly -50%, so the loop is seamless.
-                    Hovering pauses it so the links stay clickable. */}
-                <div className="marquee-viewport relative w-full overflow-hidden">
-                  <div className="marquee-track flex w-max gap-3 items-center py-1">
-                    {[...shops, ...shops].map((s, i) => (
-                      <a
-                        key={i}
-                        href={`https://${s.domain}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-hidden={i >= shops.length}
-                        tabIndex={i >= shops.length ? -1 : undefined}
-                        className="flex shrink-0 items-center gap-2 bg-secondary/50 px-4 py-1.5 rounded-full border border-border hover:border-primary/40 hover:bg-secondary transition-all cursor-pointer group/shop"
-                      >
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-soft-ping" />
-                        <span className="text-sm font-bold text-muted-foreground tracking-tight whitespace-nowrap group-hover/shop:text-primary transition-colors">
-                          {s.name}
-                        </span>
-                      </a>
-                    ))}
-                  </div>
-                  <div className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
-                  <div className="absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="relative hero-pop-3">
@@ -565,6 +564,53 @@ function LandingContent() {
           </div>
         </div>
       </section>
+
+      {/* ── Customer marquee ─────────────────────────────────────────────
+          Promoted out of the hero column to a full-bleed band: social proof
+          lands immediately after the pitch instead of being buried under the
+          CTA. The list is rendered twice inside the track and the CSS shifts
+          it by exactly -50%, so the loop is seamless. Hovering pauses it so
+          the links stay clickable, and the duplicated half is hidden from
+          assistive tech. */}
+      {shops.length > 0 && (
+        <section className="relative py-8 md:py-9 bg-background border-t border-border overflow-hidden">
+          <div className="max-w-7xl mx-auto px-6">
+            <p className="flex items-center justify-center gap-2 text-[13px] font-bold text-muted-foreground mb-5 text-center">
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 animate-soft-ping" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              <span>
+                <span className="text-foreground font-black tabular-nums">{shops.length}</span> เซิร์ฟเวอร์เปิดร้านกับเราแล้ว
+              </span>
+            </p>
+          </div>
+
+          <div className="marquee-viewport relative w-full overflow-hidden">
+            <div className="marquee-track flex w-max gap-3 md:gap-4 items-center py-1">
+              {[...shops, ...shops].map((s, i) => (
+                <a
+                  key={i}
+                  href={`https://${s.domain}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-hidden={i >= shops.length}
+                  tabIndex={i >= shops.length ? -1 : undefined}
+                  className="flex shrink-0 items-center gap-2.5 bg-card px-5 py-2.5 rounded-full border border-border shadow-sm hover:border-primary/50 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group/shop"
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                  <span className="text-sm md:text-[15px] font-bold text-foreground/80 tracking-tight whitespace-nowrap group-hover/shop:text-primary transition-colors">
+                    {s.name}
+                  </span>
+                  <Icon name="arrow-up-right-from-square" className="text-[10px] text-muted-foreground/0 group-hover/shop:text-primary/70 transition-colors" />
+                </a>
+              ))}
+            </div>
+            <div className="absolute inset-y-0 left-0 w-16 md:w-32 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+            <div className="absolute inset-y-0 right-0 w-16 md:w-32 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+          </div>
+        </section>
+      )}
 
       {/* ── Live stats ───────────────────────────────────────────────── */}
       <section className="py-10 bg-secondary/40 border-y border-border">
@@ -842,8 +888,9 @@ function LandingContent() {
       </section>
 
       {/* ── Pricing ──────────────────────────────────────────────────── */}
-      <section id="pricing" className="py-20 md:py-24 bg-background">
-        <div className="max-w-7xl mx-auto px-6">
+      <section id="pricing" className="relative py-20 md:py-24 bg-background overflow-hidden">
+        <div className="animate-blob-drift absolute top-1/4 left-1/2 -translate-x-1/2 w-[700px] h-[700px] bg-primary/5 rounded-full blur-[130px] pointer-events-none" style={{ animationDelay: '-4s' }} />
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
           <SectionHead
             eyebrow="ราคา"
             title="เลือกแพ็กเกจที่เหมาะกับคุณ"
@@ -860,6 +907,27 @@ function LandingContent() {
             {packages.length > 0 && (
               <PackageCard pkg={packages[1] || packages[0]} index={2} easyslipFee={easyslipFee} onShowEasySlip={() => setShowEasySlipPlan(true)} />
             )}
+          </div>
+
+          {/* Shared across every plan, so it is stated once here instead of
+              being repeated inside all three cards. */}
+          <div className="mt-10 rounded-2xl border border-border bg-secondary/30 p-6 md:p-7">
+            <p className="text-center text-[13px] font-black text-foreground mb-5">
+              ทุกแพ็กเกจได้ครบเท่ากัน
+            </p>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-3">
+              {([
+                { icon: 'box-open', text: 'ระบบสุ่ม Loot Box แอนิเมชั่น CS:GO' },
+                { icon: 'archive', text: 'ระบบคลังเว็บ (Web Inventory)' },
+                { icon: 'arrows-rotate', text: 'อัปเดตเวอร์ชันใหม่ฟรีตลอดการใช้งาน' },
+                { icon: 'headset', text: 'ซัพพอร์ตคนไทย ตอบเร็ว' },
+              ] as { icon: IconName; text: string }[]).map(f => (
+                <li key={f.text} className="flex items-start gap-2.5 text-[13px] font-medium text-muted-foreground">
+                  <Icon name={f.icon} className="text-primary/70 text-base mt-0.5 shrink-0" />
+                  {f.text}
+                </li>
+              ))}
+            </ul>
           </div>
 
           <p className="text-center text-[12px] text-muted-foreground/80 mt-8 max-w-2xl mx-auto leading-relaxed font-medium">
