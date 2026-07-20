@@ -406,8 +406,85 @@ function HeroShopMarquee({ shops, shopCount }: { shops: { name: string; domain: 
 function PlanRail({ children, count }: { children: React.ReactNode; count: number }) {
   const reduceMotion = useReducedMotion();
   const ref = useRef<HTMLDivElement>(null);
-  const [touched, setTouched] = useState(false);
+  const [atStart, setAtStart] = useState(true);
+  const [atEnd, setAtEnd] = useState(false);
 
+  /* Mouse drag has to be implemented by hand. A native scroll container gives
+     you touch drag, wheel, trackpad and the scrollbar for free, but a mouse
+     press-and-move does nothing at all, which is why the rail felt dead on
+     desktop. */
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    let dragging = false;
+    let startX = 0;
+    let startScroll = 0;
+    let moved = 0;
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (e.button !== 0) return;
+      dragging = true;
+      moved = 0;
+      startX = e.clientX;
+      startScroll = el.scrollLeft;
+      el.classList.add('is-dragging');
+    };
+    const onPointerMove = (e: PointerEvent) => {
+      if (!dragging) return;
+      const dx = e.clientX - startX;
+      moved = Math.max(moved, Math.abs(dx));
+      el.scrollLeft = startScroll - dx;
+      // Only capture once the gesture is clearly a drag, so a plain click on a
+      // card's button still reaches the button.
+      if (moved > 6 && el.hasPointerCapture?.(e.pointerId) === false) {
+        el.setPointerCapture(e.pointerId);
+      }
+    };
+    const endDrag = (e: PointerEvent) => {
+      if (!dragging) return;
+      dragging = false;
+      el.classList.remove('is-dragging');
+      if (el.hasPointerCapture?.(e.pointerId)) el.releasePointerCapture(e.pointerId);
+    };
+    // A drag that ends on top of a link would otherwise fire that link.
+    const onClickCapture = (e: MouseEvent) => {
+      if (moved > 6) { e.preventDefault(); e.stopPropagation(); moved = 0; }
+    };
+
+    el.addEventListener('pointerdown', onPointerDown);
+    el.addEventListener('pointermove', onPointerMove);
+    el.addEventListener('pointerup', endDrag);
+    el.addEventListener('pointercancel', endDrag);
+    el.addEventListener('click', onClickCapture, true);
+
+    return () => {
+      el.removeEventListener('pointerdown', onPointerDown);
+      el.removeEventListener('pointermove', onPointerMove);
+      el.removeEventListener('pointerup', endDrag);
+      el.removeEventListener('pointercancel', endDrag);
+      el.removeEventListener('click', onClickCapture, true);
+    };
+  }, []);
+
+  // Arrow enable/disable state.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const sync = () => {
+      const max = el.scrollWidth - el.clientWidth;
+      setAtStart(el.scrollLeft <= 2);
+      setAtEnd(el.scrollLeft >= max - 2);
+    };
+    sync();
+    el.addEventListener('scroll', sync, { passive: true });
+    window.addEventListener('resize', sync);
+    return () => { el.removeEventListener('scroll', sync); window.removeEventListener('resize', sync); };
+  }, [count]);
+
+  /* Auto-drift. Honours prefers-reduced-motion: someone who asked the OS for
+     less movement should not get a panel that slides on its own, so for them
+     the rail only moves via drag, arrows, wheel or keyboard. */
   useEffect(() => {
     if (reduceMotion) return;
     const el = ref.current;
@@ -418,17 +495,17 @@ function PlanRail({ children, count }: { children: React.ReactNode; count: numbe
     let acc = 0;
     let hovering = false;
     let resumeAt = 0;
-    const SPEED = 0.28; // px per frame, slow enough to read while it moves
+    const SPEED = 0.5;
 
-    const nudgePause = () => { resumeAt = performance.now() + 2600; setTouched(true); };
+    const pause = () => { resumeAt = performance.now() + 3000; };
     const onEnter = () => { hovering = true; };
-    const onLeave = () => { hovering = false; resumeAt = performance.now() + 600; };
+    const onLeave = () => { hovering = false; resumeAt = performance.now() + 800; };
 
     const passive = { passive: true } as const;
-    el.addEventListener('pointerdown', nudgePause, passive);
-    el.addEventListener('wheel', nudgePause, passive);
-    el.addEventListener('touchstart', nudgePause, passive);
-    el.addEventListener('keydown', nudgePause, passive);
+    el.addEventListener('pointerdown', pause, passive);
+    el.addEventListener('wheel', pause, passive);
+    el.addEventListener('touchstart', pause, passive);
+    el.addEventListener('keydown', pause, passive);
     el.addEventListener('mouseenter', onEnter, passive);
     el.addEventListener('mouseleave', onLeave, passive);
 
@@ -437,6 +514,7 @@ function PlanRail({ children, count }: { children: React.ReactNode; count: numbe
       const max = el.scrollWidth - el.clientWidth;
       if (max <= 1 || hovering || now < resumeAt) return;
 
+      // scrollLeft is integral, so sub-pixel speed is accumulated separately.
       acc += SPEED * dir;
       const step = Math.trunc(acc);
       if (step !== 0) {
@@ -450,38 +528,62 @@ function PlanRail({ children, count }: { children: React.ReactNode; count: numbe
 
     return () => {
       cancelAnimationFrame(raf);
-      el.removeEventListener('pointerdown', nudgePause);
-      el.removeEventListener('wheel', nudgePause);
-      el.removeEventListener('touchstart', nudgePause);
-      el.removeEventListener('keydown', nudgePause);
+      el.removeEventListener('pointerdown', pause);
+      el.removeEventListener('wheel', pause);
+      el.removeEventListener('touchstart', pause);
+      el.removeEventListener('keydown', pause);
       el.removeEventListener('mouseenter', onEnter);
       el.removeEventListener('mouseleave', onLeave);
     };
   }, [reduceMotion]);
 
+  const nudge = (dirn: 1 | -1) => {
+    const el = ref.current;
+    if (!el) return;
+    const card = el.querySelector(':scope > *') as HTMLElement | null;
+    const amount = card ? card.offsetWidth + 20 : 320;
+    el.scrollBy({ left: amount * dirn, behavior: 'smooth' });
+  };
+
+  const arrowBase =
+    'grid place-items-center w-11 h-11 rounded-full border-2 border-border bg-card shadow-lg transition-all duration-200 cursor-pointer hover:border-primary hover:text-primary hover:scale-110 disabled:opacity-0 disabled:pointer-events-none';
+
   return (
     <div className="relative">
+      {/* Generous vertical padding: overflow-x also clips vertically, so
+          without it the featured card's lift and glow get cut off. */}
       <div
         ref={ref}
-        className="plan-rail flex gap-5 overflow-x-auto pb-4 pt-6 px-1 -mx-1 items-stretch"
+        className="plan-rail flex gap-5 overflow-x-auto py-10 px-1 -mx-1 items-stretch"
         tabIndex={0}
         role="region"
-        aria-label={`แพ็กเกจทั้งหมด ${count} แบบ เลื่อนซ้ายขวาเพื่อดูเพิ่ม`}
+        aria-label={`แพ็กเกจทั้งหมด ${count} แบบ เลื่อนซ้ายขวาเพื่อดูเพิ่มได้`}
       >
         {children}
       </div>
 
       {/* Edge fades hint that the rail continues past the viewport. */}
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-8 md:w-14 bg-gradient-to-r from-background to-transparent" aria-hidden="true" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-8 md:w-14 bg-gradient-to-l from-background to-transparent" aria-hidden="true" />
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-8 md:w-16 bg-gradient-to-r from-background to-transparent z-10" aria-hidden="true" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-8 md:w-16 bg-gradient-to-l from-background to-transparent z-10" aria-hidden="true" />
 
-      {!touched && (
-        <p className="flex items-center justify-center gap-2 text-[12px] font-bold text-muted-foreground mt-2">
-          <Icon name="hand-pointer" className="text-sm" />
-          ลากดูแพ็กเกจอื่นได้
-          <Icon name="arrow-right" className="drag-hint text-sm" />
-        </p>
-      )}
+      <button
+        type="button"
+        onClick={() => nudge(-1)}
+        disabled={atStart}
+        aria-label="ดูแพ็กเกจก่อนหน้า"
+        className={`${arrowBase} absolute left-0 md:-left-4 top-1/2 -translate-y-1/2 z-20`}
+      >
+        <Icon name="chevron-left" className="text-lg" />
+      </button>
+      <button
+        type="button"
+        onClick={() => nudge(1)}
+        disabled={atEnd}
+        aria-label="ดูแพ็กเกจถัดไป"
+        className={`${arrowBase} absolute right-0 md:-right-4 top-1/2 -translate-y-1/2 z-20`}
+      >
+        <Icon name="chevron-right" className="text-lg" />
+      </button>
     </div>
   );
 }
@@ -515,12 +617,16 @@ function PackageCard({
       transition={{ delay: index * 0.08, duration: 0.45, ease: [0.34, 1.3, 0.64, 1] }}
     >
       <Card
-        style={{ ['--tier' as string]: tier.color, ['--tier-glow' as string]: tier.glow }}
-        className={`landing-tier-card flex flex-col relative h-full overflow-hidden border-2 ${armed ? 'tier-armed' : ''} ${
+        className={`landing-tier-card flex flex-col relative h-full overflow-hidden border-2 rounded-2xl ${armed ? 'tier-armed' : ''} ${
           isPromo
-            ? 'card-sheen landing-tier-featured shadow-2xl bg-card'
-            : 'bg-card/60 shadow-sm'
+            ? 'card-sheen landing-tier-featured shadow-2xl bg-card scale-[1.04] md:scale-[1.06] z-10'
+            : 'bg-card/70 shadow-sm'
         }`}
+        style={{
+          ['--tier' as string]: tier.color,
+          ['--tier-glow' as string]: tier.glow,
+          borderColor: isPromo ? tier.color : undefined,
+        }}
       >
         {/* Rarity strip: the tier colour reads before any text does. It starts
             below the badge row so the "คุ้มที่สุด" badge never sits on top of
@@ -933,8 +1039,8 @@ function LandingContent() {
         <div className="max-w-7xl mx-auto px-6">
           <SectionHead
             eyebrow="ฟีเจอร์เด่น"
-            title="ครบ จบในที่เดียว"
-            sub="ไม่ต้องยุ่งยากกับการตั้งค่า หรือปวดหัวกับการดูแลระบบด้วยตัวเอง"
+            title={<>ได้ครบทุกอย่าง ตั้งแต่<span className="text-primary">วันแรก</span></>}
+            sub="ไม่ต้องซื้อปลั๊กอินเพิ่ม ไม่ต้องจ้างคนทำเว็บ ไม่ต้องดูแลเซิร์ฟเวอร์เอง"
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -946,12 +1052,14 @@ function LandingContent() {
                 viewport={{ once: true, amount: 0.3 }}
                 transition={{ delay: i * 0.06, duration: 0.4, ease: 'easeOut' }}
               >
-                <Card className="bg-card hover:border-primary/50 hover:-translate-y-1 transition-all shadow-sm h-full">
+                <Card className="group/feat bg-card border-2 hover:border-primary/50 hover:-translate-y-1.5 hover:shadow-xl transition-all duration-300 shadow-sm h-full">
                   <CardHeader>
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4">
+                    {/* Icon tile flips to solid on hover: one small reward per
+                        card, cheap because only colour and transform move. */}
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4 transition-all duration-300 group-hover/feat:bg-primary group-hover/feat:text-primary-foreground group-hover/feat:scale-110 group-hover/feat:-rotate-6">
                       <Icon name={f.icon} className="text-xl" />
                     </div>
-                    <CardTitle className="text-lg">{f.title}</CardTitle>
+                    <CardTitle className="text-lg group-hover/feat:text-primary transition-colors">{f.title}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
@@ -1087,7 +1195,7 @@ function LandingContent() {
         <div className="max-w-5xl mx-auto px-6">
           <SectionHead
             eyebrow="เทียบให้เห็นภาพ"
-            title="ทำไมต้องเช่ากับเรา"
+            title={<>จ้างเขียนเว็บเอง <span className="text-primary">หลักหมื่น</span> เริ่มกับเรา ฿99</>}
             sub="เทียบกับการจ้างเขียนเว็บเอง และการใช้แพลตฟอร์มต่างประเทศ"
           />
 

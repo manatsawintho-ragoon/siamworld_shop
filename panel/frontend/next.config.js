@@ -4,6 +4,8 @@
 // object-src, base-uri and form-action. Panel uses Google Fonts (Kanit) and inline
 // lucide SVG (no icon CDN), talks to the same-origin API, and does OAuth via
 // top-level redirects (unaffected by form-action).
+const isDev = process.env.NODE_ENV === 'development';
+
 const securityHeaders = [
   { key: 'X-Frame-Options', value: 'DENY' },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -25,8 +27,13 @@ const securityHeaders = [
       // challenges.cloudflare.com, so it needs both script-src and frame-src.
       // Without frame-src the iframe falls back to default-src 'self' and the
       // widget silently never appears, which blocks login and register.
-      // Keep this in sync with the helmet policy in panel/backend/src/server.ts.
-      "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
+      // static.cloudflareinsights.com is the Web Analytics beacon, injected by
+      // Cloudflare into the response; without it the browser blocks the script
+      // and logs a CSP violation on every page load.
+      // `unsafe-eval` is added in development only: the Next dev bundler
+      // evaluates modules as strings, so without it the dev server cannot boot
+      // a page at all. It is never emitted in production builds.
+      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://challenges.cloudflare.com https://static.cloudflareinsights.com`,
       "frame-src 'self' https://challenges.cloudflare.com",
       "connect-src 'self' https: wss:",
       "upgrade-insecure-requests",

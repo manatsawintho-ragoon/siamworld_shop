@@ -285,23 +285,24 @@
 .plan-rail {
   scrollbar-width: none;
   -ms-overflow-style: none;
-  scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
+  cursor: grab;
 }
+.plan-rail.is-dragging { cursor: grabbing; }
+/* While dragging, stop the pointer from selecting text or starting a native
+   image drag, both of which cancel the gesture halfway through. */
+.plan-rail.is-dragging * { user-select: none; }
 .plan-rail::-webkit-scrollbar { display: none; }
-.plan-rail > * { scroll-snap-align: center; }
 
-/* Hint that the rail is draggable, shown until the user first scrolls it. */
-@keyframes drag-hint {
-  0%, 100% { transform: translateX(0); opacity: 0.65; }
-  50%      { transform: translateX(6px); opacity: 1; }
-}
-.drag-hint { animation: drag-hint 1.8s ease-in-out infinite; }
+/* NO scroll-snap here, deliberately.
+   Snap points hijack programmatic scrolling: setting scrollLeft to 120 landed
+   on 94 because the snap target won, so the 1px-per-step auto-drift was pulled
+   straight back every frame and the rail looked frozen. Free scrolling plus
+   arrow buttons gives the same "lands on a card" feel without fighting it. */
 
 @media (prefers-reduced-motion: reduce) {
   .marquee-track,
-  .drag-hint,
   .animate-caret,
   .animate-blob-drift,
   .animate-soft-ping,
