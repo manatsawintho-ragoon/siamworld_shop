@@ -5,6 +5,7 @@ import { ToastProvider } from '@/components/Toast';
 import SessionToastBridge from '@/components/SessionToastBridge';
 import PageTitleManager from '@/components/PageTitle';
 import ActivityTracker from '@/components/ActivityTracker';
+import FacebookFab from '@/components/FacebookFab';
 import { FAQ } from '@/lib/faq';
 
 export const metadata: Metadata = {
@@ -181,7 +182,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        <ToastProvider><AuthProvider><SessionToastBridge /><PageTitleManager /><ActivityTracker />{children}</AuthProvider></ToastProvider>
+        <ToastProvider><AuthProvider><SessionToastBridge /><PageTitleManager /><ActivityTracker />{children}<FacebookFab /></AuthProvider></ToastProvider>
       </body>
     </html>
   );

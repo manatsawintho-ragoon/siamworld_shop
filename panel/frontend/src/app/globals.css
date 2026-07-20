@@ -277,8 +277,31 @@
   );
 }
 
+/* ── Plan rail ───────────────────────────────────────────────────────
+   Horizontal scroller holding every plan. Uses native overflow scrolling so
+   touch drag, trackpad, keyboard and scrollbar all work without JS taking
+   over the gesture. The auto-drift is applied by nudging scrollLeft, which
+   native scrolling can interrupt at any moment, so it never blocks the user. */
+.plan-rail {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+.plan-rail::-webkit-scrollbar { display: none; }
+.plan-rail > * { scroll-snap-align: center; }
+
+/* Hint that the rail is draggable, shown until the user first scrolls it. */
+@keyframes drag-hint {
+  0%, 100% { transform: translateX(0); opacity: 0.65; }
+  50%      { transform: translateX(6px); opacity: 1; }
+}
+.drag-hint { animation: drag-hint 1.8s ease-in-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   .marquee-track,
+  .drag-hint,
   .animate-caret,
   .animate-blob-drift,
   .animate-soft-ping,

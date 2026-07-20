@@ -11,7 +11,7 @@
  */
 import type { IconName } from '@/components/ui/icon';
 
-export type TierKey = 'common' | 'epic' | 'legendary';
+export type TierKey = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
 export interface TierDef {
   /** Uppercase tier name shown in the badge. Conveys tier without relying on colour. */
@@ -24,9 +24,11 @@ export interface TierDef {
 }
 
 export const TIERS: Record<TierKey, TierDef> = {
-  common:    { label: 'COMMON',    color: '#64748b', glow: 'rgba(100,116,139,0.30)', icon: 'cube'  },
-  epic:      { label: 'EPIC',      color: '#9333ea', glow: 'rgba(147,51,234,0.38)',  icon: 'gem'   },
-  legendary: { label: 'LEGENDARY', color: '#f97316', glow: 'rgba(249,115,22,0.38)',  icon: 'crown' },
+  common:    { label: 'COMMON',    color: '#64748b', glow: 'rgba(100,116,139,0.30)', icon: 'cube'   },
+  uncommon:  { label: 'UNCOMMON',  color: '#16a34a', glow: 'rgba(22,163,74,0.32)',   icon: 'cubes'  },
+  rare:      { label: 'RARE',      color: '#2563eb', glow: 'rgba(37,99,235,0.34)',   icon: 'swords' },
+  epic:      { label: 'EPIC',      color: '#9333ea', glow: 'rgba(147,51,234,0.38)',  icon: 'gem'    },
+  legendary: { label: 'LEGENDARY', color: '#f97316', glow: 'rgba(249,115,22,0.38)',  icon: 'crown'  },
 };
 
 export function getTier(key: TierKey): TierDef {

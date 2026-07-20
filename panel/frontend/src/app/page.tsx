@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useMemo, Suspense } from 'react';
+import { useEffect, useState, useMemo, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import Navbar from '@/components/Navbar';
@@ -66,41 +66,63 @@ const PRIMARY_CTA = { href: '/order?kind=trial', label: 'เริ่มทด�
    which leaves LEGENDARY meaningful for the longest plan. */
 interface TierCopy {
   tier: TierKey;
-  /** Who this plan suits, one line, shown directly under the title. */
+  /** Who this plan suits, one short line under the title. */
   audience: string;
+  /** Single reason to pick this one, shown as the card's hook. */
+  hook: string;
   points: { icon: IconName; text: string; tone?: 'good' | 'muted' | 'off' }[];
 }
 
-const TIER_COPY: Record<'trial' | 'intro' | 'regular', TierCopy> = {
+/** Points every paid plan shares, so each plan only lists what differs. */
+const PAID_POINTS: TierCopy['points'] = [
+  { icon: 'circle-check', text: 'ได้ฟีเจอร์ครบทุกอย่าง', tone: 'good' },
+  { icon: 'qrcode',       text: 'ตรวจสลิป PromptPay ให้อัตโนมัติ 24 ชม.' },
+  { icon: 'wallet',       text: 'เติมผ่าน TrueMoney อั่งเปา ฟรี', tone: 'good' },
+];
+
+export type PlanId = 'trial' | 'intro' | 'm1' | 'm3' | 'm6';
+
+/* The three tiers the user sees first are COMMON, EPIC and LEGENDARY, so they
+   are ordered first. UNCOMMON and RARE sit to their right and are reached by
+   dragging, which keeps the default view to three readable cards while still
+   showing every plan. */
+const PLAN_ORDER: PlanId[] = ['trial', 'intro', 'm6', 'm1', 'm3'];
+
+const TIER_COPY: Record<PlanId, TierCopy> = {
   trial: {
     tier: 'common',
-    audience: 'เหมาะกับคนที่อยากลองระบบจริงก่อนตัดสินใจ',
+    audience: 'อยากลองก่อน ยังไม่อยากจ่าย',
+    hook: 'ลองใช้ของจริงฟรี 7 วัน',
     points: [
-      { icon: 'circle-check', text: 'ได้ฟีเจอร์พรีเมียมครบทุกอย่าง', tone: 'good' },
-      { icon: 'clock',        text: 'ใช้งานเต็มรูปแบบ 7 วัน ไม่ต้องผูกบัตร' },
-      { icon: 'wallet',       text: 'เติมผ่าน TrueMoney อั่งเปา ฟรี ไม่มีค่าธรรมเนียม', tone: 'good' },
-      { icon: 'circle-xmark', text: 'ยังไม่รวมตรวจสลิป PromptPay อัตโนมัติ', tone: 'off' },
+      { icon: 'circle-check', text: 'ได้ฟีเจอร์ครบทุกอย่าง', tone: 'good' },
+      { icon: 'clock',        text: 'ใช้ได้เต็มที่ 7 วัน ไม่ต้องผูกบัตร' },
+      { icon: 'wallet',       text: 'เติมผ่าน TrueMoney อั่งเปา ฟรี', tone: 'good' },
+      { icon: 'circle-xmark', text: 'ยังไม่รวมตรวจสลิป PromptPay', tone: 'off' },
     ],
   },
   intro: {
     tier: 'epic',
-    audience: 'เหมาะกับเซิร์ฟเวอร์ที่พร้อมเปิดขายจริงเดือนนี้',
-    points: [
-      { icon: 'circle-check', text: 'ได้ฟีเจอร์พรีเมียมครบทุกอย่าง', tone: 'good' },
-      { icon: 'qrcode',       text: 'ตรวจสลิป PromptPay อัตโนมัติ 24 ชม.' },
-      { icon: 'wallet',       text: 'เติมผ่าน TrueMoney อั่งเปา ฟรี ไม่มีค่าธรรมเนียม', tone: 'good' },
-      { icon: 'shield-check', text: 'ยกเลิกได้ทุกเมื่อ ไม่มีสัญญาผูกมัด' },
-    ],
+    audience: 'พร้อมเปิดขายจริงเดือนนี้',
+    hook: 'เริ่มต้นถูกที่สุด ลดจาก ฿350 เหลือ ฿99',
+    points: [...PAID_POINTS, { icon: 'shield-check', text: 'ยกเลิกได้ทุกเมื่อ ไม่มีสัญญาผูกมัด' }],
   },
-  regular: {
+  m6: {
     tier: 'legendary',
-    audience: 'เหมาะกับเซิร์ฟเวอร์ที่เปิดยาว อยากล็อกราคาไว้',
-    points: [
-      { icon: 'circle-check',   text: 'ได้ฟีเจอร์พรีเมียมครบทุกอย่าง', tone: 'good' },
-      { icon: 'qrcode',         text: 'ตรวจสลิป PromptPay อัตโนมัติ 24 ชม.' },
-      { icon: 'wallet',         text: 'เติมผ่าน TrueMoney อั่งเปา ฟรี ไม่มีค่าธรรมเนียม', tone: 'good' },
-      { icon: 'arrows-rotate',  text: 'จ่ายทีเดียว ไม่ต้องต่ออายุทุกเดือน' },
-    ],
+    audience: 'เปิดยาว อยากล็อกราคาไว้',
+    hook: 'จ่ายทีเดียว ประหยัดที่สุด',
+    points: [...PAID_POINTS, { icon: 'arrows-rotate', text: 'จ่ายครั้งเดียว ไม่ต้องต่อทุกเดือน' }],
+  },
+  m1: {
+    tier: 'uncommon',
+    audience: 'อยากจ่ายเป็นรายเดือน',
+    hook: 'ยืดหยุ่นที่สุด จ่ายเท่าที่ใช้',
+    points: [...PAID_POINTS, { icon: 'shield-check', text: 'ยกเลิกได้ทุกเมื่อ' }],
+  },
+  m3: {
+    tier: 'rare',
+    audience: 'เปิดต่อเนื่องระยะกลาง',
+    hook: 'คุ้มขึ้น แต่ยังไม่ต้องจ่ายยาว',
+    points: [...PAID_POINTS, { icon: 'arrows-rotate', text: 'ต่ออายุน้อยลง เหลือ 4 เดือนครั้ง' }],
   },
 };
 
@@ -266,11 +288,6 @@ function TypewriterHeadline() {
           </span>
         ))}
         {animating && caretAfter >= leadCount && <Caret />}
-        <span
-          aria-hidden="true"
-          className="absolute left-0 -bottom-1 h-[6px] rounded-full bg-primary/25 transition-[width] duration-300 ease-out"
-          style={{ width: shown >= HEADLINE_WORDS.length ? '100%' : '0%' }}
-        />
       </span>
     </h1>
   );
@@ -315,53 +332,210 @@ function SectionHead({ eyebrow, title, sub, center = true }: { eyebrow: string; 
   );
 }
 
+/* ── Hero customer marquee ───────────────────────────────────────────
+   Compact social proof directly under the primary CTA: a narrow viewport
+   shows roughly four or five shops at a time while the track loops left
+   through every one of them.
+
+   `shopCount` comes from the same public stat the counters use, so the
+   headline number here and the one in the stats row can never disagree. The
+   pills themselves are the shops that are currently live, so nothing links to
+   a site that is down. */
+function HeroShopMarquee({ shops, shopCount }: { shops: { name: string; domain: string }[]; shopCount?: number }) {
+  if (!shops.length) return null;
+  const total = shopCount ?? shops.length;
+
+  return (
+    <div className="hero-pop-3 mt-6 max-w-xl">
+      <p className="flex items-center gap-2 text-[12px] font-bold text-muted-foreground mb-2.5">
+        <span className="relative flex h-2 w-2 shrink-0">
+          <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 animate-soft-ping" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+        </span>
+        <span>
+          <span className="text-foreground font-black tabular-nums">{total}</span> เซิร์ฟเวอร์เปิดร้านกับเราแล้ว
+        </span>
+      </p>
+
+      <div className="marquee-viewport relative w-full overflow-hidden">
+        {/* The list is rendered twice and shifted by exactly -50%, so the loop
+            lands on an identical frame. The duplicate half is hidden from
+            assistive tech and removed from the tab order. */}
+        <div className="marquee-track flex w-max gap-2.5 items-center py-1">
+          {[...shops, ...shops].map((s, i) => (
+            <a
+              key={i}
+              href={`https://${s.domain}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-hidden={i >= shops.length}
+              tabIndex={i >= shops.length ? -1 : undefined}
+              className="flex shrink-0 items-center gap-2 bg-card px-3 py-2 rounded-lg border border-border shadow-sm hover:border-primary/60 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group/shop"
+            >
+              <span
+                className="grid place-items-center w-5 h-5 rounded bg-primary/10 text-primary text-[10px] font-black shrink-0 group-hover/shop:bg-primary group-hover/shop:text-primary-foreground transition-colors"
+                aria-hidden="true"
+              >
+                {s.name.trim().charAt(0).toUpperCase()}
+              </span>
+              <span className="text-[13px] font-bold text-foreground/80 tracking-tight whitespace-nowrap group-hover/shop:text-primary transition-colors">
+                {s.name}
+              </span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" aria-hidden="true" />
+            </a>
+          ))}
+        </div>
+        <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+        <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+      </div>
+    </div>
+  );
+}
+
+/* ── Plan rail ───────────────────────────────────────────────────────
+   Every plan lives in one horizontal scroller. The default view lands on the
+   three headline tiers (COMMON / EPIC / LEGENDARY); the remaining plans are a
+   drag to the right.
+
+   The drift is applied by nudging `scrollLeft` on a native scroll container
+   rather than transforming a track, which matters: native scrolling stays
+   interruptible, so a drag, wheel, keyboard or scrollbar grab takes over
+   mid-drift instead of fighting it. Any interaction pauses the drift and it
+   resumes after a short idle. Sub-pixel speed is accumulated separately
+   because `scrollLeft` snaps to integers. */
+function PlanRail({ children, count }: { children: React.ReactNode; count: number }) {
+  const reduceMotion = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  const [touched, setTouched] = useState(false);
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    const el = ref.current;
+    if (!el) return;
+
+    let raf = 0;
+    let dir = 1;
+    let acc = 0;
+    let hovering = false;
+    let resumeAt = 0;
+    const SPEED = 0.28; // px per frame, slow enough to read while it moves
+
+    const nudgePause = () => { resumeAt = performance.now() + 2600; setTouched(true); };
+    const onEnter = () => { hovering = true; };
+    const onLeave = () => { hovering = false; resumeAt = performance.now() + 600; };
+
+    const passive = { passive: true } as const;
+    el.addEventListener('pointerdown', nudgePause, passive);
+    el.addEventListener('wheel', nudgePause, passive);
+    el.addEventListener('touchstart', nudgePause, passive);
+    el.addEventListener('keydown', nudgePause, passive);
+    el.addEventListener('mouseenter', onEnter, passive);
+    el.addEventListener('mouseleave', onLeave, passive);
+
+    const tick = (now: number) => {
+      raf = requestAnimationFrame(tick);
+      const max = el.scrollWidth - el.clientWidth;
+      if (max <= 1 || hovering || now < resumeAt) return;
+
+      acc += SPEED * dir;
+      const step = Math.trunc(acc);
+      if (step !== 0) {
+        acc -= step;
+        el.scrollLeft += step;
+        if (el.scrollLeft >= max - 1) dir = -1;
+        else if (el.scrollLeft <= 1) dir = 1;
+      }
+    };
+    raf = requestAnimationFrame(tick);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      el.removeEventListener('pointerdown', nudgePause);
+      el.removeEventListener('wheel', nudgePause);
+      el.removeEventListener('touchstart', nudgePause);
+      el.removeEventListener('keydown', nudgePause);
+      el.removeEventListener('mouseenter', onEnter);
+      el.removeEventListener('mouseleave', onLeave);
+    };
+  }, [reduceMotion]);
+
+  return (
+    <div className="relative">
+      <div
+        ref={ref}
+        className="plan-rail flex gap-5 overflow-x-auto pb-4 pt-6 px-1 -mx-1 items-stretch"
+        tabIndex={0}
+        role="region"
+        aria-label={`แพ็กเกจทั้งหมด ${count} แบบ เลื่อนซ้ายขวาเพื่อดูเพิ่ม`}
+      >
+        {children}
+      </div>
+
+      {/* Edge fades hint that the rail continues past the viewport. */}
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-8 md:w-14 bg-gradient-to-r from-background to-transparent" aria-hidden="true" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-8 md:w-14 bg-gradient-to-l from-background to-transparent" aria-hidden="true" />
+
+      {!touched && (
+        <p className="flex items-center justify-center gap-2 text-[12px] font-bold text-muted-foreground mt-2">
+          <Icon name="hand-pointer" className="text-sm" />
+          ลากดูแพ็กเกจอื่นได้
+          <Icon name="arrow-right" className="drag-hint text-sm" />
+        </p>
+      )}
+    </div>
+  );
+}
+
 /* ── Pricing card ────────────────────────────────────────────────────── */
 
 function PackageCard({
   pkg,
+  planId,
   isPromo = false,
   isTrial = false,
   index = 0,
   easyslipFee,
   onShowEasySlip,
-}: { pkg: any; isPromo?: boolean; isTrial?: boolean; index?: number; easyslipFee: number; onShowEasySlip: () => void }) {
+}: { pkg: any; planId: PlanId; isPromo?: boolean; isTrial?: boolean; index?: number; easyslipFee: number; onShowEasySlip: () => void }) {
   const reduceMotion = useReducedMotion();
   // Touch devices have no hover, so the glow is armed when the card scrolls
   // into view instead. CSS picks whichever applies via @media (hover: …).
   const [armed, setArmed] = useState(false);
 
-  const copy = TIER_COPY[isTrial ? 'trial' : isPromo ? 'intro' : 'regular'];
+  const copy = TIER_COPY[planId];
   const tier = getTier(copy.tier);
 
   return (
     <motion.div
-      className={isPromo ? 'z-10' : ''}
+      className={`h-full ${isPromo ? 'z-10' : ''}`}
       initial={reduceMotion ? false : { opacity: 0, y: 24, scale: 0.96 }}
       whileInView={{ opacity: 1, y: 0, scale: 1 }}
       viewport={{ once: true, amount: 0.2 }}
       onViewportEnter={() => setArmed(true)}
-      transition={{ delay: index * 0.1, duration: 0.45, ease: [0.34, 1.3, 0.64, 1] }}
+      transition={{ delay: index * 0.08, duration: 0.45, ease: [0.34, 1.3, 0.64, 1] }}
     >
       <Card
         style={{ ['--tier' as string]: tier.color, ['--tier-glow' as string]: tier.glow }}
         className={`landing-tier-card flex flex-col relative h-full overflow-hidden border-2 ${armed ? 'tier-armed' : ''} ${
           isPromo
-            ? 'card-sheen landing-tier-featured shadow-2xl lg:scale-105 bg-card'
+            ? 'card-sheen landing-tier-featured shadow-2xl bg-card'
             : 'bg-card/60 shadow-sm'
         }`}
       >
-        {/* Rarity strip: the tier colour reads before any text does. */}
-        <div className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: tier.color }} aria-hidden="true" />
+        {/* Rarity strip: the tier colour reads before any text does. It starts
+            below the badge row so the "คุ้มที่สุด" badge never sits on top of
+            it. */}
+        <div className="absolute inset-x-0 top-0 h-1.5" style={{ backgroundColor: tier.color }} aria-hidden="true" />
 
         {isPromo && (
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-            <Badge className="bg-primary text-primary-foreground px-4 py-1 text-[10px] uppercase tracking-wider font-black shadow-lg border-none whitespace-nowrap">
+          <div className="absolute top-1.5 left-0 right-0 flex justify-center z-20">
+            <Badge className="bg-primary text-primary-foreground rounded-t-none px-4 py-1 text-[10px] uppercase tracking-wider font-black shadow-lg border-none whitespace-nowrap">
               คุ้มที่สุด
             </Badge>
           </div>
         )}
 
-        <CardHeader className="pb-4 pt-8">
+        <CardHeader className={isPromo ? 'pb-4 pt-11' : 'pb-4 pt-8'}>
           {/* Tier is stated in text as well as colour, so it survives both
               colour-blindness and greyscale printing. */}
           <span
@@ -390,9 +564,9 @@ function PackageCard({
               ประหยัด ฿{pkg.regularPrice - pkg.price} เดือนแรก
             </span>
           )}
-          {isTrial && <p className="text-[13px] text-muted-foreground mt-2 font-medium">ไม่ต้องผูกบัตร ยกเลิกเองได้</p>}
-          {isPromo && <p className="text-[13px] text-muted-foreground mt-2 font-medium">เดือนถัดไป ฿{pkg.regularPrice ?? 350}/เดือน ไม่มีสัญญาผูกมัด</p>}
-          {!isTrial && !isPromo && <p className="text-[13px] text-muted-foreground mt-2 font-medium">ราคาปกติ จ่ายทีเดียวคุ้มกว่า</p>}
+          {/* One-line hook: the single reason to pick this plan over the others. */}
+          <p className="text-[13px] font-bold mt-3 leading-snug" style={{ color: tier.color }}>{copy.hook}</p>
+          {isPromo && <p className="text-[12px] text-muted-foreground mt-1.5 font-medium">เดือนถัดไป ฿{pkg.regularPrice ?? 350}/เดือน</p>}
         </CardHeader>
 
         {/* Plan-specific points only. The list shared by every plan is
@@ -555,7 +729,11 @@ function LandingContent() {
      prerendered HTML never advertises "0 customers" to crawlers.
      `num` counts up on arrival; `text` is shown as-is. */
   const stats: { label: string; num?: number; text?: string; icon: IconName }[] = useMemo(() => [
-    { label: 'ร้านค้าที่เปิดใช้งาน', num: statsData ? (statsData.total_shops || 0) : undefined, icon: 'store' },
+    /* Cumulative wording on purpose: `total_shops` counts every non-cancelled
+       subscription, which includes shops whose subscription has since lapsed.
+       Labelling that "เปิดใช้งาน" (currently active) would overstate it. The
+       hero marquee shows this same number with the same wording. */
+    { label: 'เซิร์ฟเวอร์เปิดร้านกับเราแล้ว', num: statsData ? (statsData.total_shops || 0) : undefined, icon: 'store' },
     { label: 'สมาชิกในระบบ',        num: statsData ? (statsData.total_users || 0) : undefined, icon: 'users' },
     { label: 'ติดตั้งเสร็จภายใน',    text: statsData?.delivery_speed || undefined, icon: 'bolt' },
     { label: 'รับเงินอัตโนมัติ',      text: '24 ชม.', icon: 'qrcode' },
@@ -563,6 +741,20 @@ function LandingContent() {
 
   const trialPromo = promos.find(p => p.kind === 'trial');
   const introPromo = promos.find(p => p.kind === 'intro');
+
+  /* Every plan the rail shows, in PLAN_ORDER. Plans the API does not return
+     are dropped rather than rendered empty, so a backend that only offers
+     some packages still produces a coherent rail. */
+  const planCards = useMemo(() => {
+    const byId: Record<PlanId, any> = {
+      trial: trialPromo,
+      intro: introPromo,
+      m1: packages.find(p => p.months === 1),
+      m3: packages.find(p => p.months === 3),
+      m6: packages.find(p => p.months === 6),
+    };
+    return PLAN_ORDER.filter(id => byId[id]).map(id => ({ id, pkg: byId[id] }));
+  }, [trialPromo, introPromo, packages]);
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
@@ -589,9 +781,15 @@ function LandingContent() {
               <TypewriterHeadline />
             </div>
 
+            {/* Broken into short lines on purpose: Thai has no spaces between
+                words, so a long unbroken paragraph is hard to scan. Each line
+                is one idea. */}
             <p className="hero-pop-2 text-lg md:text-xl text-muted-foreground leading-relaxed mb-8 max-w-xl font-medium">
-              ระบบร้านค้าสำเร็จรูปสำหรับเซิร์ฟเวอร์ไทย ผู้เล่นเติมเงินเอง ของส่งเข้าเกมอัตโนมัติ
-              คุณไม่ต้องเขียนโค้ดและไม่ต้องเฝ้าสลิปเอง
+              เว็บร้านค้าสำเร็จรูปสำหรับเซิร์ฟเวอร์มายคราฟไทย
+              <br className="hidden sm:block" />
+              ผู้เล่นเติมเงินเอง ของเข้าเกมอัตโนมัติ 24 ชม.
+              <br className="hidden sm:block" />
+              คุณไม่ต้องเขียนโค้ด ไม่ต้องนั่งเฝ้าสลิป
             </p>
 
             <div className="hero-pop-2 flex flex-col sm:flex-row gap-3 mb-5">
@@ -614,6 +812,7 @@ function LandingContent() {
               ))}
             </ul>
 
+            <HeroShopMarquee shops={shops} shopCount={statsData?.total_shops} />
           </div>
 
           <div className="relative hero-pop-3">
@@ -642,80 +841,6 @@ function LandingContent() {
           </div>
         </div>
       </section>
-
-      {/* ── Customer marquee ─────────────────────────────────────────────
-          Promoted out of the hero column to a full-bleed band: social proof
-          lands immediately after the pitch instead of being buried under the
-          CTA. The list is rendered twice inside the track and the CSS shifts
-          it by exactly -50%, so the loop is seamless. Hovering pauses it so
-          the links stay clickable, and the duplicated half is hidden from
-          assistive tech. */}
-      {shops.length > 0 && (
-        <section className="relative py-8 md:py-9 bg-background border-t border-border overflow-hidden">
-          <div className="max-w-7xl mx-auto px-6">
-            <p className="flex items-center justify-center gap-2 text-[13px] font-bold text-muted-foreground mb-3 text-center">
-              <span className="relative flex h-2 w-2 shrink-0">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 animate-soft-ping" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-              </span>
-              <span>
-                <span className="text-foreground font-black tabular-nums">{shops.length}</span> เซิร์ฟเวอร์เปิดร้านกับเราแล้ว
-              </span>
-            </p>
-
-            {/* Decorative XP-style accent under the count. It fills once on
-                view and does not encode a quota, so it cannot misrepresent
-                the real number above it. */}
-            <motion.div
-              className="mx-auto mb-6 h-1.5 w-40 rounded-full bg-muted overflow-hidden"
-              aria-hidden="true"
-            >
-              <motion.div
-                className="xp-fill h-full rounded-full bg-gradient-to-r from-primary to-amber-400 origin-left"
-                initial={reduceMotion ? false : { scaleX: 0 }}
-                whileInView={{ scaleX: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1, ease: 'easeOut' }}
-              />
-            </motion.div>
-          </div>
-
-          <div className="marquee-viewport relative w-full overflow-hidden">
-            <div className="marquee-track flex w-max gap-3 md:gap-4 items-center py-1">
-              {[...shops, ...shops].map((s, i) => (
-                <a
-                  key={i}
-                  href={`https://${s.domain}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-hidden={i >= shops.length}
-                  tabIndex={i >= shops.length ? -1 : undefined}
-                  className="flex shrink-0 items-center gap-2.5 bg-card px-4 py-3 rounded-xl border-2 border-border shadow-sm hover:border-primary/60 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer group/shop"
-                >
-                  {/* Blocky server-card mark: first letter as an item slot. */}
-                  <span
-                    className="grid place-items-center w-7 h-7 rounded-md bg-primary/10 text-primary text-[13px] font-black shrink-0 group-hover/shop:bg-primary group-hover/shop:text-primary-foreground transition-colors"
-                    aria-hidden="true"
-                  >
-                    {s.name.trim().charAt(0).toUpperCase()}
-                  </span>
-                  <span className="text-sm md:text-[15px] font-bold text-foreground/80 tracking-tight whitespace-nowrap group-hover/shop:text-primary transition-colors">
-                    {s.name}
-                  </span>
-                  {/* Static dot on purpose: one pulsing indicator lives on the
-                      count above. Pulsing all ~28 pills would animate as many
-                      box-shadows at once, which is both visually noisy and off
-                      the compositor. */}
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" aria-hidden="true" />
-                  <Icon name="arrow-up-right-from-square" className="text-[10px] text-muted-foreground/0 group-hover/shop:text-primary/70 transition-colors" />
-                </a>
-              ))}
-            </div>
-            <div className="absolute inset-y-0 left-0 w-16 md:w-32 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
-            <div className="absolute inset-y-0 right-0 w-16 md:w-32 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
-          </div>
-        </section>
-      )}
 
       {/* ── Live stats ───────────────────────────────────────────────── */}
       <section className="py-10 bg-secondary/40 border-y border-border">
@@ -989,17 +1114,29 @@ function LandingContent() {
                     transition={{ delay: i * 0.05, duration: 0.3, ease: 'easeOut' }}
                     className="group/row"
                   >
-                    <th scope="row" className="p-4 text-sm font-bold text-foreground border-t border-border align-middle group-hover/row:text-primary transition-colors">
+                    <th scope="row" className="py-4 pr-4 pl-2 text-[13px] font-bold text-foreground border-t border-border align-middle group-hover/row:text-primary transition-colors">
                       {row.label}
                     </th>
-                    <td className="p-4 text-center text-sm font-bold text-foreground bg-primary/5 border-t border-primary/20 align-middle group-hover/row:bg-primary/10 transition-colors">
-                      <span className="inline-flex items-center gap-1.5">
+                    <td className="p-4 text-center text-[13px] font-black text-foreground bg-primary/5 border-t border-primary/20 align-middle group-hover/row:bg-primary/10 transition-colors">
+                      <span className="inline-flex items-center gap-1.5 justify-center">
                         <Icon name="circle-check" className="text-primary shrink-0" />
                         {row.ours}
                       </span>
                     </td>
-                    <td className="p-4 text-center text-sm text-muted-foreground border-t border-border align-middle">{row.custom}</td>
-                    <td className="p-4 text-center text-sm text-muted-foreground border-t border-border align-middle">{row.foreign}</td>
+                    {/* Alternatives get a muted cross so the row reads at a
+                        glance without having to compare the wording. */}
+                    <td className="p-4 text-center text-[13px] text-muted-foreground border-t border-border align-middle">
+                      <span className="inline-flex items-center gap-1.5 justify-center">
+                        <Icon name="circle-xmark" className="text-destructive/40 shrink-0" />
+                        {row.custom}
+                      </span>
+                    </td>
+                    <td className="p-4 text-center text-[13px] text-muted-foreground border-t border-border align-middle">
+                      <span className="inline-flex items-center gap-1.5 justify-center">
+                        <Icon name="circle-xmark" className="text-destructive/40 shrink-0" />
+                        {row.foreign}
+                      </span>
+                    </td>
                   </motion.tr>
                 ))}
               </tbody>
@@ -1014,21 +1151,25 @@ function LandingContent() {
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <SectionHead
             eyebrow="ราคา"
-            title="เลือกแพ็กเกจที่เหมาะกับคุณ"
-            sub="ทุกแพ็กเกจได้ฟีเจอร์ครบเท่ากัน พร้อมอัปเดตเวอร์ชันใหม่ฟรีตลอดการใช้งาน"
+            title={<>เริ่มขายได้ในราคา <span className="text-primary">฿99</span> เดือนแรก</>}
+            sub="ทุกแพ็กเกจได้ฟีเจอร์เท่ากันหมด ต่างกันแค่ระยะเวลา ยิ่งจ่ายยาว ยิ่งถูกต่อเดือน ลองฟรีก่อน 7 วันได้ ไม่ต้องผูกบัตร"
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch pt-4">
-            {trialPromo && (
-              <PackageCard pkg={trialPromo} isTrial index={0} easyslipFee={easyslipFee} onShowEasySlip={() => setShowEasySlipPlan(true)} />
-            )}
-            {introPromo && (
-              <PackageCard pkg={introPromo} isPromo index={1} easyslipFee={easyslipFee} onShowEasySlip={() => setShowEasySlipPlan(true)} />
-            )}
-            {packages.length > 0 && (
-              <PackageCard pkg={packages[1] || packages[0]} index={2} easyslipFee={easyslipFee} onShowEasySlip={() => setShowEasySlipPlan(true)} />
-            )}
-          </div>
+          <PlanRail count={planCards.length}>
+            {planCards.map((p, i) => (
+              <div key={p.id} className="shrink-0 w-[280px] sm:w-[300px] lg:w-[340px]">
+                <PackageCard
+                  pkg={p.pkg}
+                  planId={p.id}
+                  isTrial={p.id === 'trial'}
+                  isPromo={p.id === 'intro'}
+                  index={i}
+                  easyslipFee={easyslipFee}
+                  onShowEasySlip={() => setShowEasySlipPlan(true)}
+                />
+              </div>
+            ))}
+          </PlanRail>
 
           {/* Shared across every plan, so it is stated once here instead of
               being repeated inside all three cards. */}
@@ -1091,26 +1232,6 @@ function LandingContent() {
 
       {/* ── FAQ ──────────────────────────────────────────────────────── */}
       <FaqSection />
-
-      {/* ── Final CTA ────────────────────────────────────────────────── */}
-      <section className="py-20 md:py-24 bg-secondary/50 border-y border-border">
-        <div className="max-w-3xl mx-auto px-6 text-center">
-          <h2 className="text-3xl md:text-5xl font-black text-foreground tracking-tight mb-5 leading-tight">
-            พร้อมเปิดร้านแล้วใช่ไหม
-          </h2>
-          <p className="text-muted-foreground text-lg mb-8 font-medium leading-relaxed">
-            ทดลองฟรี 7 วัน ไม่ต้องผูกบัตร ถ้าไม่ชอบก็ปล่อยให้หมดอายุได้เลย
-          </p>
-          <Button size="lg" className="cta-sweep relative overflow-hidden h-14 px-10 text-base font-black rounded-full shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer" asChild>
-            <Link href={PRIMARY_CTA.href}>
-              <Icon name="rocket" className="mr-2" /> {PRIMARY_CTA.label}
-            </Link>
-          </Button>
-          <p className="text-[13px] text-muted-foreground mt-5 font-semibold">
-            มีคำถามก่อนตัดสินใจ? <Link href="/contact" className="text-primary hover:underline">ทักหาเราได้เลย</Link>
-          </p>
-        </div>
-      </section>
 
       {/* ── Footer ───────────────────────────────────────────────────── */}
       <footer className="bg-background py-16 border-t border-border">
