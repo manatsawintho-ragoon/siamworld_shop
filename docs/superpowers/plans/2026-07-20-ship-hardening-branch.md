@@ -191,13 +191,18 @@ Building `panel-frontend` pulls `panel-backend` into a recreate via
 failure while the container is actually running. Check this output before
 re-running anything.
 
-- [ ] **Step 3: Confirm the containers run non-root**
+- [ ] **Step 3: Confirm the container user is as designed**
 
 ```bash
 docker exec panel-backend id
 docker exec panel-frontend id
 ```
-Expected: a non-zero `uid=`. If either returns `uid=0(root)`, the non-root change did not take effect. STOP and report.
+
+Expected:
+- `panel-frontend`: non-zero `uid=` (currently `uid=1000(node)`). If this is `uid=0(root)`, the non-root change did not take effect. STOP and report.
+- `panel-backend`: `uid=0(root)` is **correct and intended**. `panel/backend/Dockerfile:2-4` documents why: it drives Docker on the host (docker.sock, nsenter, iptables) to deploy and manage customer shops on the same VPS. This is the accepted single-VPS control-plane design. Do not "fix" it.
+
+The non-root hardening applies to the shop images (`backend/Dockerfile:33` and `frontend/Dockerfile:41`, both `USER node`), which is what Task 5 verifies.
 
 - [ ] **Step 4: Confirm the panel serves**
 
@@ -271,9 +276,22 @@ Any failure STOPS the rollout. Roll back per Task 7 before touching customer sho
 
 ```bash
 deploy/manage-customer.sh --action restart --name testwebshop
-docker logs sw-testwebshop-backend-1 2>&1 | grep -i "shutting down"
+rtk proxy bash -c "docker logs sw-testwebshop-backend-1 --tail 40 2>&1"
 ```
-Expected: a `SIGTERM received, shutting down...` line, and no `Graceful shutdown timed out` line. Confirms the new handler runs and completes inside its 10s budget.
+Expected: a `SIGTERM received, shutting down...` line followed by
+`RCON pool: all connections closed`, and no `Graceful shutdown timed out` line.
+Confirms the handler runs and completes inside its 10s budget.
+
+Two gotchas observed when this ran on 2026-07-20:
+
+1. **Read the log through `rtk proxy`.** RTK truncates and filters long output,
+   which made a successful drain look like a missing log line. Any verification
+   step whose conclusion depends on complete output must bypass RTK.
+2. **`--action restart` restarts MySQL and Redis too**, so the backend briefly
+   logs `Failed to start server ... ECONNREFUSED :3306` and restarts once or
+   twice before MySQL is ready. This is pre-existing retry behaviour, not a
+   regression, and it self-heals. It does **not** affect Task 6, because
+   `rebuild` uses `--no-deps` and never touches the database tier.
 
 ---
 
