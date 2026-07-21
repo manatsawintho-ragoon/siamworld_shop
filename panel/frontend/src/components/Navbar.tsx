@@ -7,6 +7,7 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import AuthModal from './AuthModal';
 import { Button } from './ui/button';
 import { Icon, type IconName } from '@/components/ui/icon';
+import LanguageSwitcher from './LanguageSwitcher';
 
 function NavbarContent() {
   const { user, logout } = useAuth();
@@ -147,6 +148,8 @@ function NavbarContent() {
           </div>
 
           <div className="hidden md:flex items-center gap-4">
+            <LanguageSwitcher />
+
             <button onClick={toggleDark} className="text-muted-foreground hover:text-foreground transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-secondary cursor-pointer">
               <Icon name={isDark ? 'sun' : 'moon'} className={`text-sm`} />
             </button>
@@ -219,6 +222,10 @@ function NavbarContent() {
           </div>
 
           <div className="md:hidden flex items-center gap-3">
+            {/* compact: flag + chevron only, so the mobile bar keeps room for
+                the theme toggle and the hamburger */}
+            <LanguageSwitcher compact />
+
             <button onClick={toggleDark} className="text-muted-foreground w-8 h-8 flex items-center justify-center cursor-pointer">
               <Icon name={isDark ? 'sun' : 'moon'} className={`text-sm`} />
             </button>
