@@ -2,6 +2,17 @@
  * TEMPORARY end-to-end verification against a throwaway MySQL.
  * Not part of the normal suite (filename ends .itest.ts, jest matches *.test.ts).
  * Run explicitly:  npx jest --testMatch='**\/*.itest.ts'
+ *
+ * Setup:
+ *   docker run -d --name campaign-test-mysql -e MYSQL_ROOT_PASSWORD=testpw \
+ *     -e MYSQL_DATABASE=siamtest -p 13306:3306 mysql:8.0
+ *   # then apply migrations/032_campaign_points.sql
+ *
+ * GOTCHA: do NOT gate readiness on `mysqladmin ping`. It reports alive while
+ * the container is still initialising, before the root password is applied, so
+ * the migration silently fails with "Access denied" and every test here fails
+ * for a reason that has nothing to do with the code. Poll a real query instead:
+ *   docker exec campaign-test-mysql mysql -uroot -ptestpw -e "SELECT 1" siamtest
  */
 process.env.MYSQL_HOST = '127.0.0.1';
 process.env.MYSQL_PORT = '13306';

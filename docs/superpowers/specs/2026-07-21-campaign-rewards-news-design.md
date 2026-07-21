@@ -264,6 +264,15 @@ flow.
 
 ### A5. Clawback
 
+> **BLOCKING GATE FOR SLICE 2.** As shipped in Slice 1, `revokeForTransaction`
+> has **no production caller**: no admin endpoint invokes it, and the de-facto
+> refund tool (`user.service.updateUserProfile`) deliberately does not touch
+> points. This is harmless only while points cannot be spent. Before the Reward
+> Shop makes points spendable, clawback MUST be wired to a real reversal path,
+> or the exact abuse this section exists to prevent ("top up, take the points,
+> redeem a reward, dispute the payment") is wide open. Do not start Slice 2
+> without closing this.
+
 If a top-up is later reversed or refunded by an admin,
 `campaignService.revokeForTransaction(transactionId)` runs:
 
