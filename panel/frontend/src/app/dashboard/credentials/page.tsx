@@ -25,7 +25,7 @@ function CopyBtn({ value }: { value: string }) {
     <Button
       variant="outline"
       size="sm"
-      className={`h-7 text-[10px] font-bold uppercase tracking-widest cursor-pointer px-3 flex-shrink-0 ${copied ? 'border-emerald-500 text-emerald-600 bg-emerald-500/10' : ''}`}
+      className={`h-7 text-[12px] font-medium cursor-pointer px-3 flex-shrink-0 ${copied ? 'border-emerald-500 text-emerald-600 bg-emerald-500/10' : ''}`}
       onClick={() => { navigator.clipboard.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
     >
       <Icon name={copied ? 'check' : 'copy'} className={`mr-1.5`} />
@@ -44,7 +44,7 @@ function CredRow({ label, value, icon, secret }: { label: string; value: string 
         {icon && <div className="w-8 h-8 rounded-lg bg-secondary text-foreground flex items-center justify-center">
           <Icon name={icon} className="text-sm" />
         </div>}
-        <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{label}</span>
+        <span className="text-xs font-medium text-muted-foreground">{label}</span>
       </div>
       <div className="flex items-center gap-3 min-w-0 bg-secondary/30 px-3 py-1.5 rounded-lg border border-border">
         <span className={`text-sm font-semibold truncate ${secret && !show ? 'text-muted-foreground' : 'text-foreground'}`}>{display}</span>
@@ -112,7 +112,7 @@ function CountdownPasswordRow({ cred, onExpire }: { cred: ShopAdmin; onExpire: (
           <div className="w-8 h-8 rounded-lg bg-secondary text-foreground flex items-center justify-center">
             <Icon name="key" className="text-sm" />
           </div>
-          <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">รหัสผ่าน</span>
+          <span className="text-xs font-medium text-muted-foreground">รหัสผ่าน</span>
         </div>
         <div className="flex items-center gap-3 min-w-0 bg-secondary/30 px-3 py-1.5 rounded-lg border border-border">
           <span className={`text-sm font-semibold truncate font-mono ${show ? 'text-foreground' : 'text-muted-foreground'}`}>
@@ -130,11 +130,11 @@ function CountdownPasswordRow({ cred, onExpire }: { cred: ShopAdmin; onExpire: (
         <div className="flex-1 h-2 rounded-full bg-secondary overflow-hidden">
           <div className={`h-full ${barColor} transition-all duration-300 ease-linear`} style={{ width: `${pct}%` }} />
         </div>
-        <span className="text-[11px] font-bold text-muted-foreground tabular-nums w-28 text-right">
+        <span className="text-[13px] font-medium text-muted-foreground tabular-nums w-28 text-right">
           เปลี่ยนใน {secondsLeft} วิ
         </span>
       </div>
-      <p className="text-[11px] text-muted-foreground font-medium mt-2">
+      <p className="text-[13px] text-muted-foreground font-medium mt-2">
         <Icon name="rotate" className="mr-1.5" />รหัสนี้เปลี่ยนทุก 1 นาทีเพื่อความปลอดภัย คัดลอกแล้วรีบเข้าสู่ระบบ
       </p>
     </div>
@@ -198,7 +198,7 @@ function AdminCredentialCard({ cred, error, busy, onRefetch, onRegen, onSetPw }:
                 </>
               )}
             </div>
-            <p className="text-[11px] text-muted-foreground font-medium mt-3">
+            <p className="text-[13px] text-muted-foreground font-medium mt-3">
               <Icon name="circle-info" className="mr-1.5" />
               {cred.rotating
                 ? 'แนะนำ: ตั้งรหัสถาวรของคุณเอง จะได้เข้าสู่ระบบได้โดยไม่ต้องเปิดหน้านี้ดูรหัสทุกครั้ง'
@@ -234,9 +234,9 @@ function CodeBlock({ code, language = 'yaml' }: { code: string; language?: strin
   return (
     <div className="rounded-xl overflow-hidden border border-border mt-2 bg-slate-950">
       <div className="px-4 py-2 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{language}</span>
+        <span className="text-[12px] font-medium text-slate-400">{language}</span>
         <button onClick={() => { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-          className="text-[10px] font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1.5 transition-colors cursor-pointer">
+          className="text-[12px] font-medium text-amber-400 hover:text-amber-300 flex items-center gap-1.5 transition-colors cursor-pointer">
           <Icon name={copied ? 'check' : 'copy'} /> {copied ? 'คัดลอกแล้ว' : 'คัดลอก'}
         </button>
       </div>
@@ -261,12 +261,12 @@ function CommandCard({ label, desc, code, lang = 'bash', tone = 'neutral' }: {
     <div className={`rounded-2xl border-2 overflow-hidden ${accent}`}>
       <div className="px-4 py-3 flex items-start justify-between gap-3 border-b border-border/40">
         <div className="min-w-0">
-          <p className="text-[13px] font-bold text-foreground leading-tight">{label}</p>
-          <p className="text-[11px] text-muted-foreground font-medium mt-0.5 leading-snug">{desc}</p>
+          <p className="text-[13px] font-medium text-foreground leading-tight">{label}</p>
+          <p className="text-[13px] text-muted-foreground font-medium mt-0.5 leading-snug">{desc}</p>
         </div>
         <button
           onClick={() => { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-          className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
+          className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[13px] font-medium transition-all cursor-pointer ${
             copied ? 'bg-emerald-500 text-white' : 'bg-foreground text-background hover:opacity-90'
           }`}
         >
@@ -275,7 +275,7 @@ function CommandCard({ label, desc, code, lang = 'bash', tone = 'neutral' }: {
         </button>
       </div>
       <pre className="px-4 py-3 text-[12px] leading-relaxed text-slate-200 bg-slate-950 overflow-x-auto whitespace-pre font-mono">
-        <span className="text-[9px] uppercase tracking-widest text-slate-500 font-sans block mb-1">{lang}</span>
+        <span className="text-[12px] text-slate-500 font-sans block mb-1">{lang}</span>
         {code}
       </pre>
     </div>
@@ -546,12 +546,12 @@ function CredContent() {
                   
                   {/* Auto-renew toggle */}
                   <div className="flex items-center gap-3 bg-secondary/50 px-3 py-1.5 rounded-xl border border-border">
-                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">ต่ออายุอัตโนมัติ</span>
+                    <span className="text-xs font-medium text-muted-foreground">ต่ออายุอัตโนมัติ</span>
                     <button
                       onClick={toggleAutoRenew}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${sub.auto_renew ? 'bg-emerald-500' : 'bg-muted'}`}
                     >
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${sub.auto_renew ? 'translate-x-6' : 'translate-x-1'}`} />
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${sub.auto_renew ? 'translate-x-6' : 'translate-x-1'}`} />
                     </button>
                   </div>
                 </CardHeader>
@@ -606,7 +606,7 @@ function CredContent() {
                     </CardTitle>
                     <CardDescription className="mt-1 font-semibold">การเชื่อมต่อเป็น <strong>ทางเลือกเสริม</strong> Bridge รองรับทั้ง <strong>AuthMe</strong> และ <strong>nLogin</strong> ปลั๊กอินจะตรวจจับให้เอง</CardDescription>
                   </div>
-                  <Badge variant="outline" className="text-[10px] font-extrabold uppercase tracking-widest bg-emerald-500/10 text-emerald-600 border-emerald-500/20">Optional</Badge>
+                  <Badge variant="outline" className="text-[12px] font-extrabold bg-emerald-500/10 text-emerald-600 border-emerald-500/20">Optional</Badge>
                 </div>
               </CardHeader>
               <CardContent>
@@ -616,7 +616,7 @@ function CredContent() {
                     className={`p-5 rounded-2xl border-2 transition-all cursor-pointer relative ${mode === 'none'
                       ? 'bg-emerald-500/5 border-emerald-500 shadow-sm'
                       : 'bg-background border-border hover:border-emerald-500/30'}`}>
-                    <Badge className="absolute -top-2 left-4 bg-emerald-500 text-white text-[9px] uppercase tracking-widest font-extrabold">มือใหม่</Badge>
+                    <Badge className="absolute -top-2 left-4 bg-emerald-500 text-white text-[12px] font-extrabold">มือใหม่</Badge>
                     <div className="flex items-center gap-3 mb-3 mt-1">
                       <Icon name="circle-check" className={`text-xl ${mode === 'none' ? 'text-emerald-500' : 'text-muted-foreground'}`} />
                       <span className={`text-base font-bold ${mode === 'none' ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
@@ -634,7 +634,7 @@ function CredContent() {
                     className={`p-5 rounded-2xl border-2 transition-all cursor-pointer relative ${mode === 'bridge'
                       ? 'bg-primary/5 border-primary shadow-sm'
                       : 'bg-background border-border hover:border-primary/50'}`}>
-                    <Badge className="absolute -top-2 left-4 bg-primary text-primary-foreground text-[9px] uppercase tracking-widest font-extrabold">แนะนำ</Badge>
+                    <Badge className="absolute -top-2 left-4 bg-primary text-primary-foreground text-[12px] font-extrabold">แนะนำ</Badge>
                     <div className="flex items-center gap-3 mb-3 mt-1">
                       <Icon name="bolt" className={`text-xl ${mode === 'bridge' ? 'text-primary' : 'text-muted-foreground'}`} />
                       <span className={`text-base font-bold ${mode === 'bridge' ? 'text-primary' : 'text-foreground'}`}>
@@ -741,7 +741,7 @@ function CredContent() {
                             Linux
                             {osType === 'linux' && <Icon name="circle-check" className="text-emerald-400 text-sm" />}
                           </p>
-                          <p className={`text-[11px] font-medium ${osType === 'linux' ? 'text-background/70' : 'text-muted-foreground'}`}>
+                          <p className={`text-[13px] font-medium ${osType === 'linux' ? 'text-background/70' : 'text-muted-foreground'}`}>
                             Ubuntu, Debian, CentOS
                           </p>
                         </div>
@@ -762,7 +762,7 @@ function CredContent() {
                             Windows
                             {osType === 'windows' && <Icon name="circle-check" className="text-emerald-400 text-sm" />}
                           </p>
-                          <p className={`text-[11px] font-medium ${osType === 'windows' ? 'text-background/70' : 'text-muted-foreground'}`}>
+                          <p className={`text-[13px] font-medium ${osType === 'windows' ? 'text-background/70' : 'text-muted-foreground'}`}>
                             Windows 10, 11, Server
                           </p>
                         </div>
@@ -781,12 +781,12 @@ function CredContent() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-bold text-foreground">สถานะการเชื่อมต่อ</p>
                         {bridgeStatus?.online ? (
-                          <Badge variant="success" className="font-bold px-3 uppercase tracking-widest"><span className="w-1.5 h-1.5 bg-emerald-600 rounded-full animate-pulse mr-2" />ออนไลน์</Badge>
+                          <Badge variant="success" className="font-bold px-3"><span className="w-1.5 h-1.5 bg-emerald-600 rounded-full animate-pulse mr-2" />ออนไลน์</Badge>
                         ) : (
-                          <Badge variant="outline" className="font-bold px-3 uppercase tracking-widest">รอการเชื่อมต่อ</Badge>
+                          <Badge variant="outline" className="font-bold px-3">รอการเชื่อมต่อ</Badge>
                         )}
                       </div>
-                      <p className="text-[11px] text-muted-foreground font-medium mt-1">
+                      <p className="text-[13px] text-muted-foreground font-medium mt-1">
                         Token: <span className="font-mono font-bold text-foreground">{bridgeStatus?.tokenPrefix || 'ยังไม่มี'}</span>
                         &nbsp;·&nbsp;Version: <span className="font-mono font-bold text-foreground">{bridgeStatus?.pluginVersion || 'ยังไม่มี'}</span>
                       </p>
@@ -817,7 +817,7 @@ function CredContent() {
                           <Icon name="circle-check" className={`text-lg ${setupTrack === 'have' ? 'text-emerald-500' : 'text-muted-foreground'}`} />
                           <span className={`text-sm font-bold ${setupTrack === 'have' ? 'text-emerald-700 dark:text-emerald-400' : 'text-foreground'}`}>มี AuthMe หรือ nLogin พร้อม MySQL อยู่แล้ว</span>
                         </div>
-                        <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">ผู้เล่นสมัครและล็อกอินในเกมได้ปกติ ไปติดตั้ง Bridge ด้านล่างได้เลย</p>
+                        <p className="text-[13px] text-muted-foreground font-medium leading-relaxed">ผู้เล่นสมัครและล็อกอินในเกมได้ปกติ ไปติดตั้ง Bridge ด้านล่างได้เลย</p>
                       </button>
                       <button
                         onClick={() => setSetupTrack('new')}
@@ -829,7 +829,7 @@ function CredContent() {
                           <Icon name="wrench" className={`text-lg ${setupTrack === 'new' ? 'text-amber-600' : 'text-muted-foreground'}`} />
                           <span className={`text-sm font-bold ${setupTrack === 'new' ? 'text-amber-700 dark:text-amber-400' : 'text-foreground'}`}>เริ่มจากศูนย์ ยังไม่เคยตั้งระบบล็อกอิน</span>
                         </div>
-                        <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">ยังไม่มี MySQL หรือ AuthMe/nLogin จะมีคู่มือตั้งครบทุกขั้น พร้อมปุ่มก็อปคำสั่ง</p>
+                        <p className="text-[13px] text-muted-foreground font-medium leading-relaxed">ยังไม่มี MySQL หรือ AuthMe/nLogin จะมีคู่มือตั้งครบทุกขั้น พร้อมปุ่มก็อปคำสั่ง</p>
                       </button>
                     </div>
                   </CardContent>
@@ -877,7 +877,7 @@ function CredContent() {
                             <p className={`text-sm font-bold mb-0.5 ${setupAuthType === 'authme' ? 'text-purple-600' : 'text-foreground'}`}>
                               <Icon name="shield-halved" className="mr-1.5" />AuthMe
                             </p>
-                            <p className="text-[10px] text-muted-foreground font-medium">ยอดนิยม ใช้ในเซิร์ฟไทยกว่า 80%</p>
+                            <p className="text-[12px] text-muted-foreground font-medium">ยอดนิยม ใช้ในเซิร์ฟไทยกว่า 80%</p>
                           </button>
                           <button
                             onClick={() => setSetupAuthType('nlogin')}
@@ -888,7 +888,7 @@ function CredContent() {
                             <p className={`text-sm font-bold mb-0.5 ${setupAuthType === 'nlogin' ? 'text-purple-600' : 'text-foreground'}`}>
                               <Icon name="lock" className="mr-1.5" />nLogin
                             </p>
-                            <p className="text-[10px] text-muted-foreground font-medium">ตัวใหม่กว่า เซิร์ฟใหม่ๆ ใช้บ่อย</p>
+                            <p className="text-[12px] text-muted-foreground font-medium">ตัวใหม่กว่า เซิร์ฟใหม่ๆ ใช้บ่อย</p>
                           </button>
                         </div>
                       </CardContent>
@@ -933,8 +933,8 @@ sudo systemctl enable --now mariadb`}
                               code="https://dev.mysql.com/downloads/installer/"
                             />
                             <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/20">
-                              <p className="text-[12px] font-bold text-blue-700 dark:text-blue-400 mb-1">B. ระหว่างติดตั้ง MySQL Installer:</p>
-                              <ul className="text-[11px] text-muted-foreground font-medium space-y-1 list-disc pl-5">
+                              <p className="text-[12px] font-medium text-blue-700 dark:text-blue-400 mb-1">B. ระหว่างติดตั้ง MySQL Installer:</p>
+                              <ul className="text-[13px] text-muted-foreground font-medium space-y-1 list-disc pl-5">
                                 <li>เลือก <strong>Server Only</strong> (ไม่ต้องลง Workbench)</li>
                                 <li>ตั้ง <strong>root password</strong> และจดไว้</li>
                                 <li>Authentication Method เลือก <strong>Use Legacy Authentication</strong> เพื่อความเข้ากันได้</li>
@@ -947,7 +947,7 @@ sudo systemctl enable --now mariadb`}
                           <p className="text-[12px] font-extrabold text-red-700 dark:text-red-400 mb-1">
                             <Icon name="circle-exclamation" className="mr-1.5" />ก่อนรันคำสั่งถัดไป
                           </p>
-                          <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
+                          <p className="text-[13px] text-muted-foreground font-medium leading-relaxed">
                             แก้ <code className="bg-secondary px-1 py-0.5 rounded">CHANGE_THIS_PASSWORD</code> ในคำสั่งด้านล่าง ให้เป็นรหัสผ่านที่คุณตั้งเอง (จะใช้ในขั้น 5 จดไว้)
                           </p>
                         </div>
@@ -978,10 +978,10 @@ EXIT;`}
                         />
 
                         <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
-                          <p className="text-[12px] font-bold text-emerald-700 dark:text-emerald-400 mb-1">
+                          <p className="text-[12px] font-medium text-emerald-700 dark:text-emerald-400 mb-1">
                             <Icon name="circle-check" className="mr-1.5" />ค่าที่ต้องจดไว้ใช้ในขั้น 5
                           </p>
-                          <ul className="text-[11px] text-foreground font-medium space-y-0.5 mt-1.5">
+                          <ul className="text-[13px] text-foreground font-medium space-y-0.5 mt-1.5">
                             <li>· Database: <code className="bg-background px-1.5 py-0.5 rounded">{setupAuthType === 'authme' ? 'authme' : 'nlogin'}</code></li>
                             <li>· User: <code className="bg-background px-1.5 py-0.5 rounded">{setupAuthType === 'authme' ? 'authme' : 'nlogin'}</code></li>
                             <li>· Password: <code className="bg-background px-1.5 py-0.5 rounded">รหัสที่คุณตั้งแทน CHANGE_THIS_PASSWORD</code></li>
@@ -1004,11 +1004,11 @@ EXIT;`}
                       </CardHeader>
                       <CardContent className="pt-5 space-y-4">
                         <div className="p-3 rounded-xl bg-background border border-border">
-                          <p className="text-[12px] font-bold text-foreground mb-1.5">A. ดาวน์โหลดปลั๊กอินจากเว็บทางการ</p>
+                          <p className="text-[12px] font-medium text-foreground mb-1.5">A. ดาวน์โหลดปลั๊กอินจากเว็บทางการ</p>
                           <a
                             href={setupAuthType === 'authme' ? 'https://www.spigotmc.org/resources/authmereloaded.6269/' : 'https://www.spigotmc.org/resources/nlogin.62674/'}
                             target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline"
+                            className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
                           >
                             <Icon name="arrow-up-right-from-square" /> เปิด {setupAuthType === 'authme' ? 'AuthMeReloaded' : 'nLogin'} บน SpigotMC
                           </a>
@@ -1023,7 +1023,7 @@ EXIT;`}
                           <p className="text-[12px] font-extrabold text-red-700 dark:text-red-400 mb-1">
                             <Icon name="circle-exclamation" className="mr-1.5" />ก่อนคัดลอก YAML ข้างล่าง
                           </p>
-                          <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
+                          <p className="text-[13px] text-muted-foreground font-medium leading-relaxed">
                             แก้ <code className="bg-secondary px-1 py-0.5 rounded">CHANGE_THIS_PASSWORD</code> เป็นรหัสจริงที่คุณตั้งในขั้น 4
                           </p>
                         </div>
@@ -1057,14 +1057,14 @@ EXIT;`}
                         />
 
                         <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
-                          <p className="text-[12px] font-bold text-emerald-700 dark:text-emerald-400 mb-1">
+                          <p className="text-[12px] font-medium text-emerald-700 dark:text-emerald-400 mb-1">
                             <Icon name="circle-check" className="mr-1.5" />D. เปิดเซิร์ฟอีกครั้ง แล้วทดสอบในเกม
                           </p>
-                          <p className="text-[11px] text-muted-foreground font-medium">
+                          <p className="text-[13px] text-muted-foreground font-medium">
                             เข้าเกม ลอง <code>/register รหัสผ่าน รหัสผ่าน</code> ถ้าผ่านแล้ว ระบบล็อกอินพร้อมใช้งานแล้ว ไปขั้นถัดไปติดตั้ง Bridge
                           </p>
                           {setupAuthType === 'nlogin' && (
-                            <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium mt-2">
+                            <p className="text-[13px] text-amber-600 dark:text-amber-400 font-medium mt-2">
                               <Icon name="triangle-exclamation" className="mr-1" /><strong>nLogin:</strong> ตรวจ <code>security.hashing.algorithm</code> ต้องเป็น <code>BCRYPT2A</code> (default) ไม่งั้นฟังก์ชัน reset password จะใช้ไม่ได้
                             </p>
                           )}
@@ -1117,10 +1117,10 @@ EXIT;`}
                             <code className="flex-1 px-4 py-2.5 bg-slate-950 text-amber-400 rounded-xl text-xs font-mono border border-amber-500/30 truncate">{bridgeToken.token}</code>
                             <CopyBtn value={bridgeToken.token} />
                           </div>
-                          <p className="text-[10px] font-bold text-amber-500">
+                          <p className="text-[12px] font-medium text-amber-500">
                             <Icon name="triangle-exclamation" className="mr-1.5" /> Token แสดงครั้งเดียว ห้ามปิดหน้าจนกว่าจะคัดลอกเสร็จ
                           </p>
-                          <button onClick={revokeBridgeToken} className="text-[10px] font-bold text-destructive hover:underline cursor-pointer">
+                          <button onClick={revokeBridgeToken} className="text-[12px] font-medium text-destructive hover:underline cursor-pointer">
                             ยกเลิก / สร้างใหม่
                           </button>
                         </div>
@@ -1142,7 +1142,7 @@ EXIT;`}
                         </ol>
                       )}
                       <div className="mt-3 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
-                        <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
+                        <p className="text-[13px] text-muted-foreground font-medium leading-relaxed">
                           <Icon name="check-circle" className="text-emerald-500 mr-1.5" />
                           จะมีไฟล์ใหม่ที่ <code>{osType === 'linux' ? 'plugins/SiamsiteBridge/config.yml' : 'plugins\\SiamsiteBridge\\config.yml'}</code>
                         </p>
@@ -1154,8 +1154,8 @@ EXIT;`}
                         <li>
                           เปิดไฟล์ <code>{osType === 'linux' ? 'plugins/SiamsiteBridge/config.yml' : 'plugins\\SiamsiteBridge\\config.yml'}</code>
                           {osType === 'linux'
-                            ? <span className="block text-[11px] text-muted-foreground mt-0.5">ใช้ nano, vim, VSCode, mcedit แก้ได้</span>
-                            : <span className="block text-[11px] text-muted-foreground mt-0.5">คลิกขวาที่ไฟล์ Open with Notepad หรือ Notepad++</span>}
+                            ? <span className="block text-[13px] text-muted-foreground mt-0.5">ใช้ nano, vim, VSCode, mcedit แก้ได้</span>
+                            : <span className="block text-[13px] text-muted-foreground mt-0.5">คลิกขวาที่ไฟล์ Open with Notepad หรือ Notepad++</span>}
                         </li>
                         <li>หาบรรทัด <code className="bg-red-500/10 text-red-700 dark:text-red-400 px-1.5 py-0.5 rounded">{`token: "PASTE-YOUR-TOKEN-HERE"`}</code></li>
                         <li><strong className="text-primary">วาง Token จากขั้น 2</strong> แทนข้อความ <code>PASTE-YOUR-TOKEN-HERE</code></li>
@@ -1163,16 +1163,16 @@ EXIT;`}
                       </ol>
                       <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
                         <p className="text-[11px] text-foreground font-bold mb-0.5"><Icon name="circle-check" className="text-emerald-500 mr-1" />ส่วนอื่นในไฟล์ไม่ต้องแก้</p>
-                        <p className="text-[11px] text-muted-foreground font-medium">Bridge อ่านข้อมูล MySQL จาก AuthMe / nLogin ของคุณเอง</p>
+                        <p className="text-[13px] text-muted-foreground font-medium">Bridge อ่านข้อมูล MySQL จาก AuthMe / nLogin ของคุณเอง</p>
                       </div>
 
                       <details className="mt-3 group">
-                        <summary className="cursor-pointer text-[11px] font-bold text-muted-foreground hover:text-foreground flex items-center gap-1.5 list-none">
+                        <summary className="cursor-pointer text-[13px] font-medium text-muted-foreground hover:text-foreground flex items-center gap-1.5 list-none">
                           <Icon name="chevron-right" className="text-[10px] transition-transform group-open:rotate-90" />
                           ตั้งค่าขั้นสูง (เกือบทุกคนไม่ต้องใช้)
                         </summary>
                         <div className="mt-2 pl-5 space-y-2">
-                          <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
+                          <p className="text-[13px] text-muted-foreground font-medium leading-relaxed">
                             ถ้า Bridge หา config ของ AuthMe / nLogin ไม่เจอ ตั้งเองได้
                           </p>
                           <CommandCard
@@ -1211,17 +1211,17 @@ bridge:
                       </p>
                       <div className="grid grid-cols-2 gap-3 mt-2">
                         <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/30">
-                          <p className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest mb-1">ถ้าสำเร็จ</p>
-                          <p className="text-[11px] font-medium text-foreground">
+                          <p className="text-[12px] font-medium text-emerald-700 dark:text-emerald-400 mb-1">ถ้าสำเร็จ</p>
+                          <p className="text-[13px] font-medium text-foreground">
                             <Icon name="circle-check" className="text-emerald-500 mr-1" />
                             สถานะ <strong className="text-emerald-600">ออนไลน์</strong> เขียวกะพริบ
                           </p>
-                          <p className="text-[11px] font-medium text-muted-foreground mt-1">ผู้เล่นล็อกอินเว็บได้ทันที</p>
+                          <p className="text-[13px] font-medium text-muted-foreground mt-1">ผู้เล่นล็อกอินเว็บได้ทันที</p>
                         </div>
                         <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/30">
-                          <p className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-widest mb-1">ถ้ายังไม่ขึ้น</p>
-                          <p className="text-[11px] font-medium text-foreground">พิมพ์ใน console MC:</p>
-                          <code className="block mt-1 px-2 py-1 bg-slate-950 text-amber-400 rounded text-[11px] font-mono">/siamsite-bridge status</code>
+                          <p className="text-[12px] font-medium text-amber-700 dark:text-amber-400 mb-1">ถ้ายังไม่ขึ้น</p>
+                          <p className="text-[13px] font-medium text-foreground">พิมพ์ใน console MC:</p>
+                          <code className="block mt-1 px-2 py-1 bg-slate-950 text-amber-400 rounded text-[13px] font-mono">/siamsite-bridge status</code>
                         </div>
                       </div>
                     </StepCard>

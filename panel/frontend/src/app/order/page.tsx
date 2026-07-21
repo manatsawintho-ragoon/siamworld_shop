@@ -131,7 +131,7 @@ function OrderContent() {
         <div className="w-20 h-20 rounded-[2rem] bg-secondary border-2 border-border text-muted-foreground flex items-center justify-center mx-auto text-3xl mb-6">
           <Icon name="check" />
         </div>
-        <h2 className="text-2xl font-black text-foreground mb-3 tracking-tight">ใช้สิทธิ์ทดลองฟรีไปแล้ว</h2>
+        <h2 className="text-2xl font-semibold text-foreground mb-3 tracking-tight">ใช้สิทธิ์ทดลองฟรีไปแล้ว</h2>
         <p className="text-sm text-muted-foreground font-semibold mb-8 leading-relaxed">
           สิทธิ์ทดลองใช้งานฟรีใช้ได้ครั้งเดียวต่อบัญชี<br/>
           คุณสามารถเลือกซื้อแพ็กเกจปกติได้
@@ -157,7 +157,7 @@ function OrderContent() {
         <div className="w-20 h-20 rounded-[2rem] bg-secondary border-2 border-border text-muted-foreground flex items-center justify-center mx-auto text-3xl mb-6">
           <Icon name="check" />
         </div>
-        <h2 className="text-2xl font-black text-foreground mb-3 tracking-tight">ใช้โปรเดือนแรกไปแล้ว</h2>
+        <h2 className="text-2xl font-semibold text-foreground mb-3 tracking-tight">ใช้โปรเดือนแรกไปแล้ว</h2>
         <p className="text-sm text-muted-foreground font-semibold mb-8 leading-relaxed">
           โปรโมชั่นเดือนแรกใช้ได้ครั้งเดียวต่อบัญชี<br/>
           คุณสามารถเลือกซื้อแพ็กเกจปกติได้
@@ -180,7 +180,7 @@ function OrderContent() {
             </button>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-foreground uppercase tracking-tight">สั่งซื้อ <span className="text-primary">แพ็กเกจ</span></h1>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">สั่งซื้อ <span className="text-primary">แพ็กเกจ</span></h1>
             <p className="text-sm text-muted-foreground font-medium">เลือกแพ็กเกจและตั้งชื่อร้านของคุณ</p>
           </div>
         </div>
@@ -221,7 +221,7 @@ function OrderContent() {
                   { label: 'แพ็กเกจ',    value: orderLabel, icon: 'box-open' },
                 ].map(row => (
                   <div key={row.label} className="flex justify-between items-center pb-2 border-b border-border/50 last:border-0 last:pb-0">
-                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                    <span className="text-xs font-medium text-muted-foreground flex items-center gap-2">
                       <Icon name={row.icon as IconName} className="text-primary/70" /> {row.label}
                     </span>
                     <span className="text-sm font-bold text-foreground">{row.value}</span>
@@ -229,11 +229,11 @@ function OrderContent() {
                 ))}
                 <div className="border-t border-border pt-4 mt-2">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">ยอดชำระทั้งสิ้น</span>
-                    <span className="text-2xl font-extrabold text-primary">฿{price.toLocaleString()}</span>
+                    <span className="text-xs font-medium text-muted-foreground">ยอดชำระทั้งสิ้น</span>
+                    <span className="text-2xl font-semibold text-primary">฿{price.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">คงเหลือหลังชำระ</span>
+                    <span className="text-xs font-medium text-muted-foreground">คงเหลือหลังชำระ</span>
                     <span className={`text-sm font-bold ${balance - price < 0 ? 'text-destructive' : 'text-emerald-500'}`}>
                       ฿{(balance - price).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                     </span>
@@ -260,10 +260,10 @@ function OrderContent() {
                       <Icon name={orderKind === 'trial' ? 'rocket' : 'tag'} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">
+                      <p className="text-xs font-medium text-muted-foreground mb-1">
                         โปรโมชั่นที่เลือก
                       </p>
-                      <p className="text-sm font-extrabold text-foreground truncate">
+                      <p className="text-sm font-semibold text-foreground truncate">
                         {orderKind === 'trial'
                           ? `ทดลองฟรี ${trialPromo?.days || 7} วัน · ฿0`
                           : `ทดลองเดือนแรก ฿${introPromo?.price || 99} (ปกติ ฿${introPromo?.regularPrice || 249})`}
@@ -271,7 +271,7 @@ function OrderContent() {
                     </div>
                     <button
                       onClick={() => setOrderKind('regular')}
-                      className="text-xs font-bold text-muted-foreground hover:text-primary transition-colors cursor-pointer flex-shrink-0 underline"
+                      className="text-xs font-medium text-muted-foreground hover:text-primary transition-colors cursor-pointer flex-shrink-0 underline"
                     >
                       เปลี่ยนเป็นปกติ
                     </button>
@@ -304,19 +304,19 @@ function OrderContent() {
                               : 'bg-background border-border text-muted-foreground hover:border-primary/50 hover:bg-primary/5'}`}
                         >
                           {discountPercent > 0 && (
-                            <div className={`absolute -top-2.5 -right-2 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase shadow-sm
+                            <div className={`absolute -top-2.5 -right-2 px-2 py-0.5 rounded-full text-[12px] font-semibold shadow-sm
                               ${active ? 'bg-white text-primary' : 'bg-destructive text-white'}`}>
                               ลด {discountPercent}%
                             </div>
                           )}
-                          <div className={`text-xs font-bold uppercase tracking-widest mb-1 ${active ? 'text-primary-foreground' : 'text-foreground'}`}>
+                          <div className={`text-xs font-medium mb-1 ${active ? 'text-primary-foreground' : 'text-foreground'}`}>
                             {pkg.label}
                           </div>
-                          <div className={`text-2xl font-extrabold ${active ? 'text-white' : 'text-primary'}`}>
+                          <div className={`text-2xl font-semibold ${active ? 'text-white' : 'text-primary'}`}>
                             ฿{pkg.price.toLocaleString()}
                           </div>
                           {pkg.save > 0 ? (
-                            <Badge variant={active ? "outline" : "success"} className={`mt-2 text-[10px] ${active ? 'border-white/40 bg-transparent text-white' : ''}`}>
+                            <Badge variant={active ? "outline" : "success"} className={`mt-2 text-[12px] ${active ? 'border-white/40 bg-transparent text-white' : ''}`}>
                               ประหยัด ฿{pkg.save.toLocaleString()}
                             </Badge>
                           ) : <div className="h-[24px] mt-2" />}
@@ -339,7 +339,7 @@ function OrderContent() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div>
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Subdomain ของร้าน</label>
+                    <label className="text-xs font-medium text-muted-foreground mb-2 block">Subdomain ของร้าน</label>
                     <div className="relative">
                       <Icon name="link" className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
                       <input
@@ -362,7 +362,7 @@ function OrderContent() {
                         <Icon name="globe" className="text-lg" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-0.5">ที่อยู่ร้านค้า (URL)</p>
+                        <p className="text-[12px] font-medium text-muted-foreground mb-0.5">ที่อยู่ร้านค้า (URL)</p>
                         <p className="text-sm font-bold text-foreground truncate tracking-tight lowercase">
                           {shopName ? shopName : '...'}
                           <span className="text-primary">.siamsite.shop</span>
@@ -372,7 +372,7 @@ function OrderContent() {
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">
+                    <label className="text-xs font-medium text-muted-foreground mb-2 block">
                       IP ของ Minecraft Server <span className="text-destructive">*</span>
                     </label>
 
@@ -399,14 +399,14 @@ function OrderContent() {
                           <p className="text-sm font-bold text-foreground flex items-center">
                             <Icon name="lightbulb" className="mr-2 text-destructive" /> ทางเลือกสำหรับเซิร์ฟเวอร์ที่อยู่หลัง NAT
                           </p>
-                          <button onClick={() => setHasPublicIp(null)} className="text-xs font-bold text-muted-foreground hover:text-foreground underline cursor-pointer">เปลี่ยนคำตอบ</button>
+                          <button onClick={() => setHasPublicIp(null)} className="text-xs font-medium text-muted-foreground hover:text-foreground underline cursor-pointer">เปลี่ยนคำตอบ</button>
                         </div>
                         <ul className="space-y-3 text-xs font-medium text-muted-foreground">
                           <li className="flex gap-3"><Icon name="server" className="text-primary mt-0.5" /><span><b className="text-foreground">เช่า VPS:</b> ย้ายเซิร์ฟเวอร์ไป VPS เพื่อได้ IP สาธารณะถาวร (แนะนำที่สุด)</span></li>
                           <li className="flex gap-3"><Icon name="cloud" className="text-primary mt-0.5" /><span><b className="text-foreground">Cloudflare Tunnel:</b> ติดตั้ง cloudflared บนเครื่อง MC ของคุณ และเปิดเส้น TCP กลับมา</span></li>
                           <li className="flex gap-3"><Icon name="house-signal" className="text-primary mt-0.5" /><span><b className="text-foreground">Port Forwarding:</b> ตั้งค่า router ให้ forward port 25565 + RCON ออกอินเทอร์เน็ต</span></li>
                         </ul>
-                        <p className="text-xs font-bold text-primary italic border-t border-destructive/10 pt-3">
+                        <p className="text-xs font-medium text-primary italic border-t border-destructive/10 pt-3">
                           เมื่อพร้อมใช้แล้ว เลือก &quot;มี (VPS / Dedicated)&quot; และกรอก IP เพื่อดำเนินการต่อ
                         </p>
                       </div>
@@ -451,23 +451,23 @@ function OrderContent() {
                 <CardContent>
                   <div className="space-y-4 mb-2">
                     <div className="flex justify-between items-center">
-                      <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">แพ็กเกจ</span>
+                      <span className="text-xs font-medium text-muted-foreground">แพ็กเกจ</span>
                       <span className="text-sm font-bold text-foreground">{orderLabel}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">ราคา</span>
-                      <span className={`text-xl font-extrabold ${orderKind === 'trial' ? 'text-emerald-500' : 'text-primary'}`}>
+                      <span className="text-xs font-medium text-muted-foreground">ราคา</span>
+                      <span className={`text-xl font-semibold ${orderKind === 'trial' ? 'text-emerald-500' : 'text-primary'}`}>
                         {orderKind === 'trial' ? 'ฟรี' : `฿${price.toLocaleString()}`}
                       </span>
                     </div>
                     {orderKind !== 'trial' && (
                       <div className="pt-4 border-t border-border">
                         <div className="flex justify-between items-center mb-2">
-                          <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">คงเหลือปัจจุบัน</span>
+                          <span className="text-xs font-medium text-muted-foreground">คงเหลือปัจจุบัน</span>
                           <span className="text-sm font-semibold text-foreground">฿{balance.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">หลังสั่งซื้อ</span>
+                          <span className="text-xs font-medium text-muted-foreground">หลังสั่งซื้อ</span>
                           <span className={`text-sm font-bold ${balance - price < 0 ? 'text-destructive' : 'text-emerald-500'}`}>
                             ฿{(balance - price).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                           </span>
@@ -475,11 +475,11 @@ function OrderContent() {
                       </div>
                     )}
                     <div className="bg-secondary/50 border border-border rounded-xl p-3 mt-4">
-                      <p className="text-[10px] font-semibold text-muted-foreground leading-relaxed">
+                      <p className="text-[12px] font-semibold text-muted-foreground leading-relaxed">
                         <Icon name="circle-info" className="mr-1.5 text-primary" />
                         ราคาแพ็กเกจไม่รวมค่าธรรมเนียม EasySlip API ฿{easyslipFee} ต่อรายการเติมเงิน
                       </p>
-                      <p className="text-[10px] font-bold text-emerald-600 leading-relaxed mt-1.5">
+                      <p className="text-[12px] font-medium text-emerald-600 leading-relaxed mt-1.5">
                         <Icon name="wallet" className="mr-1.5" />
                         ใหม่! รองรับเติมเงินผ่าน TrueMoney อั่งเปา ใช้ฟรี ไม่มีค่าธรรมเนียมเพิ่ม
                       </p>
@@ -490,10 +490,10 @@ function OrderContent() {
                   {insufficient && (
                     <div className="w-full p-4 bg-destructive/10 border border-destructive/20 rounded-xl mb-2 flex flex-col gap-3">
                       <div>
-                        <p className="text-xs font-bold text-destructive uppercase tracking-tight mb-0.5">ยอดเงินไม่เพียงพอ</p>
+                        <p className="text-xs font-medium text-destructive tracking-tight mb-0.5">ยอดเงินไม่เพียงพอ</p>
                         <p className="text-xs font-semibold text-destructive/80">ขาดอีก ฿{(price - balance).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</p>
                       </div>
-                      <Button variant="destructive" className="w-full rounded-lg text-xs font-bold cursor-pointer shadow-sm hover:shadow-md transition-all" asChild>
+                      <Button variant="destructive" className="w-full rounded-lg text-xs font-medium cursor-pointer shadow-sm hover:shadow-md transition-all" asChild>
                         <Link href="/dashboard/topup">เติมเงินตอนนี้</Link>
                       </Button>
                     </div>

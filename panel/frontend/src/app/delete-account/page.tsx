@@ -2,7 +2,7 @@ import React from 'react';
 
 export default function DeletionPage() {
   return (
-    <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8 text-gray-800">
+    <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8 text-foreground">
       <h1 className="text-3xl font-bold mb-8">การขอเพิกถอนและลบข้อมูล (User Data Deletion)</h1>
       <p className="mb-6">หากคุณต้องการลบข้อมูลบัญชี Siamsite Panel ของคุณ รวมถึงข้อมูลที่ได้มาจาก Facebook หรือ Google โปรดปฏิบัติตามขั้นตอนดังนี้:</p>
       <ul className="list-disc pl-6 mb-6">

@@ -108,11 +108,11 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
           <Icon name={cfg.icon} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className={`text-xs font-black uppercase tracking-wide leading-tight ${cfg.title}`}>
+          <p className={`text-xs font-semibold tracking-wide leading-tight ${cfg.title}`}>
             {toast.title}
           </p>
           {toast.message && (
-            <p className="text-[11px] font-medium text-gray-500 dark:text-slate-400 mt-0.5 leading-snug">
+            <p className="text-[13px] font-medium text-gray-500 dark:text-slate-400 mt-0.5 leading-snug">
               {toast.message}
             </p>
           )}

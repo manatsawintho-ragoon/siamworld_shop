@@ -166,7 +166,7 @@ export default function TopupPage() {
                         : 'bg-secondary text-muted-foreground'}`}>
                       {i < currentStepIdx ? <Icon name="check" className="text-xs" /> : i + 1}
                     </div>
-                    <span className={`text-[11px] mt-2 font-semibold tracking-wide hidden sm:block whitespace-nowrap ${i <= currentStepIdx ? 'text-foreground' : 'text-muted-foreground'}`}>
+                    <span className={`text-[13px] mt-2 font-semibold tracking-wide hidden sm:block whitespace-nowrap ${i <= currentStepIdx ? 'text-foreground' : 'text-muted-foreground'}`}>
                       {s}
                     </span>
                   </div>
@@ -210,12 +210,12 @@ export default function TopupPage() {
           <div className="grid md:grid-cols-2 gap-6">
             <Card className="shadow-sm border-border flex flex-col items-center text-center">
               <CardHeader>
-                <CardDescription className="uppercase tracking-widest font-bold">สแกนเพื่อชำระเงิน</CardDescription>
+                <CardDescription>สแกนเพื่อชำระเงิน</CardDescription>
                 <CardTitle className="text-4xl font-extrabold text-primary mt-2">฿{parseFloat(amount).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col items-center pb-6">
                 {qrImage && (
-                  <div className="p-3 rounded-2xl bg-white border border-border shadow-sm mb-4">
+                  <div className="p-3 rounded-2xl bg-card border border-border shadow-sm mb-4">
                     <img src={qrImage} alt="QR Code" className="rounded-xl" width={220} />
                   </div>
                 )}
@@ -237,7 +237,7 @@ export default function TopupPage() {
                 <ol className="space-y-4">
                   {['เปิดแอปพลิเคชันธนาคาร', 'สแกน QR Code ด้านซ้าย', 'ตรวจสอบยอดเงินและยืนยันการโอน', 'บันทึกสลิป แล้วกดปุ่มด้านล่าง'].map((t, i) => (
                     <li key={i} className="flex items-start gap-3 text-sm text-muted-foreground font-medium">
-                      <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0">{i + 1}</span>
+                      <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-medium flex items-center justify-center flex-shrink-0">{i + 1}</span>
                       <span className="mt-0.5">{t}</span>
                     </li>
                   ))}
@@ -396,7 +396,7 @@ export default function TopupPage() {
                     <Icon name="circle-info" /> ยอดขั้นต่ำ 10 บาท ต่อครั้ง
                   </p>
                   {error && (
-                    <p className="text-xs text-destructive mt-3 flex items-center gap-1.5 font-bold">
+                    <p className="text-xs text-destructive mt-3 flex items-center gap-1.5 font-medium">
                       <Icon name="circle-exclamation" />{error}
                     </p>
                   )}
@@ -435,7 +435,7 @@ export default function TopupPage() {
                   <div className="relative flex-1">
                     <Icon name="gift" className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <input type="text"
-                      className="w-full bg-background border border-border rounded-xl pl-10 pr-4 py-3 text-sm font-bold outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all text-foreground placeholder:text-muted-foreground uppercase"
+                      className="w-full bg-background border border-border rounded-xl pl-10 pr-4 py-3 text-sm font-bold outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all text-foreground placeholder:text-muted-foreground"
                       placeholder="กรอกโค้ดที่นี่"
                       value={voucherCode}
                       onChange={e => setVoucherCode(e.target.value)} />

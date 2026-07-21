@@ -108,7 +108,7 @@ export default function AdminActionModal({
                     </button>
                   </div>
                   {err && (
-                    <p className="text-xs font-bold text-destructive flex items-center gap-1.5">
+                    <p className="text-xs font-medium text-destructive flex items-center gap-1.5">
                       <Icon name="circle-exclamation" /> {err}
                     </p>
                   )}

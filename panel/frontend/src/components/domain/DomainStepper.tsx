@@ -23,7 +23,7 @@ export default function DomainStepper({ status }: { status: DomainStatus }) {
           <div key={label} className="flex items-center flex-1 last:flex-none">
             <div className="flex flex-col items-center gap-1.5">
               <div
-                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 transition-colors ${
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 transition-colors ${
                   done ? 'bg-emerald-500 text-white'
                   : activeStep ? 'bg-primary text-primary-foreground'
                   : 'bg-secondary text-muted-foreground border border-border'
@@ -31,7 +31,7 @@ export default function DomainStepper({ status }: { status: DomainStatus }) {
               >
                 {done ? <Icon name="check" /> : activeStep ? <Icon name="spinner" className="animate-spin" /> : i + 1}
               </div>
-              <span className={`text-[10px] font-bold text-center leading-tight ${done || activeStep ? 'text-foreground' : 'text-muted-foreground'}`}>
+              <span className={`text-[12px] font-medium text-center leading-tight ${done || activeStep ? 'text-foreground' : 'text-muted-foreground'}`}>
                 {label}
               </span>
             </div>

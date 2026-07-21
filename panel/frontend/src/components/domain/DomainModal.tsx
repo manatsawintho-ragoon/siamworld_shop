@@ -36,7 +36,7 @@ function CopyBtn({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <button type="button" onClick={() => { navigator.clipboard.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
-      className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border cursor-pointer flex-shrink-0 transition-colors ${copied ? 'border-emerald-500 text-emerald-600 bg-emerald-500/10' : 'border-border text-muted-foreground hover:bg-secondary'}`}>
+      className={`text-[12px] font-medium px-2.5 py-1 rounded-md border cursor-pointer flex-shrink-0 transition-colors ${copied ? 'border-emerald-500 text-emerald-600 bg-emerald-500/10' : 'border-border text-muted-foreground hover:bg-secondary'}`}>
       <Icon name={copied ? 'check' : 'copy'} className={`mr-1`} />{copied ? 'คัดลอกแล้ว' : 'คัดลอก'}
     </button>
   );
@@ -208,12 +208,12 @@ export default function DomainModal({ subId, isOpen, onClose }: { subId: number 
                       )}
                       {(fieldError || (input && !previewOk)) && (
                         <div className="flex items-center justify-between gap-2">
-                          <p className="text-xs font-bold text-destructive flex items-center gap-1.5">
+                          <p className="text-xs font-medium text-destructive flex items-center gap-1.5">
                             <Icon name="circle-exclamation" /> {fieldError || (live as { error: string }).error}
                           </p>
                           {!fieldError && (live as { apex?: boolean }).apex && (
                             <button type="button" onClick={() => setInput(`shop.${input.trim().toLowerCase()}`)}
-                              className="text-xs font-bold text-primary hover:underline cursor-pointer whitespace-nowrap">
+                              className="text-xs font-medium text-primary hover:underline cursor-pointer whitespace-nowrap">
                               เติม shop. ให้
                             </button>
                           )}
@@ -264,7 +264,7 @@ export default function DomainModal({ subId, isOpen, onClose }: { subId: number 
                         <div className="flex items-center gap-2 mb-3">
                           <Icon name="circle-check" className="text-emerald-600" />
                           <span className="text-sm font-bold text-foreground">โดเมนพร้อมใช้งาน</span>
-                          <Badge variant="success" className="font-bold uppercase tracking-widest ml-1">Live</Badge>
+                          <Badge variant="success" className="font-bold ml-1">Live</Badge>
                         </div>
                         <div className="flex items-center justify-between gap-2 bg-background rounded-lg border border-border px-3 py-2">
                           <code className="text-sm font-mono font-semibold truncate">https://{host}</code>

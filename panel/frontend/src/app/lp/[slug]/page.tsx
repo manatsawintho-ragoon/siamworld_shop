@@ -90,11 +90,11 @@ export default function LandingPageView({ params }: { params: { slug: string } }
 
         <header className="space-y-4 mb-8">
           {cluster && (
-            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-bold uppercase tracking-wider">
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-[13px] font-medium tracking-wider">
               <Icon name={cluster.icon as IconName} /> {cluster.label}
             </span>
           )}
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground leading-tight">{page.h1}</h1>
+          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground leading-tight">{page.h1}</h1>
           <div className="space-y-3">
             {page.intro.map((p, i) => (
               <p key={i} className="text-base text-muted-foreground leading-relaxed">{p}</p>

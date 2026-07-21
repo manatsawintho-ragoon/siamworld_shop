@@ -579,3 +579,96 @@
 @media (max-width: 639px) {
   .admin-shell .admin-toolbar > * { flex: 1 1 100%; }
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   CODED PRODUCT MOCKUPS (landing page)
+
+   These replaced the dashboard screenshots. The whole reason to render the
+   product as markup rather than an image is that it can respond, so the hover
+   states here are the feature, not decoration: a visitor discovers the UI is
+   alive by pointing at it.
+
+   Effects are scoped to `.mock-frame` and are all cheap compositor properties
+   (transform, opacity, colour), so hovering never triggers layout.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.mock-frame {
+  transition: box-shadow 0.35s ease, transform 0.35s ease, border-color 0.35s ease;
+}
+@media (hover: hover) {
+  .mock-frame:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+    box-shadow: 0 22px 50px -20px color-mix(in srgb, var(--color-primary) 35%, transparent);
+  }
+}
+
+/* Stat tiles and product cards: lift toward the pointer and take the accent. */
+.mock-frame .mock-tile {
+  transition: transform 0.25s ease, border-color 0.25s ease, background-color 0.25s ease;
+}
+@media (hover: hover) {
+  .mock-frame .mock-tile:hover {
+    transform: translateY(-2px);
+    border-color: var(--color-primary);
+    background-color: color-mix(in srgb, var(--color-primary) 6%, transparent);
+  }
+  .mock-frame .mock-tile:hover .mock-tile-value { color: var(--color-primary); }
+}
+.mock-frame .mock-tile-value { transition: color 0.25s ease; }
+
+/* List rows: the same highlight the real order table uses, plus the chevron
+   sliding in the direction the row would take you. */
+.mock-frame .mock-row { transition: background-color 0.2s ease; }
+.mock-frame .mock-row-arrow { transition: transform 0.2s ease, color 0.2s ease; }
+@media (hover: hover) {
+  .mock-frame .mock-row:hover { background-color: var(--color-secondary); }
+  .mock-frame .mock-row:hover .mock-row-arrow {
+    transform: translateX(3px);
+    color: var(--color-primary);
+  }
+}
+
+/* Buttons inside a mock are not real buttons, so they get the affordance of
+   one without ever claiming to be clickable. */
+.mock-frame .mock-buy { transition: filter 0.2s ease, transform 0.2s ease; }
+@media (hover: hover) {
+  .mock-frame .mock-buy:hover { filter: brightness(1.08); transform: translateY(-1px); }
+}
+
+.mock-frame .mock-chip { transition: border-color 0.2s ease, color 0.2s ease; }
+@media (hover: hover) {
+  .mock-frame .mock-chip:hover { border-color: var(--color-primary); color: var(--color-primary); }
+}
+
+/* Loot box reel: hovering nudges the strip, hinting that it spins. */
+.mock-frame .mock-reel-item { transition: transform 0.3s ease; }
+@media (hover: hover) {
+  .mock-frame:hover .mock-reel-item { transform: translateX(-10px); }
+  .mock-frame .mock-reel-item:hover { transform: translateY(-3px) scale(1.04); }
+}
+
+/* The one ambient animation: a live dot, because "อยู่" is the claim it makes. */
+@keyframes mock-live-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgb(16 185 129 / 0.55); }
+  70%      { opacity: 0.85; box-shadow: 0 0 0 5px rgb(16 185 129 / 0); }
+}
+.mock-live { animation: mock-live-pulse 2.4s ease-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mock-live { animation: none !important; }
+  .mock-frame,
+  .mock-frame .mock-tile,
+  .mock-frame .mock-row,
+  .mock-frame .mock-row-arrow,
+  .mock-frame .mock-buy,
+  .mock-frame .mock-reel-item {
+    transition: none;
+  }
+  /* Colour feedback survives; the movement does not. */
+  .mock-frame:hover,
+  .mock-frame .mock-tile:hover,
+  .mock-frame .mock-buy:hover,
+  .mock-frame:hover .mock-reel-item,
+  .mock-frame .mock-reel-item:hover { transform: none; }
+}

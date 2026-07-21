@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence, useReducedMotion, useScroll, useSpring } from 'framer-motion';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { getTier, type TierKey } from '@/lib/rarity';
+import { DashboardMock, MOCK_SLIDES } from '@/components/landing/UiMocks';
 
 /* Scroll progress, styled as an XP bar: continuous motion that tracks the
    reader's own position rather than animating on its own, so it adds life
@@ -202,17 +203,18 @@ const COMPARISON: { label: string; ours: string; custom: string; foreign: string
   { label: 'ซัพพอร์ตภาษาไทย',            ours: 'คนไทย ตอบไทย',               custom: 'ขึ้นกับผู้รับจ้าง',  foreign: 'ภาษาอังกฤษ' },
 ];
 
-interface ShowcaseSlide { src: string; title: string; desc: string }
-
-// Fallback slides shown when the admin hasn't configured any in the panel yet.
-const DEFAULT_SHOWCASE: ShowcaseSlide[] = [
-  { src: '/images/homepage.png', title: 'หน้าแรกที่ทันสมัย', desc: 'ดึงดูดผู้เล่นด้วยดีไซน์ที่สวยงามและใช้งานง่าย' },
-  { src: '/images/items_shop.png', title: 'ร้านค้าไอเท็ม', desc: 'จัดการหมวดหมู่และสินค้าได้ง่ายดายผ่านระบบหลังบ้าน' },
-  { src: '/images/gacha_system.jpg', title: 'ระบบกล่องสุ่ม Gacha', desc: 'เพิ่มความตื่นเต้นด้วยการสุ่มไอเท็มพร้อมแอนิเมชั่นระดับพรีเมียม' },
-  { src: '/images/inventory_system.jpg', title: 'ระบบคลังเว็บ', desc: 'เก็บไอเท็มที่สุ่มได้ไว้ในคลังเว็บ เลือกรับเข้าตัวได้ทุกเมื่อ' },
-  { src: '/images/topup_system.jpg', title: 'ระบบเติมเงินอัตโนมัติ', desc: 'รองรับ PromptPay และ TrueMoney อั่งเปา ตรวจสอบยอดเงินทันที 24 ชม.' },
-  { src: '/images/theme_change.png', title: 'ปรับแต่งธีมได้อิสระ', desc: 'เปลี่ยนสีและรูปแบบของร้านค้าให้เข้ากับเซิร์ฟเวอร์ของคุณ' },
-];
+/* A showcase slide is either an operator-uploaded screenshot or one of the
+   coded mockups. Uploads always win: /admin/showcase stays the way to put your
+   own shop on the landing page. The mockups are what everyone sees until then,
+   which beats shipping screenshots of somebody else's shop. */
+interface ShowcaseSlide {
+  key: string;
+  title: string;
+  desc: string;
+  /** Present only for uploaded slides, which are the ones that can open in the lightbox. */
+  src?: string;
+  Mock?: () => React.ReactElement;
+}
 
 /* ── Animated headline ───────────────────────────────────────────────── */
 
@@ -315,7 +317,7 @@ function TypewriterHeadline() {
   });
 
   return (
-    <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.15] mb-6 tracking-tight text-foreground">
+    <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold leading-[1.15] mb-6 tracking-tight text-foreground">
       {rendered.map((l, i) => (
         <span key={i} className={`relative block ${l.accent ? 'text-primary mt-2' : ''}`}>
           <span className="opacity-0">{l.text}</span>
@@ -359,10 +361,10 @@ function CountUp({ value, suffix = '' }: { value: number; suffix?: string }) {
 function SectionHead({ eyebrow, title, sub, center = true }: { eyebrow: string; title: React.ReactNode; sub?: string; center?: boolean }) {
   return (
     <div className={`max-w-2xl mb-12 ${center ? 'mx-auto text-center' : ''}`}>
-      <span className="inline-block text-[11px] font-black uppercase tracking-[0.2em] text-primary mb-3">
+      <span className="inline-block text-[13px] font-semibold text-primary mb-3">
         {eyebrow}
       </span>
-      <h2 className="text-3xl md:text-5xl font-black text-foreground tracking-tight leading-tight">{title}</h2>
+      <h2 className="text-3xl md:text-5xl font-semibold text-foreground tracking-tight leading-tight">{title}</h2>
       {sub && <p className="text-muted-foreground text-lg mt-4 leading-relaxed">{sub}</p>}
     </div>
   );
@@ -383,13 +385,13 @@ function HeroShopMarquee({ shops, shopCount }: { shops: { name: string; domain: 
 
   return (
     <div className="hero-pop-3 mt-6 max-w-xl">
-      <p className="flex items-center gap-2 text-[12px] font-bold text-muted-foreground mb-2.5">
+      <p className="flex items-center gap-2 text-[12px] font-medium text-muted-foreground mb-2.5">
         <span className="relative flex h-2 w-2 shrink-0">
           <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 animate-soft-ping" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
         </span>
         <span>
-          <span className="text-foreground font-black tabular-nums">{total}</span> เซิร์ฟเวอร์เปิดร้านกับเราแล้ว
+          <span className="text-foreground font-semibold tabular-nums">{total}</span> เซิร์ฟเวอร์เปิดร้านกับเราแล้ว
         </span>
       </p>
 
@@ -409,12 +411,12 @@ function HeroShopMarquee({ shops, shopCount }: { shops: { name: string; domain: 
               className="flex shrink-0 items-center gap-2 bg-card px-3 py-2 rounded-lg border border-border shadow-sm hover:border-primary/60 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group/shop"
             >
               <span
-                className="grid place-items-center w-5 h-5 rounded bg-primary/10 text-primary text-[10px] font-black shrink-0 group-hover/shop:bg-primary group-hover/shop:text-primary-foreground transition-colors"
+                className="grid place-items-center w-5 h-5 rounded bg-primary/10 text-primary text-[12px] font-semibold shrink-0 group-hover/shop:bg-primary group-hover/shop:text-primary-foreground transition-colors"
                 aria-hidden="true"
               >
                 {s.name.trim().charAt(0).toUpperCase()}
               </span>
-              <span className="text-[13px] font-bold text-foreground/80 tracking-tight whitespace-nowrap group-hover/shop:text-primary transition-colors">
+              <span className="text-[13px] font-medium text-foreground/80 tracking-tight whitespace-nowrap group-hover/shop:text-primary transition-colors">
                 {s.name}
               </span>
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" aria-hidden="true" />
@@ -697,7 +699,7 @@ function PackageCard({
         {badge && (
           <div className="absolute top-1.5 left-0 right-0 flex justify-center z-20">
             <Badge
-              className={`rounded-t-none px-4 py-1 text-[10px] uppercase tracking-wider font-black shadow-lg border-none whitespace-nowrap ${
+              className={`rounded-t-none px-4 py-1 text-[12px] tracking-wider font-semibold shadow-lg border-none whitespace-nowrap ${
                 featured ? 'bg-primary text-primary-foreground' : 'bg-foreground/85 text-background'
               }`}
             >
@@ -710,16 +712,16 @@ function PackageCard({
           {/* Tier is stated in text as well as colour, so it survives both
               colour-blindness and greyscale printing. */}
           <span
-            className="inline-flex w-fit items-center gap-1.5 rounded-md px-2 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-white leading-none mb-3"
+            className="inline-flex w-fit items-center gap-1.5 rounded-md px-2 py-1 text-[12px] font-semibold text-white leading-none mb-3"
             style={{ backgroundColor: tier.color }}
           >
             <Icon name={tier.icon} className="text-[10px]" />
             {tier.label}
           </span>
-          <CardTitle className="text-lg font-black">{isTrial ? 'ทดลองใช้ฟรี' : pkg.label}</CardTitle>
+          <CardTitle className="text-lg font-semibold">{isTrial ? 'ทดลองใช้ฟรี' : pkg.label}</CardTitle>
           <p className="text-[12px] font-semibold text-muted-foreground mt-1.5 leading-snug">{copy.audience}</p>
           <div className="flex items-baseline flex-wrap gap-x-2 gap-y-1 mt-3">
-            <span className="text-5xl font-black tracking-tighter text-foreground tabular-nums">
+            <span className="text-5xl font-semibold tracking-tighter text-foreground tabular-nums">
               ฿{pkg.price.toLocaleString()}
             </span>
             <span className="text-sm font-bold text-muted-foreground">/{unit}</span>
@@ -736,11 +738,11 @@ function PackageCard({
               >
                 ฿{discount.regular.toLocaleString()}
               </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-black text-destructive">
+              <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[13px] font-semibold text-destructive">
                 <Icon name="arrow-down" className="text-[9px]" />
                 ลด {discount.percent}%
               </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-black text-emerald-600">
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[13px] font-semibold text-emerald-600">
                 <Icon name="tag" className="text-[9px]" />
                 ประหยัด ฿{discount.save.toLocaleString()}
               </span>
@@ -749,13 +751,13 @@ function PackageCard({
 
           {/* The number that makes the long plans comparable to the short ones. */}
           {perMonth && (
-            <p className="text-[12px] font-bold text-foreground/80 mt-2 tabular-nums">
+            <p className="text-[12px] font-medium text-foreground/80 mt-2 tabular-nums">
               เฉลี่ยเดือนละ ฿{perMonth.toLocaleString()}
             </p>
           )}
 
           {/* One-line hook: the single reason to pick this plan over the others. */}
-          <p className="text-[13px] font-bold mt-3 leading-snug" style={{ color: tier.color }}>{copy.hook}</p>
+          <p className="text-[13px] font-medium mt-3 leading-snug" style={{ color: tier.color }}>{copy.hook}</p>
           {isIntro && discount && (
             <p className="text-[12px] text-muted-foreground mt-1.5 font-medium">
               เดือนถัดไป ฿{discount.regular.toLocaleString()}/เดือน
@@ -773,7 +775,7 @@ function PackageCard({
                 key={p.text}
                 className={`flex items-start gap-2.5 ${
                   p.tone === 'good'
-                    ? 'text-[13px] font-bold text-emerald-600'
+                    ? 'text-[13px] font-medium text-emerald-600'
                     : p.tone === 'off'
                       ? 'text-[13px] font-medium text-muted-foreground/70'
                       : 'text-[13px] font-medium text-muted-foreground'
@@ -793,7 +795,7 @@ function PackageCard({
 
         <CardFooter className="pt-0 flex-col items-stretch gap-3">
           <Button
-            className={`w-full rounded-full font-black tracking-wide h-12 transition-all cursor-pointer ${
+            className={`w-full rounded-full font-semibold tracking-wide h-12 transition-all cursor-pointer ${
               featured ? 'bg-primary hover:bg-primary/90 shadow-lg hover:shadow-xl' : 'bg-background border-2 border-border hover:bg-secondary text-foreground'
             }`}
             variant={featured ? 'default' : 'outline'}
@@ -806,7 +808,7 @@ function PackageCard({
           {!isTrial && (
             <button
               onClick={onShowEasySlip}
-              className="text-[11px] font-semibold text-muted-foreground hover:text-primary flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              className="text-[13px] font-semibold text-muted-foreground hover:text-primary flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
               <Icon name="circle-info" className="text-xs" />
               ค่าตรวจสลิป PromptPay ฿{easyslipFee}/รายการ
@@ -892,7 +894,7 @@ function LandingContent() {
   // Fills the quest-chain line once the steps section is first reached.
   const [questFilled, setQuestFilled] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [showcase, setShowcase] = useState<ShowcaseSlide[]>(DEFAULT_SHOWCASE);
+  const [uploadedSlides, setUploadedSlides] = useState<ShowcaseSlide[]>([]);
 
   useEffect(() => {
     api.get('/api/subscriptions/packages').then(r => {
@@ -902,12 +904,27 @@ function LandingContent() {
     }).catch(() => {});
     api.get('/api/subscriptions/public-stats').then(r => setStatsData(r.data)).catch(() => {});
     api.get('/api/subscriptions/public-shops').then(r => { if (r.data.shops?.length) setShops(r.data.shops); }).catch(() => {});
-    // Admin-managed feature showcase; keep the built-in defaults if none configured.
+    // Operator-managed feature showcase. Falls back to the coded mockups below.
     api.get('/api/showcase').then(r => {
       const items = (r.data.items || []) as { title: string; description: string; image_data: string }[];
-      if (items.length) setShowcase(items.map(i => ({ src: i.image_data, title: i.title, desc: i.description })));
+      if (items.length) {
+        setUploadedSlides(items.map((i, n) => ({
+          key: `upload-${n}`, src: i.image_data, title: i.title, desc: i.description,
+        })));
+      }
     }).catch(() => {});
   }, []);
+
+  const showcase: ShowcaseSlide[] = useMemo(
+    () => (uploadedSlides.length
+      ? uploadedSlides
+      : MOCK_SLIDES.map(m => ({ key: m.key, title: m.title, desc: m.desc, Mock: m.Mock }))),
+    [uploadedSlides]
+  );
+
+  // An upload arriving after the auto-advance has moved on must not leave the
+  // index pointing past the end of the shorter list.
+  useEffect(() => { setCurrentIndex(0); }, [uploadedSlides.length]);
 
   const nextImage = () => setCurrentIndex(prev => (prev + 1) % showcase.length);
   const prevImage = () => setCurrentIndex(prev => (prev - 1 + showcase.length) % showcase.length);
@@ -962,7 +979,7 @@ function LandingContent() {
 
       {/* Promo strip: the offer stays visible before anything else loads */}
       <div className="promo-strip-anim bg-gradient-to-r from-primary via-amber-500 to-primary text-primary-foreground">
-        <div className="max-w-7xl mx-auto px-6 py-2 flex items-center justify-center gap-2 text-center text-[12px] md:text-[13px] font-bold">
+        <div className="max-w-7xl mx-auto px-6 py-2 flex items-center justify-center gap-2 text-center text-[12px] md:text-[13px] font-medium">
           <Icon name="sparkles" className="shrink-0" />
           <span>ทดลองฟรี 7 วัน ไม่ต้องผูกบัตร ต่อเดือนแรกเพียง ฿99</span>
         </div>
@@ -993,7 +1010,7 @@ function LandingContent() {
             </p>
 
             <div className="hero-pop-2 flex flex-col sm:flex-row gap-3 mb-5">
-              <Button size="lg" className="cta-sweep relative overflow-hidden h-14 px-8 text-base font-black rounded-full shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer" asChild>
+              <Button size="lg" className="cta-sweep relative overflow-hidden h-14 px-8 text-base font-semibold rounded-full shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer" asChild>
                 <Link href={PRIMARY_CTA.href}>
                   <Icon name="rocket" className="mr-2" /> {PRIMARY_CTA.label}
                 </Link>
@@ -1015,17 +1032,12 @@ function LandingContent() {
             <HeroShopMarquee shops={shops} shopCount={statsData?.total_shops} />
           </div>
 
+          {/* The dashboard, rendered as markup rather than a screenshot: it
+              follows the theme, stays sharp at any density, and responds to the
+              pointer, which is as close as a landing page gets to a trial. */}
           <div className="relative hero-pop-3">
-            <div className="relative z-20 rounded-[2rem] overflow-hidden shadow-2xl border border-border bg-card">
-              <Image
-                src="/dashboard-admin.png"
-                alt="ตัวอย่างหน้าจัดการร้านค้า SIAMSITE แสดงยอดขายและรายการสั่งซื้อ"
-                width={1200}
-                height={750}
-                priority
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                className="w-full h-auto"
-              />
+            <div className="relative z-20">
+              <DashboardMock />
             </div>
             <div className="absolute -bottom-5 -left-3 md:-left-6 bg-card border border-border p-4 rounded-2xl shadow-xl z-30 animate-float-y">
               <div className="flex items-center gap-3">
@@ -1062,11 +1074,11 @@ function LandingContent() {
                   {stat.num === undefined && stat.text === undefined ? (
                     <span className="block h-7 w-20 rounded-md bg-muted animate-pulse" aria-hidden="true" />
                   ) : (
-                    <span className="block text-xl md:text-2xl font-black text-foreground tabular-nums leading-tight">
+                    <span className="block text-xl md:text-2xl font-semibold text-foreground tabular-nums leading-tight">
                       {stat.num !== undefined ? <CountUp value={stat.num} suffix="+" /> : stat.text}
                     </span>
                   )}
-                  <span className="block text-[11px] md:text-xs font-bold text-muted-foreground tracking-wide">{stat.label}</span>
+                  <span className="block text-[13px] md:text-xs font-medium text-muted-foreground tracking-wide">{stat.label}</span>
                 </div>
               </motion.div>
             ))}
@@ -1109,7 +1121,7 @@ function LandingContent() {
                     <CardHeader>
                       <div className="flex items-center gap-3 mb-3">
                         <span
-                          className={`quest-node w-9 h-9 rounded-xl bg-primary text-primary-foreground font-black flex items-center justify-center text-base tabular-nums shrink-0 ring-4 ring-background ${questFilled ? 'quest-reached' : ''}`}
+                          className={`quest-node w-9 h-9 rounded-xl bg-primary text-primary-foreground font-semibold flex items-center justify-center text-base tabular-nums shrink-0 ring-4 ring-background ${questFilled ? 'quest-reached' : ''}`}
                         >
                           {i + 1}
                         </span>
@@ -1195,36 +1207,51 @@ function LandingContent() {
                 transition={{ duration: 0.35, ease: 'easeOut' }}
                 className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center"
               >
-                <button
-                  className="lg:col-span-7 relative group cursor-pointer text-left"
-                  onClick={() => setSelectedImage(currentIndex)}
-                  aria-label={`ดูรูปขยาย: ${showcase[currentIndex].title}`}
-                >
-                  <div className="overflow-hidden rounded-[2rem] border border-border bg-secondary/30 shadow-xl relative h-[300px] md:h-[480px] flex items-center justify-center">
-                    <img
-                      src={showcase[currentIndex].src}
-                      alt={showcase[currentIndex].title}
-                      loading="lazy"
-                      className="max-w-full max-h-full object-contain p-4"
-                    />
-                    <div className="absolute top-4 right-4 z-20 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">
-                      <span className="flex items-center gap-2 bg-background/80 backdrop-blur-md px-3 py-1.5 rounded-full text-foreground text-xs font-bold border border-border shadow-sm">
-                        <Icon name="search-plus" /> ดูรูปขยาย
-                      </span>
+                {/* An uploaded screenshot is a button (it opens the lightbox);
+                    a coded mockup is not, because there is nothing to enlarge
+                    and it is already interactive where it stands. */}
+                {showcase[currentIndex].src ? (
+                  <button
+                    className="lg:col-span-7 relative group cursor-pointer text-left"
+                    onClick={() => setSelectedImage(currentIndex)}
+                    aria-label={`ดูรูปขยาย: ${showcase[currentIndex].title}`}
+                  >
+                    <div className="overflow-hidden rounded-[2rem] border border-border bg-secondary/30 shadow-xl relative h-[300px] md:h-[480px] flex items-center justify-center">
+                      <img
+                        src={showcase[currentIndex].src}
+                        alt={showcase[currentIndex].title}
+                        loading="lazy"
+                        className="max-w-full max-h-full object-contain p-4"
+                      />
+                      <div className="absolute top-4 right-4 z-20 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">
+                        <span className="flex items-center gap-2 bg-background/80 backdrop-blur-md px-3 py-1.5 rounded-full text-foreground text-xs font-medium border border-border shadow-sm">
+                          <Icon name="search-plus" /> ดูรูปขยาย
+                        </span>
+                      </div>
                     </div>
+                  </button>
+                ) : (
+                  <div className="lg:col-span-7">
+                    {showcase[currentIndex].Mock?.()}
                   </div>
-                </button>
+                )}
 
                 <div className="lg:col-span-5 space-y-6">
                   <Badge variant="outline" className="text-primary border-primary/20 px-4 py-1.5 text-sm rounded-full">
                     ตัวอย่างฟีเจอร์
                   </Badge>
-                  <h3 className="text-3xl md:text-4xl font-black text-foreground leading-tight">
+                  <h3 className="text-3xl md:text-4xl font-semibold text-foreground leading-tight">
                     {showcase[currentIndex].title}
                   </h3>
                   <p className="text-lg text-muted-foreground leading-relaxed">
                     {showcase[currentIndex].desc}
                   </p>
+                  {!showcase[currentIndex].src && (
+                    <p className="text-[13px] text-muted-foreground flex items-center gap-2">
+                      <Icon name="hand-pointer" className="text-primary" />
+                      ลองชี้เมาส์ดูได้ นี่คือหน้าจอจริงของระบบ ไม่ใช่ภาพนิ่ง
+                    </p>
+                  )}
 
                   <div className="flex gap-2.5 pt-2">
                     {showcase.map((s, i) => (
@@ -1298,8 +1325,8 @@ function LandingContent() {
               <caption className="sr-only">ตารางเปรียบเทียบ SIAMSITE กับการจ้างเขียนเว็บเองและแพลตฟอร์มต่างประเทศ</caption>
               <thead>
                 <tr>
-                  <th scope="col" className="p-4 text-xs font-bold uppercase tracking-wider text-muted-foreground" />
-                  <th scope="col" className="p-4 text-center rounded-t-2xl bg-primary text-primary-foreground font-black text-sm">
+                  <th scope="col" className="p-4 text-xs font-medium tracking-wider text-muted-foreground" />
+                  <th scope="col" className="p-4 text-center rounded-t-2xl bg-primary text-primary-foreground font-semibold text-sm">
                     SIAMSITE
                   </th>
                   <th scope="col" className="p-4 text-center text-sm font-bold text-muted-foreground">จ้างเขียนเว็บเอง</th>
@@ -1316,10 +1343,10 @@ function LandingContent() {
                     transition={{ delay: i * 0.05, duration: 0.3, ease: 'easeOut' }}
                     className="group/row"
                   >
-                    <th scope="row" className="py-4 pr-4 pl-2 text-[13px] font-bold text-foreground border-t border-border align-middle group-hover/row:text-primary transition-colors">
+                    <th scope="row" className="py-4 pr-4 pl-2 text-[13px] font-medium text-foreground border-t border-border align-middle group-hover/row:text-primary transition-colors">
                       {row.label}
                     </th>
-                    <td className="p-4 text-center text-[13px] font-black text-foreground bg-primary/5 border-t border-primary/20 align-middle group-hover/row:bg-primary/10 transition-colors">
+                    <td className="p-4 text-center text-[13px] font-semibold text-foreground bg-primary/5 border-t border-primary/20 align-middle group-hover/row:bg-primary/10 transition-colors">
                       <span className="inline-flex items-center gap-1.5 justify-center">
                         <Icon name="circle-check" className="text-primary shrink-0" />
                         {row.ours}
@@ -1374,11 +1401,11 @@ function LandingContent() {
           {featuredPkg && featuredDiscount && (
             <div className="mt-4 rounded-2xl border-2 border-primary/40 bg-primary/5 p-5 md:p-6 flex flex-col md:flex-row md:items-center gap-5">
               <div className="flex-1">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-[10px] font-black uppercase tracking-wider text-primary-foreground">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-[12px] font-semibold tracking-wider text-primary-foreground">
                   <Icon name="fire" className="text-[10px]" />
                   แนะนำที่สุด
                 </span>
-                <p className="text-lg md:text-xl font-black text-foreground mt-2.5 leading-snug">
+                <p className="text-lg md:text-xl font-semibold text-foreground mt-2.5 leading-snug">
                   แพ็กเกจ {featuredPkg.label} จ่าย ฿{featuredPkg.price.toLocaleString()}
                   <span className="text-destructive line-through font-bold text-base ml-2 tabular-nums">
                     ฿{featuredDiscount.regular.toLocaleString()}
@@ -1391,7 +1418,7 @@ function LandingContent() {
                 </p>
               </div>
               <Button
-                className="rounded-full font-black tracking-wide h-12 px-7 shrink-0 bg-primary hover:bg-primary/90 shadow-lg hover:shadow-xl cursor-pointer"
+                className="rounded-full font-semibold tracking-wide h-12 px-7 shrink-0 bg-primary hover:bg-primary/90 shadow-lg hover:shadow-xl cursor-pointer"
                 asChild
               >
                 <Link href={`/order?months=${featuredPkg.months}`}>เลือกแพ็กเกจนี้</Link>
@@ -1402,7 +1429,7 @@ function LandingContent() {
           {/* Shared across every plan, so it is stated once here instead of
               being repeated inside all three cards. */}
           <div className="mt-10 rounded-2xl border border-border bg-secondary/30 p-6 md:p-7">
-            <p className="text-center text-[13px] font-black text-foreground mb-5">
+            <p className="text-center text-[13px] font-semibold text-foreground mb-5">
               ทุกแพ็กเกจได้ครบเท่ากัน
             </p>
             <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-3">
@@ -1444,12 +1471,12 @@ function LandingContent() {
             <div className="relative max-w-2xl w-full" onClick={e => e.stopPropagation()}>
               <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-2xl">
                 <div className="p-4 border-b border-border flex justify-between items-center bg-secondary/30">
-                  <h4 className="font-black text-foreground text-sm">รายละเอียดค่าบริการ EasySlip</h4>
+                  <h4 className="font-semibold text-foreground text-sm">รายละเอียดค่าบริการ EasySlip</h4>
                   <Button variant="ghost" size="icon" onClick={() => setShowEasySlipPlan(false)} className="rounded-full w-8 h-8 cursor-pointer" aria-label="ปิด">
                     <Icon name="times" className="text-xs" />
                   </Button>
                 </div>
-                <div className="p-2 bg-white">
+                <div className="p-2 bg-card">
                   <img src="/images/easy_slip_plan.png" alt="ตารางค่าบริการของ EasySlip" loading="lazy" className="w-full h-auto rounded-xl" />
                 </div>
               </div>
@@ -1476,7 +1503,7 @@ function LandingContent() {
                 />
                 <span className="flex flex-col">
                   <span className="font-bold text-foreground text-xl tracking-tight leading-none">SIAMSITE</span>
-                  <span className="text-[10px] font-bold text-primary tracking-[0.2em] mt-1">MANAGER</span>
+                  <span className="text-[12px] font-medium text-primary mt-1">MANAGER</span>
                 </span>
               </Link>
               <p className="text-muted-foreground text-base leading-relaxed max-w-sm font-medium">
@@ -1522,15 +1549,15 @@ function LandingContent() {
                 <div className="flex items-center gap-3 p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
                   <Icon name="shield-check" className="text-emerald-500 text-xl shrink-0" />
                   <div>
-                    <p className="text-xs font-bold text-foreground">การเชื่อมต่อที่ปลอดภัย (SSL)</p>
-                    <p className="text-[10px] text-muted-foreground">เข้ารหัสข้อมูลระดับสูง</p>
+                    <p className="text-xs font-medium text-foreground">การเชื่อมต่อที่ปลอดภัย (SSL)</p>
+                    <p className="text-[12px] text-muted-foreground">เข้ารหัสข้อมูลระดับสูง</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-3 rounded-2xl bg-amber-500/5 border border-amber-500/10">
                   <Icon name="qrcode" className="text-amber-500 text-xl shrink-0" />
                   <div>
-                    <p className="text-xs font-bold text-foreground">ยืนยันผ่าน PromptPay</p>
-                    <p className="text-[10px] text-muted-foreground">ตรวจสอบสลิปอัตโนมัติ</p>
+                    <p className="text-xs font-medium text-foreground">ยืนยันผ่าน PromptPay</p>
+                    <p className="text-[12px] text-muted-foreground">ตรวจสอบสลิปอัตโนมัติ</p>
                   </div>
                 </div>
               </div>
@@ -1541,7 +1568,7 @@ function LandingContent() {
             <p className="text-sm text-muted-foreground font-semibold">
               &copy; {new Date().getFullYear()} SIAMSITE STORE. All rights reserved.
             </p>
-            <div className="flex items-center gap-2.5 text-[11px] font-semibold text-muted-foreground/70">
+            <div className="flex items-center gap-2.5 text-[13px] font-semibold text-muted-foreground/70">
               <Icon name="lock" className="text-emerald-500/80" />
               <span>ชำระเงินปลอดภัย</span>
               <span className="text-border">|</span>

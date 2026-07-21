@@ -63,9 +63,9 @@ function StatCard({ label, value, icon, color = 'primary', subValue }: any) {
               <Icon name={icon} />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.15em] mb-1">{label}</p>
-              <h4 className="text-3xl font-black text-foreground tracking-tight leading-none">{value}</h4>
-              {subValue && <p className="text-[10px] font-bold text-muted-foreground/80 mt-1.5">{subValue}</p>}
+              <p className="text-[13px] font-semibold text-muted-foreground mb-1">{label}</p>
+              <h4 className="text-3xl font-semibold text-foreground tracking-tight leading-none">{value}</h4>
+              {subValue && <p className="text-[12px] font-medium text-muted-foreground/80 mt-1.5">{subValue}</p>}
             </div>
           </div>
         </CardContent>
@@ -153,7 +153,7 @@ function DashboardContent() {
             animate={{ opacity: 1, x: 0 }}
             className="space-y-1"
           >
-            <h1 className="text-4xl font-black tracking-tight text-foreground flex items-center gap-3">
+            <h1 className="text-4xl font-semibold tracking-tight text-foreground flex items-center gap-3">
               Dashboard <span className="text-primary text-2xl opacity-20">/</span>
             </h1>
             <p className="text-muted-foreground font-semibold flex items-center gap-2">
@@ -167,7 +167,7 @@ function DashboardContent() {
             animate={{ opacity: 1, scale: 1 }}
             className="flex flex-wrap gap-4"
           >
-             <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-white dark:bg-card border border-border shadow-sm">
+             <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-card border border-border shadow-sm">
                 <Button variant="ghost" size="lg" asChild className="h-12 px-6 rounded-xl font-bold gap-2 hover:bg-secondary">
                   <Link href="/dashboard/topup">
                     <Icon name="plus-circle" className="text-primary" /> เติมเงิน
@@ -175,25 +175,25 @@ function DashboardContent() {
                 </Button>
                 <div className="h-6 w-px bg-border mx-1" />
                 <div className="px-5 py-2">
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">คงเหลือ</p>
-                  <p className="text-lg font-black text-foreground">฿{(Number(user?.walletBalance) || 0).toLocaleString()}</p>
+                  <p className="text-[12px] font-semibold text-muted-foreground tracking-wider">คงเหลือ</p>
+                  <p className="text-lg font-semibold text-foreground">฿{(Number(user?.walletBalance) || 0).toLocaleString()}</p>
                 </div>
              </div>
 
              {!hasActiveShop && !usedTrial && trialPromo ? (
-               <Button size="lg" asChild className="h-14 px-8 rounded-2xl font-black gap-3 shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20 transition-transform active:scale-95">
+               <Button size="lg" asChild className="h-14 px-8 rounded-2xl font-semibold gap-3 shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20 transition-transform active:scale-95">
                  <Link href="/order?kind=trial">
                    <Icon name="rocket" /> ทดลองฟรี {trialPromo.days} วัน
                  </Link>
                </Button>
              ) : !usedIntro && introPromo ? (
-               <Button size="lg" asChild className="h-14 px-8 rounded-2xl font-black gap-3 shadow-lg shadow-primary/20 transition-transform active:scale-95">
+               <Button size="lg" asChild className="h-14 px-8 rounded-2xl font-semibold gap-3 shadow-lg shadow-primary/20 transition-transform active:scale-95">
                  <Link href="/order?kind=intro">
                    <Icon name="tag" /> เดือนแรก ฿{introPromo.price}
                  </Link>
                </Button>
              ) : (
-               <Button size="lg" asChild className="h-14 px-8 rounded-2xl font-black gap-3 shadow-lg shadow-primary/20 transition-transform active:scale-95">
+               <Button size="lg" asChild className="h-14 px-8 rounded-2xl font-semibold gap-3 shadow-lg shadow-primary/20 transition-transform active:scale-95">
                  <Link href="/order">
                    <Icon name="store-medical" /> สร้างร้านค้าใหม่
                  </Link>
@@ -216,8 +216,8 @@ function DashboardContent() {
                     <Icon name="rocket" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-widest mb-0.5">สิทธิ์ที่คุณได้รับ</p>
-                    <p className="text-sm font-black text-foreground">ทดลองฟรี {trialPromo.days} วัน</p>
+                    <p className="text-[12px] font-semibold text-emerald-700 dark:text-emerald-400 mb-0.5">สิทธิ์ที่คุณได้รับ</p>
+                    <p className="text-sm font-semibold text-foreground">ทดลองฟรี {trialPromo.days} วัน</p>
                     <p className="text-xs font-semibold text-muted-foreground">ไม่ต้องชำระเงิน · เริ่มได้เลย</p>
                   </div>
                   <div className="flex-shrink-0 text-emerald-600 group-hover:translate-x-1 transition-transform">
@@ -233,8 +233,8 @@ function DashboardContent() {
                     <Icon name="tag" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-0.5">โปรโมชั่นพิเศษ</p>
-                    <p className="text-sm font-black text-foreground">เดือนแรก ฿{introPromo.price} <span className="font-semibold text-muted-foreground line-through text-xs">฿{introPromo.regularPrice}</span></p>
+                    <p className="text-[12px] font-semibold text-primary mb-0.5">โปรโมชั่นพิเศษ</p>
+                    <p className="text-sm font-semibold text-foreground">เดือนแรก ฿{introPromo.price} <span className="font-semibold text-muted-foreground line-through text-xs">฿{introPromo.regularPrice}</span></p>
                     <p className="text-xs font-semibold text-muted-foreground">ประหยัด ฿{introPromo.regularPrice - introPromo.price} · เฉพาะครั้งแรก</p>
                   </div>
                   <div className="flex-shrink-0 text-primary group-hover:translate-x-1 transition-transform">
@@ -249,8 +249,8 @@ function DashboardContent() {
                   <Icon name="check" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-0.5">ใช้สิทธิ์แล้ว</p>
-                  <p className="text-sm font-black text-muted-foreground">ทดลองฟรี {trialPromo.days} วัน</p>
+                  <p className="text-[12px] font-semibold text-muted-foreground mb-0.5">ใช้สิทธิ์แล้ว</p>
+                  <p className="text-sm font-semibold text-muted-foreground">ทดลองฟรี {trialPromo.days} วัน</p>
                   <p className="text-xs font-semibold text-muted-foreground">คุณเคยใช้สิทธิ์นี้ไปแล้ว</p>
                 </div>
               </div>
@@ -261,8 +261,8 @@ function DashboardContent() {
                   <Icon name="check" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-0.5">ใช้สิทธิ์แล้ว</p>
-                  <p className="text-sm font-black text-muted-foreground">ทดลองเดือนแรก ฿{introPromo.price}</p>
+                  <p className="text-[12px] font-semibold text-muted-foreground mb-0.5">ใช้สิทธิ์แล้ว</p>
+                  <p className="text-sm font-semibold text-muted-foreground">ทดลองเดือนแรก ฿{introPromo.price}</p>
                   <p className="text-xs font-semibold text-muted-foreground">คุณเคยใช้สิทธิ์นี้ไปแล้ว</p>
                 </div>
               </div>
@@ -310,11 +310,11 @@ function DashboardContent() {
            {/* Section Header */}
            <div className="flex flex-col md:flex-row gap-6 justify-between items-end">
               <div className="space-y-2">
-                <h3 className="text-xl font-black text-foreground tracking-tight">การจัดการร้านค้า</h3>
-                <div className="flex bg-white dark:bg-card p-1.5 rounded-[1.25rem] border border-border shadow-sm overflow-x-auto hide-scrollbar">
+                <h3 className="text-xl font-semibold text-foreground tracking-tight">การจัดการร้านค้า</h3>
+                <div className="flex bg-card p-1.5 rounded-[1.25rem] border border-border shadow-sm overflow-x-auto hide-scrollbar">
                   {FILTER_TABS.map(tab => (
                     <button key={tab.value} onClick={() => { setFilterStatus(tab.value); setPage(1); }}
-                      className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-xs font-black whitespace-nowrap transition-all duration-300 ${
+                      className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-300 ${
                         filterStatus === tab.value
                         ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20 scale-105'
                         : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
@@ -332,7 +332,7 @@ function DashboardContent() {
                 <input 
                   type="text" 
                   placeholder="ค้นหาชื่อร้านหรือโดเมน..."
-                  className="w-full pl-11 pr-4 h-12 bg-white dark:bg-card border border-border rounded-2xl text-sm font-bold transition-all focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary placeholder:text-muted-foreground/50 shadow-sm"
+                  className="w-full pl-11 pr-4 h-12 bg-card border border-border rounded-2xl text-sm font-bold transition-all focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary placeholder:text-muted-foreground/50 shadow-sm"
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)} 
                 />
@@ -358,17 +358,17 @@ function DashboardContent() {
                   <motion.div 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white dark:bg-card border border-border rounded-[2.5rem] shadow-sm overflow-hidden"
+                    className="bg-card border border-border rounded-[2.5rem] shadow-sm overflow-hidden"
                   >
                     <div className="overflow-x-auto">
                       <table className="w-full text-left min-w-[900px]">
                         <thead>
                           <tr className="border-b border-border bg-secondary/30">
-                            <th className="px-8 py-6 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">ข้อมูลร้านค้า</th>
-                            <th className="px-6 py-6 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] text-center">สถานะปัจจุบัน</th>
-                            <th className="px-6 py-6 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">รายละเอียดแพ็กเกจ</th>
-                            <th className="px-6 py-6 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">อายุการใช้งาน</th>
-                            <th className="px-8 py-6 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] text-right">แอคชั่น</th>
+                            <th className="px-8 py-6 text-[13px] font-semibold text-muted-foreground">ข้อมูลร้านค้า</th>
+                            <th className="px-6 py-6 text-[13px] font-semibold text-muted-foreground text-center">สถานะปัจจุบัน</th>
+                            <th className="px-6 py-6 text-[13px] font-semibold text-muted-foreground">รายละเอียดแพ็กเกจ</th>
+                            <th className="px-6 py-6 text-[13px] font-semibold text-muted-foreground">อายุการใช้งาน</th>
+                            <th className="px-8 py-6 text-[13px] font-semibold text-muted-foreground text-right">แอคชั่น</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/60">
@@ -389,7 +389,7 @@ function DashboardContent() {
                                       <Icon name="cube" className="text-lg" />
                                     </div>
                                     <div>
-                                      <p className="font-black text-foreground text-base tracking-tight leading-tight group-hover:text-primary transition-colors">{sub.shop_name}</p>
+                                      <p className="font-semibold text-foreground text-base tracking-tight leading-tight group-hover:text-primary transition-colors">{sub.shop_name}</p>
                                       <a href={`https://${sub.domain}`} target="_blank" rel="noopener noreferrer"
                                         className="text-[13px] font-semibold text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5 mt-1 opacity-80">
                                         {sub.domain} <Icon name="arrow-up-right-from-square" className="text-[9px]" />
@@ -402,8 +402,8 @@ function DashboardContent() {
                                 </td>
                                 <td className="px-6 py-6">
                                   <div className="space-y-1">
-                                    <div className="text-sm font-black text-foreground">{sub.package_months} เดือน</div>
-                                    <div className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-600 bg-emerald-500/5 px-2 py-0.5 rounded-md border border-emerald-500/10">
+                                    <div className="text-sm font-semibold text-foreground">{sub.package_months} เดือน</div>
+                                    <div className="inline-flex items-center gap-1 text-[13px] font-semibold text-emerald-600 bg-emerald-500/5 px-2 py-0.5 rounded-md border border-emerald-500/10">
                                        ฿{Number(sub.price_paid).toLocaleString()}
                                     </div>
                                   </div>
@@ -419,10 +419,10 @@ function DashboardContent() {
                                 </td>
                                 <td className="px-8 py-6">
                                   <div className="flex justify-end items-center gap-3">
-                                    <Button variant="outline" size="sm" onClick={() => setDomainSubId(sub.id)} className="h-10 px-5 rounded-xl font-bold border-border shadow-sm hover:border-primary/40 hover:bg-white cursor-pointer transition-all">
+                                    <Button variant="outline" size="sm" onClick={() => setDomainSubId(sub.id)} className="h-10 px-5 rounded-xl font-bold border-border shadow-sm hover:border-primary/40 hover:bg-card cursor-pointer transition-all">
                                       <Icon name="globe" className="mr-2 opacity-60" /> โดเมน
                                     </Button>
-                                    <Button variant="outline" size="sm" asChild className="h-10 px-5 rounded-xl font-bold border-border shadow-sm hover:border-primary/40 hover:bg-white cursor-pointer transition-all">
+                                    <Button variant="outline" size="sm" asChild className="h-10 px-5 rounded-xl font-bold border-border shadow-sm hover:border-primary/40 hover:bg-card cursor-pointer transition-all">
                                       <Link href={`/dashboard/credentials?id=${sub.id}`} data-track="dashboard_manage_shop">
                                         จัดการ <Icon name="angle-right" className="ml-2 opacity-50" />
                                       </Link>
@@ -430,7 +430,7 @@ function DashboardContent() {
                                     <Button 
                                       variant={isExpiringSoon ? 'destructive' : 'default'} 
                                       size="sm" asChild 
-                                      className={`h-10 px-5 rounded-xl font-black transition-all active:scale-95 cursor-pointer ${!isExpiringSoon ? 'bg-foreground hover:bg-foreground/90' : ''}`}
+                                      className={`h-10 px-5 rounded-xl font-semibold transition-all active:scale-95 cursor-pointer ${!isExpiringSoon ? 'bg-foreground hover:bg-foreground/90' : ''}`}
                                     >
                                       <Link href={`/dashboard/renew?id=${sub.id}`}>
                                         <Icon name="bolt" className="mr-2 text-[10px]" /> ต่ออายุ
@@ -448,7 +448,7 @@ function DashboardContent() {
                     {/* Pagination */}
                     {totalPages > 1 && (
                       <div className="flex flex-col sm:flex-row items-center justify-between px-8 py-6 border-t border-border/60 bg-secondary/10 gap-4">
-                        <p className="text-[13px] font-bold text-muted-foreground">
+                        <p className="text-[13px] font-medium text-muted-foreground">
                           แสดง {((page - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(page * ITEMS_PER_PAGE, filtered.length)} จาก {filtered.length} ร้านค้า
                         </p>
                         <div className="flex items-center gap-2">
@@ -457,11 +457,11 @@ function DashboardContent() {
                             size="icon" 
                             disabled={page <= 1} 
                             onClick={() => setPage(p => Math.max(1, p - 1))}
-                            className="rounded-xl w-10 h-10 border-border hover:bg-white transition-all shadow-sm"
+                            className="rounded-xl w-10 h-10 border-border hover:bg-card transition-all shadow-sm"
                           >
                             <Icon name="chevron-left" className="text-[10px]" />
                           </Button>
-                          <div className="bg-white border border-border rounded-xl px-4 h-10 flex items-center font-black text-xs min-w-[80px] justify-center shadow-sm">
+                          <div className="bg-card border border-border rounded-xl px-4 h-10 flex items-center font-semibold text-xs min-w-[80px] justify-center shadow-sm">
                             {page} / {totalPages}
                           </div>
                           <Button 
@@ -469,7 +469,7 @@ function DashboardContent() {
                             size="icon" 
                             disabled={page >= totalPages} 
                             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                            className="rounded-xl w-10 h-10 border-border hover:bg-white transition-all shadow-sm"
+                            className="rounded-xl w-10 h-10 border-border hover:bg-card transition-all shadow-sm"
                           >
                             <Icon name="chevron-right" className="text-[10px]" />
                           </Button>
@@ -482,17 +482,17 @@ function DashboardContent() {
            ) : (
              /* Empty State / Onboarding */
              <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
-                <Card className="border-border border-2 bg-white rounded-[3rem] shadow-sm overflow-hidden">
+                <Card className="border-border border-2 bg-card rounded-[3rem] shadow-sm overflow-hidden">
                   <CardContent className="p-0">
                     <div className="bg-primary/5 p-12 text-center border-b border-border">
                        <div className="w-20 h-20 rounded-[2rem] bg-primary text-white flex items-center justify-center mx-auto text-3xl shadow-xl shadow-primary/20 mb-8">
                           <Icon name="rocket" />
                        </div>
-                       <h3 className="text-3xl font-black text-foreground tracking-tight mb-2">ยินดีต้อนรับสู่ SIAMSITE SHOP</h3>
+                       <h3 className="text-3xl font-semibold text-foreground tracking-tight mb-2">ยินดีต้อนรับสู่ SIAMSITE SHOP</h3>
                        <p className="text-muted-foreground font-semibold max-w-lg mx-auto">เริ่มต้นธุรกิจ Minecraft ของคุณด้วย 3 ขั้นตอนง่ายๆ เพื่อเตรียมตัวรับยอดขายแบบมืออาชีพ</p>
                     </div>
                     
-                    <div className="p-12 grid grid-cols-1 md:grid-cols-3 gap-10 bg-white">
+                    <div className="p-12 grid grid-cols-1 md:grid-cols-3 gap-10 bg-card">
                       {[
                         {
                           step: 1, title: 'เติมเงินเข้ากระเป๋า', icon: 'wallet',
@@ -518,8 +518,8 @@ function DashboardContent() {
                               <Icon name={(s.done ? 'check' : s.icon) as IconName} />
                             </div>
                             <div>
-                              <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${s.done ? 'text-emerald-600' : 'text-primary'}`}>Step {s.step}</span>
-                              <h4 className="text-base font-black text-foreground tracking-tight">{s.title}</h4>
+                              <span className={`text-[12px] font-semibold ${s.done ? 'text-emerald-600' : 'text-primary'}`}>Step {s.step}</span>
+                              <h4 className="text-base font-semibold text-foreground tracking-tight">{s.title}</h4>
                             </div>
                           </div>
                           <p className="text-sm font-semibold text-muted-foreground leading-relaxed h-12">{s.desc}</p>
@@ -551,11 +551,11 @@ function DashboardContent() {
                                 <Link href={s.action}>{s.actionLabel}</Link>
                               </Button>
                             ) : s.done ? (
-                              <div className="h-11 flex items-center justify-center gap-2 rounded-xl bg-emerald-500/10 text-emerald-600 text-sm font-black border border-emerald-500/20">
+                              <div className="h-11 flex items-center justify-center gap-2 rounded-xl bg-emerald-500/10 text-emerald-600 text-sm font-semibold border border-emerald-500/20">
                                 <Icon name="check-circle" /> เสร็จสมบูรณ์
                               </div>
                             ) : (
-                              <div className="h-11 flex items-center justify-center gap-2 rounded-xl bg-secondary text-muted-foreground/50 text-xs font-black border border-border border-dashed">
+                              <div className="h-11 flex items-center justify-center gap-2 rounded-xl bg-secondary text-muted-foreground/50 text-xs font-semibold border border-border border-dashed">
                                 รอทำขั้นตอนก่อนหน้า
                               </div>
                             )}

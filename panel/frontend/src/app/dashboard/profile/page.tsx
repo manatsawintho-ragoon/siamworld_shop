@@ -21,7 +21,7 @@ function InputField({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">{label}</label>
+      <label className="text-[12px] font-medium text-muted-foreground ml-1">{label}</label>
       <div className="relative">
         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary/70 text-sm pointer-events-none">
           <Icon name={icon} />
@@ -115,11 +115,11 @@ export default function ProfilePage() {
               <h2 className="text-2xl font-bold text-foreground tracking-tight">{user?.displayName}</h2>
               <p className="text-sm text-muted-foreground font-medium mt-1">{user?.email}</p>
               <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-3">
-                <Badge variant={user?.role === 'admin' ? "default" : "secondary"} className="px-3 py-1 font-bold uppercase tracking-wider text-[10px]">
+                <Badge variant={user?.role === 'admin' ? "default" : "secondary"} className="px-3 py-1 font-medium tracking-wider text-[12px]">
                   <Icon name={user?.role === 'admin' ? 'shield-halved' : 'user'} className={`mr-1.5`} />
                   {user?.role === 'admin' ? 'แอดมิน' : 'ลูกค้า'}
                 </Badge>
-                <Badge variant="outline" className="px-3 py-1 font-bold border-border bg-background/50 text-[10px]">
+                <Badge variant="outline" className="px-3 py-1 font-medium border-border bg-background/50 text-[12px]">
                   ID: #{user?.id}
                 </Badge>
               </div>
@@ -154,7 +154,7 @@ export default function ProfilePage() {
                   value={form.phone}
                   onChange={v => setForm(f => ({ ...f, phone: v }))}
                   placeholder="08x-xxx-xxxx" />
-                <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 ml-1 font-semibold">
+                <p className="text-[12px] text-muted-foreground flex items-center gap-1.5 ml-1 font-semibold">
                   <Icon name="envelope" className="text-primary" />
                   ระบบจะส่งอีเมลแจ้งเตือนก่อนร้านหมดอายุไปยังอีเมลของคุณอัตโนมัติ
                 </p>

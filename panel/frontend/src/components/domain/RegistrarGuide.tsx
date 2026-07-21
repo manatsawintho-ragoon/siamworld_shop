@@ -45,7 +45,7 @@ function CopyBtn({ value }: { value: string }) {
     <button
       type="button"
       onClick={() => { navigator.clipboard.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
-      className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border cursor-pointer flex-shrink-0 transition-colors ${copied ? 'border-emerald-500 text-emerald-600 bg-emerald-500/10' : 'border-border text-muted-foreground hover:bg-secondary'}`}
+      className={`text-[12px] font-medium px-2.5 py-1 rounded-md border cursor-pointer flex-shrink-0 transition-colors ${copied ? 'border-emerald-500 text-emerald-600 bg-emerald-500/10' : 'border-border text-muted-foreground hover:bg-secondary'}`}
     >
       <Icon name={copied ? 'check' : 'copy'} className={`mr-1`} />{copied ? 'คัดลอก' : 'คัดลอก'}
     </button>
@@ -56,8 +56,8 @@ function ValueRow({ label, value, hint }: { label: string; value: string; hint?:
   return (
     <div className="flex items-center justify-between gap-3 py-2 border-b border-border/50 last:border-0">
       <div className="min-w-0">
-        <div className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">{label}</div>
-        {hint && <div className="text-[10px] text-muted-foreground/80 mt-0.5">{hint}</div>}
+        <div className="text-[13px] font-medium text-muted-foreground">{label}</div>
+        {hint && <div className="text-[12px] text-muted-foreground/80 mt-0.5">{hint}</div>}
       </div>
       <div className="flex items-center gap-2 min-w-0">
         <code className="text-sm font-mono font-semibold text-foreground truncate bg-secondary/40 px-2 py-1 rounded">{value}</code>
@@ -88,7 +88,7 @@ export default function RegistrarGuide({ host, cname }: { host: string; cname: s
             key={r.id}
             type="button"
             onClick={() => setSel(r.id)}
-            className={`text-xs font-bold px-3 py-1.5 rounded-full border cursor-pointer transition-colors ${sel === r.id ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:bg-secondary'}`}
+            className={`text-xs font-medium px-3 py-1.5 rounded-full border cursor-pointer transition-colors ${sel === r.id ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:bg-secondary'}`}
           >
             {r.label}
           </button>

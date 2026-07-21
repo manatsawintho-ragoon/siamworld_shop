@@ -22,11 +22,11 @@ export default function LegalLayout({ current, title, subtitle, children }: Lega
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
         {/* Header */}
         <header className="mb-8">
-          <Link href="/" className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-primary transition-colors mb-5">
+          <Link href="/" className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-primary transition-colors mb-5">
             <Icon name="chevron-left" className="text-[10px]" /> กลับหน้าแรก
           </Link>
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary mb-2">เอกสารทางกฎหมาย</p>
-          <h1 className="text-3xl sm:text-4xl font-black text-foreground tracking-tight leading-tight">{title}</h1>
+          <p className="text-[13px] font-medium text-primary mb-2">เอกสารทางกฎหมาย</p>
+          <h1 className="text-3xl sm:text-4xl font-semibold text-foreground tracking-tight leading-tight">{title}</h1>
           <p className="mt-3 text-base text-muted-foreground font-medium max-w-2xl leading-relaxed">{subtitle}</p>
           <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground font-semibold">
             <span><Icon name="calendar-day" className="mr-1.5 text-primary/70" /> ปรับปรุงล่าสุด: {LEGAL_UPDATED_TH}</span>
@@ -63,7 +63,7 @@ export default function LegalLayout({ current, title, subtitle, children }: Lega
 
         {/* Contact / data-controller block */}
         <section className="mt-14 rounded-3xl border border-border bg-card p-6 sm:p-8">
-          <h2 className="text-lg font-black text-foreground mb-1.5">ติดต่อผู้ให้บริการ</h2>
+          <h2 className="text-lg font-semibold text-foreground mb-1.5">ติดต่อผู้ให้บริการ</h2>
           <p className="text-sm text-muted-foreground font-medium mb-5 leading-relaxed">
             {OPERATOR.nameTh} ({OPERATOR.status}) ผู้ให้บริการแพลตฟอร์ม {OPERATOR.service} ({OPERATOR.domain}).
             หากมีข้อสงสัยเกี่ยวกับเอกสารนี้ ต้องการใช้สิทธิตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล (PDPA)
@@ -73,28 +73,28 @@ export default function LegalLayout({ current, title, subtitle, children }: Lega
             <a href={`mailto:${CONTACT.email}`} className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3.5 hover:border-primary/40 transition-colors">
               <Icon name="envelope" className="text-primary w-5 text-center" />
               <span className="min-w-0">
-                <span className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">อีเมลหลัก</span>
+                <span className="block text-[12px] font-medium tracking-wide text-muted-foreground">อีเมลหลัก</span>
                 <span className="block text-sm font-bold text-foreground truncate">{CONTACT.email}</span>
               </span>
             </a>
             <a href={`mailto:${CONTACT.altEmail}`} className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3.5 hover:border-primary/40 transition-colors">
               <Icon name="envelope-open" className="text-primary w-5 text-center" />
               <span className="min-w-0">
-                <span className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">อีเมลสำรอง</span>
+                <span className="block text-[12px] font-medium tracking-wide text-muted-foreground">อีเมลสำรอง</span>
                 <span className="block text-sm font-bold text-foreground truncate">{CONTACT.altEmail}</span>
               </span>
             </a>
             <a href={CONTACT.facebook} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3.5 hover:border-primary/40 transition-colors">
               <Icon name="facebook-f" className="text-primary w-5 text-center" />
               <span className="min-w-0">
-                <span className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Facebook</span>
+                <span className="block text-[12px] font-medium tracking-wide text-muted-foreground">Facebook</span>
                 <span className="block text-sm font-bold text-foreground truncate">{CONTACT.facebookLabel}</span>
               </span>
             </a>
             <a href={CONTACT.discord} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3.5 hover:border-primary/40 transition-colors">
               <Icon name="discord" className="text-primary w-5 text-center" />
               <span className="min-w-0">
-                <span className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Discord</span>
+                <span className="block text-[12px] font-medium tracking-wide text-muted-foreground">Discord</span>
                 <span className="block text-sm font-bold text-foreground truncate">{CONTACT.discordLabel}</span>
               </span>
             </a>
@@ -115,7 +115,7 @@ export default function LegalLayout({ current, title, subtitle, children }: Lega
 export function Section({ id, n, title, children }: { id?: string; n: string; title: string; children: React.ReactNode }) {
   return (
     <section id={id} className="scroll-mt-24">
-      <h2 className="text-xl font-black text-foreground mb-3 flex items-baseline gap-2.5">
+      <h2 className="text-xl font-semibold text-foreground mb-3 flex items-baseline gap-2.5">
         <span className="text-primary font-mono text-base">{n}</span>
         <span>{title}</span>
       </h2>

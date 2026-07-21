@@ -74,7 +74,7 @@ export default function CompensationPopup() {
             </div>
 
             {cat && (
-              <span className={`px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${cat.badge}`}>
+              <span className={`px-2.5 py-1 rounded-full border text-[12px] font-medium tracking-wider ${cat.badge}`}>
                 {cat.label}
               </span>
             )}
@@ -95,13 +95,13 @@ export default function CompensationPopup() {
 
             <button
               onClick={dismiss}
-              className="mt-2 w-full h-12 rounded-2xl bg-primary text-primary-foreground font-bold text-xs uppercase tracking-widest shadow-md shadow-primary/20 hover:opacity-90 transition-all active:scale-95 cursor-pointer"
+              className="mt-2 w-full h-12 rounded-2xl bg-primary text-primary-foreground font-medium text-xs shadow-md shadow-primary/20 hover:opacity-90 transition-all active:scale-95 cursor-pointer"
             >
               รับทราบ
             </button>
 
             {queue.length > 1 && (
-              <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider">
+              <p className="text-[12px] font-medium text-muted-foreground/60 tracking-wider">
                 เหลืออีก {queue.length - 1} รายการ
               </p>
             )}

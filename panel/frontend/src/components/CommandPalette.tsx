@@ -46,16 +46,16 @@ export default function CommandPalette() {
 
   return (
     <div className="fixed inset-0 z-[200] flex items-start justify-center pt-[15vh] px-4">
-      <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={() => setIsOpen(false)} />
+      <div className="fixed inset-0 bg-slate-950/55" onClick={() => setIsOpen(false)} />
       
-      <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[2rem] border-2 border-amber-500 shadow-2xl overflow-hidden animate-saas-fade">
-        <div className="p-6 border-b-2 border-gray-100 dark:border-slate-800 flex items-center gap-4">
+      <div className="relative w-full max-w-2xl bg-card border border-border rounded-xl shadow-xl overflow-hidden">
+        <div className="p-4 border-b border-border flex items-center gap-3">
           <Icon name={loading ? 'spinner' : 'search'} className={`text-amber-500 text-lg ${loading ? 'animate-spin' : ''}`} />
           <input 
             autoFocus
             type="text" 
-            placeholder="Search for users or store clusters... (Press ESC to close)"
-            className="w-full bg-transparent border-none outline-none text-lg font-bold text-gray-900 dark:text-white placeholder:text-gray-300 dark:placeholder:text-slate-700"
+            placeholder="ค้นหาผู้ใช้หรือร้านค้า (กด ESC เพื่อปิด)"
+            className="w-full bg-transparent border-none outline-none text-[15px] text-foreground placeholder:text-muted-foreground"
             value={query}
             onChange={e => setQuery(e.target.value)}
           />
@@ -64,11 +64,11 @@ export default function CommandPalette() {
         <div className="max-h-[400px] overflow-y-auto p-4 custom-scrollbar">
           {!query && (
             <div className="py-10 text-center">
-              <p className="text-saas-label">Quick Navigation</p>
+              <p className="text-[13px] text-muted-foreground">ไปที่หน้า</p>
               <div className="flex justify-center gap-4 mt-4">
-                {['Customers', 'Payments', 'Settings'].map(t => (
-                  <button key={t} onClick={() => { router.push(`/admin/${t.toLowerCase()}`); setIsOpen(false); }} className="px-4 py-2 rounded-xl bg-gray-50 dark:bg-slate-800 text-xs font-black uppercase tracking-widest text-gray-500 hover:text-amber-500 transition-all border-2 border-transparent hover:border-amber-200">
-                    {t}
+                {[{ label: 'ร้านค้า', path: 'customers' }, { label: 'การชำระเงิน', path: 'payments' }, { label: 'ตั้งค่า', path: 'settings' }].map(t => (
+                  <button key={t.path} onClick={() => { router.push(`/admin/${t.path}`); setIsOpen(false); }} className="admin-btn admin-btn-sm">
+                    {t.label}
                   </button>
                 ))}
               </div>
@@ -76,7 +76,7 @@ export default function CommandPalette() {
           )}
 
           {query && results.length === 0 && !loading && (
-            <div className="py-10 text-center text-gray-400 font-bold uppercase text-xs tracking-widest">No matching results found</div>
+            <div className="py-10 text-center text-[13px] text-muted-foreground">ไม่พบผลลัพธ์ที่ตรงกัน</div>
           )}
 
           <div className="space-y-2">
@@ -84,22 +84,22 @@ export default function CommandPalette() {
               <button 
                 key={i} 
                 onClick={() => navigate(r.type, r.id, r.detail)}
-                className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all group border-2 border-transparent hover:border-amber-100 dark:hover:border-amber-900/50"
+                className="w-full flex items-center gap-3 p-3 rounded-md hover:bg-secondary group border border-transparent hover:border-border cursor-pointer"
               >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm border-2 ${r.type === 'user' ? 'bg-blue-50 border-blue-100 text-blue-500' : 'bg-amber-50 border-amber-100 text-amber-500'}`}>
+                <div className={`w-9 h-9 rounded-md flex items-center justify-center text-sm border ${r.type === 'user' ? 'bg-blue-500/10 border-blue-500/25 text-blue-600 dark:text-blue-400' : 'bg-primary/10 border-primary/25 text-primary'}`}>
                   <Icon name={r.type === 'user' ? 'user' : 'server'} />
                 </div>
                 <div className="text-left flex-1 min-w-0">
-                  <p className="font-black text-gray-900 dark:text-white uppercase tracking-tight truncate">{r.name}</p>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate">{r.detail}</p>
+                  <p className="text-[14px] font-medium text-foreground truncate">{r.name}</p>
+                  <p className="text-[12px] text-muted-foreground truncate">{r.detail}</p>
                 </div>
-                <div className="text-[10px] font-black text-gray-300 group-hover:text-amber-400 uppercase tracking-widest">Enter ↵</div>
+                <div className="text-[12px] text-muted-foreground group-hover:text-primary shrink-0">Enter</div>
               </button>
             ))}
           </div>
         </div>
 
-        <div className="bg-gray-50 dark:bg-slate-800/50 px-6 py-3 flex items-center justify-between text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">
+        <div className="bg-gray-50 dark:bg-slate-800/50 px-6 py-3 flex items-center justify-between text-[12px] font-semibold text-gray-400">
           <span>Search Engine v1.0</span>
           <div className="flex gap-4">
             <span><span className="bg-white dark:bg-slate-700 px-1.5 py-0.5 rounded border border-gray-200 dark:border-slate-600 shadow-sm mr-1">↑↓</span> Select</span>

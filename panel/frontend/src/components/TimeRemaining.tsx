@@ -84,17 +84,17 @@ export default function TimeRemaining({ date, suspendAt = null, suspended = fals
 
   return (
     <div className={`flex flex-col ${className}`}>
-      <div className={`flex items-center gap-1.5 text-xs font-bold ${colorClass}`}>
+      <div className={`flex items-center gap-1.5 text-xs font-medium ${colorClass}`}>
         <Icon name={icon} className="text-[10px] opacity-70" />
         <span className="font-semibold">{view.text}</span>
       </div>
       {view.sub && (
-        <p className={`text-[10px] font-semibold mt-0.5 leading-snug ${view.phase === 'grace' ? 'text-red-500/90 dark:text-red-400/80' : 'text-gray-400 dark:text-slate-500'}`}>
+        <p className={`text-[12px] font-semibold mt-0.5 leading-snug ${view.phase === 'grace' ? 'text-red-500/90 dark:text-red-400/80' : 'text-gray-400 dark:text-slate-500'}`}>
           {view.sub}
         </p>
       )}
       {showExactDate && (
-        <p className="text-[10px] text-gray-400 dark:text-slate-500 font-semibold mt-0.5">
+        <p className="text-[12px] text-gray-400 dark:text-slate-500 font-semibold mt-0.5">
           ({view.exactDate})
         </p>
       )}

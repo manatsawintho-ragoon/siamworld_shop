@@ -8,8 +8,8 @@ interface Props {
 
 export default function AdminChart({ data, type }: Props) {
   if (!data || data.length === 0) return (
-    <div className="h-64 flex items-center justify-center text-slate-400 uppercase text-[10px] font-black tracking-widest">
-      No data available for the last 30 days
+    <div className="h-64 flex items-center justify-center text-[13px] text-muted-foreground">
+      ยังไม่มีข้อมูลในช่วง 30 วันที่ผ่านมา
     </div>
   );
 

@@ -135,7 +135,7 @@ function NavbarContent() {
               />
               <div className="flex flex-col">
                 <span className="font-bold text-foreground text-xl leading-none tracking-tight">SIAMSITE</span>
-                <span className="text-[10px] font-semibold text-primary uppercase tracking-widest mt-1">Manager</span>
+                <span className="text-[12px] font-semibold text-primary mt-1">Manager</span>
               </div>
             </Link>
 
@@ -165,7 +165,7 @@ function NavbarContent() {
                     onClick={() => setProfileOpen(!profileOpen)}
                     className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full border border-border hover:bg-secondary transition-colors cursor-pointer"
                   >
-                    <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs">
+                    <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-medium text-xs">
                       {user.displayName?.charAt(0).toUpperCase()}
                     </div>
                     <span className="text-xs font-semibold text-foreground max-w-[90px] truncate hidden sm:block">

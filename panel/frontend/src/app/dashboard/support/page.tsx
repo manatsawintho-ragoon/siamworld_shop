@@ -109,7 +109,7 @@ export default function SupportPage() {
           </h1>
           <button 
             onClick={() => { setCreating(true); setSelectedTicket(null); setNewMessage(''); setSubject(''); }}
-            className="px-4 py-2 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-500"
+            className="px-4 py-2 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90"
           >
             เปิดตั๋วใหม่
           </button>
@@ -118,23 +118,23 @@ export default function SupportPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Ticket List */}
           <div className="lg:col-span-1 space-y-4">
-            <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
-              <h2 className="text-lg font-bold text-white mb-4">ตั๋วของคุณ</h2>
-              {tickets.length === 0 && <p className="text-slate-400 text-sm">ไม่มีตั๋ว</p>}
+            <div className="bg-card border border-border rounded-xl p-4">
+              <h2 className="text-lg font-semibold text-foreground mb-4">ตั๋วของคุณ</h2>
+              {tickets.length === 0 && <p className="text-muted-foreground text-sm">ยังไม่มีตั๋ว</p>}
               <div className="space-y-2">
                 {tickets.map(t => (
                   <div 
                     key={t.id} 
                     onClick={() => handleSelectTicket(t)}
-                    className={`p-3 rounded-lg cursor-pointer border ${selectedTicket?.id === t.id ? 'border-emerald-500 bg-slate-700' : 'border-slate-700 bg-slate-800 hover:bg-slate-700'}`}
+                    className={`p-3 rounded-lg cursor-pointer border ${selectedTicket?.id === t.id ? 'border-primary bg-primary/8' : 'border-border bg-background hover:bg-secondary'}`}
                   >
                     <div className="flex justify-between items-center mb-2">
-                      <span className="font-bold text-white truncate mr-2" title={t.subject}>{t.subject}</span>
-                      <span className={`text-xs px-2 py-1 rounded whitespace-nowrap ${t.status === 'open' ? 'bg-amber-500/20 text-amber-500' : t.status === 'answered' ? 'bg-emerald-500/20 text-emerald-500' : 'bg-slate-500/20 text-slate-400'}`}>
+                      <span className="font-medium text-foreground truncate mr-2" title={t.subject}>{t.subject}</span>
+                      <span className={`text-xs px-2 py-1 rounded whitespace-nowrap ${t.status === 'open' ? 'bg-amber-500/20 text-amber-500' : t.status === 'answered' ? 'bg-emerald-500/20 text-emerald-500' : 'bg-secondary text-muted-foreground'}`}>
                         {t.status.toUpperCase()}
                       </span>
                     </div>
-                    <div className="text-xs text-slate-400">อัพเดต: {new Date(t.updated_at).toLocaleString('th-TH')}</div>
+                    <div className="text-[13px] text-muted-foreground">อัพเดต: {new Date(t.updated_at).toLocaleString('th-TH')}</div>
                   </div>
                 ))}
               </div>
@@ -144,44 +144,44 @@ export default function SupportPage() {
           {/* Ticket Detail / Create Form */}
           <div className="lg:col-span-2">
             {creating ? (
-              <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-                <h2 className="text-xl font-bold text-white mb-4">เปิดตั๋วแจ้งปัญหาใหม่</h2>
+              <div className="bg-card border border-border rounded-xl p-6">
+                <h2 className="text-xl font-semibold text-foreground mb-4">เปิดตั๋วแจ้งปัญหาใหม่</h2>
                 <form onSubmit={handleCreateTicket} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">หัวข้อ</label>
+                    <label className="block text-[13px] font-medium text-secondary-foreground mb-1.5">หัวข้อ</label>
                     <input 
                       type="text" 
                       required
                       value={subject}
                       onChange={e => setSubject(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-background border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:border-primary"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">รายละเอียดปัญหา</label>
+                    <label className="block text-[13px] font-medium text-secondary-foreground mb-1.5">รายละเอียดปัญหา</label>
                     <textarea 
                       required
                       rows={5}
                       value={newMessage}
                       onChange={e => setNewMessage(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-background border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:border-primary"
                     />
                   </div>
                   <div className="flex justify-end gap-3">
-                    <button type="button" onClick={() => setCreating(false)} className="px-4 py-2 text-slate-300 hover:text-white">ยกเลิก</button>
-                    <button type="submit" data-track="support_submit" className="px-4 py-2 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-500">ส่งข้อความ</button>
+                    <button type="button" onClick={() => setCreating(false)} className="px-4 py-2 text-muted-foreground hover:text-foreground">ยกเลิก</button>
+                    <button type="submit" data-track="support_submit" className="px-4 py-2 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90">ส่งข้อความ</button>
                   </div>
                 </form>
               </div>
             ) : selectedTicket ? (
-              <div className="bg-slate-800 border border-slate-700 rounded-xl flex flex-col h-[600px]">
-                <div className="p-4 border-b border-slate-700 flex justify-between items-center">
+              <div className="bg-card border border-border rounded-xl flex flex-col h-[70vh] min-h-[420px]">
+                <div className="p-4 border-b border-border flex justify-between items-center">
                   <div>
-                    <h2 className="text-xl font-bold text-white">{selectedTicket.subject}</h2>
-                    <span className="text-sm text-slate-400">สถานะ: {selectedTicket.status}</span>
+                    <h2 className="text-xl font-semibold text-foreground">{selectedTicket.subject}</h2>
+                    <span className="text-[13px] text-muted-foreground">สถานะ: {selectedTicket.status}</span>
                   </div>
                   {selectedTicket.status !== 'closed' && (
-                    <button onClick={handleClose} className="px-3 py-1 text-sm bg-red-500/20 text-red-500 border border-red-500/50 rounded hover:bg-red-500 hover:text-white transition-colors">
+                    <button onClick={handleClose} className="px-3 py-1 text-sm bg-destructive/10 text-destructive border border-destructive/40 rounded hover:bg-destructive hover:text-white">
                       ปิดตั๋วนี้
                     </button>
                   )}
@@ -190,7 +190,7 @@ export default function SupportPage() {
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
                   {messages.map(m => (
                     <div key={m.id} className={`flex flex-col ${m.is_admin ? 'items-start' : 'items-end'}`}>
-                      <div className={`max-w-[80%] rounded-xl p-3 ${m.is_admin ? 'bg-slate-700 text-white' : 'bg-emerald-600 text-white'}`}>
+                      <div className={`max-w-[80%] rounded-xl p-3 ${m.is_admin ? 'bg-secondary text-foreground' : 'bg-primary text-primary-foreground'}`}>
                         <div className="text-xs opacity-70 mb-1">{m.is_admin ? 'Admin' : 'คุณ'} • {new Date(m.created_at).toLocaleString('th-TH')}</div>
                         <div className="whitespace-pre-wrap text-sm">{m.message}</div>
                       </div>
@@ -199,25 +199,25 @@ export default function SupportPage() {
                 </div>
 
                 {selectedTicket.status !== 'closed' ? (
-                  <form onSubmit={handleReply} className="p-4 border-t border-slate-700 flex gap-2">
+                  <form onSubmit={handleReply} className="p-4 border-t border-border flex gap-2">
                     <input 
                       type="text" 
                       required
                       value={newMessage}
                       onChange={e => setNewMessage(e.target.value)}
                       placeholder="พิมพ์ข้อความ..."
-                      className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500"
+                      className="flex-1 bg-background border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:border-primary"
                     />
-                    <button type="submit" className="px-4 py-2 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-500">ส่ง</button>
+                    <button type="submit" className="px-4 py-2 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90">ส่ง</button>
                   </form>
                 ) : (
-                  <div className="p-4 border-t border-slate-700 text-center text-slate-500 text-sm">
+                  <div className="p-4 border-t border-border text-center text-muted-foreground text-[13px]">
                     ตั๋วนี้ถูกปิดแล้ว ไม่สามารถตอบกลับได้
                   </div>
                 )}
               </div>
             ) : (
-              <div className="bg-slate-800 border border-slate-700 rounded-xl h-[600px] flex items-center justify-center text-slate-500">
+              <div className="bg-card border border-border rounded-xl h-[70vh] min-h-[420px] flex items-center justify-center text-muted-foreground">
                 เลือกตั๋วจากรายการด้านซ้าย หรือเปิดตั๋วใหม่
               </div>
             )}

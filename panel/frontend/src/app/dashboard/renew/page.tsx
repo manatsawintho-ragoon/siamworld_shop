@@ -170,7 +170,7 @@ function RenewContent() {
                                 <div className="flex items-center gap-2">
                                   <span className="text-sm font-bold text-foreground truncate">{sub.shop_name}</span>
                                   {isExpiring && (
-                                    <Badge variant="destructive" className="px-1.5 py-0 text-[10px]">กำลังจะหมดอายุ</Badge>
+                                    <Badge variant="destructive" className="px-1.5 py-0 text-[12px]">กำลังจะหมดอายุ</Badge>
                                   )}
                                 </div>
                                 <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1 font-semibold">
@@ -214,9 +214,9 @@ function RenewContent() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">โปรเดือนแรก · ครั้งแรก</span>
+                          <span className="text-[12px] font-semibold text-emerald-700 dark:text-emerald-400">โปรเดือนแรก · ครั้งแรก</span>
                         </div>
-                        <p className="text-sm font-black text-foreground">
+                        <p className="text-sm font-semibold text-foreground">
                           ต่ออายุ 1 เดือน <span className="text-emerald-600">฿{introPromo.price}</span>
                           <span className="ml-2 font-semibold text-muted-foreground line-through text-xs">฿{introPromo.regularPrice}</span>
                         </p>
@@ -238,7 +238,7 @@ function RenewContent() {
                           <div className={`font-bold text-sm ${isSelected ? 'text-primary-foreground' : 'text-foreground'}`}>{p.label}</div>
                           <div className={`font-extrabold text-2xl my-1.5 ${isSelected ? 'text-white' : 'text-primary'}`}>฿{p.price.toLocaleString()}</div>
                           {p.save > 0 ? (
-                            <Badge variant={isSelected ? "outline" : "success"} className={`mt-1 text-[10px] ${isSelected ? 'border-white/40 bg-transparent text-white' : ''}`}>
+                            <Badge variant={isSelected ? "outline" : "success"} className={`mt-1 text-[12px] ${isSelected ? 'border-white/40 bg-transparent text-white' : ''}`}>
                               ประหยัด ฿{p.save}
                             </Badge>
                           ) : <div className="h-[22px] mt-1" />}
