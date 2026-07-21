@@ -273,26 +273,63 @@ class CampaignService {
     await pool.execute('UPDATE campaigns SET deleted_at = NOW() WHERE id = ?', [id]);
   }
 
-  /** Dashboard figures for one campaign, including outstanding liability. */
+  /**
+   * Dashboard figures for one campaign, including outstanding liability.
+   *
+   * Reconciliation identity (holds for every campaign; re-derive this if the
+   * query ever changes): issued = outstanding + expiredUnspent + clawedBack + redeemed
+   *
+   * Why this holds - read revokeForTransaction above first:
+   * When a lot is revoked, `planClawback` guarantees, PER LOT:
+   *   reduceRemainingBy + debtToRecord === points_granted
+   * `reduceRemainingBy` is subtracted from that lot's points_remaining (which
+   * always lands on exactly 0, since reduceRemainingBy = min(granted,
+   * remaining) = remaining), and `debtToRecord` (if > 0) is written out as a
+   * brand-new negative lot in the same campaign. So the original grant is
+   * always fully accounted for by "what got zeroed out" plus "what got
+   * turned into debt" - nothing is lost and nothing is double-counted.
+   *
+   * That gives us:
+   *   - clawedBack = SUM(points_granted) of every lot with revoked_at set.
+   *     Per the identity above this already equals "reclaimed-from-remaining"
+   *     + "recorded-as-debt" combined, so it is the whole amount clawed back,
+   *     no separate debt term needs adding on top.
+   *   - redeemed (genuine player spend, clawback fully excluded) =
+   *     (granted - remaining) summed over every lot that was NEVER revoked,
+   *     PLUS the absolute value of every debt lot's points_granted. The debt
+   *     amount IS the genuine spend that happened on a lot before it got
+   *     revoked - the revoke overwrites that lot's own remaining to 0, so
+   *     the debt row is the only surviving record of that spend.
+   *   - outstanding is a plain SUM(points_remaining) over unexpired lots with
+   *     no points_granted filter, so negative debt lots (which never expire)
+   *     pull it down and it reflects true net liability for the campaign.
+   *   - expiredUnspent stays positive-lots-only: debt lots use a 2099
+   *     expires_at so they never land here anyway.
+   */
   async stats(id: number): Promise<Record<string, number>> {
     const [[row]] = await pool.execute<RowDataPacket[]>(
       `SELECT
          COALESCE(SUM(CASE WHEN points_granted > 0 THEN points_granted END), 0) AS issued,
-         COALESCE(SUM(CASE WHEN points_granted > 0 AND expires_at > NOW()
-                           THEN points_remaining END), 0) AS outstanding,
+         COALESCE(SUM(CASE WHEN expires_at > NOW() THEN points_remaining END), 0) AS outstanding,
          COALESCE(SUM(CASE WHEN points_granted > 0 AND expires_at <= NOW()
                            THEN points_remaining END), 0) AS expired_unspent,
+         COALESCE(SUM(CASE WHEN revoked_at IS NOT NULL THEN points_granted END), 0) AS clawed_back,
+         COALESCE(SUM(CASE WHEN points_granted > 0 AND revoked_at IS NULL
+                           THEN points_granted - points_remaining END), 0)
+           + COALESCE(SUM(CASE WHEN points_granted < 0 THEN -points_granted END), 0) AS redeemed,
          COUNT(DISTINCT user_id) AS participants
        FROM point_lots WHERE campaign_id = ?`,
       [id]
     ) as unknown as [RowDataPacket[], unknown];
-    const issued = Number(row.issued);
     return {
-      issued,
+      issued: Number(row.issued),
       outstanding: Number(row.outstanding),
       expiredUnspent: Number(row.expired_unspent),
+      clawedBack: Number(row.clawed_back),
       participants: Number(row.participants),
-      redeemed: issued - Number(row.outstanding) - Number(row.expired_unspent),
+      // Guaranteed non-negative by construction (both terms above are
+      // sums of non-negative quantities); Math.max is a defensive floor only.
+      redeemed: Math.max(0, Number(row.redeemed)),
     };
   }
 

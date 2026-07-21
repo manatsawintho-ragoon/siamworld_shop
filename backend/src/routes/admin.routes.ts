@@ -1394,7 +1394,8 @@ router.get('/campaigns', async (_req: Request, res: Response, next: NextFunction
 
 router.get('/campaigns/:id/stats', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id, 10);
+    if (!id) { res.status(400).json({ success: false, error: 'id ไม่ถูกต้อง' }); return; }
     const stats = await campaignService.stats(id);
     res.json({ success: true, stats });
   } catch (err) { next(err); }
@@ -1410,7 +1411,8 @@ router.post('/campaigns', validate(campaignSchema), async (req: Request, res: Re
 
 router.put('/campaigns/:id', validate(campaignSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id, 10);
+    if (!id) { res.status(400).json({ success: false, error: 'id ไม่ถูกต้อง' }); return; }
     await campaignService.update(id, req.body);
     auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'campaign_update', description: `แก้ไขแคมเปญ "${req.body.name}"`, refId: String(id), meta: { name: req.body.name } });
     res.json({ success: true });
@@ -1419,7 +1421,8 @@ router.put('/campaigns/:id', validate(campaignSchema), async (req: Request, res:
 
 router.delete('/campaigns/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id, 10);
+    if (!id) { res.status(400).json({ success: false, error: 'id ไม่ถูกต้อง' }); return; }
     await campaignService.softDelete(id);
     auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'campaign_delete', description: `ลบแคมเปญ ID ${id}`, refId: String(id) });
     res.json({ success: true });
