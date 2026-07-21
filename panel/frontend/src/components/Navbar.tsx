@@ -7,8 +7,11 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import AuthModal from './AuthModal';
 import { Button } from './ui/button';
 import { Icon, type IconName } from '@/components/ui/icon';
+import LanguageSwitcher from './LanguageSwitcher';
+import { useTranslations } from 'next-intl';
 
 function NavbarContent() {
+  const t = useTranslations('nav');
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -140,13 +143,17 @@ function NavbarContent() {
             </Link>
 
             <div className="hidden md:flex items-center gap-6 border-l border-border pl-6">
-              {navLink('/', 'หน้าแรก')}
-              {navLink('/#features', 'ฟีเจอร์เด่น')}
-              {navLink('/#pricing', 'ราคาแพ็กเกจ')}
+              {navLink('/', t('home'))}
+              {navLink('/#features', t('features'))}
+              {navLink('/#pricing', t('pricing'))}
             </div>
           </div>
 
           <div className="hidden md:flex items-center gap-4">
+            {/* Not in /admin: the operator back office is Thai-only, and a
+                control that silently sends you elsewhere is worse than none. */}
+            {!pathname.startsWith('/admin') && <LanguageSwitcher />}
+
             <button onClick={toggleDark} className="text-muted-foreground hover:text-foreground transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-secondary cursor-pointer">
               <Icon name={isDark ? 'sun' : 'moon'} className={`text-sm`} />
             </button>
@@ -183,23 +190,23 @@ function NavbarContent() {
                       <div className="py-1">
                         <Link href="/dashboard" onClick={() => setProfileOpen(false)} className="flex items-center gap-2.5 px-4 py-2 text-sm font-medium hover:bg-secondary transition-colors cursor-pointer">
                           <Icon name="gauge-high" className="w-4 text-center text-muted-foreground" />
-                          แดชบอร์ด
+                          {t('dashboard')}
                         </Link>
                         <Link href="/dashboard/profile" onClick={() => setProfileOpen(false)} className="flex items-center gap-2.5 px-4 py-2 text-sm font-medium hover:bg-secondary transition-colors cursor-pointer">
                           <Icon name="user" className="w-4 text-center text-muted-foreground" />
-                          โปรไฟล์ส่วนตัว
+                          {t('profile')}
                         </Link>
                         {user.role === 'admin' && (
                           <Link href="/admin" onClick={() => setProfileOpen(false)} className="flex items-center gap-2.5 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer">
                             <Icon name="shield-halved" className="w-4 text-center" />
-                            แผงควบคุมแอดมิน
+                            {t('adminPanel')}
                           </Link>
                         )}
                       </div>
                       <div className="border-t border-border py-1">
                         <button onClick={handleLogout} className="w-full flex items-center gap-2.5 px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors text-left cursor-pointer">
                           <Icon name="sign-out-alt" className="w-4 text-center" />
-                          ออกจากระบบ
+                          {t('logout')}
                         </button>
                       </div>
                     </div>
@@ -209,16 +216,20 @@ function NavbarContent() {
             ) : (
               <div className="flex items-center gap-3">
                 <Button variant="ghost" onClick={() => openAuth('login')} className="font-semibold text-sm cursor-pointer">
-                  เข้าสู่ระบบ
+                  {t('login')}
                 </Button>
                 <Button onClick={() => openAuth('register')} className="font-semibold text-sm rounded-full cursor-pointer">
-                  สมัครสมาชิก
+                  {t('register')}
                 </Button>
               </div>
             )}
           </div>
 
           <div className="md:hidden flex items-center gap-3">
+            {/* compact: flag + chevron only, so the mobile bar keeps room for
+                the theme toggle and the hamburger */}
+            {!pathname.startsWith('/admin') && <LanguageSwitcher compact />}
+
             <button onClick={toggleDark} className="text-muted-foreground w-8 h-8 flex items-center justify-center cursor-pointer">
               <Icon name={isDark ? 'sun' : 'moon'} className={`text-sm`} />
             </button>
@@ -242,20 +253,20 @@ function NavbarContent() {
                       <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                     </div>
                   </div>
-                  <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="text-sm font-semibold py-2 cursor-pointer">แดชบอร์ด</Link>
-                  <Link href="/dashboard/topup" onClick={() => setMobileOpen(false)} className="text-sm font-semibold py-2 cursor-pointer">เติมเงิน</Link>
+                  <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="text-sm font-semibold py-2 cursor-pointer">{t('dashboard')}</Link>
+                  <Link href="/dashboard/topup" onClick={() => setMobileOpen(false)} className="text-sm font-semibold py-2 cursor-pointer">{t('topup')}</Link>
                   {user.role === 'admin' && (
-                    <Link href="/admin" onClick={() => setMobileOpen(false)} className="text-sm font-semibold py-2 text-primary cursor-pointer">แผงควบคุมแอดมิน</Link>
+                    <Link href="/admin" onClick={() => setMobileOpen(false)} className="text-sm font-semibold py-2 text-primary cursor-pointer">{t('adminPanel')}</Link>
                   )}
-                  <button onClick={handleLogout} className="text-sm font-semibold py-2 text-destructive text-left cursor-pointer">ออกจากระบบ</button>
+                  <button onClick={handleLogout} className="text-sm font-semibold py-2 text-destructive text-left cursor-pointer">{t('logout')}</button>
                 </>
               ) : (
                 <div className="grid gap-3 pt-2">
                   <Button variant="outline" className="w-full justify-center cursor-pointer" onClick={() => openAuth('login')}>
-                    เข้าสู่ระบบ
+                    {t('login')}
                   </Button>
                   <Button className="w-full justify-center cursor-pointer" onClick={() => openAuth('register')}>
-                    สมัครสมาชิก
+                    {t('register')}
                   </Button>
                 </div>
               )}

@@ -59,4 +59,10 @@ const nextConfig = {
     return [{ source: '/api/:path*', destination: `${backendUrl}/api/:path*` }];
   },
 };
-module.exports = nextConfig;
+const createNextIntlPlugin = require('next-intl/plugin');
+
+// next-intl's default lookup is ./i18n/request.ts relative to the project
+// root; ours lives under src/, so the path is passed explicitly.
+const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
+
+module.exports = withNextIntl(nextConfig);
