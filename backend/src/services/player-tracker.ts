@@ -15,11 +15,18 @@ const SINCE_TTL_SEC = 3600;
 
 // Join/leave event feed (near-realtime, refreshed on the 10s poll cadence).
 const EVENTS_KEY = 'mc:events';
-const EVENTS_MAX = 100;        // keep the last N events
-const EVENTS_TTL_SEC = 6 * 3600;
+// Monotonic counter stamped on every event. A single poll emits a whole batch that
+// shares one `ts`, so the timestamp alone cannot order them — `seq` is what makes
+// "which one happened last" unambiguous for the admin feed and for incremental polls.
+const EVENTS_SEQ_KEY = 'mc:events:seq';
+const EVENTS_MAX = 500;        // keep the last N events (feeds the analytics window too)
+const EVENTS_TTL_SEC = 48 * 3600;
 
 // Online-count trend: one bucket per minute (peak within the minute), 48h retention.
 const TREND_TTL_SEC = 48 * 3600;
+
+// Distinct IGNs seen today — cheap per-poll SADD, powers the "unique players" metric.
+const SEEN_TTL_SEC = 48 * 3600;
 
 export interface PlayerEvent {
   type: 'join' | 'leave';
@@ -27,6 +34,14 @@ export interface PlayerEvent {
   serverId: number;
   serverName: string;
   ts: number;
+  seq: number;
+}
+
+export interface TrendBucket {
+  ts: number;      // bucket start (epoch ms)
+  total: number;   // peak concurrent online within the bucket
+  joins: number;
+  leaves: number;
 }
 
 /**
@@ -128,17 +143,31 @@ export class PlayerTracker {
           if (!truncated && Object.keys(existing).length > 0) {
             const { joined, left } = diffPlayers(Object.keys(existing), data.players);
             if (joined.length > 0 || left.length > 0) {
+              // Reserve a contiguous seq range up-front so every event in this batch
+              // carries a distinct, strictly increasing number even though they all
+              // share the same wall-clock `ts`.
+              const count = joined.length + left.length;
+              const endSeq = await this.redis.incrby(EVENTS_SEQ_KEY, count);
+              let seq = endSeq - count + 1;
+
               const evMulti = this.redis.multi();
               for (const name of joined) {
-                evMulti.rpush(EVENTS_KEY, JSON.stringify({ type: 'join', name, serverId: Number(id), serverName: data.serverName, ts: now }));
+                evMulti.rpush(EVENTS_KEY, JSON.stringify({ type: 'join', name, serverId: Number(id), serverName: data.serverName, ts: now, seq: seq++ }));
               }
               for (const name of left) {
-                evMulti.rpush(EVENTS_KEY, JSON.stringify({ type: 'leave', name, serverId: Number(id), serverName: data.serverName, ts: now }));
+                evMulti.rpush(EVENTS_KEY, JSON.stringify({ type: 'leave', name, serverId: Number(id), serverName: data.serverName, ts: now, seq: seq++ }));
               }
               evMulti.ltrim(EVENTS_KEY, -EVENTS_MAX, -1);
               evMulti.expire(EVENTS_KEY, EVENTS_TTL_SEC);
               await evMulti.exec();
             }
+          }
+
+          // Distinct-players-today set (best-effort, drives the unique-players metric).
+          if (data.players.length > 0) {
+            const seenKey = `mc:seen:${new Date().toISOString().slice(0, 10)}`;
+            await this.redis.sadd(seenKey, ...data.players.map((p) => p.toLowerCase()));
+            await this.redis.expire(seenKey, SEEN_TTL_SEC);
           }
         } catch { /* non-fatal — timing display is best-effort */ }
       }
@@ -218,25 +247,47 @@ export class PlayerTracker {
     }
   }
 
-  /** Recent join/leave events, newest first (up to `limit`). */
-  async getRecentEvents(limit = 40): Promise<PlayerEvent[]> {
+  /**
+   * Recent join/leave events, newest first (up to `limit`).
+   * Pass `afterSeq` to get only events newer than one already shown — this is what
+   * lets the admin feed poll on a fast cadence without re-sending the whole list.
+   */
+  async getRecentEvents(limit = 40, afterSeq?: number): Promise<PlayerEvent[]> {
     try {
-      const raw = await this.redis.lrange(EVENTS_KEY, -limit, -1);
+      // Read a wider slice than `limit` when filtering by seq so a burst of events
+      // between polls isn't silently clipped.
+      const span = afterSeq != null ? EVENTS_MAX : limit;
+      const raw = await this.redis.lrange(EVENTS_KEY, -span, -1);
       const out: PlayerEvent[] = [];
       for (const s of raw) {
-        try { out.push(JSON.parse(s)); } catch { /* skip malformed */ }
+        try {
+          const ev = JSON.parse(s) as PlayerEvent;
+          if (afterSeq != null && Number(ev.seq || 0) <= afterSeq) continue;
+          out.push(ev);
+        } catch { /* skip malformed */ }
       }
-      return out.reverse(); // newest first
+      // Newest first, ordered by seq (falls back to ts for pre-upgrade events).
+      out.sort((a, b) => (Number(b.seq || 0) - Number(a.seq || 0)) || (b.ts - a.ts));
+      return out.slice(0, limit);
     } catch {
       return [];
     }
   }
 
-  /** Today's online-count trend as ascending {ts, total} points (last `limit` minutes). */
+  /**
+   * Online-count trend as ascending {ts, total} points, one per minute.
+   * Spans today plus yesterday so ranges longer than the current day stay continuous.
+   */
   async getTrend(limit = 180): Promise<{ ts: number; total: number }[]> {
     try {
-      const h = await this.redis.hgetall(`mc:trend:${new Date().toISOString().slice(0, 10)}`);
-      const points = Object.entries(h)
+      const today = new Date();
+      const yesterday = new Date(today.getTime() - 24 * 3600 * 1000);
+      const keys = [yesterday, today].map((d) => `mc:trend:${d.toISOString().slice(0, 10)}`);
+      const merged: Record<string, string> = {};
+      for (const key of keys) {
+        Object.assign(merged, await this.redis.hgetall(key));
+      }
+      const points = Object.entries(merged)
         .map(([min, total]) => ({ ts: parseInt(min, 10) * 60000, total: parseInt(total, 10) }))
         .filter((p) => !Number.isNaN(p.ts) && !Number.isNaN(p.total))
         .sort((a, b) => a.ts - b.ts);
@@ -244,6 +295,83 @@ export class PlayerTracker {
     } catch {
       return [];
     }
+  }
+
+  /** Count of distinct IGNs seen on any server today. */
+  async getUniqueToday(): Promise<number> {
+    try {
+      return await this.redis.scard(`mc:seen:${new Date().toISOString().slice(0, 10)}`);
+    } catch {
+      return 0;
+    }
+  }
+
+  /**
+   * Analytics for the online chart: concurrency trend and join/leave flow rolled up
+   * into fixed-width buckets over `rangeMin` minutes, plus summary stats.
+   *
+   * `bucketMin` widens with the range so a 48h view stays readable (and the payload
+   * small) instead of shipping ~2900 one-minute points.
+   */
+  async getAnalytics(rangeMin: number, bucketMin: number): Promise<{
+    buckets: TrendBucket[];
+    stats: {
+      peak: number; peakTs: number | null; avg: number; low: number;
+      joins: number; leaves: number; net: number; uniqueToday: number;
+      turnover: number;
+    };
+  }> {
+    const now = Date.now();
+    const from = now - rangeMin * 60000;
+    const bucketMs = bucketMin * 60000;
+    const bucketOf = (ts: number) => Math.floor(ts / bucketMs) * bucketMs;
+
+    // Seed every bucket in range so gaps render as real zeros, not as a skipped x-axis.
+    const map = new Map<number, TrendBucket>();
+    for (let t = bucketOf(from); t <= bucketOf(now); t += bucketMs) {
+      map.set(t, { ts: t, total: 0, joins: 0, leaves: 0 });
+    }
+
+    const trend = await this.getTrend(48 * 60);
+    for (const p of trend) {
+      if (p.ts < from) continue;
+      const b = map.get(bucketOf(p.ts));
+      if (b) b.total = Math.max(b.total, p.total); // peak concurrency within the bucket
+    }
+
+    const events = await this.getRecentEvents(EVENTS_MAX);
+    let joins = 0, leaves = 0;
+    for (const e of events) {
+      if (e.ts < from) continue;
+      const b = map.get(bucketOf(e.ts));
+      if (e.type === 'join') { joins++; if (b) b.joins++; }
+      else { leaves++; if (b) b.leaves++; }
+    }
+
+    const buckets = [...map.values()].sort((a, b) => a.ts - b.ts);
+    const totals = buckets.map((b) => b.total);
+    const active = totals.filter((t) => t > 0);
+    let peak = 0, peakTs: number | null = null;
+    for (const b of buckets) {
+      if (b.total > peak) { peak = b.total; peakTs = b.ts; }
+    }
+    const uniqueToday = await this.getUniqueToday();
+
+    return {
+      buckets,
+      stats: {
+        peak,
+        peakTs,
+        avg: active.length ? Math.round((active.reduce((a, b) => a + b, 0) / active.length) * 10) / 10 : 0,
+        low: active.length ? Math.min(...active) : 0,
+        joins,
+        leaves,
+        net: joins - leaves,
+        uniqueToday,
+        // Sessions started per hour over the window — a rough churn/traffic rate.
+        turnover: rangeMin > 0 ? Math.round((joins / (rangeMin / 60)) * 10) / 10 : 0,
+      },
+    };
   }
 
   /**

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { api, getToken } from '@/lib/api';
 
@@ -33,20 +33,39 @@ interface PlayerEvent {
   serverId: number;
   serverName: string;
   ts: number;
+  seq: number;
 }
 
 interface OnlineData {
   servers: OnlineServer[];
   totalOnline: number;
   peakToday: number;
+  uniqueToday: number;
   matchedAccounts: number;
   guests: number;
   onlineWallet: number;
   onlineSpent: number;
   adminsOnline: number;
   bannedOnline: number;
-  trend: { ts: number; total: number }[];
-  recentEvents: PlayerEvent[];
+}
+
+interface TrendBucket {
+  ts: number;
+  total: number;
+  joins: number;
+  leaves: number;
+}
+
+interface AnalyticsStats {
+  peak: number;
+  peakTs: number | null;
+  avg: number;
+  low: number;
+  joins: number;
+  leaves: number;
+  net: number;
+  uniqueToday: number;
+  turnover: number;
 }
 
 // Deeper stats fetched on-demand when a player card is opened (web account holders).
@@ -62,11 +81,28 @@ interface PlayerProfile {
   net_balance_rate?: number;
 }
 
-const REFRESH_MS = 10000;
+// The roster costs a MySQL lookup per online IGN, so it polls slowly. The join/leave
+// feed is Redis-only and incremental, so it polls fast - that split is what makes the
+// feed feel live without multiplying load on the heavy endpoint.
+const ROSTER_REFRESH_MS = 15000;
+const EVENTS_REFRESH_MS = 3000;
+const ANALYTICS_REFRESH_MS = 30000;
+const MAX_FEED = 60;
+
 type SortKey = 'playtime' | 'balance' | 'name';
 type AccFilter = 'all' | 'account' | 'guest' | 'banned' | 'admin';
+type RangeKey = '1h' | '6h' | '24h' | '48h';
+
+const RANGES: { key: RangeKey; label: string }[] = [
+  { key: '1h',  label: '1 ชม' },
+  { key: '6h',  label: '6 ชม' },
+  { key: '24h', label: '24 ชม' },
+  { key: '48h', label: '48 ชม' },
+];
 
 const fmtMoney = (n?: number) => (Number(n) || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 });
+const fmtClock = (ts: number) => new Date(ts).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+const fmtClockSec = (ts: number) => new Date(ts).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
 function fmtDuration(sinceMs?: number | null, nowMs?: number): string {
   if (!sinceMs) return '-';
@@ -89,43 +125,208 @@ const worldLabel = (w: string | null): string => {
   return map[w.toLowerCase()] || w;
 };
 
-// Relative time for the join/leave feed ("เมื่อสักครู่", "5 น ที่แล้ว").
+// Compact relative age for the feed. Paired with an exact clock time in the row, so
+// "อันไหนล่าสุด" never depends on reading a fuzzy label.
 function fmtAgo(ts: number, nowMs: number): string {
   const s = Math.max(0, Math.floor((nowMs - ts) / 1000));
-  if (s < 15) return 'เมื่อสักครู่';
-  if (s < 60) return `${s} วิ ที่แล้ว`;
+  if (s < 10) return 'ตอนนี้';
+  if (s < 60) return `${s} วิ`;
   const m = Math.floor(s / 60);
-  if (m < 60) return `${m} น ที่แล้ว`;
+  if (m < 60) return `${m} น`;
   const h = Math.floor(m / 60);
-  return `${h} ชม ที่แล้ว`;
+  return `${h} ชม`;
 }
 
-// Inline SVG area sparkline for the online-count trend (no chart dependency).
-function Sparkline({ points }: { points: { ts: number; total: number }[] }) {
-  const W = 600, H = 120, PAD = 6;
-  if (points.length < 2) {
-    return <div className="flex items-center justify-center h-[120px] text-xs text-gray-300">ยังไม่มีข้อมูลเทรนด์เพียงพอ</div>;
+// ── Interactive concurrency chart ─────────────────────────────────────────────
+// Single series (peak concurrent online per bucket), so it carries no legend: the
+// card title names it. Pointer, touch and keyboard all drive the same crosshair.
+
+const CH_H = 196;
+const PAD = { top: 14, right: 10, bottom: 24, left: 34 };
+
+function OnlineChart({
+  buckets, bucketMin, stale,
+}: { buckets: TrendBucket[]; bucketMin: number; stale: boolean }) {
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const [width, setWidth] = useState(720);
+  const [active, setActive] = useState<number | null>(null);
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      const w = entries[0]?.contentRect.width;
+      if (w && w > 0) setWidth(w);
+    });
+    ro.observe(el);
+    setWidth(el.clientWidth || 720);
+    return () => ro.disconnect();
+  }, []);
+
+  const geom = useMemo(() => {
+    const innerW = Math.max(1, width - PAD.left - PAD.right);
+    const innerH = CH_H - PAD.top - PAD.bottom;
+    const maxY = Math.max(1, ...buckets.map(b => b.total));
+    // Round the axis top up to a friendly step so gridline labels stay whole numbers.
+    const step = maxY <= 4 ? 1 : maxY <= 10 ? 2 : maxY <= 40 ? 10 : maxY <= 100 ? 25 : 50;
+    const topY = Math.ceil(maxY / step) * step || step;
+    const x = (i: number) => PAD.left + (buckets.length <= 1 ? innerW / 2 : (i / (buckets.length - 1)) * innerW);
+    const y = (v: number) => PAD.top + innerH - (v / topY) * innerH;
+    const ticks = [0, topY / 2, topY].filter((v, i, a) => a.indexOf(v) === i);
+    return { innerW, innerH, topY, x, y, ticks };
+  }, [width, buckets]);
+
+  const paths = useMemo(() => {
+    if (buckets.length < 2) return null;
+    const { x, y } = geom;
+    const line = buckets.map((b, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(b.total).toFixed(1)}`).join(' ');
+    const base = CH_H - PAD.bottom;
+    const area = `${line} L${x(buckets.length - 1).toFixed(1)},${base} L${x(0).toFixed(1)},${base} Z`;
+    return { line, area };
+  }, [buckets, geom]);
+
+  // Nearest-bucket lookup: the reader aims at a time, never at a 2px line.
+  const pick = useCallback((clientX: number) => {
+    const el = wrapRef.current;
+    if (!el || buckets.length === 0) return;
+    const rect = el.getBoundingClientRect();
+    const rel = clientX - rect.left - PAD.left;
+    const ratio = geom.innerW <= 0 ? 0 : rel / geom.innerW;
+    const i = Math.round(ratio * (buckets.length - 1));
+    setActive(Math.min(buckets.length - 1, Math.max(0, i)));
+  }, [buckets.length, geom.innerW]);
+
+  const onKey = (e: React.KeyboardEvent) => {
+    if (buckets.length === 0) return;
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      setActive(prev => {
+        const next = (prev ?? buckets.length - 1) + (e.key === 'ArrowRight' ? 1 : -1);
+        return Math.min(buckets.length - 1, Math.max(0, next));
+      });
+    } else if (e.key === 'Escape') setActive(null);
+  };
+
+  if (buckets.length === 0) {
+    return <div className="flex items-center justify-center h-[196px] text-xs text-gray-400">ยังไม่มีข้อมูลในช่วงเวลานี้</div>;
   }
-  const xs = points.map(p => p.ts);
-  const minX = Math.min(...xs), maxX = Math.max(...xs);
-  const maxY = Math.max(1, ...points.map(p => p.total));
-  const sx = (x: number) => PAD + ((x - minX) / (maxX - minX || 1)) * (W - PAD * 2);
-  const sy = (y: number) => H - PAD - (y / maxY) * (H - PAD * 2);
-  const line = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${sx(p.ts).toFixed(1)},${sy(p.total).toFixed(1)}`).join(' ');
-  const area = `${line} L${sx(maxX).toFixed(1)},${H - PAD} L${sx(minX).toFixed(1)},${H - PAD} Z`;
+
+  const cur = active != null ? buckets[active] : null;
+  // Clamp the tooltip inside the card so edge buckets stay fully readable.
+  const tipW = 176;
+  const tipLeft = cur ? Math.min(Math.max(geom.x(active!) - tipW / 2, 4), Math.max(4, width - tipW - 4)) : 0;
+
+  const xLabelIdx: number[] = [];
+  const labelCount = Math.min(5, buckets.length);
+  for (let i = 0; i < labelCount; i++) {
+    xLabelIdx.push(Math.round((i / Math.max(1, labelCount - 1)) * (buckets.length - 1)));
+  }
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-[120px]">
-      <defs>
-        <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#22c55e" stopOpacity="0.35" />
-          <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={area} fill="url(#trendFill)" />
-      <path d={line} fill="none" stroke="#16a34a" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-    </svg>
+    <div
+      ref={wrapRef}
+      className={`relative select-none transition-opacity duration-200 ${stale ? 'opacity-60' : 'opacity-100'}`}
+      tabIndex={0}
+      role="application"
+      aria-label="กราฟผู้เล่นออนไลน์ ใช้ปุ่มลูกศรซ้ายขวาเพื่อดูรายละเอียดแต่ละช่วงเวลา"
+      onKeyDown={onKey}
+      onPointerMove={e => pick(e.clientX)}
+      onPointerDown={e => pick(e.clientX)}
+      onPointerLeave={() => setActive(null)}
+      onBlur={() => setActive(null)}
+      style={{ touchAction: 'pan-y' }}
+    >
+      <svg width={width} height={CH_H} className="block overflow-visible">
+        <defs>
+          <linearGradient id="onlineFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#16a34a" stopOpacity="0.20" />
+            <stop offset="100%" stopColor="#16a34a" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+
+        {/* Recessive grid + y labels */}
+        {geom.ticks.map(v => (
+          <g key={v}>
+            <line x1={PAD.left} x2={width - PAD.right} y1={geom.y(v)} y2={geom.y(v)} stroke="#eef0f3" strokeWidth="1" />
+            <text x={PAD.left - 7} y={geom.y(v) + 3.5} textAnchor="end" className="fill-gray-400" style={{ fontSize: 10 }}>{v}</text>
+          </g>
+        ))}
+
+        {paths && <path d={paths.area} fill="url(#onlineFill)" />}
+        {paths && <path d={paths.line} fill="none" stroke="#16a34a" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />}
+        {!paths && buckets.length === 1 && <circle cx={geom.x(0)} cy={geom.y(buckets[0].total)} r="3.5" fill="#16a34a" />}
+
+        {/* x labels */}
+        {xLabelIdx.map((i, n) => (
+          <text
+            key={`${i}-${n}`}
+            x={geom.x(i)}
+            y={CH_H - 7}
+            textAnchor={n === 0 ? 'start' : n === xLabelIdx.length - 1 ? 'end' : 'middle'}
+            className="fill-gray-400"
+            style={{ fontSize: 10 }}
+          >
+            {fmtClock(buckets[i].ts)}
+          </text>
+        ))}
+
+        {/* Crosshair */}
+        {cur && (
+          <g>
+            <line x1={geom.x(active!)} x2={geom.x(active!)} y1={PAD.top} y2={CH_H - PAD.bottom} stroke="#9ca3af" strokeWidth="1" strokeDasharray="3 3" />
+            <circle cx={geom.x(active!)} cy={geom.y(cur.total)} r="8" fill="#16a34a" fillOpacity="0.15" />
+            <circle cx={geom.x(active!)} cy={geom.y(cur.total)} r="4" fill="#16a34a" stroke="#fff" strokeWidth="2" />
+          </g>
+        )}
+      </svg>
+
+      {/* Tooltip: value leads, label follows */}
+      {cur && (
+        <div
+          className="pointer-events-none absolute z-10 rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-lg"
+          style={{ width: tipW, left: tipLeft, top: 2 }}
+        >
+          <p className="text-[10px] font-semibold text-gray-400">
+            {fmtClock(cur.ts)} - {fmtClock(cur.ts + bucketMin * 60000)}
+          </p>
+          <p className="mt-0.5 flex items-baseline gap-1.5">
+            <span className="text-lg font-black tabular-nums text-gray-900">{cur.total}</span>
+            <span className="text-[11px] text-gray-500">คนออนไลน์ (สูงสุด)</span>
+          </p>
+          <div className="mt-1.5 flex items-center gap-3 border-t border-gray-100 pt-1.5">
+            <span className="flex items-center gap-1 text-[11px] text-gray-600">
+              <i className="fas fa-arrow-right-to-bracket text-[9px] text-green-600"></i>
+              เข้า <b className="tabular-nums text-gray-900">{cur.joins}</b>
+            </span>
+            <span className="flex items-center gap-1 text-[11px] text-gray-600">
+              <i className="fas fa-arrow-right-from-bracket text-[9px] text-gray-400"></i>
+              ออก <b className="tabular-nums text-gray-900">{cur.leaves}</b>
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
+
+// ── Small building blocks ─────────────────────────────────────────────────────
+
+function Metric({ label, value, sub, accent, live }: {
+  label: string; value: string; sub?: string; accent?: boolean; live?: boolean;
+}) {
+  return (
+    <div className="px-4 py-3">
+      <p className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500">
+        {label}
+        {live && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-500"></span>}
+      </p>
+      <p className={`mt-1 text-2xl font-black leading-none tabular-nums ${accent ? 'text-green-600' : 'text-gray-900'}`}>{value}</p>
+      {sub && <p className="mt-1 text-[11px] text-gray-400">{sub}</p>}
+    </div>
+  );
+}
+
+const CARD = 'rounded-2xl border border-gray-200 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.05)]';
 
 export default function AdminOnlinePlayers() {
   const [data, setData]           = useState<OnlineData | null>(null);
@@ -134,11 +335,24 @@ export default function AdminOnlinePlayers() {
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [now, setNow]             = useState(Date.now());
 
+  // Analytics / chart
+  const [range, setRange]         = useState<RangeKey>('6h');
+  const [buckets, setBuckets]     = useState<TrendBucket[]>([]);
+  const [bucketMin, setBucketMin] = useState(10);
+  const [stats, setStats]         = useState<AnalyticsStats | null>(null);
+  const [chartStale, setChartStale] = useState(false);
+
+  // Live feed
+  const [events, setEvents]       = useState<PlayerEvent[]>([]);
+  const [feedReady, setFeedReady] = useState(false);
+  const lastSeq = useRef(0);
+  const freshSeqs = useRef<Set<number>>(new Set());
+
   // Filters
-  const [search, setSearch]   = useState('');
-  const [serverId, setServerId] = useState<string>('all');
+  const [search, setSearch]       = useState('');
+  const [serverId, setServerId]   = useState<string>('all');
   const [accFilter, setAccFilter] = useState<AccFilter>('all');
-  const [sortKey, setSortKey] = useState<SortKey>('playtime');
+  const [sortKey, setSortKey]     = useState<SortKey>('playtime');
 
   // Detail modal
   const [selected, setSelected]   = useState<OnlinePlayer | null>(null);
@@ -147,10 +361,7 @@ export default function AdminOnlinePlayers() {
   const [profile, setProfile]     = useState<PlayerProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
 
-  const dataTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const tickTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const load = (silent = false) => {
+  const loadRoster = useCallback((silent = false) => {
     if (!silent) setLoading(true);
     api('/admin/online-players', { token: getToken()! })
       .then((d: any) => {
@@ -158,32 +369,74 @@ export default function AdminOnlinePlayers() {
           servers: d.servers || [],
           totalOnline: d.totalOnline || 0,
           peakToday: d.peakToday || 0,
+          uniqueToday: d.uniqueToday || 0,
           matchedAccounts: d.matchedAccounts || 0,
           guests: d.guests || 0,
           onlineWallet: d.onlineWallet || 0,
           onlineSpent: d.onlineSpent || 0,
           adminsOnline: d.adminsOnline || 0,
           bannedOnline: d.bannedOnline || 0,
-          trend: d.trend || [],
-          recentEvents: d.recentEvents || [],
         });
         setUpdatedAt(new Date());
         setError('');
       })
       .catch((err: any) => setError(err?.message || 'โหลดข้อมูลไม่สำเร็จ'))
       .finally(() => setLoading(false));
-  };
+  }, []);
+
+  const loadAnalytics = useCallback((key: RangeKey) => {
+    setChartStale(true);
+    api(`/admin/online-players/analytics?range=${key}`, { token: getToken()! })
+      .then((d: any) => {
+        setBuckets(d.buckets || []);
+        setBucketMin(d.bucketMin || 10);
+        setStats(d.stats || null);
+      })
+      .catch(() => { /* chart keeps its previous frame */ })
+      .finally(() => setChartStale(false));
+  }, []);
+
+  // Incremental feed poll: only events newer than what is already on screen.
+  const loadEvents = useCallback(() => {
+    const after = lastSeq.current;
+    const qs = after > 0 ? `?after=${after}&limit=50` : '?limit=50';
+    api(`/admin/online-players/events${qs}`, { token: getToken()! })
+      .then((d: any) => {
+        const incoming: PlayerEvent[] = d.events || [];
+        setFeedReady(true);
+        if (incoming.length === 0) return;
+        lastSeq.current = Math.max(lastSeq.current, Number(d.lastSeq) || 0);
+        if (after > 0) {
+          // Only the seqs still renderable matter; drop the rest so this can't grow forever.
+          if (freshSeqs.current.size > MAX_FEED * 2) freshSeqs.current.clear();
+          incoming.forEach(e => freshSeqs.current.add(e.seq));
+        }
+        setEvents(prev => {
+          const merged = after > 0 ? [...incoming, ...prev] : incoming;
+          return merged.slice(0, MAX_FEED);
+        });
+      })
+      .catch(() => { /* transient - next tick retries */ });
+  }, []);
 
   useEffect(() => {
-    load();
-    dataTimer.current = setInterval(() => load(true), REFRESH_MS);
-    tickTimer.current = setInterval(() => setNow(Date.now()), 1000);
+    loadRoster();
+    loadEvents();
+    const rosterTimer = setInterval(() => loadRoster(true), ROSTER_REFRESH_MS);
+    const eventsTimer = setInterval(loadEvents, EVENTS_REFRESH_MS);
+    const tickTimer = setInterval(() => setNow(Date.now()), 1000);
     return () => {
-      if (dataTimer.current) clearInterval(dataTimer.current);
-      if (tickTimer.current) clearInterval(tickTimer.current);
+      clearInterval(rosterTimer);
+      clearInterval(eventsTimer);
+      clearInterval(tickTimer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadRoster, loadEvents]);
+
+  useEffect(() => {
+    loadAnalytics(range);
+    const t = setInterval(() => loadAnalytics(range), ANALYTICS_REFRESH_MS);
+    return () => clearInterval(t);
+  }, [range, loadAnalytics]);
 
   // Flatten all servers into one list (each player tagged with its server) so many
   // players are visible in a single dense grid without hunting through sections.
@@ -215,6 +468,15 @@ export default function AdminOnlinePlayers() {
     return sorted;
   }, [allPlayers, serverId, search, accFilter, sortKey]);
 
+  // Average session length of everyone currently online - a read on whether the
+  // server is holding players or churning.
+  const avgSession = useMemo(() => {
+    const withSince = allPlayers.filter(p => p.onlineSince);
+    if (withSince.length === 0) return null;
+    const total = withSince.reduce((sum, p) => sum + (now - (p.onlineSince as number)), 0);
+    return total / withSince.length;
+  }, [allPlayers, now]);
+
   const openDetail = (p: OnlinePlayer) => {
     setSelected(p);
     setWorld(null);
@@ -234,284 +496,334 @@ export default function AdminOnlinePlayers() {
     }
   };
 
-  const CHIPS: { key: AccFilter; icon: string; label: string }[] = [
-    { key: 'all',     icon: 'fa-layer-group',  label: 'ทั้งหมด' },
-    { key: 'account', icon: 'fa-user-check',   label: 'มีบัญชีเว็บ' },
-    { key: 'guest',   icon: 'fa-user-secret',  label: 'ไม่มีบัญชี' },
-    { key: 'banned',  icon: 'fa-ban',          label: 'ถูกระงับ' },
-    { key: 'admin',   icon: 'fa-shield-alt',   label: 'Admin' },
+  const CHIPS: { key: AccFilter; label: string }[] = [
+    { key: 'all',     label: 'ทั้งหมด' },
+    { key: 'account', label: 'มีบัญชีเว็บ' },
+    { key: 'guest',   label: 'ไม่มีบัญชี' },
+    { key: 'banned',  label: 'ถูกระงับ' },
+    { key: 'admin',   label: 'Admin' },
   ];
 
-  const summary = [
-    { label: 'ออนไลน์ตอนนี้', value: String(data?.totalOnline ?? 0), icon: 'fa-users',      grad: 'from-green-500 to-emerald-600', pulse: true },
-    { label: 'Peak วันนี้',    value: String(data?.peakToday ?? 0),   icon: 'fa-arrow-trend-up', grad: 'from-orange-500 to-amber-600' },
-    { label: 'มีบัญชีเว็บ',    value: String(data?.matchedAccounts ?? 0), icon: 'fa-user-check', grad: 'from-blue-500 to-indigo-600' },
-    { label: 'ไม่มีบัญชี',     value: String(data?.guests ?? 0),      icon: 'fa-user-secret', grad: 'from-slate-500 to-slate-700' },
-    { label: 'ยอดเงินรวม (ออนไลน์)', value: fmtMoney(data?.onlineWallet), icon: 'fa-wallet', grad: 'from-teal-500 to-cyan-600' },
-    { label: 'ใช้จ่ายรวม (ออนไลน์)', value: fmtMoney(data?.onlineSpent), icon: 'fa-cart-shopping', grad: 'from-violet-500 to-purple-600' },
-    { label: 'Admin ออนไลน์',  value: String(data?.adminsOnline ?? 0), icon: 'fa-shield-halved', grad: 'from-amber-500 to-orange-600' },
-    { label: 'ถูกระงับ (ออนไลน์)', value: String(data?.bannedOnline ?? 0), icon: 'fa-ban', grad: 'from-rose-500 to-red-600' },
-  ];
+  const truncatedServers = data?.servers.filter(s => s.truncated) ?? [];
 
   return (
-    <div className="space-y-5 max-w-[1600px] mx-auto">
+    <div className="mx-auto max-w-[1400px] space-y-4">
 
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <i className="fas fa-signal text-[#22c55e]"></i> ผู้เล่นออนไลน์
-          </h1>
-          <p className="text-xs text-gray-400 mt-0.5">
-            เรียลไทม์ + ข้อมูลบัญชีเว็บของแต่ละคน
-            {updatedAt && <span className="ml-1">· อัปเดต {updatedAt.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} น.</span>}
+          <h1 className="text-xl font-bold text-gray-900">ผู้เล่นออนไลน์</h1>
+          <p className="mt-0.5 text-xs text-gray-500">
+            สถานะเรียลไทม์และข้อมูลบัญชีเว็บของผู้เล่นแต่ละคน
+            {updatedAt && <span className="ml-1 text-gray-400">: อัปเดต {fmtClockSec(updatedAt.getTime())} น.</span>}
           </p>
         </div>
-        <button onClick={() => load()} disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg bg-[#1e2735] text-white shadow-[0_4px_0_#0d131d] hover:brightness-110 transition-all active:shadow-[0_1px_0_#0d131d] active:translate-y-[2px] disabled:opacity-60">
-          <i className={`fas fa-rotate ${loading ? 'fa-spin' : ''} text-xs`}></i> รีเฟรช
+        <button onClick={() => { loadRoster(); loadAnalytics(range); }} disabled={loading}
+          className="flex items-center gap-2 rounded-lg bg-[#1e2735] px-4 py-2 text-sm font-bold text-white shadow-[0_4px_0_#0d131d] transition-all hover:brightness-110 active:translate-y-[2px] active:shadow-[0_1px_0_#0d131d] disabled:opacity-60">
+          <i className={`fas fa-rotate text-xs ${loading ? 'fa-spin' : ''}`}></i> รีเฟรช
         </button>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-2 text-sm">
+        <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           <i className="fas fa-exclamation-circle flex-shrink-0"></i><span className="flex-1 text-xs">{error}</span>
         </div>
       )}
 
-      {/* Summary hero */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {summary.map(s => (
-          <div key={s.label} className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${s.grad} p-4 text-white shadow-[0_8px_24px_rgba(0,0,0,0.15)]`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-3xl font-black tabular-nums leading-none flex items-center gap-2">
-                  {s.value}
-                  {s.pulse && (data?.totalOnline ?? 0) > 0 && <span className="w-2.5 h-2.5 rounded-full bg-white/90 animate-pulse"></span>}
-                </p>
-                <p className="text-[11px] font-semibold text-white/80 mt-1.5">{s.label}</p>
-              </div>
-              <i className={`fas ${s.icon} text-3xl text-white/25`}></i>
-            </div>
-          </div>
-        ))}
+      {/* Key numbers: one strip, no card confetti. Secondary figures ride along as
+          sub-lines under the metric they qualify instead of claiming their own card. */}
+      <div className={`${CARD} grid grid-cols-2 divide-gray-100 sm:grid-cols-3 lg:grid-cols-5 lg:divide-x`}>
+        <Metric
+          label="ออนไลน์ตอนนี้" accent live
+          value={String(data?.totalOnline ?? 0)}
+          sub={avgSession != null ? `เฉลี่ยเล่นมาแล้ว ${fmtDuration(now - avgSession, now)}` : 'ยังไม่มีผู้เล่น'}
+        />
+        <Metric
+          label="Peak วันนี้"
+          value={String(data?.peakToday ?? 0)}
+          sub={stats?.peak ? `ช่วง ${RANGES.find(r => r.key === range)?.label} สูงสุด ${stats.peak}` : undefined}
+        />
+        <Metric
+          label="ผู้เล่นไม่ซ้ำวันนี้"
+          value={String(data?.uniqueToday ?? 0)}
+          sub={stats ? `เข้าใหม่ ${stats.turnover}/ชม` : undefined}
+        />
+        <Metric
+          label="มีบัญชีเว็บ"
+          value={String(data?.matchedAccounts ?? 0)}
+          sub={`ไม่มีบัญชี ${data?.guests ?? 0} คน`}
+        />
+        <Metric
+          label="ยอดเงินคงเหลือรวม"
+          value={fmtMoney(data?.onlineWallet)}
+          sub={`ใช้จ่ายสะสม ${fmtMoney(data?.onlineSpent)}`}
+        />
       </div>
 
-      {/* Trend + per-server + live join/leave feed */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        {/* Trend + per-server strip */}
-        <div className="lg:col-span-2 bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 p-4">
-          <div className="flex items-center justify-between mb-1">
-            <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2"><i className="fas fa-chart-area text-green-500"></i> เทรนด์ออนไลน์วันนี้</h3>
-            <span className="text-[11px] text-gray-400">ตอนนี้ {data?.totalOnline ?? 0} · Peak {data?.peakToday ?? 0}</span>
+      {/* Warnings that used to hide inside per-server chips */}
+      {(truncatedServers.length > 0 || (data?.bannedOnline ?? 0) > 0 || (data?.adminsOnline ?? 0) > 0) && (
+        <div className="flex flex-wrap items-center gap-2 text-[11px]">
+          {(data?.adminsOnline ?? 0) > 0 && (
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1 font-medium text-gray-600">
+              <i className="fas fa-shield-halved text-[10px] text-gray-400"></i> Admin ออนไลน์ {data!.adminsOnline}
+            </span>
+          )}
+          {(data?.bannedOnline ?? 0) > 0 && (
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 font-medium text-red-700">
+              <i className="fas fa-ban text-[10px]"></i> ผู้เล่นถูกระงับกำลังออนไลน์ {data!.bannedOnline} คน
+            </span>
+          )}
+          {truncatedServers.length > 0 && (
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-700">
+              <i className="fas fa-triangle-exclamation text-[10px]"></i>
+              รายชื่อไม่ครบ ({truncatedServers.map(s => s.serverName || `#${s.id}`).join(', ')}) เซิร์ฟเวอร์จำกัดรายชื่อ RCON
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Chart + live feed */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className={`${CARD} p-4 lg:col-span-2`}>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-bold text-gray-900">ผู้เล่นออนไลน์ตามช่วงเวลา</h2>
+              <p className="text-[11px] text-gray-400">แตะหรือชี้ที่กราฟเพื่อดูรายละเอียดแต่ละช่วง</p>
+            </div>
+            <div className="flex rounded-lg border border-gray-200 p-0.5">
+              {RANGES.map(r => (
+                <button key={r.key} onClick={() => setRange(r.key)}
+                  className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                    range === r.key ? 'bg-[#1e2735] text-white' : 'text-gray-500 hover:bg-gray-50'
+                  }`}>
+                  {r.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <Sparkline points={data?.trend ?? []} />
-          {(data?.servers?.length ?? 0) > 0 && (
-            <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-100">
-              {data!.servers.map(s => (
-                <div key={s.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-gray-50 border border-gray-100">
-                  <i className="fas fa-server text-[10px] text-gray-400"></i>
-                  <span className="text-[11px] font-semibold text-gray-600">{s.serverName || `#${s.id}`}</span>
-                  <span className="text-[11px] font-black text-gray-800 tabular-nums">{s.count}</span>
-                  {s.truncated && <span title="เซิร์ฟเวอร์จำกัดรายชื่อ RCON ผู้เล่นบางส่วนไม่แสดงในการ์ด" className="text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1">รายชื่อไม่ครบ</span>}
+
+          <OnlineChart buckets={buckets} bucketMin={bucketMin} stale={chartStale} />
+
+          {stats && (
+            <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-gray-100 pt-3 sm:grid-cols-4">
+              {[
+                { label: 'สูงสุดในช่วง', value: String(stats.peak), hint: stats.peakTs ? `เวลา ${fmtClock(stats.peakTs)} น.` : undefined },
+                { label: 'เฉลี่ย',        value: String(stats.avg),  hint: `ต่ำสุด ${stats.low}` },
+                { label: 'เข้าเซิร์ฟ',    value: String(stats.joins), hint: `ออก ${stats.leaves}` },
+                { label: 'เปลี่ยนแปลงสุทธิ', value: `${stats.net > 0 ? '+' : ''}${stats.net}`, hint: `${stats.turnover}/ชม` },
+              ].map(s => (
+                <div key={s.label}>
+                  <p className="text-[10px] font-medium text-gray-400">{s.label}</p>
+                  <p className="text-sm font-black tabular-nums text-gray-900">{s.value}</p>
+                  {s.hint && <p className="text-[10px] text-gray-400">{s.hint}</p>}
                 </div>
               ))}
             </div>
           )}
         </div>
+
         {/* Live join/leave feed */}
-        <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 p-4 flex flex-col">
-          <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2 mb-2"><i className="fas fa-right-left text-blue-500"></i> เข้า-ออกล่าสุด</h3>
-          <div className="flex-1 overflow-y-auto max-h-[176px] space-y-1.5 pr-1">
-            {(data?.recentEvents?.length ?? 0) === 0 ? (
-              <p className="text-xs text-gray-300 text-center py-8">ยังไม่มีความเคลื่อนไหว</p>
-            ) : data!.recentEvents.map((e, i) => (
-              <div key={`${e.ts}:${e.name}:${i}`} className="flex items-center gap-2 text-xs">
-                <span className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 ${e.type === 'join' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500'}`}>
-                  <i className={`fas ${e.type === 'join' ? 'fa-arrow-right-to-bracket' : 'fa-arrow-right-from-bracket'} text-[9px]`}></i>
-                </span>
-                <span className="font-semibold text-gray-700 truncate">{e.name}</span>
-                <span className={`text-[10px] font-bold ${e.type === 'join' ? 'text-green-500' : 'text-gray-400'}`}>{e.type === 'join' ? 'เข้า' : 'ออก'}</span>
-                <span className="text-[10px] text-gray-300 ml-auto whitespace-nowrap">{fmtAgo(e.ts, now)}</span>
+        <div className={`${CARD} flex flex-col p-4`}>
+          <div className="mb-2 flex items-baseline justify-between">
+            <h2 className="text-sm font-bold text-gray-900">เข้า-ออกล่าสุด</h2>
+            <span className="text-[10px] text-gray-400">ใหม่สุดอยู่บนสุด</span>
+          </div>
+          <div className="-mr-1 max-h-[360px] flex-1 overflow-y-auto pr-1">
+            {!feedReady ? (
+              <div className="space-y-2 py-1">
+                {[0, 1, 2, 3].map(i => (
+                  <div key={i} className="flex items-center gap-2">
+                    <div className="h-6 w-6 flex-shrink-0 animate-pulse rounded bg-gray-100"></div>
+                    <div className="h-3 flex-1 animate-pulse rounded bg-gray-100"></div>
+                  </div>
+                ))}
               </div>
-            ))}
+            ) : events.length === 0 ? (
+              <p className="py-10 text-center text-xs text-gray-400">ยังไม่มีความเคลื่อนไหว</p>
+            ) : (
+              <ul className="divide-y divide-gray-50">
+                {events.map((e, i) => (
+                  <li
+                    key={e.seq || `${e.ts}:${e.name}:${i}`}
+                    className={`flex items-center gap-2 py-1.5 ${freshSeqs.current.has(e.seq) ? 'animate-[fadeIn_0.35s_ease-out]' : ''}`}
+                  >
+                    <span className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded ${
+                      e.type === 'join' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-400'
+                    }`}>
+                      <i className={`fas ${e.type === 'join' ? 'fa-arrow-right-to-bracket' : 'fa-arrow-right-from-bracket'} text-[9px]`}></i>
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="flex items-center gap-1.5">
+                        <span className="truncate text-xs font-semibold text-gray-800">{e.name}</span>
+                        <span className={`text-[10px] font-bold ${e.type === 'join' ? 'text-green-600' : 'text-gray-400'}`}>
+                          {e.type === 'join' ? 'เข้า' : 'ออก'}
+                        </span>
+                        {i === 0 && <span className="rounded bg-gray-900 px-1 py-px text-[8px] font-bold text-white">ล่าสุด</span>}
+                      </p>
+                      {/* Exact clock time removes the "which one came first" guesswork */}
+                      <p className="text-[10px] tabular-nums text-gray-400">{fmtClockSec(e.ts)} น.</p>
+                    </div>
+                    <span className="flex-shrink-0 text-[10px] tabular-nums text-gray-300">{fmtAgo(e.ts, now)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Filter / search bar */}
-      <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 p-3 flex flex-wrap items-center gap-2.5">
-        <div className="relative flex-1 min-w-[180px] max-w-xs">
-          <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
+      {/* Filters - one row above the roster */}
+      <div className={`${CARD} flex flex-wrap items-center gap-2 p-3`}>
+        <div className="relative min-w-[180px] max-w-xs flex-1">
+          <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-300"></i>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="ค้นหาชื่อผู้เล่น..."
-            className="w-full pl-8 pr-8 py-2 rounded-lg border border-gray-200 text-sm bg-gray-50 focus:bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20 placeholder:text-gray-300 transition-colors" />
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-8 pr-8 text-sm transition-colors placeholder:text-gray-400 focus:border-[#637469] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#637469]/20" />
           {search && (
-            <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 text-xs"><i className="fas fa-times"></i></button>
+            <button onClick={() => setSearch('')} aria-label="ล้างคำค้นหา"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-300 hover:text-gray-500"><i className="fas fa-times"></i></button>
           )}
         </div>
-        {/* Chips */}
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="flex flex-wrap items-center gap-1.5">
           {CHIPS.map(c => (
             <button key={c.key} onClick={() => setAccFilter(c.key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${
-                accFilter === c.key ? 'bg-[#1e2735] border-[#1e2735] text-white' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-100'
+              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                accFilter === c.key ? 'border-[#1e2735] bg-[#1e2735] text-white' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
               }`}>
-              <i className={`fas ${c.icon} text-[10px]`}></i> {c.label}
+              {c.label}
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="ml-auto flex items-center gap-2">
           {(data?.servers.length ?? 0) > 1 && (
-            <select value={serverId} onChange={e => setServerId(e.target.value)}
-              className="border border-gray-200 rounded-lg px-2.5 py-2 text-xs bg-gray-50 focus:bg-white focus:outline-none focus:border-[#637469]">
+            <select value={serverId} onChange={e => setServerId(e.target.value)} aria-label="กรองตามเซิร์ฟเวอร์"
+              className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2 text-xs focus:border-[#637469] focus:bg-white focus:outline-none">
               <option value="all">ทุกเซิร์ฟเวอร์</option>
-              {data!.servers.map(s => <option key={s.id} value={s.id}>{s.serverName || `#${s.id}`}</option>)}
+              {data!.servers.map(s => <option key={s.id} value={s.id}>{s.serverName || `#${s.id}`} ({s.count})</option>)}
             </select>
           )}
-          <select value={sortKey} onChange={e => setSortKey(e.target.value as SortKey)}
-            className="border border-gray-200 rounded-lg px-2.5 py-2 text-xs bg-gray-50 focus:bg-white focus:outline-none focus:border-[#637469]">
+          <select value={sortKey} onChange={e => setSortKey(e.target.value as SortKey)} aria-label="เรียงลำดับ"
+            className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2 text-xs focus:border-[#637469] focus:bg-white focus:outline-none">
             <option value="playtime">ออนไลน์นานสุด</option>
             <option value="balance">ยอดเงินมากสุด</option>
             <option value="name">ชื่อ A-Z</option>
           </select>
+          <span className="text-[11px] tabular-nums text-gray-400">{filtered.length.toLocaleString()} คน</span>
         </div>
-        <span className="text-[11px] text-gray-400 w-full sm:w-auto">แสดง {filtered.length.toLocaleString()} คน</span>
       </div>
 
-      {/* Player grid */}
+      {/* Roster */}
       {loading && !data ? (
         <div className="flex flex-col items-center justify-center py-20">
-          <i className="fas fa-spinner fa-spin text-2xl text-green-400"></i>
-          <p className="text-xs text-gray-400 mt-2">กำลังโหลด...</p>
+          <i className="fas fa-spinner fa-spin text-2xl text-gray-300"></i>
+          <p className="mt-2 text-xs text-gray-400">กำลังโหลด...</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 flex flex-col items-center justify-center py-16 text-gray-400">
-          <i className="fas fa-user-slash text-3xl mb-3 text-gray-200"></i>
+        <div className={`${CARD} flex flex-col items-center justify-center py-16 text-gray-400`}>
+          <i className="fas fa-user-slash mb-3 text-3xl text-gray-200"></i>
           <p className="text-sm font-medium">{allPlayers.length === 0 ? 'ยังไม่มีผู้เล่นออนไลน์ หรือ RCON ยังต่อไม่ได้' : 'ไม่พบผู้เล่นตามตัวกรอง'}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filtered.map(p => (
             <button key={`${p.serverId}:${p.name}`} onClick={() => openDetail(p)}
-              className="group text-left bg-white rounded-xl border border-gray-200/70 shadow-[0_2px_10px_rgba(0,0,0,0.05)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.10)] hover:border-green-300 transition-all p-3 flex items-center gap-3">
+              className="group flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 text-left transition-colors hover:border-gray-300 hover:bg-gray-50">
               <div className="relative flex-shrink-0">
-                <div className="w-11 h-11 rounded-lg bg-gray-100 overflow-hidden border border-gray-200">
-                  <img src={`https://mc-heads.net/avatar/${p.name}/44`} alt={p.name} className="w-full h-full" style={{ imageRendering: 'pixelated' }} />
+                <div className="h-10 w-10 overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
+                  <img src={`https://mc-heads.net/avatar/${p.name}/40`} alt="" className="h-full w-full" style={{ imageRendering: 'pixelated' }} />
                 </div>
-                <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-white"></span>
+                <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-green-500"></span>
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-gray-800 text-[13px] truncate">{p.name}</span>
-                  {p.role === 'admin' && <i className="fas fa-shield-alt text-orange-500 text-[9px]" title="Admin"></i>}
-                  {p.banned && <i className="fas fa-ban text-red-500 text-[9px]" title="ถูกระงับ"></i>}
+                  <span className="truncate text-[13px] font-bold text-gray-900">{p.name}</span>
+                  {p.role === 'admin' && <i className="fas fa-shield-halved text-[9px] text-gray-400" title="Admin"></i>}
+                  {p.banned && <i className="fas fa-ban text-[9px] text-red-500" title="ถูกระงับ"></i>}
                 </div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[10px] text-gray-400 flex items-center gap-1 truncate">
-                    <i className="fas fa-clock text-[8px]"></i> {fmtDuration(p.onlineSince, now)}
-                  </span>
+                <div className="mt-0.5 flex items-center gap-2 text-[10px] text-gray-400">
+                  <span className="tabular-nums">{fmtDuration(p.onlineSince, now)}</span>
                   {p.hasAccount ? (
-                    <span className="text-[10px] font-bold text-green-600 tabular-nums flex items-center gap-1">
-                      <i className="fas fa-wallet text-[8px]"></i> {fmtMoney(p.walletBalance)}
-                    </span>
+                    <span className="tabular-nums font-semibold text-gray-600">{fmtMoney(p.walletBalance)} บาท</span>
                   ) : (
-                    <span className="text-[10px] text-gray-300">ไม่มีบัญชี</span>
+                    <span>ไม่มีบัญชี</span>
                   )}
+                  {(data?.servers.length ?? 0) > 1 && <span className="truncate">{p.serverName}</span>}
                 </div>
-                {(data?.servers.length ?? 0) > 1 && (
-                  <span className="text-[9px] text-gray-300 flex items-center gap-1 mt-0.5 truncate"><i className="fas fa-server text-[7px]"></i> {p.serverName}</span>
-                )}
               </div>
-              <i className="fas fa-chevron-right text-gray-200 group-hover:text-green-400 text-xs transition-colors"></i>
+              <i className="fas fa-chevron-right text-xs text-gray-200 transition-colors group-hover:text-gray-400"></i>
             </button>
           ))}
         </div>
       )}
 
-      {/* Detail modal (centered) */}
+      {/* Detail modal */}
       {selected && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setSelected(null)}>
-          <div className="relative w-full max-w-lg max-h-[90vh] bg-white rounded-2xl shadow-2xl overflow-y-auto animate-[popIn_0.15s_ease-out]" onClick={e => e.stopPropagation()}>
-            {/* Modal header */}
-            <div className="p-5 bg-gradient-to-br from-[#1e2735] to-[#0d131d] text-white">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={() => setSelected(null)}>
+          <div className="relative max-h-[90vh] w-full max-w-lg animate-[popIn_0.15s_ease-out] overflow-y-auto rounded-2xl bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="bg-[#1e2735] p-5 text-white">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-14 h-14 rounded-xl bg-white/10 overflow-hidden border border-white/20">
-                    <img src={`https://mc-heads.net/avatar/${selected.name}/56`} alt={selected.name} className="w-full h-full" style={{ imageRendering: 'pixelated' }} />
+                  <div className="h-14 w-14 overflow-hidden rounded-xl border border-white/20 bg-white/10">
+                    <img src={`https://mc-heads.net/avatar/${selected.name}/56`} alt="" className="h-full w-full" style={{ imageRendering: 'pixelated' }} />
                   </div>
                   <div>
-                    <p className="font-black text-lg flex items-center gap-2">{selected.name}
-                      {selected.role === 'admin' && <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-500">Admin</span>}
-                      {selected.banned && <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-500">ระงับ</span>}
+                    <p className="flex items-center gap-2 text-lg font-black">{selected.name}
+                      {selected.role === 'admin' && <span className="rounded bg-white/15 px-1.5 py-0.5 text-[9px] font-bold">Admin</span>}
+                      {selected.banned && <span className="rounded bg-red-500 px-1.5 py-0.5 text-[9px] font-bold">ระงับ</span>}
                     </p>
-                    <p className="text-[11px] text-white/60 flex items-center gap-1.5 mt-0.5">
-                      <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span> ออนไลน์ · {selected.serverName}
+                    <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-white/60">
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-green-400"></span>
+                      ออนไลน์ {fmtDuration(selected.onlineSince, now)} : {selected.serverName}
                     </p>
                   </div>
                 </div>
-                <button onClick={() => setSelected(null)} className="text-white/50 hover:text-white transition-colors"><i className="fas fa-times text-lg"></i></button>
+                <button onClick={() => setSelected(null)} aria-label="ปิด" className="text-white/50 transition-colors hover:text-white"><i className="fas fa-times text-lg"></i></button>
               </div>
             </div>
 
-            {/* Modal body */}
-            <div className="p-5 space-y-4">
-              {/* Live session */}
+            <div className="space-y-4 p-5">
+              {/* Session: login time + world in one row instead of two stacked cards */}
               <div className="grid grid-cols-2 gap-2.5">
-                <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">ออนไลน์มาแล้ว</p>
-                  <p className="text-lg font-black text-gray-800 tabular-nums">{fmtDuration(selected.onlineSince, now)}</p>
+                <div className="rounded-xl border border-gray-100 bg-gray-50 p-3">
+                  <p className="text-[10px] font-medium text-gray-400">ล็อกอินเมื่อ</p>
+                  <p className="mt-0.5 text-sm font-bold text-gray-900">
+                    {selected.onlineSince ? `${fmtClock(selected.onlineSince)} น.` : '-'}
+                  </p>
                 </div>
-                <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">ล็อกอินเมื่อ</p>
-                  <p className="text-sm font-bold text-gray-700">{selected.onlineSince ? new Date(selected.onlineSince).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.' : '-'}</p>
-                </div>
-              </div>
-              {/* World */}
-              <div className="rounded-xl bg-gray-50 border border-gray-100 p-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0"><i className="fas fa-earth-asia text-emerald-600 text-sm"></i></div>
-                <div className="min-w-0">
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">โลกที่อยู่</p>
-                  <p className="text-sm font-bold text-gray-800 truncate">{worldLoading ? <i className="fas fa-spinner fa-spin text-gray-300"></i> : worldLabel(world)}</p>
+                <div className="rounded-xl border border-gray-100 bg-gray-50 p-3">
+                  <p className="text-[10px] font-medium text-gray-400">โลกที่อยู่</p>
+                  <p className="mt-0.5 truncate text-sm font-bold text-gray-900">
+                    {worldLoading ? <i className="fas fa-spinner fa-spin text-gray-300"></i> : worldLabel(world)}
+                  </p>
                 </div>
               </div>
 
-              {/* Web account */}
               {selected.hasAccount ? (
-                <div className="rounded-xl border border-gray-100 overflow-hidden">
-                  <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">บัญชีเว็บ</span>
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold text-white ${selected.role === 'admin' ? 'bg-orange-500' : 'bg-green-500'}`}>{selected.role === 'admin' ? 'Admin' : 'Member'}</span>
-                  </div>
-                  {/* Money headline */}
+                <div className="overflow-hidden rounded-xl border border-gray-200">
                   <div className="grid grid-cols-3 divide-x divide-gray-100 border-b border-gray-100">
-                    <div className="p-3 text-center">
-                      <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mb-1">คงเหลือ</p>
-                      <p className="text-sm font-black text-gray-800 tabular-nums">{fmtMoney(selected.walletBalance)}</p>
-                    </div>
-                    <div className="p-3 text-center">
-                      <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mb-1">เติมรวม</p>
-                      <p className="text-sm font-black text-green-600 tabular-nums">{fmtMoney(profile?.total_topup ?? selected.totalTopup)}</p>
-                    </div>
-                    <div className="p-3 text-center">
-                      <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mb-1">ใช้จ่ายรวม</p>
-                      <p className="text-sm font-black text-violet-600 tabular-nums">{fmtMoney(selected.totalSpent)}</p>
-                    </div>
-                  </div>
-                  {/* Deeper stats */}
-                  <div className="p-3 space-y-2">
                     {[
-                      { label: 'เติมเดือนนี้',     value: `${fmtMoney(profile?.monthly_topup)} บาท` },
-                      { label: 'ใช้จ่ายเดือนนี้',   value: `${fmtMoney(profile?.monthly_spent)} บาท` },
-                      { label: 'จำนวนครั้งที่เติม',  value: profile?.topup_count != null ? `${profile.topup_count} ครั้ง` : '-' },
-                      { label: 'เติมเฉลี่ย/ครั้ง',   value: profile?.avg_topup != null ? `${fmtMoney(profile.avg_topup)} บาท` : '-' },
-                      { label: 'จำนวนออเดอร์',      value: profile?.purchase_count != null ? `${profile.purchase_count} ออเดอร์` : '-' },
-                      { label: 'โค้ดที่ใช้ไปแล้ว',   value: profile?.used_codes_count != null ? `${profile.used_codes_count} โค้ด` : '-' },
-                      { label: 'เติมล่าสุด',         value: profile?.last_topup_at ? new Date(profile.last_topup_at).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-' },
-                      { label: 'สมัครเมื่อ',         value: selected.createdAt ? new Date(selected.createdAt).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-' },
+                      { label: 'คงเหลือ',    value: fmtMoney(selected.walletBalance) },
+                      { label: 'เติมรวม',    value: fmtMoney(profile?.total_topup ?? selected.totalTopup) },
+                      { label: 'ใช้จ่ายรวม', value: fmtMoney(selected.totalSpent) },
+                    ].map(c => (
+                      <div key={c.label} className="p-3 text-center">
+                        <p className="text-[10px] font-medium text-gray-400">{c.label}</p>
+                        <p className="mt-0.5 text-sm font-black tabular-nums text-gray-900">{c.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="space-y-2 p-3">
+                    {[
+                      { label: 'เติมเดือนนี้',    value: `${fmtMoney(profile?.monthly_topup)} บาท` },
+                      { label: 'ใช้จ่ายเดือนนี้',  value: `${fmtMoney(profile?.monthly_spent)} บาท` },
+                      { label: 'จำนวนครั้งที่เติม', value: profile?.topup_count != null ? `${profile.topup_count} ครั้ง` : '-' },
+                      { label: 'เติมเฉลี่ย/ครั้ง',  value: profile?.avg_topup != null ? `${fmtMoney(profile.avg_topup)} บาท` : '-' },
+                      { label: 'จำนวนออเดอร์',     value: profile?.purchase_count != null ? `${profile.purchase_count} ออเดอร์` : '-' },
+                      { label: 'เติมล่าสุด',        value: profile?.last_topup_at ? new Date(profile.last_topup_at).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-' },
+                      { label: 'สมัครเมื่อ',        value: selected.createdAt ? new Date(selected.createdAt).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-' },
                     ].map(r => (
                       <div key={r.label} className="flex items-center justify-between">
                         <span className="text-xs text-gray-400">{r.label}</span>
-                        <span className="text-xs tabular-nums font-semibold text-gray-600">
+                        <span className="text-xs font-semibold tabular-nums text-gray-700">
                           {profileLoading && r.value === '-' ? <i className="fas fa-spinner fa-spin text-gray-300"></i> : r.value}
                         </span>
                       </div>
@@ -519,15 +831,14 @@ export default function AdminOnlinePlayers() {
                   </div>
                   <div className="p-3 pt-0">
                     <Link href={`/admin/users/${selected.userId}`}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-amber-500 text-white text-[13px] font-bold shadow-[0_3px_0_#b45309] hover:brightness-110 transition-all active:shadow-[0_1px_0_#b45309] active:translate-y-[2px]">
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-amber-500 py-2.5 text-[13px] font-bold text-white shadow-[0_3px_0_#b45309] transition-all hover:brightness-110 active:translate-y-[2px] active:shadow-[0_1px_0_#b45309]">
                       <i className="fas fa-pen text-[11px]"></i> จัดการบัญชีนี้
                     </Link>
                   </div>
                 </div>
               ) : (
-                <div className="rounded-xl bg-gray-50 border border-gray-100 p-4 text-center">
-                  <i className="fas fa-user-secret text-2xl text-gray-300 mb-2"></i>
-                  <p className="text-xs text-gray-400">ผู้เล่นนี้ยังไม่มีบัญชีในเว็บ</p>
+                <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-center">
+                  <p className="text-xs text-gray-500">ผู้เล่นนี้ยังไม่มีบัญชีในเว็บ</p>
                 </div>
               )}
             </div>
@@ -536,6 +847,7 @@ export default function AdminOnlinePlayers() {
         </div>
       )}
 
+      <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }`}</style>
     </div>
   );
 }

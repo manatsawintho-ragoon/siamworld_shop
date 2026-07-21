@@ -292,23 +292,61 @@ router.get('/online-players', async (req: Request, res: Response, next: NextFunc
 
     const totalOnline = data.totalOnline || 0;
     const peakToday = playerTracker ? Math.max(await playerTracker.getPeakToday(), totalOnline) : totalOnline;
-    const trend = playerTracker ? await playerTracker.getTrend() : [];
-    const recentEvents = playerTracker ? await playerTracker.getRecentEvents() : [];
+    const uniqueToday = playerTracker ? await playerTracker.getUniqueToday() : 0;
 
     res.json({
       success: true,
       servers,
       totalOnline,
       peakToday,
+      uniqueToday,
       matchedAccounts: matched,
       guests: allNames.length - matched,
       onlineWallet: Math.round(onlineWallet * 100) / 100,
       onlineSpent: Math.round(onlineSpent * 100) / 100,
       adminsOnline,
       bannedOnline,
-      trend,
-      recentEvents,
     });
+  } catch (err) { next(err); }
+});
+
+// Join/leave feed, split out of the main endpoint so the panel can poll it on a fast
+// cadence: this touches Redis only, while /online-players does a MySQL account lookup
+// for every online IGN. Pass ?after=<seq> to fetch just what is new.
+router.get('/online-players/events', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const playerTracker = req.app.get('playerTracker');
+    if (!playerTracker) return res.json({ success: true, events: [], lastSeq: 0 });
+
+    const afterRaw = req.query.after;
+    const after = afterRaw != null && afterRaw !== '' ? parseInt(String(afterRaw), 10) : undefined;
+    const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? '50'), 10) || 50, 1), 200);
+
+    const events = await playerTracker.getRecentEvents(limit, Number.isNaN(after as number) ? undefined : after);
+    // Events come back newest-first, so the head carries the highest seq.
+    const lastSeq = events.length > 0 ? Number(events[0].seq || 0) : (after ?? 0);
+    res.json({ success: true, events, lastSeq });
+  } catch (err) { next(err); }
+});
+
+// Concurrency + join/leave analytics for the online chart, bucketed by range.
+router.get('/online-players/analytics', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const playerTracker = req.app.get('playerTracker');
+    const RANGES: Record<string, { rangeMin: number; bucketMin: number }> = {
+      '1h':  { rangeMin: 60,        bucketMin: 2 },
+      '6h':  { rangeMin: 6 * 60,    bucketMin: 10 },
+      '24h': { rangeMin: 24 * 60,   bucketMin: 30 },
+      '48h': { rangeMin: 48 * 60,   bucketMin: 60 },
+    };
+    const key = String(req.query.range || '6h');
+    const cfg = RANGES[key] || RANGES['6h'];
+
+    if (!playerTracker) {
+      return res.json({ success: true, range: key, bucketMin: cfg.bucketMin, buckets: [], stats: null });
+    }
+    const { buckets, stats } = await playerTracker.getAnalytics(cfg.rangeMin, cfg.bucketMin);
+    res.json({ success: true, range: key, bucketMin: cfg.bucketMin, buckets, stats });
   } catch (err) { next(err); }
 });
 
