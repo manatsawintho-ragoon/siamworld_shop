@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState, useRef, useCallback, Suspense } from 'react';
+import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { useRouter } from '@/i18n/navigation';
 import { Link } from '@/i18n/navigation';
@@ -21,6 +22,7 @@ interface Credentials {
 
 /* ── CopyBtn ── */
 function CopyBtn({ value }: { value: string }) {
+  const t = useTranslations('credentials');
   const [copied, setCopied] = useState(false);
   return (
     <Button
@@ -30,7 +32,7 @@ function CopyBtn({ value }: { value: string }) {
       onClick={() => { navigator.clipboard.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
     >
       <Icon name={copied ? 'check' : 'copy'} className={`mr-1.5`} />
-      {copied ? 'คัดลอกแล้ว' : 'คัดลอก'}
+      {copied ? t('copied') : t('copy')}
     </Button>
   );
 }
@@ -79,6 +81,7 @@ interface ShopAdmin {
  *  window passes it shows the pre-fetched next password immediately and asks the
  *  parent to refetch the following window's values (so there is no blank gap). */
 function CountdownPasswordRow({ cred, onExpire }: { cred: ShopAdmin; onExpire: () => void }) {
+  const t = useTranslations('credentials');
   const [show, setShow] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const firedRef = useRef(false);
@@ -115,7 +118,7 @@ function CountdownPasswordRow({ cred, onExpire }: { cred: ShopAdmin; onExpire: (
           <div className="w-8 h-8 rounded-lg bg-secondary text-foreground flex items-center justify-center">
             <Icon name="key" className="text-sm" />
           </div>
-          <span className="text-xs font-medium text-muted-foreground">รหัสผ่าน</span>
+          <span className="text-xs font-medium text-muted-foreground">{t('password')}</span>
         </div>
         <div className="flex items-center gap-3 min-w-0 bg-secondary/30 px-3 py-1.5 rounded-lg border border-border">
           <span className={`text-sm font-semibold truncate font-mono ${show ? 'text-foreground' : 'text-muted-foreground'}`}>
@@ -134,12 +137,11 @@ function CountdownPasswordRow({ cred, onExpire }: { cred: ShopAdmin; onExpire: (
           <div className={`h-full ${barColor} transition-all duration-300 ease-linear`} style={{ width: `${pct}%` }} />
         </div>
         <span className="text-[13px] font-medium text-muted-foreground tabular-nums w-28 text-right">
-          เปลี่ยนใน {secondsLeft} วิ
+          {t('changeIn')} {secondsLeft} {t('sec')}
         </span>
       </div>
       <p className="text-[13px] text-muted-foreground font-medium mt-2">
-        <Icon name="rotate" className="mr-1.5" />รหัสนี้เปลี่ยนทุก 1 นาทีเพื่อความปลอดภัย คัดลอกแล้วรีบเข้าสู่ระบบ
-      </p>
+        <Icon name="rotate" className="mr-1.5" />{t('rotatingHint')}</p>
     </div>
   );
 }
@@ -150,62 +152,53 @@ function AdminCredentialCard({ cred, error, busy, onRefetch, onRegen, onSetPw }:
   cred: ShopAdmin | null; error: boolean; busy: boolean;
   onRefetch: () => void; onRegen: () => void; onSetPw: () => void;
 }) {
+  const t = useTranslations('credentials');
   return (
     <Card className="shadow-sm border-amber-500/20">
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center">
             <Icon name="user-shield" />
-          </div>
-          บัญชีแอดมินเว็บ
-        </CardTitle>
-        <CardDescription className="font-semibold">
-          ใช้เข้าหน้าจัดการร้าน (admin) แยกต่างหากจากรหัสในเกม รีเซ็ตได้ทุกเมื่อโดยไม่กระทบรหัส Minecraft
-        </CardDescription>
+          </div>{t('webAdmin')}</CardTitle>
+        <CardDescription className="font-semibold">{t('adminPurpose')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-1">
         {error ? (
           <div className="py-6 text-center">
             <p className="text-sm font-semibold text-muted-foreground mb-3">
-              <Icon name="triangle-exclamation" className="mr-2 text-amber-500" />โหลดบัญชีแอดมินไม่สำเร็จ
-            </p>
+              <Icon name="triangle-exclamation" className="mr-2 text-amber-500" />{t('adminLoadFailed')}</p>
             <Button variant="outline" onClick={onRefetch} className="rounded-full font-medium cursor-pointer">
-              <Icon name="rotate-right" className="mr-2" />ลองใหม่
-            </Button>
+              <Icon name="rotate-right" className="mr-2" />{t('retry')}</Button>
           </div>
         ) : !cred ? (
           <div className="py-6 text-center text-sm font-semibold text-muted-foreground">
-            <Icon name="spinner" className="mr-2 animate-spin" />กำลังโหลด...
-          </div>
+            <Icon name="spinner" className="mr-2 animate-spin" />{t('loading')}</div>
         ) : (
           <>
-            <CredRow label="ชื่อผู้ใช้" value={cred.username} icon="user" />
+            <CredRow label={t('username')} value={cred.username} icon="user" />
             {cred.rotating ? (
               <CountdownPasswordRow cred={cred} onExpire={onRefetch} />
             ) : (
-              <CredRow label="รหัสผ่าน" value={cred.password} icon="key" secret />
+              <CredRow label={t('password')} value={cred.password} icon="key" secret />
             )}
             <div className="mt-5 flex flex-wrap gap-3">
               {cred.rotating ? (
                 <Button onClick={onSetPw} disabled={busy} className="cursor-pointer font-medium rounded-full">
-                  <Icon name="lock" className="mr-2" /> ตั้งรหัสถาวรของคุณเอง
-                </Button>
+                  <Icon name="lock" className="mr-2" />{t('setOwnPassword')}</Button>
               ) : (
                 <>
                   <Button variant="outline" onClick={onSetPw} disabled={busy} className="cursor-pointer font-medium rounded-full">
-                    <Icon name="pen" className="mr-2" /> เปลี่ยนรหัส
-                  </Button>
+                    <Icon name="pen" className="mr-2" />{t('changePassword')}</Button>
                   <Button variant="outline" onClick={onRegen} disabled={busy} className="cursor-pointer font-medium rounded-full">
-                    <Icon name="rotate" className="mr-2" /> กลับไปใช้รหัสหมุน
-                  </Button>
+                    <Icon name="rotate" className="mr-2" />{t('backToRotating')}</Button>
                 </>
               )}
             </div>
             <p className="text-[13px] text-muted-foreground font-medium mt-3">
               <Icon name="circle-info" className="mr-1.5" />
               {cred.rotating
-                ? 'แนะนำ: ตั้งรหัสถาวรของคุณเอง จะได้เข้าสู่ระบบได้โดยไม่ต้องเปิดหน้านี้ดูรหัสทุกครั้ง'
-                : 'รหัสนี้เป็นรหัสถาวรที่คุณตั้งเอง ใช้เข้าสู่ระบบได้ตลอด'}
+                ? t('setOwnPasswordTip')
+                : t('permanentHint')}
             </p>
           </>
         )}
@@ -233,6 +226,7 @@ function StepCard({ n, title, children, done, warn }: { n: number; title: string
 
 /* ── CodeBlock ── */
 function CodeBlock({ code, language = 'yaml' }: { code: string; language?: string }) {
+  const t = useTranslations('credentials');
   const [copied, setCopied] = useState(false);
   return (
     <div className="rounded-xl overflow-hidden border border-border mt-2 bg-slate-950">
@@ -240,7 +234,7 @@ function CodeBlock({ code, language = 'yaml' }: { code: string; language?: strin
         <span className="text-[12px] font-medium text-slate-400">{language}</span>
         <button onClick={() => { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
           className="text-[12px] font-medium text-amber-400 hover:text-amber-300 flex items-center gap-1.5 transition-colors cursor-pointer">
-          <Icon name={copied ? 'check' : 'copy'} /> {copied ? 'คัดลอกแล้ว' : 'คัดลอก'}
+          <Icon name={copied ? 'check' : 'copy'} /> {copied ? t('copied') : t('copy')}
         </button>
       </div>
       <pre className="px-4 py-3 text-xs leading-relaxed text-slate-300 overflow-x-auto whitespace-pre font-mono">{code}</pre>
@@ -254,6 +248,7 @@ function CommandCard({ label, desc, code, lang = 'bash', tone = 'neutral' }: {
   label: string; desc: string; code: string; lang?: string;
   tone?: 'neutral' | 'critical' | 'sql' | 'yaml';
 }) {
+  const t = useTranslations('credentials');
   const [copied, setCopied] = useState(false);
   const accent =
     tone === 'critical' ? 'border-red-500/40 bg-red-500/5'
@@ -274,7 +269,7 @@ function CommandCard({ label, desc, code, lang = 'bash', tone = 'neutral' }: {
           }`}
         >
           <Icon name={copied ? 'check' : 'copy'} className={`text-xs`} />
-          {copied ? 'คัดลอกแล้ว' : 'คัดลอกคำสั่ง'}
+          {copied ? t('copied') : t('copyCommand')}
         </button>
       </div>
       <pre className="px-4 py-3 text-[12px] leading-relaxed text-slate-200 bg-slate-950 overflow-x-auto whitespace-pre font-mono">
@@ -286,6 +281,7 @@ function CommandCard({ label, desc, code, lang = 'bash', tone = 'neutral' }: {
 }
 
 function CredContent() {
+  const t = useTranslations('credentials');
   const { user, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -326,7 +322,7 @@ function CredContent() {
         setCreds(credRes.data);
         if (subRes) setSub(subRes.data.subscription);
       } catch (err) {
-        setError('ไม่พบข้อมูล หรือคุณไม่มีสิทธิ์เข้าถึง');
+        setError(t('notFound'));
       }
     };
     fetchAll();
@@ -336,7 +332,7 @@ function CredContent() {
     try {
       setActionLoading(true);
       await api.post(`/api/subscriptions/${subId}/action`, { action });
-      toast.success(`สั่งการ ${action} เรียบร้อยแล้ว รอสักครู่...`);
+      toast.success(t('commandDone', { action }));
     } catch (err: any) {
       toast.error(err.response?.data?.error || `Failed to ${action}`);
     } finally {
@@ -351,7 +347,7 @@ function CredContent() {
       setLogs(res.data.logs);
       setShowLogs(true);
     } catch (err: any) {
-      toast.error('ไม่สามารถดึง Logs ได้');
+      toast.error(t('logsFailed'));
     } finally {
       setActionLoading(false);
     }
@@ -380,24 +376,24 @@ function CredContent() {
       const res = await api.post(`/api/bridge/${subId}/token`);
       setBridgeToken({ token: res.data.token, prefix: res.data.prefix });
       await fetchBridgeStatus();
-      toast.success('สร้าง token ใหม่แล้ว คัดลอกไปใส่ใน config.yml ของปลั๊กอิน');
+      toast.success(t('tokenCreated'));
       if (res.data.provision?.rebuildStarted) {
-        toast.success('กำลังตั้งค่าและ rebuild เว็บไซต์ของคุณ (~30 วินาที)');
+        toast.success(t('rebuilding'));
       }
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'ไม่สามารถสร้าง token ได้');
+      toast.error(err.response?.data?.error || t('tokenCreateFailed'));
     }
   };
 
   const revokeBridgeToken = async () => {
-    if (!confirm('ยืนยันยกเลิก token? ปลั๊กอินจะถูกตัดการเชื่อมต่อทันที')) return;
+    if (!confirm(t('revokeConfirm'))) return;
     try {
       await api.delete(`/api/bridge/${subId}/token`);
       setBridgeToken(null);
       await fetchBridgeStatus();
-      toast.success('ยกเลิก token แล้ว');
+      toast.success(t('tokenRevoked'));
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'ไม่สามารถยกเลิก token ได้');
+      toast.error(err.response?.data?.error || t('tokenRevokeFailed'));
     }
   };
 
@@ -406,9 +402,9 @@ function CredContent() {
       const newVal = !sub.auto_renew;
       await api.patch(`/api/subscriptions/${subId}/auto-renew`, { autoRenew: newVal });
       setSub({ ...sub, auto_renew: newVal });
-      toast.success(newVal ? 'เปิดต่ออายุอัตโนมัติแล้ว' : 'ปิดต่ออายุอัตโนมัติแล้ว');
+      toast.success(newVal ? t('autoRenewOn') : t('autoRenewOff'));
     } catch (err: any) {
-      toast.error('ไม่สามารถเปลี่ยนการตั้งค่าได้');
+      toast.error(t('settingsFailed'));
     }
   };
 
@@ -435,25 +431,25 @@ function CredContent() {
       const res = await api.post(`/api/subscriptions/${subId}/shop-admin/regenerate`);
       trackFeature('credentials_regenerate');
       setShopAdmin(res.data);
-      toast.success('สุ่มรหัสแอดมินใหม่แล้ว');
+      toast.success(t('passwordRandomised'));
       setAdminAction(null);
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'ไม่สามารถสุ่มรหัสใหม่ได้');
+      toast.error(err.response?.data?.error || t('randomiseFailed'));
     } finally {
       setAdminLoading(false);
     }
   };
 
   const setAdminPw = async (pw?: string) => {
-    if (!pw || pw.length < 6) { toast.error('รหัสผ่านต้องยาวอย่างน้อย 6 ตัวอักษร'); return; }
+    if (!pw || pw.length < 6) { toast.error(t('passwordTooShort')); return; }
     try {
       setAdminLoading(true);
       const res = await api.post(`/api/subscriptions/${subId}/shop-admin/password`, { password: pw });
       setShopAdmin(res.data);
-      toast.success('ตั้งรหัสแอดมินใหม่แล้ว');
+      toast.success(t('passwordSet'));
       setAdminAction(null);
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'ไม่สามารถตั้งรหัสได้');
+      toast.error(err.response?.data?.error || t('passwordFailed'));
     } finally {
       setAdminLoading(false);
     }
@@ -474,7 +470,7 @@ function CredContent() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-semibold text-foreground tracking-tight">ข้อมูลร้านค้า</h1>
+            <h1 className="text-2xl font-semibold text-foreground tracking-tight">{t('shopInfo')}</h1>
             {creds && <p className="text-sm font-semibold text-muted-foreground mt-0.5">{creds.domain}</p>}
           </div>
         </div>
@@ -491,7 +487,7 @@ function CredContent() {
         {!creds && !error && (
           <div className="py-20 text-center flex flex-col items-center">
             <Icon name="spinner" className="text-primary text-3xl mb-4 animate-spin" />
-            <p className="text-sm font-semibold text-muted-foreground">กำลังโหลดข้อมูล...</p>
+            <p className="text-sm font-semibold text-muted-foreground">{t('loadingData')}</p>
           </div>
         )}
 
@@ -504,23 +500,20 @@ function CredContent() {
                 <CardTitle className="text-base flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                     <Icon name="store" />
-                  </div>
-                  รายละเอียดเว็บไซต์
-                </CardTitle>
+                  </div>{t('siteDetails')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-1">
-                <CredRow label="ชื่อร้าน" value={creds.shopName} icon="font" />
-                <CredRow label="URL เว็บไซต์" value={`https://${creds.domain}`} icon="globe" />
+                <CredRow label={t('shopName')} value={creds.shopName} icon="font" />
+                <CredRow label="URL {t('website')}" value={`https://${creds.domain}`} icon="globe" />
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Button asChild className="cursor-pointer font-medium rounded-full">
                     <a href={`https://${creds.domain}`} target="_blank" rel="noopener noreferrer">
-                      <Icon name="arrow-up-right-from-square" className="mr-2" /> เปิดเว็บร้านค้า
+                      <Icon name="arrow-up-right-from-square" className="mr-2" /> {t('openShopSite')}
                     </a>
                   </Button>
                   <Button variant="outline" asChild className="cursor-pointer font-medium rounded-full">
                     <a href={creds.setupUrl} target="_blank" rel="noopener noreferrer">
-                      <Icon name="wand-magic-sparkles" className="mr-2" /> เริ่มตั้งค่าเว็บครั้งแรก
-                    </a>
+                      <Icon name="wand-magic-sparkles" className="mr-2" />{t('startFirstSetup')}</a>
                   </Button>
                 </div>
               </CardContent>
@@ -543,13 +536,11 @@ function CredContent() {
                   <CardTitle className="text-base flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center">
                       <Icon name="server" />
-                    </div>
-                    การจัดการเซิร์ฟเวอร์
-                  </CardTitle>
+                    </div>{t('serverManagement')}</CardTitle>
                   
                   {/* Auto-renew toggle */}
                   <div className="flex items-center gap-3 bg-secondary/50 px-3 py-1.5 rounded-xl border border-border">
-                    <span className="text-xs font-medium text-muted-foreground">ต่ออายุอัตโนมัติ</span>
+                    <span className="text-xs font-medium text-muted-foreground">{t('autoRenew')}</span>
                     <button
                       onClick={toggleAutoRenew}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${sub.auto_renew ? 'bg-emerald-500' : 'bg-muted'}`}
@@ -561,17 +552,13 @@ function CredContent() {
                 <CardContent>
                   <div className="flex flex-wrap gap-3">
                     <Button variant="outline" size="sm" onClick={() => handleAction('start')} disabled={actionLoading} className="cursor-pointer font-medium text-emerald-600 border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500 hover:text-white">
-                      <Icon name="play" className="mr-1.5" /> เริ่มเซิร์ฟเวอร์
-                    </Button>
+                      <Icon name="play" className="mr-1.5" />{t('startServer')}</Button>
                     <Button variant="outline" size="sm" onClick={() => handleAction('restart')} disabled={actionLoading} className="cursor-pointer font-medium text-amber-600 border-amber-500/30 bg-amber-500/5 hover:bg-amber-500 hover:text-white">
-                      <Icon name="rotate-right" className="mr-1.5" /> รีสตาร์ท
-                    </Button>
+                      <Icon name="rotate-right" className="mr-1.5" />{t('restart')}</Button>
                     <Button variant="outline" size="sm" onClick={() => handleAction('stop')} disabled={actionLoading} className="cursor-pointer font-medium text-destructive border-destructive/30 bg-destructive/5 hover:bg-destructive hover:text-white">
-                      <Icon name="stop" className="mr-1.5" /> หยุดเซิร์ฟเวอร์
-                    </Button>
+                      <Icon name="stop" className="mr-1.5" />{t('stopServer')}</Button>
                     <Button variant="secondary" size="sm" onClick={handleLogs} disabled={actionLoading} className="cursor-pointer font-medium ml-auto">
-                      <Icon name="terminal" className="mr-1.5" /> ดู Logs ของระบบ
-                    </Button>
+                      <Icon name="terminal" className="mr-1.5" />{t('viewLogs')}</Button>
                   </div>
                 </CardContent>
               </Card>
@@ -605,9 +592,9 @@ function CredContent() {
                       <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-600 flex items-center justify-center">
                         <Icon name="code-branch" />
                       </div>
-                      วิธีเชื่อมต่อฐานข้อมูลเกม (AuthMe / nLogin)
+                      {t('howConnectDb')}
                     </CardTitle>
-                    <CardDescription className="mt-1 font-semibold">การเชื่อมต่อเป็น <strong>ทางเลือกเสริม</strong> Bridge รองรับทั้ง <strong>AuthMe</strong> และ <strong>nLogin</strong> ปลั๊กอินจะตรวจจับให้เอง</CardDescription>
+                    <CardDescription className="mt-1 font-semibold">{t('connectedAs')}<strong>{t('optionalExtra')}</strong> Bridge {t('supportsBoth')} <strong>AuthMe</strong>{t('and')}<strong>nLogin</strong>{t('autoDetect')}</CardDescription>
                   </div>
                   <Badge variant="outline" className="text-[12px] font-extrabold bg-emerald-500/10 text-emerald-600 border-emerald-500/20">Optional</Badge>
                 </div>
@@ -619,16 +606,13 @@ function CredContent() {
                     className={`p-5 rounded-xl border-2 transition-all cursor-pointer relative ${mode === 'none'
                       ? 'bg-emerald-500/5 border-emerald-500 shadow-sm'
                       : 'bg-background border-border hover:border-emerald-500/30'}`}>
-                    <Badge className="absolute -top-2 left-4 bg-emerald-500 text-white text-[12px] font-extrabold">มือใหม่</Badge>
+                    <Badge className="absolute -top-2 left-4 bg-emerald-500 text-white text-[12px] font-extrabold">{t('beginner')}</Badge>
                     <div className="flex items-center gap-3 mb-3 mt-1">
                       <Icon name="circle-check" className={`text-xl ${mode === 'none' ? 'text-emerald-500' : 'text-muted-foreground'}`} />
-                      <span className={`text-base font-semibold ${mode === 'none' ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
-                        ไม่เชื่อมต่อ
-                      </span>
+                      <span className={`text-base font-semibold ${mode === 'none' ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>{t('notConnected')}</span>
                     </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed font-medium">
-                      ไม่ต้องตั้งค่าใดๆ ระบบแยกอิสระ<br />
-                      <span className="text-emerald-600 dark:text-emerald-400 font-medium mt-1 block">✓ ปลอดภัย 100% เซิร์ฟดับเว็บไม่พัง</span>
+                    <p className="text-xs text-muted-foreground leading-relaxed font-medium">{t('noExtraSetup')}<br />
+                      <span className="text-emerald-600 dark:text-emerald-400 font-medium mt-1 block">✓ {t('safe100')}</span>
                     </p>
                   </div>
 
@@ -637,16 +621,15 @@ function CredContent() {
                     className={`p-5 rounded-xl border-2 transition-all cursor-pointer relative ${mode === 'bridge'
                       ? 'bg-primary/5 border-primary shadow-sm'
                       : 'bg-background border-border hover:border-primary/50'}`}>
-                    <Badge className="absolute -top-2 left-4 bg-primary text-primary-foreground text-[12px] font-extrabold">แนะนำ</Badge>
+                    <Badge className="absolute -top-2 left-4 bg-primary text-primary-foreground text-[12px] font-extrabold">{t('recommended')}</Badge>
                     <div className="flex items-center gap-3 mb-3 mt-1">
                       <Icon name="bolt" className={`text-xl ${mode === 'bridge' ? 'text-primary' : 'text-muted-foreground'}`} />
                       <span className={`text-base font-semibold ${mode === 'bridge' ? 'text-primary' : 'text-foreground'}`}>
                         Bridge Plugin
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed font-medium">
-                      เชื่อมต่อผ่านปลั๊กอิน .jar ตัวเดียว<br />
-                      <span className="text-emerald-600 dark:text-emerald-400 font-medium mt-1 block">✓ ใช้รหัสเดียวกับในเกมได้ทันที</span>
+                    <p className="text-xs text-muted-foreground leading-relaxed font-medium">{t('onePluginJar')}<br />
+                      <span className="text-emerald-600 dark:text-emerald-400 font-medium mt-1 block">✓ {t('sameAsGame')}</span>
                     </p>
                   </div>
 
@@ -665,10 +648,8 @@ function CredContent() {
                       <Icon name="bullseye" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-foreground mb-1">ไม่ต้องตั้งค่าการเชื่อมต่อใดๆ</h3>
-                      <p className="text-sm text-muted-foreground font-medium">
-                        เว็บร้านค้าของคุณใช้ฐานข้อมูลแยกต่างหาก ผู้เล่นสามารถลงทะเบียนบนหน้าเว็บเพื่อเริ่มใช้งานได้ทันที
-                      </p>
+                      <h3 className="font-semibold text-foreground mb-1">{t('noConnSetup')}</h3>
+                      <p className="text-sm text-muted-foreground font-medium">{t('separateDb')}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -678,30 +659,26 @@ function CredContent() {
                     <CardTitle className="text-base flex items-center gap-2">
                       <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center">
                         <Icon name="bullhorn" />
-                      </div>
-                      สิ่งสำคัญที่ต้องแจ้งผู้เล่น
-                    </CardTitle>
-                    <CardDescription className="font-medium">เพื่อให้ระบบ RCON ส่งไอเท็มถึงผู้เล่นได้ถูกต้อง</CardDescription>
+                      </div>{t('importantForPlayers')}</CardTitle>
+                    <CardDescription className="font-medium">{t('forRcon')}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20">
                       <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
                         <Icon name="key" className="text-amber-500" />
-                        ผู้เล่นต้องสมัครเว็บด้วย "ชื่อเดียวกับในเกม"
+                        {t('playersMustRegister')} t('sameNameAsGame')
                       </p>
-                      <p className="text-xs text-muted-foreground font-medium">
-                        ระบบจะอ้างอิงจาก Username บนเว็บ หากไม่ตรงกัน ผู้เล่นจะไม่ได้รับของเมื่อสั่งซื้อ
-                      </p>
+                      <p className="text-xs text-muted-foreground font-medium">{t('usernameMustMatch')}</p>
                     </div>
 
                     <div className="space-y-4">
-                      <StepCard n={1} title="ประกาศกฎให้ผู้เล่นทราบ">
-                        <p className="text-xs text-muted-foreground font-medium mb-2">ตัวอย่างข้อความสำหรับประกาศ:</p>
-                        <CodeBlock code={`📢 วิธีซื้อของจากร้านค้าออนไลน์\n1. เข้าเว็บ ${creds?.domain || 'shop.siamsite.shop'} แล้วกดสมัครสมาชิก\n2. ⚠️ ใช้ชื่อ Username ตรงกับชื่อในเกม (ตัวเล็ก/ใหญ่ก็ต้องตรง)\n3. เข้าเกมก่อนซื้อ ระบบจะส่งของให้ทันที`} language="text" />
+                      <StepCard n={1} title={t('announceRules')}>
+                        <p className="text-xs text-muted-foreground font-medium mb-2">{t('announceSample')}</p>
+                        <CodeBlock code={t('announceBody', { domain: creds?.domain || 'shop.siamsite.shop' })} language="text" />
                       </StepCard>
-                      <StepCard n={2} title="ตั้งค่า RCON เพื่อจัดส่งไอเท็ม (เลือกได้)">
-                        <CodeBlock code={`enable-rcon=true\nrcon.port=25575\nrcon.password=ตั้งรหัสผ่านเอง`} language="properties" />
-                        <p className="text-xs text-muted-foreground font-medium mt-3">แก้ไขไฟล์ `server.properties` ของ Minecraft แล้วเริ่มเซิร์ฟเวอร์ใหม่ จากนั้นนำรหัสผ่านนี้ไปกรอกใน Setup Wizard บนหน้าร้านค้าของคุณ</p>
+                      <StepCard n={2} title={t('rconOptional')}>
+                        <CodeBlock code={`enable-rcon=true\nrcon.port=25575\nrcon.password={t('setPassword')}`} language="properties" />
+                        <p className="text-xs text-muted-foreground font-medium mt-3">{t('edit')} `server.properties` {t('ofMinecraftThen')}{t('startServer')}{t('newThenTake')}{t('password')}{t('pasteInWizard')}</p>
                       </StepCard>
                     </div>
                   </CardContent>
@@ -721,8 +698,8 @@ function CredContent() {
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-extrabold text-lg">1</div>
                       <div>
-                        <CardTitle className="text-base">เซิร์ฟ MC ของคุณรันบนระบบไหน?</CardTitle>
-                        <CardDescription className="font-medium mt-0.5">เลือกก่อนเริ่ม คู่มือทั้งหน้าจะเปลี่ยนตามระบบที่เลือก</CardDescription>
+                        <CardTitle className="text-base">{t('serverOsQ')}</CardTitle>
+                        <CardDescription className="font-medium mt-0.5">{t('chooseFirst')}</CardDescription>
                       </div>
                     </div>
                   </CardHeader>
@@ -782,16 +759,16 @@ function CredContent() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-medium text-foreground">สถานะการเชื่อมต่อ</p>
+                        <p className="text-sm font-medium text-foreground">{t('connStatus')}</p>
                         {bridgeStatus?.online ? (
-                          <Badge variant="success" className="font-medium px-3"><span className="w-1.5 h-1.5 bg-emerald-600 rounded-full animate-pulse mr-2" />ออนไลน์</Badge>
+                          <Badge variant="success" className="font-medium px-3"><span className="w-1.5 h-1.5 bg-emerald-600 rounded-full animate-pulse mr-2" />{t('online')}</Badge>
                         ) : (
-                          <Badge variant="outline" className="font-medium px-3">รอการเชื่อมต่อ</Badge>
+                          <Badge variant="outline" className="font-medium px-3">{t('waitingConn')}</Badge>
                         )}
                       </div>
                       <p className="text-[13px] text-muted-foreground font-medium mt-1">
-                        Token: <span className="font-mono font-medium text-foreground">{bridgeStatus?.tokenPrefix || 'ยังไม่มี'}</span>
-                        &nbsp;·&nbsp;Version: <span className="font-mono font-medium text-foreground">{bridgeStatus?.pluginVersion || 'ยังไม่มี'}</span>
+                        Token: <span className="font-mono font-medium text-foreground">{bridgeStatus?.tokenPrefix || t('none')}</span>
+                        &nbsp;·&nbsp;Version: <span className="font-mono font-medium text-foreground">{bridgeStatus?.pluginVersion || t('none')}</span>
                       </p>
                     </div>
                   </CardContent>
@@ -803,8 +780,8 @@ function CredContent() {
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-extrabold text-lg">2</div>
                       <div>
-                        <CardTitle className="text-base">เซิร์ฟ MC ของคุณตอนนี้เป็นอย่างไร?</CardTitle>
-                        <CardDescription className="font-medium mt-0.5">เลือกตามสถานะปัจจุบัน เพื่อแสดงคู่มือที่ตรงกับคุณ</CardDescription>
+                        <CardTitle className="text-base">{t('serverStateQ')}</CardTitle>
+                        <CardDescription className="font-medium mt-0.5">{t('chooseByStatus')}</CardDescription>
                       </div>
                     </div>
                   </CardHeader>
@@ -818,9 +795,9 @@ function CredContent() {
                       >
                         <div className="flex items-center gap-2 mb-1.5">
                           <Icon name="circle-check" className={`text-lg ${setupTrack === 'have' ? 'text-emerald-500' : 'text-muted-foreground'}`} />
-                          <span className={`text-sm font-medium ${setupTrack === 'have' ? 'text-emerald-700 dark:text-emerald-400' : 'text-foreground'}`}>มี AuthMe หรือ nLogin พร้อม MySQL อยู่แล้ว</span>
+                          <span className={`text-sm font-medium ${setupTrack === 'have' ? 'text-emerald-700 dark:text-emerald-400' : 'text-foreground'}`}>{t('hasAuthme')}</span>
                         </div>
-                        <p className="text-[13px] text-muted-foreground font-medium leading-relaxed">ผู้เล่นสมัครและล็อกอินในเกมได้ปกติ ไปติดตั้ง Bridge ด้านล่างได้เลย</p>
+                        <p className="text-[13px] text-muted-foreground font-medium leading-relaxed">{t('playersCanRegister')}</p>
                       </button>
                       <button
                         onClick={() => setSetupTrack('new')}
@@ -830,9 +807,9 @@ function CredContent() {
                       >
                         <div className="flex items-center gap-2 mb-1.5">
                           <Icon name="wrench" className={`text-lg ${setupTrack === 'new' ? 'text-amber-600' : 'text-muted-foreground'}`} />
-                          <span className={`text-sm font-medium ${setupTrack === 'new' ? 'text-amber-700 dark:text-amber-400' : 'text-foreground'}`}>เริ่มจากศูนย์ ยังไม่เคยตั้งระบบล็อกอิน</span>
+                          <span className={`text-sm font-medium ${setupTrack === 'new' ? 'text-amber-700 dark:text-amber-400' : 'text-foreground'}`}>{t('fromScratch')}</span>
                         </div>
-                        <p className="text-[13px] text-muted-foreground font-medium leading-relaxed">ยังไม่มี MySQL หรือ AuthMe/nLogin จะมีคู่มือตั้งครบทุกขั้น พร้อมปุ่มก็อปคำสั่ง</p>
+                        <p className="text-[13px] text-muted-foreground font-medium leading-relaxed">{t('none')} MySQL {t('or')} AuthMe/nLogin {t('fullGuideHint')}</p>
                       </button>
                     </div>
                   </CardContent>
@@ -846,9 +823,9 @@ function CredContent() {
                         <Icon name="circle-check" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-foreground mb-1">ดีเลย ไม่ต้องแก้ AuthMe / nLogin / MySQL อะไรเพิ่ม</h4>
+                        <h4 className="font-semibold text-foreground mb-1">{t('noNeedEdit')}</h4>
                         <p className="text-sm text-muted-foreground font-medium leading-relaxed">
-                          Bridge อ่านข้อมูล MySQL จาก config ของ AuthMe หรือ nLogin ของคุณให้อัตโนมัติ ในไฟล์ Bridge มีอย่างเดียวที่ต้องใส่คือ <strong className="text-primary">Token</strong> (ขั้น 4 ของการติดตั้ง Bridge ด้านล่าง)
+                          Bridge {t('readsAuthmeConfig')} {t('or')} nLogin {t('bridgeOnlyNeeds')} <strong className="text-primary">Token</strong> ({t('step4Below')}
                         </p>
                       </div>
                     </CardContent>
@@ -864,8 +841,8 @@ function CredContent() {
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-extrabold text-lg">3</div>
                           <div>
-                            <CardTitle className="text-base">เลือกปลั๊กอินล็อกอินที่จะใช้</CardTitle>
-                            <CardDescription className="font-medium mt-0.5">ใช้ตัวไหนก็ได้ ทำงานกับ Bridge ได้ทั้งคู่</CardDescription>
+                            <CardTitle className="text-base">{t('choosePlugin')}</CardTitle>
+                            <CardDescription className="font-medium mt-0.5">{t('eitherWorks')}</CardDescription>
                           </div>
                         </div>
                       </CardHeader>
@@ -880,7 +857,7 @@ function CredContent() {
                             <p className={`text-sm font-medium mb-0.5 ${setupAuthType === 'authme' ? 'text-purple-600' : 'text-foreground'}`}>
                               <Icon name="shield-halved" className="mr-1.5" />AuthMe
                             </p>
-                            <p className="text-[12px] text-muted-foreground font-medium">ยอดนิยม ใช้ในเซิร์ฟไทยกว่า 80%</p>
+                            <p className="text-[12px] text-muted-foreground font-medium">{t('popularTh')}</p>
                           </button>
                           <button
                             onClick={() => setSetupAuthType('nlogin')}
@@ -891,7 +868,7 @@ function CredContent() {
                             <p className={`text-sm font-medium mb-0.5 ${setupAuthType === 'nlogin' ? 'text-purple-600' : 'text-foreground'}`}>
                               <Icon name="lock" className="mr-1.5" />nLogin
                             </p>
-                            <p className="text-[12px] text-muted-foreground font-medium">ตัวใหม่กว่า เซิร์ฟใหม่ๆ ใช้บ่อย</p>
+                            <p className="text-[12px] text-muted-foreground font-medium">{t('newerCommon')}</p>
                           </button>
                         </div>
                       </CardContent>
@@ -903,8 +880,8 @@ function CredContent() {
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-extrabold text-lg">4</div>
                           <div>
-                            <CardTitle className="text-base">ติดตั้ง MySQL และสร้างฐานข้อมูล</CardTitle>
-                            <CardDescription className="font-medium mt-0.5">กดปุ่มคัดลอกคำสั่งของแต่ละกล่อง แล้วเอาไปวางใน Terminal / PowerShell ทีละช่อง</CardDescription>
+                            <CardTitle className="text-base">{t('installMysql')}</CardTitle>
+                            <CardDescription className="font-medium mt-0.5">{t('runEachBox')}</CardDescription>
                           </div>
                         </div>
                       </CardHeader>
@@ -913,16 +890,16 @@ function CredContent() {
                         {osType === 'linux' ? (
                           <>
                             <CommandCard
-                              label="A. ติดตั้ง MariaDB (MySQL ที่ใช้กันแพร่หลาย)"
-                              desc="รันใน Terminal ของเซิร์ฟ Linux ใช้สิทธิ์ sudo"
+                              label="A. {t('installMariadb')}"
+                              desc={t('runInTerminal')}
                               lang="bash (Linux)"
                               code={`sudo apt update
 sudo apt install -y mariadb-server
 sudo systemctl enable --now mariadb`}
                             />
                             <CommandCard
-                              label="B. ตั้งรหัสผ่าน root ของ MySQL (ทำครั้งแรกเท่านั้น)"
-                              desc="ตอบ Y ทุกข้อ ตั้งรหัส root ที่จำได้ จดไว้"
+                              label="B. {t('setRootPassword')}"
+                              desc={t('answerY')}
                               lang="bash (Linux)"
                               code="sudo mysql_secure_installation"
                             />
@@ -930,17 +907,17 @@ sudo systemctl enable --now mariadb`}
                         ) : (
                           <>
                             <CommandCard
-                              label="A. ดาวน์โหลด MySQL Installer สำหรับ Windows"
-                              desc="ลิงก์ทางการ ดาวน์โหลด mysql-installer-community รัน .msi เลือกแบบ Server Only"
+                              label="A. {t('downloadMysqlWin')}"
+                              desc={t('mysqlInstallerLink')}
                               lang="link"
                               code="https://dev.mysql.com/downloads/installer/"
                             />
                             <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/20">
-                              <p className="text-[12px] font-medium text-blue-700 dark:text-blue-400 mb-1">B. ระหว่างติดตั้ง MySQL Installer:</p>
+                              <p className="text-[12px] font-medium text-blue-700 dark:text-blue-400 mb-1">B. {t('duringInstall')}</p>
                               <ul className="text-[13px] text-muted-foreground font-medium space-y-1 list-disc pl-5">
-                                <li>เลือก <strong>Server Only</strong> (ไม่ต้องลง Workbench)</li>
-                                <li>ตั้ง <strong>root password</strong> และจดไว้</li>
-                                <li>Authentication Method เลือก <strong>Use Legacy Authentication</strong> เพื่อความเข้ากันได้</li>
+                                <li>{t('select')}<strong>Server Only</strong> ({t('noWorkbench')}</li>
+                                <li>{t('set')} <strong>root password</strong>{t('writeDown')}</li>
+                                <li>Authentication Method {t('select')} <strong>Use Legacy Authentication</strong>{t('forCompatibility')}</li>
                               </ul>
                             </div>
                           </>
@@ -948,24 +925,23 @@ sudo systemctl enable --now mariadb`}
 
                         <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
                           <p className="text-[12px] font-extrabold text-red-700 dark:text-red-400 mb-1">
-                            <Icon name="circle-exclamation" className="mr-1.5" />ก่อนรันคำสั่งถัดไป
+                            <Icon name="circle-exclamation" className="mr-1.5" />{t('beforeNextCmd')}
                           </p>
                           <p className="text-[13px] text-muted-foreground font-medium leading-relaxed">
-                            แก้ <code className="bg-secondary px-1 py-0.5 rounded">CHANGE_THIS_PASSWORD</code> ในคำสั่งด้านล่าง ให้เป็นรหัสผ่านที่คุณตั้งเอง (จะใช้ในขั้น 5 จดไว้)
-                          </p>
+                            {t('fix')} <code className="bg-secondary px-1 py-0.5 rounded">CHANGE_THIS_PASSWORD</code>{t('replacePassword')}</p>
                         </div>
 
                         <CommandCard
-                          label="C. เปิด MySQL shell (เข้าโหมดรันคำสั่ง SQL)"
-                          desc="ใส่รหัส root ที่ตั้งใน B จะเข้าสู่ prompt mysql>"
+                          label="C. {t('openMysqlShell')}"
+                          desc="{t('enterRootPassword')}>"
                           lang={osType === 'linux' ? 'bash (Linux)' : 'cmd (Windows)'}
                           code={osType === 'linux' ? 'sudo mysql -u root -p' : 'mysql -u root -p'}
                         />
 
                         <CommandCard
                           tone="sql"
-                          label={`D. สร้างฐานข้อมูลและ user สำหรับ ${setupAuthType === 'authme' ? 'AuthMe' : 'nLogin'}`}
-                          desc="คัดลอกแล้ววางใน prompt mysql> รวดเดียว แก้ CHANGE_THIS_PASSWORD ก่อนวาง"
+                          label={t('dbUserFor', { plugin: setupAuthType === 'authme' ? 'AuthMe' : 'nLogin' })}
+                          desc="{t('pasteInMysql')}> {t('changeBeforePaste')}"
                           lang="SQL"
                           code={setupAuthType === 'authme'
                             ? `CREATE DATABASE authme CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -982,12 +958,11 @@ EXIT;`}
 
                         <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
                           <p className="text-[12px] font-medium text-emerald-700 dark:text-emerald-400 mb-1">
-                            <Icon name="circle-check" className="mr-1.5" />ค่าที่ต้องจดไว้ใช้ในขั้น 5
-                          </p>
+                            <Icon name="circle-check" className="mr-1.5" />{t('valuesForStep5')}</p>
                           <ul className="text-[13px] text-foreground font-medium space-y-0.5 mt-1.5">
                             <li>· Database: <code className="bg-background px-1.5 py-0.5 rounded">{setupAuthType === 'authme' ? 'authme' : 'nlogin'}</code></li>
                             <li>· User: <code className="bg-background px-1.5 py-0.5 rounded">{setupAuthType === 'authme' ? 'authme' : 'nlogin'}</code></li>
-                            <li>· Password: <code className="bg-background px-1.5 py-0.5 rounded">รหัสที่คุณตั้งแทน CHANGE_THIS_PASSWORD</code></li>
+                            <li>· Password: <code className="bg-background px-1.5 py-0.5 rounded">{t('yourPasswordInstead')}</code></li>
                             <li>· Host: <code className="bg-background px-1.5 py-0.5 rounded">127.0.0.1</code> &nbsp; Port: <code className="bg-background px-1.5 py-0.5 rounded">3306</code></li>
                           </ul>
                         </div>
@@ -1000,43 +975,42 @@ EXIT;`}
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-extrabold text-lg">5</div>
                           <div>
-                            <CardTitle className="text-base">ติดตั้ง {setupAuthType === 'authme' ? 'AuthMe' : 'nLogin'} และตั้งให้ใช้ MySQL</CardTitle>
-                            <CardDescription className="font-medium mt-0.5">วาง .jar ใน plugins, เปิดเซิร์ฟ 1 ครั้ง, แก้ config ใช้ MySQL ที่สร้างในขั้น 4</CardDescription>
+                            <CardTitle className="text-base">{t('install')} {setupAuthType === 'authme' ? 'AuthMe' : 'nLogin'} {t('setToUseMysql')}</CardTitle>
+                            <CardDescription className="font-medium mt-0.5">{t('dropJarComma')} {t('openServerOnce')}, {t('editMysqlStep4')}</CardDescription>
                           </div>
                         </div>
                       </CardHeader>
                       <CardContent className="pt-5 space-y-4">
                         <div className="p-3 rounded-xl bg-background border border-border">
-                          <p className="text-[12px] font-medium text-foreground mb-1.5">A. ดาวน์โหลดปลั๊กอินจากเว็บทางการ</p>
+                          <p className="text-[12px] font-medium text-foreground mb-1.5">A. {t('downloadPlugin')}</p>
                           <a
                             href={setupAuthType === 'authme' ? 'https://www.spigotmc.org/resources/authmereloaded.6269/' : 'https://www.spigotmc.org/resources/nlogin.62674/'}
                             target="_blank" rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
                           >
-                            <Icon name="arrow-up-right-from-square" /> เปิด {setupAuthType === 'authme' ? 'AuthMeReloaded' : 'nLogin'} บน SpigotMC
+                            <Icon name="arrow-up-right-from-square" /> {t('open')} {setupAuthType === 'authme' ? 'AuthMeReloaded' : 'nLogin'} {t('onSpigot')}
                           </a>
                         </div>
 
                         <div className="p-3 rounded-xl bg-background border border-border text-[12px] text-muted-foreground font-medium leading-relaxed">
-                          <p className="font-medium text-foreground mb-1">B. วาง .jar ในโฟลเดอร์ plugins แล้วเปิดเซิร์ฟ 1 ครั้ง</p>
-                          เอาไฟล์ <code>.jar</code> ที่โหลดมา วางใน <code>{osType === 'linux' ? 'plugins/' : 'plugins\\'}</code> ของเซิร์ฟ MC จากนั้น <strong>start เซิร์ฟ</strong> รอจน console บอก <code>Done!</code> แล้ว <strong>stop</strong>. ปลั๊กอินจะสร้าง <code>{osType === 'linux' ? `plugins/${setupAuthType === 'authme' ? 'AuthMe' : 'nLogin'}/config.yml` : `plugins\\${setupAuthType === 'authme' ? 'AuthMe' : 'nLogin'}\\config.yml`}</code> ให้
+                          <p className="font-medium text-foreground mb-1">B. {t('dropJar')}</p>
+                          {t('takeFile')} <code>.jar</code> {t('downloadedPutIn')} <code>{osType === 'linux' ? 'plugins/' : 'plugins\\'}</code> {t('ofMcServerThen')} <strong>start {t('server')}</strong>{t('waitUntilConsole')}<code>Done!</code> {t('then')} <strong>stop</strong>. {t('pluginWillCreate')} <code>{osType === 'linux' ? `plugins/${setupAuthType === 'authme' ? 'AuthMe' : 'nLogin'}/config.yml` : `plugins\\${setupAuthType === 'authme' ? 'AuthMe' : 'nLogin'}\\config.yml`}</code> {t('make')}
                         </div>
 
                         <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
                           <p className="text-[12px] font-extrabold text-red-700 dark:text-red-400 mb-1">
-                            <Icon name="circle-exclamation" className="mr-1.5" />ก่อนคัดลอก YAML ข้างล่าง
+                            <Icon name="circle-exclamation" className="mr-1.5" />{t('before')}{t('copy')} YAML {t('belowText')}
                           </p>
                           <p className="text-[13px] text-muted-foreground font-medium leading-relaxed">
-                            แก้ <code className="bg-secondary px-1 py-0.5 rounded">CHANGE_THIS_PASSWORD</code> เป็นรหัสจริงที่คุณตั้งในขั้น 4
-                          </p>
+                            {t('fix')} <code className="bg-secondary px-1 py-0.5 rounded">CHANGE_THIS_PASSWORD</code>{t('realPasswordStep4')}</p>
                         </div>
 
                         <CommandCard
                           tone="yaml"
-                          label={`C. แทนที่ section ในไฟล์ ${setupAuthType === 'authme' ? 'plugins/AuthMe/config.yml' : 'plugins/nLogin/config.yml'}`}
+                          label={`C. {t('replaceSection')} ${setupAuthType === 'authme' ? 'plugins/AuthMe/config.yml' : 'plugins/nLogin/config.yml'}`}
                           desc={setupAuthType === 'authme'
-                            ? 'ค้นหา DataSource: ในไฟล์ แล้วแทนที่ section นั้นด้วยข้อความนี้'
-                            : 'ค้นหา database: ในไฟล์ แล้วแทนที่ section นั้นด้วยข้อความนี้'}
+                            ? t('findDataSource')
+                            : t('findDatabase')}
                           lang="YAML"
                           code={setupAuthType === 'authme'
                             ? `DataSource:
@@ -1061,14 +1035,12 @@ EXIT;`}
 
                         <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
                           <p className="text-[12px] font-medium text-emerald-700 dark:text-emerald-400 mb-1">
-                            <Icon name="circle-check" className="mr-1.5" />D. เปิดเซิร์ฟอีกครั้ง แล้วทดสอบในเกม
+                            <Icon name="circle-check" className="mr-1.5" />D. {t('restartServer')}
                           </p>
-                          <p className="text-[13px] text-muted-foreground font-medium">
-                            เข้าเกม ลอง <code>/register รหัสผ่าน รหัสผ่าน</code> ถ้าผ่านแล้ว ระบบล็อกอินพร้อมใช้งานแล้ว ไปขั้นถัดไปติดตั้ง Bridge
-                          </p>
+                          <p className="text-[13px] text-muted-foreground font-medium">{t('goInGameTry')}<code>/register {t('password')} {t('password')}</code>{t('loginReady')}</p>
                           {setupAuthType === 'nlogin' && (
                             <p className="text-[13px] text-amber-600 dark:text-amber-400 font-medium mt-2">
-                              <Icon name="triangle-exclamation" className="mr-1" /><strong>nLogin:</strong> ตรวจ <code>security.hashing.algorithm</code> ต้องเป็น <code>BCRYPT2A</code> (default) ไม่งั้นฟังก์ชัน reset password จะใช้ไม่ได้
+                              <Icon name="triangle-exclamation" className="mr-1" /><strong>nLogin:</strong> {t('check')} <code>security.hashing.algorithm</code> {t('mustBe')} <code>BCRYPT2A</code> (default) {t('resetPasswordNote')}
                             </p>
                           )}
                         </div>
@@ -1085,35 +1057,32 @@ EXIT;`}
                         {setupTrack === 'have' ? 3 : 6}
                       </div>
                       <div>
-                        <CardTitle className="text-base flex items-center gap-2">
-                          ติดตั้งปลั๊กอิน Bridge สำหรับ <strong>{osType === 'linux' ? 'Linux' : 'Windows'}</strong>
+                        <CardTitle className="text-base flex items-center gap-2">{t('installBridge')}<strong>{osType === 'linux' ? 'Linux' : 'Windows'}</strong>
                           <Icon name={osType === 'linux' ? 'linux' : 'windows'} className={osType === 'linux' ? 'text-amber-600' : 'text-sky-600'} />
                         </CardTitle>
-                        <CardDescription className="font-medium mt-0.5">ทำตามทีละขั้น ใช้เวลาประมาณ 3 นาที</CardDescription>
+                        <CardDescription className="font-medium mt-0.5">{t('setupGuideTime')}</CardDescription>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent className="pt-5 space-y-4">
 
-                    <StepCard n={1} title="ดาวน์โหลดไฟล์ Bridge">
+                    <StepCard n={1} title={t('downloadBridgeFile')}>
                       <p className="text-xs text-muted-foreground font-medium mb-2">
-                        กดปุ่มด้านล่างเพื่อโหลด เก็บไว้ก่อน เดี๋ยวเอาไปวางในขั้น 3
+                        {t('downloadHint')}
                       </p>
                       <Button variant="outline" asChild className="mt-1 cursor-pointer rounded-full font-medium h-10 px-6">
                         <a href="/downloads/siamsite-bridge-1.1.0.jar" download>
-                          <Icon name="download" className="mr-2" /> ดาวน์โหลด siamsite-bridge.jar
-                        </a>
+                          <Icon name="download" className="mr-2" />{t('downloadBridge')}</a>
                       </Button>
                     </StepCard>
 
-                    <StepCard n={2} title="กดสร้าง Token (เก็บไว้ใช้ในขั้น 4)">
+                    <StepCard n={2} title="{t('press')}{t('createToken')} ({t('createTokenStep')}">
                       <p className="text-xs text-muted-foreground font-medium mb-2">
-                        Token คือกุญแจของร้านคุณ ปลั๊กอินใช้เชื่อมเข้าร้านนี้ คัดลอกเก็บก่อน
+                        Token {t('tokenIsKey')}
                       </p>
                       {!bridgeToken ? (
                         <Button className="font-medium cursor-pointer rounded-full h-10 px-6 mt-1" onClick={issueBridgeToken}>
-                          <Icon name="plus" className="mr-2" /> สร้าง Token
-                        </Button>
+                          <Icon name="plus" className="mr-2" />{t('createToken')}</Button>
                       ) : (
                         <div className="mt-2 space-y-2">
                           <div className="flex gap-2 items-center">
@@ -1121,67 +1090,62 @@ EXIT;`}
                             <CopyBtn value={bridgeToken.token} />
                           </div>
                           <p className="text-[12px] font-medium text-amber-500">
-                            <Icon name="triangle-exclamation" className="mr-1.5" /> Token แสดงครั้งเดียว ห้ามปิดหน้าจนกว่าจะคัดลอกเสร็จ
+                            <Icon name="triangle-exclamation" className="mr-1.5" /> Token {t('showOnce')}
                           </p>
-                          <button onClick={revokeBridgeToken} className="text-[12px] font-medium text-destructive hover:underline cursor-pointer">
-                            ยกเลิก / สร้างใหม่
-                          </button>
+                          <button onClick={revokeBridgeToken} className="text-[12px] font-medium text-destructive hover:underline cursor-pointer">{t('revokeOrNew')}</button>
                         </div>
                       )}
                     </StepCard>
 
-                    <StepCard n={3} title="วาง .jar ใน plugins แล้วเปิดเซิร์ฟ 1 ครั้ง">
+                    <StepCard n={3} title="{t('dropJarThen')}{t('openServerOnce')}">
                       {osType === 'linux' ? (
                         <ol className="text-xs text-muted-foreground font-medium space-y-1.5 list-decimal pl-5">
-                          <li>SSH หรือ SFTP เข้าเซิร์ฟ ไปที่โฟลเดอร์ที่เก็บเซิร์ฟ MC</li>
-                          <li>ลากไฟล์ <code>siamsite-bridge-1.1.0.jar</code> ที่โหลดมา วางในโฟลเดอร์ <code>plugins/</code></li>
-                          <li><strong>เปิดเซิร์ฟ 1 ครั้ง</strong> รอจน console บอก <code>Done!</code> แล้วพิมพ์ <code>stop</code></li>
+                          <li>SSH {t('sftpToServer')}</li>
+                          <li>{t('dragFile')}<code>siamsite-bridge-1.1.0.jar</code>{t('putDownloadedIn')}<code>plugins/</code></li>
+                          <li><strong>{t('openServerOnce')}</strong>{t('waitUntilConsole')}<code>Done!</code> {t('thenType')} <code>stop</code></li>
                         </ol>
                       ) : (
                         <ol className="text-xs text-muted-foreground font-medium space-y-1.5 list-decimal pl-5">
-                          <li>เปิด Windows Explorer ไปที่โฟลเดอร์เซิร์ฟ MC</li>
-                          <li>ลากไฟล์ <code>siamsite-bridge-1.1.0.jar</code> ที่โหลดมา วางใน <code>plugins\</code></li>
-                          <li><strong>เปิดเซิร์ฟ 1 ครั้ง</strong> double-click <code>run.bat</code> รอจนบอก <code>Done!</code> แล้วพิมพ์ <code>stop</code> ใน CMD</li>
+                          <li>{t('openExplorer')}</li>
+                          <li>{t('dragFile')}<code>siamsite-bridge-1.1.0.jar</code> {t('downloadedPutIn')} <code>plugins\</code></li>
+                          <li><strong>{t('openServerOnce')}</strong> double-click <code>run.bat</code> {t('waitUntilSays')} <code>Done!</code> {t('thenType')} <code>stop</code> {t('inCmd')}</li>
                         </ol>
                       )}
                       <div className="mt-3 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
                         <p className="text-[13px] text-muted-foreground font-medium leading-relaxed">
                           <Icon name="check-circle" className="text-emerald-500 mr-1.5" />
-                          จะมีไฟล์ใหม่ที่ <code>{osType === 'linux' ? 'plugins/SiamsiteBridge/config.yml' : 'plugins\\SiamsiteBridge\\config.yml'}</code>
+                          {t('newFileAt')} <code>{osType === 'linux' ? 'plugins/SiamsiteBridge/config.yml' : 'plugins\\SiamsiteBridge\\config.yml'}</code>
                         </p>
                       </div>
                     </StepCard>
 
-                    <StepCard n={4} title="เปิด config.yml แล้ววาง Token ที่คัดลอกไว้">
+                    <StepCard n={4} title={t('pasteToken')}>
                       <ol className="text-xs text-muted-foreground font-medium space-y-1.5 list-decimal pl-5 mb-3">
-                        <li>
-                          เปิดไฟล์ <code>{osType === 'linux' ? 'plugins/SiamsiteBridge/config.yml' : 'plugins\\SiamsiteBridge\\config.yml'}</code>
+                        <li>{t('openFile')}<code>{osType === 'linux' ? 'plugins/SiamsiteBridge/config.yml' : 'plugins\\SiamsiteBridge\\config.yml'}</code>
                           {osType === 'linux'
-                            ? <span className="block text-[13px] text-muted-foreground mt-0.5">ใช้ nano, vim, VSCode, mcedit แก้ได้</span>
-                            : <span className="block text-[13px] text-muted-foreground mt-0.5">คลิกขวาที่ไฟล์ Open with Notepad หรือ Notepad++</span>}
+                            ? <span className="block text-[13px] text-muted-foreground mt-0.5">{t('useAnyEditor')}</span>
+                            : <span className="block text-[13px] text-muted-foreground mt-0.5">{t('rightClickNotepad')}</span>}
                         </li>
-                        <li>หาบรรทัด <code className="bg-red-500/10 text-red-700 dark:text-red-400 px-1.5 py-0.5 rounded">{`token: "PASTE-YOUR-TOKEN-HERE"`}</code></li>
-                        <li><strong className="text-primary">วาง Token จากขั้น 2</strong> แทนข้อความ <code>PASTE-YOUR-TOKEN-HERE</code></li>
-                        <li>บันทึก (Ctrl+S) ปิดไฟล์</li>
+                        <li>{t('findLine')}<code className="bg-red-500/10 text-red-700 dark:text-red-400 px-1.5 py-0.5 rounded">{`token: "PASTE-YOUR-TOKEN-HERE"`}</code></li>
+                        <li><strong className="text-primary">{t('pasteTokenStep')}</strong>{t('insteadOf')}<code>PASTE-YOUR-TOKEN-HERE</code></li>
+                        <li>{t('saveClose')}</li>
                       </ol>
                       <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
-                        <p className="text-[11px] text-foreground font-medium mb-0.5"><Icon name="circle-check" className="text-emerald-500 mr-1" />ส่วนอื่นในไฟล์ไม่ต้องแก้</p>
-                        <p className="text-[13px] text-muted-foreground font-medium">Bridge อ่านข้อมูล MySQL จาก AuthMe / nLogin ของคุณเอง</p>
+                        <p className="text-[11px] text-foreground font-medium mb-0.5"><Icon name="circle-check" className="text-emerald-500 mr-1" />{t('noOtherEdits')}</p>
+                        <p className="text-[13px] text-muted-foreground font-medium">Bridge {t('readsMysql')}</p>
                       </div>
 
                       <details className="mt-3 group">
                         <summary className="cursor-pointer text-[13px] font-medium text-muted-foreground hover:text-foreground flex items-center gap-1.5 list-none">
-                          <Icon name="chevron-right" className="text-[10px] transition-transform group-open:rotate-90" />
-                          ตั้งค่าขั้นสูง (เกือบทุกคนไม่ต้องใช้)
-                        </summary>
+                          <Icon name="chevron-right" className="text-[10px] transition-transform group-open:rotate-90" />{t('advancedSetup')}</summary>
                         <div className="mt-2 pl-5 space-y-2">
                           <p className="text-[13px] text-muted-foreground font-medium leading-relaxed">
-                            ถ้า Bridge หา config ของ AuthMe / nLogin ไม่เจอ ตั้งเองได้
+                            {t('bridgeFallback')}
                           </p>
                           <CommandCard
                             tone="yaml"
-                            label="ใส่ค่า MySQL เองในไฟล์ config.yml ของ Bridge"
-                            desc="เปลี่ยน auto: true เป็น auto: false แล้วใส่ค่า MySQL"
+                            label={t('manualMysql')}
+                            desc={t('changeAutoFalse')}
                             lang="YAML"
                             code={`authme:
   auto: false
@@ -1189,7 +1153,7 @@ EXIT;`}
   port: 3306
   database: authme
   user: authme
-  password: 'รหัสผ่าน-MySQL'
+  password: '{t('password')}-MySQL'
   table: authme
 
 nlogin:
@@ -1198,32 +1162,29 @@ nlogin:
   port: 3306
   database: nlogin
   user: nlogin
-  password: 'รหัสผ่าน-MySQL'
+  password: '{t('password')}-MySQL'
   table: nlogin
 
 bridge:
-  backend: authme    # หรือ nlogin`}
+  backend: authme    # {t('or')} nlogin`}
                           />
                         </div>
                       </details>
                     </StepCard>
 
-                    <StepCard n={5} title="เปิดเซิร์ฟอีกครั้ง เสร็จ">
+                    <StepCard n={5} title="{t('restartDone')}">
                       <p className="text-xs text-muted-foreground font-medium mb-2">
-                        เริ่มเซิร์ฟ MC อีก 1 ครั้ง รอ <strong>~10 วินาที</strong> แล้วกลับมาดูแถบสถานะการเชื่อมต่อ ด้านบนสุดของหน้านี้
-                      </p>
+                        {t('startMcWait')} <strong>~10 {t('seconds')}</strong>{t('checkStatusBar')}</p>
                       <div className="grid grid-cols-2 gap-3 mt-2">
                         <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/30">
-                          <p className="text-[12px] font-medium text-emerald-700 dark:text-emerald-400 mb-1">ถ้าสำเร็จ</p>
+                          <p className="text-[12px] font-medium text-emerald-700 dark:text-emerald-400 mb-1">{t('ifSuccess')}</p>
                           <p className="text-[13px] font-medium text-foreground">
-                            <Icon name="circle-check" className="text-emerald-500 mr-1" />
-                            สถานะ <strong className="text-emerald-600">ออนไลน์</strong> เขียวกะพริบ
-                          </p>
-                          <p className="text-[13px] font-medium text-muted-foreground mt-1">ผู้เล่นล็อกอินเว็บได้ทันที</p>
+                            <Icon name="circle-check" className="text-emerald-500 mr-1" />{t('status')}<strong className="text-emerald-600">{t('online')}</strong>{t('greenBlink')}</p>
+                          <p className="text-[13px] font-medium text-muted-foreground mt-1">{t('playersLoginNow')}</p>
                         </div>
                         <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/30">
-                          <p className="text-[12px] font-medium text-amber-700 dark:text-amber-400 mb-1">ถ้ายังไม่ขึ้น</p>
-                          <p className="text-[13px] font-medium text-foreground">พิมพ์ใน console MC:</p>
+                          <p className="text-[12px] font-medium text-amber-700 dark:text-amber-400 mb-1">{t('ifNotYet')}</p>
+                          <p className="text-[13px] font-medium text-foreground">{t('typeInConsole')}</p>
                           <code className="block mt-1 px-2 py-1 bg-slate-950 text-amber-400 rounded text-[13px] font-mono">/siamsite-bridge status</code>
                         </div>
                       </div>

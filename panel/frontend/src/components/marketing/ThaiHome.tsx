@@ -962,7 +962,7 @@ function LandingContent() {
     { label: t('serversWithUs'), num: statsData ? (statsData.total_shops || 0) : undefined, icon: 'store' },
     { label: t('membersInSystem'),        num: statsData ? (statsData.total_users || 0) : undefined, icon: 'users' },
     { label: t('installedWithin'),    text: statsData?.delivery_speed || undefined, icon: 'bolt' },
-    { label: t('autoReceive'),      text: '24 ชม.', icon: 'qrcode' },
+    { label: t('autoReceive'),      text: t('hours24'), icon: 'qrcode' },
   ], [statsData]);
 
   const trialPromo = promos.find(p => p.kind === 'trial');
@@ -1089,7 +1089,7 @@ function LandingContent() {
         <div className="max-w-7xl mx-auto px-6">
           <SectionHead
             eyebrow={t('secHowStart')}
-            title={<>{t('shopReadyIn')}<span className="text-primary">3 ขั้นตอน</span></>}
+            title={<>{t('shopReadyIn')}<span className="text-primary">{t('threeSteps')}</span></>}
             sub={t('heroNoWebSkill')}
           />
 
@@ -1403,9 +1403,11 @@ function LandingContent() {
                   </span>
                 </p>
                 <p className="text-[13px] font-semibold text-muted-foreground mt-1.5 leading-relaxed">
-                  ลด {featuredDiscount.percent}% ประหยัดไป ฿{featuredDiscount.save.toLocaleString()} เฉลี่ยเดือนละ ฿
-                  {Math.round(featuredPkg.price / featuredPkg.months).toLocaleString()}
-                  {' '}จ่ายไม่หนัก ต่ออายุน้อยลง และได้ส่วนลดแล้ว
+                  {t('featuredSavingLine', {
+                    percent: featuredDiscount.percent,
+                    save: featuredDiscount.save.toLocaleString(),
+                    perMonth: Math.round(featuredPkg.price / featuredPkg.months).toLocaleString(),
+                  })}
                 </p>
               </div>
               <Button
@@ -1437,8 +1439,7 @@ function LandingContent() {
           </div>
 
           <p className="text-center text-[12px] text-muted-foreground/80 mt-8 max-w-2xl mx-auto leading-relaxed font-medium">
-            * ค่าธรรมเนียม API ของ EasySlip ฿{easyslipFee} ต่อรายการ คิดเฉพาะการตรวจสลิป PromptPay
-            และหักจากยอดเติมเงินของผู้เล่นเท่านั้น ไม่กระทบค่าเช่ารายเดือน ส่วน TrueMoney อั่งเปา ใช้ฟรี ไม่มีค่าธรรมเนียม
+            {t('easyslipFootnoteFull', { fee: easyslipFee })}
           </p>
         </div>
       </section>
