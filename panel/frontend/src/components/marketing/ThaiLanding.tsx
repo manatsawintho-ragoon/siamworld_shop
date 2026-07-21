@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { getRelated, CLUSTERS, type LandingPage } from '@/lib/seo/keywords';

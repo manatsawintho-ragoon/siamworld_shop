@@ -1,8 +1,9 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
+import { useRouter, usePathname } from '@/i18n/navigation';
 import { useState, useEffect, useRef, Suspense } from 'react';
 import AuthModal from './AuthModal';
 import { Button } from './ui/button';

@@ -1,4 +1,17 @@
 'use client';
+import { useTranslations } from 'next-intl';
+
+/**
+ * Mock data mixes message keys with literals that are the same in both
+ * languages ("100 Crystal", "Appearance / Theme"). Resolve a key when one
+ * exists and otherwise render the string as-is, so adding a literal to the
+ * mock data never throws MISSING_MESSAGE.
+ */
+function useMockText() {
+  const t = useTranslations('mock');
+  return (key: string): string => (t.has(key as never) ? t(key as never) : key);
+}
+
 
 /* ── Coded product mockups ─────────────────────────────────────────────
    These replace the screenshots the landing page used to ship.
@@ -77,45 +90,45 @@ function Frame({ url, children }: { url: string; children: React.ReactNode }) {
 const SHOP_CARD = 'bg-white rounded-2xl border border-gray-200/70 shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)]';
 
 const SHOP_SIDEBAR: { label: string; icon: IconName; active?: boolean; cat?: string }[] = [
-  { label: 'แดชบอร์ด', icon: 'chart-area', active: true },
-  { cat: 'MANAGEMENT', label: 'ระบบจัดการสมาชิก', icon: 'users' },
-  { label: 'จัดการโค้ดไอเท็ม', icon: 'ticket' },
-  { label: 'ระบบร้านค้า', icon: 'store' },
-  { cat: 'PAGE MANAGER', label: 'ตั้งค่าหน้าเว็บไซต์', icon: 'gears' },
+  { label: 'dashboard', icon: 'chart-area', active: true },
+  { cat: 'MANAGEMENT', label: 'memberSystem', icon: 'users' },
+  { label: 'manageCodes', icon: 'ticket' },
+  { label: 'shopSystem', icon: 'store' },
+  { cat: 'PAGE MANAGER', label: 'siteSettings', icon: 'gears' },
   { label: 'Appearance / Theme', icon: 'wand-magic-sparkles' },
-  { cat: 'SYSTEM', label: 'จัดการเซิร์ฟเวอร์', icon: 'server' },
-  { label: 'ผู้เล่นออนไลน์', icon: 'signal' },
-  { label: 'ระบบเติมเงิน', icon: 'wallet' },
+  { cat: 'SYSTEM', label: 'manageServer', icon: 'server' },
+  { label: 'playersOnline', icon: 'signal' },
+  { label: 'topupSystem', icon: 'wallet' },
 ];
 
 const TOP_ITEMS = [
   { medal: '🥇', name: '100 Crystal', count: 119, revenue: 1190 },
   { medal: '🥈', name: '490 Crystal', count: 27, revenue: 1323 },
-  { medal: '🥉', name: 'ยศ VIP 30 วัน', count: 23, revenue: 3427 },
+  { medal: '🥉', name: 'vip30', count: 23, revenue: 3427 },
   { medal: '#4', name: 'Furniture Set', count: 6, revenue: 150 },
 ];
 
 const TOP_BOXES = [
-  { medal: '🥇', name: 'กล่องพรีเมียม', count: 84, revenue: 8316 },
-  { medal: '🥈', name: 'กล่องตำนาน', count: 41, revenue: 10209 },
-  { medal: '🥉', name: 'กล่องธรรมดา', count: 33, revenue: 957 },
-  { medal: '#4', name: 'กล่องเทศกาล', count: 12, revenue: 1188 },
+  { medal: '🥇', name: 'lootPremium', count: 84, revenue: 8316 },
+  { medal: '🥈', name: 'lootLegendary', count: 41, revenue: 10209 },
+  { medal: '🥉', name: 'lootCommon', count: 33, revenue: 957 },
+  { medal: '#4', name: 'lootFestival', count: 12, revenue: 1188 },
 ];
 
 /** Reproduces the shop admin's `DeltaBadge`: green delta line + last-month line. */
 function DeltaBadge({ delta, pct, last, suffix = '', dark = false }: {
   delta: string; pct: string; last: string; suffix?: string; dark?: boolean;
 }) {
+  const t = useMockText();
   return (
     <div className="mt-3 space-y-0.5">
       <p className={`text-[10px] font-bold flex items-center gap-1 flex-wrap ${dark ? 'text-white/90' : 'text-emerald-600'}`}>
         <Icon name="arrow-up" className="text-[9px]" />
         <span>+{delta}{suffix}</span>
         <span className="opacity-80">(+{pct}%)</span>
-        <span className={`font-medium ${dark ? 'text-white/60' : 'text-gray-400'}`}>เทียบเดือนก่อน</span>
+        <span className={`font-medium ${dark ? 'text-white/60' : 'text-gray-400'}`}>{t('vsLastMonth')}</span>
       </p>
-      <p className={`text-[10px] ${dark ? 'text-white/50' : 'text-gray-400'}`}>
-        เดือนที่แล้ว <span className={`font-semibold ${dark ? 'text-white/80' : 'text-gray-600'}`}>{last}{suffix}</span>
+      <p className={`text-[10px] ${dark ? 'text-white/50' : 'text-gray-400'}`}>{t('lastMonth')}<span className={`font-semibold ${dark ? 'text-white/80' : 'text-gray-600'}`}>{last}{suffix}</span>
       </p>
     </div>
   );
@@ -125,6 +138,7 @@ function RankColumn({ title, icon, tint, rows, unit }: {
   title: string; icon: IconName; tint: string;
   rows: { medal: string; name: string; count: number; revenue: number }[]; unit: string;
 }) {
+  const t = useMockText();
   return (
     <div className={`${SHOP_CARD} overflow-hidden`}>
       <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/60 flex items-center gap-2">
@@ -143,8 +157,8 @@ function RankColumn({ title, icon, tint, rows, unit }: {
               <Icon name="cube" className="text-[11px]" />
             </span>
             <span className="flex-1 min-w-0">
-              <span className="block text-[12px] font-bold text-gray-800 truncate">{r.name}</span>
-              <span className="block text-[10px] text-gray-500">หมวดหมู่: ไอเท็ม</span>
+              <span className="block text-[12px] font-bold text-gray-800 truncate">{t(r.name)}</span>
+              <span className="block text-[10px] text-gray-500">{t('catItems')}</span>
             </span>
             <span className="text-right shrink-0">
               <span className="block text-[11px] font-bold text-gray-800">
@@ -160,6 +174,7 @@ function RankColumn({ title, icon, tint, rows, unit }: {
 }
 
 export function DashboardMock() {
+  const t = useMockText();
   return (
     <ScaledMock designWidth={1440} designHeight={900}>
       <Frame url="yourshop.siamsite.shop/admin">
@@ -184,7 +199,7 @@ export function DashboardMock() {
                     }`}
                   >
                     <Icon name={m.icon} className="w-5 text-center text-[13px]" />
-                    {m.label}
+                    {t(m.label)}
                   </span>
                 </div>
               ))}
@@ -196,22 +211,16 @@ export function DashboardMock() {
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                  <Icon name="chart-area" className="text-[#f97316]" /> แดชบอร์ด
-                </h1>
-                <p className="text-xs text-gray-400 mt-0.5">ภาพรวมระบบทั้งหมด</p>
+                  <Icon name="chart-area" className="text-[#f97316]" />{t('dashboard')}</h1>
+                <p className="text-xs text-gray-400 mt-0.5">{t('systemOverview')}</p>
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-50 text-[#f97316] text-[10px] font-bold border border-orange-100">
-                  <Icon name="calendar-day" className="text-[9px]" />
-                  ข้อมูลเดือน มีนาคม 2569
-                </span>
+                  <Icon name="calendar-day" className="text-[9px]" />{t('monthData')}</span>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 text-[10px] font-bold border border-emerald-100">
-                  <span className="mock-live w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  อัปเดตสด
-                </span>
+                  <span className="mock-live w-1.5 h-1.5 rounded-full bg-emerald-500" />{t('liveUpdate')}</span>
                 <span className="mock-buy flex items-center gap-1.5 px-3.5 py-2 bg-[#1e2735] text-white rounded-lg text-[11px] font-bold shadow-[0_4px_0_#38404d]">
-                  <Icon name="arrows-rotate" className="text-[10px]" /> รีเฟรช
-                </span>
+                  <Icon name="arrows-rotate" className="text-[10px]" />{t('refresh')}</span>
               </div>
             </div>
 
@@ -223,15 +232,15 @@ export function DashboardMock() {
                     <span className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
                       <Icon name="chart-area" className="text-orange-500 text-xs" />
                     </span>
-                    <h3 className="font-bold text-gray-900 text-sm truncate">สถิติระบบ (30 วันล่าสุด)</h3>
+                    <h3 className="font-bold text-gray-900 text-sm truncate">{t('stats30')}</h3>
                   </span>
                   <span className="flex bg-gray-100 rounded-lg p-0.5 shrink-0">
-                    {['รายวัน', 'รายสัปดาห์', 'รายเดือน'].map((t, i) => (
+                    {[t('daily'), t('weekly'), t('monthly')].map((label, i) => (
                       <span
-                        key={t}
+                        key={label}
                         className={`px-2.5 py-1 rounded-md text-[10px] font-bold ${i === 0 ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'}`}
                       >
-                        {t}
+                        {label}
                       </span>
                     ))}
                   </span>
@@ -241,9 +250,9 @@ export function DashboardMock() {
                     <MiniChart />
                   </div>
                   <div className="shrink-0 flex justify-center gap-5 pt-2 text-[10px] font-bold">
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#f97316]" /><span className="text-gray-500">สมาชิกใหม่</span></span>
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /><span className="text-gray-500">ยอดขาย Item (฿)</span></span>
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-purple-500" /><span className="text-gray-500">ยอดเติมเงิน (฿)</span></span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#f97316]" /><span className="text-gray-500">{t('membersNew')}</span></span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /><span className="text-gray-500">{t('itemSales')}</span></span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-purple-500" /><span className="text-gray-500">{t('topupAmount')}</span></span>
                   </div>
                 </div>
               </div>
@@ -254,11 +263,11 @@ export function DashboardMock() {
                   <span className="absolute right-16 bottom-0 w-20 h-20 bg-white/5 rounded-full blur-xl pointer-events-none" />
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-white text-[11px] font-bold mb-1 tracking-wide opacity-70">ยอดเติมเดือนนี้</p>
+                      <p className="text-white text-[11px] font-bold mb-1 tracking-wide opacity-70">{t('topupThisMonth')}</p>
                       <h2 className="text-4xl font-bold leading-tight tracking-tight text-white">
-                        <span className="mock-count">48,250</span> <span className="text-base font-medium text-white/60">บาท</span>
+                        <span className="mock-count">48,250</span> <span className="text-base font-medium text-white/60">{t('baht')}</span>
                       </h2>
-                      <p className="text-[10px] text-white/60 mt-1">สะสมทั้งหมด <span className="font-bold text-white/90">612,480 ฿</span></p>
+                      <p className="text-[10px] text-white/60 mt-1">{t('accumulatedAll')}<span className="font-bold text-white/90">612,480 ฿</span></p>
                     </div>
                     <span className="w-11 h-11 bg-black/15 border border-white/20 rounded-xl flex items-center justify-center shrink-0">
                       <Icon name="wallet" className="text-white text-sm" />
@@ -271,11 +280,11 @@ export function DashboardMock() {
                   <div className={`mock-tile ${SHOP_CARD} p-5`}>
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">รายได้ Item เดือนนี้</p>
+                        <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">{t('itemRevenue')}</p>
                         <h2 className="text-2xl font-bold text-gray-800 leading-tight">
-                          21,430 <span className="text-xs font-medium text-gray-400">บาท</span>
+                          21,430 <span className="text-xs font-medium text-gray-400">{t('baht')}</span>
                         </h2>
-                        <p className="text-[10px] text-gray-400 mt-1">สะสม <span className="font-bold text-gray-600">288,120 ฿</span> · 1,842 ชิ้น</p>
+                        <p className="text-[10px] text-gray-400 mt-1">{t('accumulated')}<span className="font-bold text-gray-600">288,120 ฿</span> · 1,842 ชิ้น</p>
                       </div>
                       <span className="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center shrink-0">
                         <Icon name="shopping-cart" className="text-sm" />
@@ -287,11 +296,11 @@ export function DashboardMock() {
                   <div className={`mock-tile ${SHOP_CARD} p-5`}>
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">รายได้ Gacha เดือนนี้</p>
+                        <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">{t('gachaRevenue')}</p>
                         <h2 className="text-2xl font-bold text-gray-800 leading-tight">
-                          14,880 <span className="text-xs font-medium text-gray-400">บาท</span>
+                          14,880 <span className="text-xs font-medium text-gray-400">{t('baht')}</span>
                         </h2>
-                        <p className="text-[10px] text-gray-400 mt-1">สะสม <span className="font-bold text-gray-600">176,540 ฿</span> · 970 ครั้ง</p>
+                        <p className="text-[10px] text-gray-400 mt-1">{t('accumulated')}<span className="font-bold text-gray-600">176,540 ฿</span> · 970 ครั้ง</p>
                       </div>
                       <span className="w-10 h-10 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center shrink-0">
                         <Icon name="dice" className="text-sm" />
@@ -308,24 +317,22 @@ export function DashboardMock() {
               <div className={`mock-tile ${SHOP_CARD} p-5 border-l-4 border-l-blue-500`}>
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">ยอดเงินคงเหลือในระบบรวม</p>
-                    <h2 className="text-2xl font-bold text-gray-800 leading-tight">39,615 <span className="text-xs font-medium text-gray-400">บาท</span></h2>
+                    <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">{t('totalWallet')}</p>
+                    <h2 className="text-2xl font-bold text-gray-800 leading-tight">39,615 <span className="text-xs font-medium text-gray-400">{t('baht')}</span></h2>
                   </div>
                   <span className="w-10 h-10 bg-violet-50 text-violet-500 rounded-xl flex items-center justify-center shrink-0">
                     <Icon name="sack-dollar" className="text-sm" />
                   </span>
                 </div>
                 <p className="text-[10px] text-gray-400 mt-3 flex items-center gap-1">
-                  <Icon name="users" className="text-gray-300 text-[9px]" />
-                  เงินคงอยู่ใน Wallet ผู้ใช้ทั้งหมด
-                </p>
+                  <Icon name="users" className="text-gray-300 text-[9px]" />{t('walletTotal')}</p>
               </div>
 
               <div className={`mock-tile ${SHOP_CARD} p-5 border-l-4 border-l-green-500`}>
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">ยอดใช้จ่ายรวม</p>
-                    <h2 className="text-2xl font-bold text-gray-800 leading-tight">464,660 <span className="text-xs font-medium text-gray-400">บาท</span></h2>
+                    <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">{t('totalSpend')}</p>
+                    <h2 className="text-2xl font-bold text-gray-800 leading-tight">464,660 <span className="text-xs font-medium text-gray-400">{t('baht')}</span></h2>
                   </div>
                   <span className="w-10 h-10 bg-violet-50 text-violet-500 rounded-xl flex items-center justify-center shrink-0">
                     <Icon name="receipt" className="text-sm" />
@@ -337,8 +344,8 @@ export function DashboardMock() {
               <div className={`mock-tile ${SHOP_CARD} p-5`}>
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">สมาชิกทั้งหมด</p>
-                    <h2 className="text-2xl font-bold text-gray-800 leading-tight">1,284 <span className="text-sm font-medium text-gray-400">คน</span></h2>
+                    <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">{t('membersAll')}</p>
+                    <h2 className="text-2xl font-bold text-gray-800 leading-tight">1,284 <span className="text-sm font-medium text-gray-400">{t('people')}</span></h2>
                   </div>
                   <span className="w-10 h-10 bg-orange-50 text-[#f97316] rounded-xl flex items-center justify-center shrink-0">
                     <Icon name="users" className="text-sm" />
@@ -350,21 +357,21 @@ export function DashboardMock() {
               <div className={`mock-tile ${SHOP_CARD} p-5`}>
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">สินค้าทั้งหมด</p>
-                    <h2 className="text-2xl font-bold text-gray-800 leading-tight">19 <span className="text-sm font-medium text-gray-400">ชิ้น</span></h2>
+                    <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">{t('allProducts')}</p>
+                    <h2 className="text-2xl font-bold text-gray-800 leading-tight">19 <span className="text-sm font-medium text-gray-400">{t('pieces')}</span></h2>
                   </div>
                   <span className="w-10 h-10 bg-orange-50 text-[#f97316] rounded-xl flex items-center justify-center shrink-0">
                     <Icon name="box-open" className="text-sm" />
                   </span>
                 </div>
-                <p className="text-[10px] text-gray-400 mt-3">รายการสินค้าที่พร้อมขาย</p>
+                <p className="text-[10px] text-gray-400 mt-3">{t('productList')}</p>
               </div>
             </div>
 
             {/* Row 3: ranking columns */}
             <div className="grid grid-cols-2 gap-4">
-              <RankColumn title="ไอเท็มขายดี" icon="trophy" tint="bg-amber-50 text-amber-500" rows={TOP_ITEMS} unit="ชิ้น" />
-              <RankColumn title="Gacha ยอดนิยม" icon="trophy" tint="bg-purple-50 text-purple-500" rows={TOP_BOXES} unit="ครั้ง" />
+              <RankColumn title={t('bestSellers')} icon="trophy" tint="bg-amber-50 text-amber-500" rows={TOP_ITEMS} unit={t('pieces')} />
+              <RankColumn title="Gacha ยอดนิยม" icon="trophy" tint="bg-purple-50 text-purple-500" rows={TOP_BOXES} unit={t('times')} />
             </div>
           </div>
         </div>
@@ -436,12 +443,13 @@ function MiniChart() {
 
 /** Desktop nav row: icon + English label above the Thai sublabel, as NavLink. */
 function ShopNav({ active }: { active: string }) {
+  const t = useMockText();
   const links = [
-    { label: 'Home', sub: 'หน้าแรก', icon: 'house-signal' as IconName },
-    { label: 'Itemshop', sub: 'ร้านค้าไอเท็ม', icon: 'shopping-cart' as IconName },
-    { label: 'Gacha', sub: 'กล่องสุ่ม', icon: 'box-open' as IconName },
-    { label: 'Topup', sub: 'เติมเงิน', icon: 'coins' as IconName },
-    { label: 'Download', sub: 'ดาวน์โหลด', icon: 'download' as IconName },
+    { label: 'Home', sub: t('home'), icon: 'house-signal' as IconName },
+    { label: 'Itemshop', sub: t('itemShop'), icon: 'shopping-cart' as IconName },
+    { label: 'Gacha', sub: t('lootBox'), icon: 'box-open' as IconName },
+    { label: 'Topup', sub: t('topup'), icon: 'coins' as IconName },
+    { label: 'Download', sub: t('download'), icon: 'download' as IconName },
   ];
   return (
     <div className="s-surface border-b s-border shadow-sm">
@@ -457,9 +465,9 @@ function ShopNav({ active }: { active: string }) {
               >
                 <span className="flex items-center gap-2 mb-1">
                   <Icon name={l.icon} className={`text-[18px] ${isActive ? '' : 's-fg-muted'}`} />
-                  <span className={`font-bold text-[15px] ${isActive ? '' : 's-fg'}`}>{l.label}</span>
+                  <span className={`font-bold text-[15px] ${isActive ? '' : 's-fg'}`}>{t(l.label)}</span>
                 </span>
-                <span className={`text-[10px] font-bold opacity-80 ${isActive ? '' : 's-fg-muted'}`}>{l.sub}</span>
+                <span className={`text-[10px] font-bold opacity-80 ${isActive ? '' : 's-fg-muted'}`}>{t(l.sub)}</span>
               </span>
             );
           })}
@@ -472,6 +480,7 @@ function ShopNav({ active }: { active: string }) {
 /** The 280px column MainLayout puts beside every page: member card, then the
  *  live DAILY TOPUP board. */
 function ShopSidebar() {
+  const t = useMockText();
   const board = [
     { name: 'Kiritoz', amount: 1200 },
     { name: 'MinnieCraft', amount: 850 },
@@ -491,17 +500,17 @@ function ShopSidebar() {
             </span>
             <span className="min-w-0">
               <span className="block s-fg font-bold text-[15px] truncate">Kiritoz</span>
-              <span className="block text-[11px] s-fg-subtle">สมาชิกทั่วไป</span>
+              <span className="block text-[11px] s-fg-subtle">{t('memberNormal')}</span>
             </span>
           </div>
         </div>
         <div className="px-5 py-4 border-b s-border-muted grid grid-cols-2 gap-3">
           <span className="block">
-            <span className="block text-[10px] font-bold s-fg-subtle">ยอดเงิน</span>
+            <span className="block text-[10px] font-bold s-fg-subtle">{t('balance')}</span>
             <span className="block text-sm font-bold s-primary tabular-nums">฿ 1,240</span>
           </span>
           <span className="block">
-            <span className="block text-[10px] font-bold s-fg-subtle">ไอเท็มในคลัง</span>
+            <span className="block text-[10px] font-bold s-fg-subtle">{t('itemsInInventory')}</span>
             <span className="block text-sm font-bold s-fg tabular-nums">6</span>
           </span>
         </div>
@@ -515,7 +524,7 @@ function ShopSidebar() {
           </span>
           <span className="flex-1 min-w-0">
             <span className="block s-fg font-bold text-sm leading-none">DAILY TOPUP</span>
-            <span className="block s-fg-subtle text-[10px] mt-0.5">เติมเงินล่าสุดวันนี้</span>
+            <span className="block s-fg-subtle text-[10px] mt-0.5">{t('topupToday')}</span>
           </span>
           <span className="mock-live relative flex h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: 'rgb(var(--color-shop-primary))' }} />
         </div>
@@ -528,7 +537,7 @@ function ShopSidebar() {
               <span className="w-7 h-7 rounded-lg shrink-0 s-surface-hover border s-border-muted grid place-items-center">
                 <Icon name="user" className="text-[11px] s-fg-subtle" />
               </span>
-              <span className="text-xs font-bold truncate flex-1 s-fg">{r.name}</span>
+              <span className="text-xs font-bold truncate flex-1 s-fg">{t(r.name)}</span>
               <span className="flex items-center gap-1 shrink-0 rounded-lg px-2 py-0.5 border s-border" style={{ backgroundColor: 'rgb(var(--color-shop-primary) / 0.1)' }}>
                 <Icon name="coins" className="text-[10px] s-primary" />
                 <span className="text-[11px] font-bold tabular-nums" style={{ color: 'rgb(var(--color-shop-primary-hover))' }}>
@@ -560,6 +569,7 @@ function ShopShell({ active, children }: { active: string; children: React.React
 function ProductCardMock({ name, price, original, sold, category, seq = 0 }: {
   name: string; price: number; original?: number; sold: number; category: string; seq?: number;
 }) {
+  const t = useMockText();
   const discount = original ? Math.round((1 - price / original) * 100) : 0;
   return (
     <article
@@ -592,19 +602,15 @@ function ProductCardMock({ name, price, original, sold, category, seq = 0 }: {
         </span>
       </div>
       <div className="p-3 flex flex-col flex-1 s-surface relative z-10">
-        <p className="s-fg font-bold text-sm leading-tight truncate">{name}</p>
+        <p className="s-fg font-bold text-sm leading-tight truncate">{t(name)}</p>
         <span className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-500/10 border border-orange-500/20 w-fit">
           <Icon name="fire" className="text-[10px] text-orange-500" />
-          <span className="text-[11px] font-bold text-orange-600">
-            ขายแล้ว <span className="tabular-nums font-bold">{sold.toLocaleString()}</span> ชิ้น
-          </span>
+          <span className="text-[11px] font-bold text-orange-600">{t('sold')}<span className="tabular-nums font-bold">{sold.toLocaleString()}</span>{t('pieces')}</span>
         </span>
         <span className="inline-flex items-center gap-1 mt-1.5 mb-1 text-[10px] font-bold s-primary">
-          <Icon name="circle-info" className="text-[9px]" /> ดูคำอธิบายสินค้า
-        </span>
+          <Icon name="circle-info" className="text-[9px]" />{t('viewDesc')}</span>
         <span className="s-btn-buy w-full mt-auto pt-3 pb-2.5 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 min-h-[40px]">
-          <Icon name="shopping-cart" className="text-[11px]" /> ซื้อเลย!
-        </span>
+          <Icon name="shopping-cart" className="text-[11px]" />{t('buyNow')}</span>
       </div>
     </article>
   );
@@ -613,18 +619,19 @@ function ProductCardMock({ name, price, original, sold, category, seq = 0 }: {
 const SHOP_ITEMS = [
   { name: '100 Crystal', price: 10, original: 15, sold: 119, category: 'Crystals' },
   { name: '490 Crystal', price: 49, sold: 27, category: 'Crystals' },
-  { name: 'ยศ VIP 30 วัน', price: 149, original: 199, sold: 23, category: 'Ranks' },
+  { name: 'vip30', price: 149, original: 199, sold: 23, category: 'Ranks' },
   { name: 'Furniture Set', price: 25, original: 30, sold: 6, category: 'Furniture' },
 ];
 
 const SHOP_TABS = [
-  { name: 'ทั้งหมด', count: 19 },
+  { name: 'all', count: 19 },
   { name: 'Crystals', count: 8 },
   { name: 'Ranks', count: 5 },
   { name: 'Furniture', count: 4 },
 ];
 
 export function StorefrontMock() {
+  const t = useMockText();
   return (
     <ScaledMock designWidth={1440} designHeight={900}>
       <Frame url="yourshop.siamsite.shop/shop">
@@ -635,31 +642,29 @@ export function StorefrontMock() {
                 <Icon name="store" className="text-[20px] s-primary" />
                 ITEMSHOP
               </h1>
-              <p className="s-fg-subtle text-xs mt-0.5">ร้านค้าไอเท็มและยศ</p>
+              <p className="s-fg-subtle text-xs mt-0.5">{t('itemRankShop')}</p>
             </div>
 
             <div className="s-surface rounded-2xl shadow-md border s-border overflow-hidden">
               {/* Filter row: the active tab carries a 3px bottom shadow, as on the real page */}
               <div className="px-4 py-2.5 border-b s-border flex items-center gap-2 flex-wrap">
-                {SHOP_TABS.map((t, i) => (
+                {SHOP_TABS.map((tab, i) => (
                   <span
-                    key={t.name}
+                    key={tab.name}
                     className="mock-tab-cycle flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold border s-border s-surface"
                     style={{ animationDelay: `${i * 2.4}s` }}
                   >
-                    {t.name}
+                    {t(tab.name)}
                     <span className="mock-tab-count text-[10px] font-bold px-1.5 py-0.5 rounded-full s-surface-hover s-fg-subtle">
-                      {t.count}
+                      {tab.count}
                     </span>
                   </span>
                 ))}
                 <span className="ml-auto flex items-center gap-2 shrink-0">
-                  <span className="py-1.5 pl-2.5 pr-7 rounded-lg border s-border s-surface text-xs s-fg">เรียงปกติ</span>
+                  <span className="py-1.5 pl-2.5 pr-7 rounded-lg border s-border s-surface text-xs s-fg">{t('sortNormal')}</span>
                   <span className="relative">
                     <Icon name="search" className="w-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] s-fg-subtle" />
-                    <span className="block pl-7 pr-7 py-1.5 rounded-lg border s-border s-surface text-xs s-fg-subtle w-44">
-                      ค้นหาสินค้า...
-                    </span>
+                    <span className="block pl-7 pr-7 py-1.5 rounded-lg border s-border s-surface text-xs s-fg-subtle w-44">{t('searchProducts')}</span>
                   </span>
                   <span className="text-xs s-fg-subtle font-bold shrink-0">19 ชิ้น</span>
                 </span>
@@ -682,6 +687,7 @@ export function StorefrontMock() {
 function BoxCardMock({ name, price, original, badge, seq }: {
   name: string; price: number; original?: number; badge?: 'HOT' | 'LIMITED'; seq: number;
 }) {
+  const t = useMockText();
   const disc = original ? Math.round((1 - price / original) * 100) : 0;
   return (
     <article
@@ -717,16 +723,16 @@ function BoxCardMock({ name, price, original, badge, seq }: {
         </span>
       </div>
       <div className="p-3 flex flex-col flex-1 s-surface">
-        <p className="s-fg font-bold text-sm leading-tight truncate">{name}</p>
+        <p className="s-fg font-bold text-sm leading-tight truncate">{t(name)}</p>
         <span className="s-btn-buy w-full mt-auto pt-3 pb-2.5 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 min-h-[40px]">
-          <Icon name="box-open" className="text-[11px]" /> เปิดกล่อง
-        </span>
+          <Icon name="box-open" className="text-[11px]" />{t('openBox')}</span>
       </div>
     </article>
   );
 }
 
 export function LootboxMock() {
+  const t = useMockText();
   /* Rarity colours come from the shared map, so the reel can never disagree
      with the real spinner about what EPIC looks like. */
   const reel: TierKey[] = ['common', 'uncommon', 'rare', 'epic', 'common', 'legendary', 'rare', 'epic', 'uncommon', 'common'];
@@ -740,16 +746,14 @@ export function LootboxMock() {
                 <Icon name="box-open" className="text-[20px] s-primary" />
                 GACHA
               </h1>
-              <p className="s-fg-subtle text-xs mt-0.5">กล่องสุ่มไอเท็มและยศ</p>
+              <p className="s-fg-subtle text-xs mt-0.5">{t('lootBoxItems')}</p>
             </div>
 
             {/* Spinner: the reel runs, decelerates and lands under the marker */}
             <div className="s-surface rounded-2xl shadow-md border s-border overflow-hidden">
               <div className="px-4 py-2.5 border-b s-border flex items-center justify-between">
-                <span className="text-[13px] font-bold s-fg">กำลังสุ่ม: กล่องพรีเมียม</span>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgb(var(--color-shop-primary) / 0.12)', color: 'rgb(var(--color-shop-primary-hover))' }}>
-                  เปิดได้ 3 ครั้ง
-                </span>
+                <span className="text-[13px] font-bold s-fg">{t('rolling')}</span>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgb(var(--color-shop-primary) / 0.12)', color: 'rgb(var(--color-shop-primary-hover))' }}>{t('opens3')}</span>
               </div>
               <div className="relative overflow-hidden">
                 <div className="mock-reel flex gap-3 p-5">
@@ -774,10 +778,10 @@ export function LootboxMock() {
             </div>
 
             <div className="grid grid-cols-4 gap-4">
-              <BoxCardMock name="กล่องธรรมดา" price={29} seq={0} />
-              <BoxCardMock name="กล่องพรีเมียม" price={99} original={129} badge="HOT" seq={1} />
-              <BoxCardMock name="กล่องตำนาน" price={249} badge="LIMITED" seq={2} />
-              <BoxCardMock name="กล่องเทศกาล" price={99} original={149} seq={3} />
+              <BoxCardMock name={t('lootCommon')} price={29} seq={0} />
+              <BoxCardMock name={t('lootPremium')} price={99} original={129} badge="HOT" seq={1} />
+              <BoxCardMock name={t('lootLegendary')} price={249} badge="LIMITED" seq={2} />
+              <BoxCardMock name={t('lootFestival')} price={99} original={149} seq={3} />
             </div>
           </div>
         </ShopShell>
@@ -787,13 +791,14 @@ export function LootboxMock() {
 }
 
 export function InventoryMock() {
+  const t = useMockText();
   const slots: { tier: TierKey; name: string; claimed: boolean }[] = [
-    { tier: 'legendary', name: 'ดาบมังกร', claimed: false },
-    { tier: 'epic', name: 'เกราะเพชร', claimed: false },
-    { tier: 'rare', name: 'คทาน้ำแข็ง', claimed: false },
-    { tier: 'uncommon', name: 'โล่เหล็ก', claimed: true },
-    { tier: 'epic', name: 'ปีกนางฟ้า', claimed: false },
-    { tier: 'common', name: 'คบเพลิง x16', claimed: true },
+    { tier: 'legendary', name: t('dragonSword'), claimed: false },
+    { tier: 'epic', name: t('diamondArmor'), claimed: false },
+    { tier: 'rare', name: t('iceStaff'), claimed: false },
+    { tier: 'uncommon', name: t('ironShield'), claimed: true },
+    { tier: 'epic', name: t('fairyWings'), claimed: false },
+    { tier: 'common', name: t('torch16'), claimed: true },
   ];
   return (
     <ScaledMock designWidth={1440} designHeight={900}>
@@ -805,12 +810,12 @@ export function InventoryMock() {
                 <Icon name="archive" className="text-[20px] s-primary" />
                 INVENTORY
               </h1>
-              <p className="s-fg-subtle text-xs mt-0.5">คลังเว็บ กดรับไอเท็มเข้าเกมได้ทุกเมื่อ</p>
+              <p className="s-fg-subtle text-xs mt-0.5">{t('webInvClaim')}</p>
             </div>
 
             <div className="s-surface rounded-2xl shadow-md border s-border overflow-hidden">
               <div className="px-4 py-2.5 border-b s-border flex items-center gap-2">
-                <span className="text-[13px] font-bold s-fg">ไอเท็มของคุณ</span>
+                <span className="text-[13px] font-bold s-fg">{t('yourItems')}</span>
                 <span className="text-xs s-fg-subtle font-bold ml-auto">6 ชิ้น</span>
               </div>
               <div className="p-6 grid grid-cols-3 gap-4">
@@ -829,15 +834,13 @@ export function InventoryMock() {
                         <Icon name={tier.icon} className="text-xl" />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block s-fg font-bold text-sm truncate">{s.name}</span>
+                        <span className="block s-fg font-bold text-sm truncate">{t(s.name)}</span>
                         <span className="block text-[11px] font-bold mt-0.5" style={{ color: tier.color }}>{tier.label}</span>
                       </span>
                       {s.claimed ? (
-                        <span className="text-[11px] font-bold px-2.5 py-1 rounded-md shrink-0" style={{ backgroundColor: 'rgb(var(--color-shop-primary) / 0.12)', color: 'rgb(var(--color-shop-primary-hover))' }}>
-                          รับแล้ว
-                        </span>
+                        <span className="text-[11px] font-bold px-2.5 py-1 rounded-md shrink-0" style={{ backgroundColor: 'rgb(var(--color-shop-primary) / 0.12)', color: 'rgb(var(--color-shop-primary-hover))' }}>{t('claimed')}</span>
                       ) : (
-                        <span className="mock-claim-btn s-btn-buy text-[11px] font-bold px-3 py-2 rounded-lg shrink-0">รับเข้าเกม</span>
+                        <span className="mock-claim-btn s-btn-buy text-[11px] font-bold px-3 py-2 rounded-lg shrink-0">{t('claimToGame')}</span>
                       )}
                     </div>
                   );
@@ -852,6 +855,7 @@ export function InventoryMock() {
 }
 
 export function TopupMock() {
+  const t = useMockText();
   return (
     <ScaledMock designWidth={1440} designHeight={900}>
       <Frame url="yourshop.siamsite.shop/topup">
@@ -862,7 +866,7 @@ export function TopupMock() {
                 <Icon name="coins" className="text-[20px] s-primary" />
                 TOPUP
               </h1>
-              <p className="s-fg-subtle text-xs mt-0.5">เติมเงินเข้ากระเป๋าเพื่อซื้อไอเท็ม</p>
+              <p className="s-fg-subtle text-xs mt-0.5">{t('topupToBuy')}</p>
             </div>
 
             <div className="s-surface rounded-2xl shadow-md border s-border overflow-hidden">
@@ -877,7 +881,7 @@ export function TopupMock() {
 
               <div className="p-6 grid grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  <span className="block text-[13px] font-bold s-fg">เลือกจำนวนเงิน</span>
+                  <span className="block text-[13px] font-bold s-fg">{t('chooseAmount')}</span>
                   <div className="grid grid-cols-3 gap-2.5">
                     {[50, 100, 300, 500, 1000, 2000].map((a, i) => (
                       <span
@@ -889,13 +893,9 @@ export function TopupMock() {
                       </span>
                     ))}
                   </div>
-                  <span className="block text-[13px] font-bold s-fg pt-2">หรือระบุเอง</span>
-                  <span className="block w-full px-3 py-2.5 rounded-lg border s-border s-surface text-[13px] s-fg-subtle">
-                    กรอกจำนวนเงิน
-                  </span>
-                  <span className="s-btn-buy block w-full py-3 rounded-lg text-center text-sm font-bold">
-                    สร้าง QR ชำระเงิน
-                  </span>
+                  <span className="block text-[13px] font-bold s-fg pt-2">{t('customAmount')}</span>
+                  <span className="block w-full px-3 py-2.5 rounded-lg border s-border s-surface text-[13px] s-fg-subtle">{t('enterAmount')}</span>
+                  <span className="s-btn-buy block w-full py-3 rounded-lg text-center text-sm font-bold">{t('createQr')}</span>
                 </div>
 
                 <div className="s-surface-hover border s-border rounded-xl p-6 flex flex-col items-center justify-center gap-4">
@@ -905,11 +905,9 @@ export function TopupMock() {
                     <Icon name="qrcode" className="text-7xl" style={{ color: 'rgb(var(--color-surface))' }} />
                     <span className="mock-qr-scan" />
                   </span>
-                  <span className="block text-sm font-bold s-fg">สแกนแล้วอัปโหลดสลิป</span>
+                  <span className="block text-sm font-bold s-fg">{t('scanUpload')}</span>
                   <span className="mock-slip flex items-center gap-2 text-[12px] font-bold px-3 py-2 rounded-lg" style={{ backgroundColor: 'rgb(var(--color-shop-primary) / 0.12)', color: 'rgb(var(--color-shop-primary-hover))' }}>
-                    <Icon name="circle-check" className="text-[12px]" />
-                    ตรวจสลิปสำเร็จ เงินเข้าแล้ว
-                  </span>
+                    <Icon name="circle-check" className="text-[12px]" />{t('slipOk')}</span>
                 </div>
               </div>
             </div>
@@ -934,32 +932,32 @@ export interface MockSlide {
 export const MOCK_SLIDES: MockSlide[] = [
   {
     key: 'storefront',
-    title: 'หน้าร้านที่ผู้เล่นเห็น',
-    desc: 'จัดหมวดหมู่ ตั้งราคา ตั้งส่วนลด และเปิดขายได้เองทั้งหมด ผู้เล่นกดซื้อแล้วของเข้าเกมทันที',
+    title: 'storefront',
+    desc: 'shopDesc',
     Mock: StorefrontMock,
   },
   {
     key: 'lootbox',
-    title: 'กล่องสุ่มพร้อมแอนิเมชั่น',
-    desc: 'ระบบสุ่มแบบ CS:GO พร้อมระดับความหายาก ตั้งอัตราการออกของแต่ละชิ้นได้เอง',
+    title: 'lootBoxAnim',
+    desc: 'gachaDesc',
     Mock: LootboxMock,
   },
   {
     key: 'inventory',
-    title: 'คลังเว็บ เก็บของไว้รับทีหลัง',
-    desc: 'ผู้เล่นสุ่มได้ตอนไม่ได้ออนไลน์ก็ไม่หาย เก็บไว้ในคลังแล้วกดรับเข้าเกมเมื่อไหร่ก็ได้',
+    title: 'webInvKeep',
+    desc: 'webInvDesc',
     Mock: InventoryMock,
   },
   {
     key: 'topup',
-    title: 'เติมเงินและตรวจสลิปอัตโนมัติ',
-    desc: 'รองรับ PromptPay และ TrueMoney อั่งเปา ระบบตรวจสลิปให้เอง ไม่ต้องนั่งเฝ้า',
+    title: 'topupAuto',
+    desc: 'payDesc',
     Mock: TopupMock,
   },
   {
     key: 'admin',
-    title: 'หลังร้านสำหรับเจ้าของเซิร์ฟเวอร์',
-    desc: 'ดูยอดเติมเงิน รายได้ Item และ Gacha เทียบกับเดือนก่อน พร้อมอันดับไอเท็มขายดี ทั้งหมดอัปเดตสด',
+    title: 'backoffice',
+    desc: 'statsDesc',
     Mock: DashboardMock,
   },
 ];

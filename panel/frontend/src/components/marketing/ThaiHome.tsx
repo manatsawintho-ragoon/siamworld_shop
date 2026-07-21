@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useState, useMemo, useRef, Suspense } from 'react';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
 import Navbar from '@/components/Navbar';
+import { useTranslations, useLocale } from 'next-intl';
 import AuthCodeExchange from '@/components/AuthCodeExchange';
 import api from '@/lib/api';
 import { FAQ, EASYSLIP_FEE_MAX } from '@/lib/faq';
@@ -54,12 +55,12 @@ const DEFAULT_PACKAGES: Package[] = [
 ];
 
 const DEFAULT_PROMOS: Promo[] = [
-  { kind: 'trial', months: 0, days: 7, price: 0,  label: 'ทดลองฟรี 7 วัน', regularPrice: 249 },
-  { kind: 'intro', months: 1,           price: 99, label: 'ทดลองเดือนแรก', regularPrice: 249 },
+  { kind: 'trial', months: 0, days: 7, price: 0,  label: 'trialFree7', regularPrice: 249 },
+  { kind: 'intro', months: 1,           price: 99, label: 'introMonth', regularPrice: 249 },
 ];
 
 /** The single primary action on this page. Every hero/section CTA points here. */
-const PRIMARY_CTA = { href: '/order?kind=trial', label: 'เริ่มทดลองฟรี 7 วัน' };
+const PRIMARY_CTA = { href: '/order?kind=trial', label: 'ctaStartTrial' };
 
 /* ── Package tiers ───────────────────────────────────────────────────
    Every plan ships the same feature set, so repeating the full list in all
@@ -81,9 +82,9 @@ interface TierCopy {
 
 /** Points every paid plan shares, so each plan only lists what differs. */
 const PAID_POINTS: TierCopy['points'] = [
-  { icon: 'circle-check', text: 'ได้ฟีเจอร์ครบทุกอย่าง', tone: 'good' },
-  { icon: 'qrcode',       text: 'ตรวจสลิป PromptPay ให้อัตโนมัติ 24 ชม.' },
-  { icon: 'wallet',       text: 'เติมผ่าน TrueMoney อั่งเปา ฟรี', tone: 'good' },
+  { icon: 'circle-check', text: 'pointAllFeatures', tone: 'good' },
+  { icon: 'qrcode',       text: 'pointSlipAuto' },
+  { icon: 'wallet',       text: 'pointTrueMoneyFree', tone: 'good' },
 ];
 
 export type PlanId = 'trial' | 'intro' | 'm1' | 'm3' | 'm6';
@@ -100,38 +101,38 @@ const FEATURED_PLAN: PlanId = 'm3';
 const TIER_COPY: Record<PlanId, TierCopy> = {
   trial: {
     tier: 'common',
-    audience: 'อยากลองก่อน ยังไม่อยากจ่าย',
-    hook: 'ลองใช้ของจริงฟรี 7 วัน',
+    audience: 'tierTrialAudience',
+    hook: 'tierTrialHook',
     points: [
-      { icon: 'circle-check', text: 'ได้ฟีเจอร์ครบทุกอย่าง', tone: 'good' },
-      { icon: 'clock',        text: 'ใช้ได้เต็มที่ 7 วัน ไม่ต้องผูกบัตร' },
-      { icon: 'wallet',       text: 'เติมผ่าน TrueMoney อั่งเปา ฟรี', tone: 'good' },
-      { icon: 'circle-xmark', text: 'ยังไม่รวมตรวจสลิป PromptPay', tone: 'off' },
+      { icon: 'circle-check', text: 'pointAllFeatures', tone: 'good' },
+      { icon: 'clock',        text: 'pointTrial7' },
+      { icon: 'wallet',       text: 'pointTrueMoneyFree', tone: 'good' },
+      { icon: 'circle-xmark', text: 'pointNoSlip', tone: 'off' },
     ],
   },
   intro: {
     tier: 'uncommon',
-    audience: 'พร้อมเปิดขายจริงเดือนนี้',
-    hook: 'จ่ายเดือนแรกถูกที่สุด ยกเลิกได้ทุกเมื่อ',
-    points: [...PAID_POINTS, { icon: 'shield-check', text: 'ยกเลิกได้ทุกเมื่อ ไม่มีสัญญาผูกมัด' }],
+    audience: 'tierIntroAudience',
+    hook: 'tierIntroHook',
+    points: [...PAID_POINTS, { icon: 'shield-check', text: 'pointCancelAnytimeNoContract' }],
   },
   m1: {
     tier: 'rare',
-    audience: 'อยากจ่ายเป็นรายเดือน',
-    hook: 'ยืดหยุ่นที่สุด จ่ายเท่าที่ใช้',
-    points: [...PAID_POINTS, { icon: 'shield-check', text: 'ยกเลิกได้ทุกเมื่อ' }],
+    audience: 'tierM1Audience',
+    hook: 'tierM1Hook',
+    points: [...PAID_POINTS, { icon: 'shield-check', text: 'pointCancelAnytime' }],
   },
   m3: {
     tier: 'epic',
-    audience: 'เปิดขายจริงจัง อยากได้ส่วนลดแล้ว',
-    hook: 'จ่ายไม่หนัก แต่ได้ส่วนลดแล้ว จุดที่คุ้มค่าที่สุด',
-    points: [...PAID_POINTS, { icon: 'arrows-rotate', text: 'ต่ออายุน้อยลง เหลือ 4 เดือนครั้ง' }],
+    audience: 'tierM3Audience',
+    hook: 'tierM3Hook',
+    points: [...PAID_POINTS, { icon: 'arrows-rotate', text: 'pointRenewLess' }],
   },
   m6: {
     tier: 'legendary',
-    audience: 'เปิดยาว อยากล็อกราคาไว้',
-    hook: 'จ่ายทีเดียว เฉลี่ยต่อเดือนถูกที่สุด',
-    points: [...PAID_POINTS, { icon: 'arrows-rotate', text: 'จ่ายครั้งเดียว ไม่ต้องต่อทุกเดือน' }],
+    audience: 'tierM6Audience',
+    hook: 'tierM6Hook',
+    points: [...PAID_POINTS, { icon: 'arrows-rotate', text: 'pointPayOnce' }],
   },
 };
 
@@ -153,54 +154,54 @@ function getDiscount(pkg: { price: number; save?: number; regularPrice?: number 
 const STEPS: { icon: IconName; title: string; desc: string }[] = [
   {
     icon: 'user-pen',
-    title: 'สมัครแล้วเลือกแพ็กเกจ',
-    desc: 'ใช้แค่อีเมล ไม่ต้องผูกบัตร ระบบสร้างเว็บร้านค้าให้อัตโนมัติภายใน 5-10 นาที',
+    title: 'step1Title',
+    desc: 'step1Desc',
   },
   {
     icon: 'plug',
-    title: 'วางปลั๊กอินเชื่อมเซิร์ฟเวอร์',
-    desc: 'วางไฟล์ .jar ลงใน /plugins ใส่ token แล้วปลั๊กอินเชื่อมกลับมาเอง ไม่ต้องเปิดพอร์ต ไม่ต้องตั้ง VPN',
+    title: 'step2Title',
+    desc: 'step2Desc',
   },
   {
     icon: 'sack-dollar',
-    title: 'เปิดขายได้เลย',
-    desc: 'ผู้เล่นเติมเงินเองผ่าน PromptPay หรือ TrueMoney อั่งเปา ของส่งเข้าเกมอัตโนมัติ 24 ชั่วโมง',
+    title: 'step3Title',
+    desc: 'step3Desc',
   },
 ];
 
 const FEATURES: { icon: IconName; title: string; desc: string }[] = [
   {
     icon: 'rocket',
-    title: 'ระบบ Auto-Deploy',
-    desc: 'พร้อมขายทันที ไม่ต้องเขียนโค้ด ไม่ต้องตั้งค่ายาก',
+    title: 'featAutoDeployTitle',
+    desc: 'featAutoDeployDesc',
   },
   {
     icon: 'qrcode',
-    title: 'รับเงิน 24 ชม.',
-    desc: 'PromptPay + TrueMoney อั่งเปา (ฟรี ไม่มีค่าธรรมเนียม) เงินเข้าทันทีแม้คุณนอน',
+    title: 'featPayTitle',
+    desc: 'featPayDesc',
   },
   {
     icon: 'box-open',
-    title: 'Loot Box ดึงดูดผู้เล่น',
-    desc: 'ระบบสุ่มพร้อมแอนิเมชั่น CS:GO กระตุ้นยอดขายซ้ำ',
+    title: 'featLootTitle',
+    desc: 'featLootDesc',
   },
   {
     icon: 'gears',
-    title: 'จัดการครบจากเว็บ',
-    desc: 'ส่งของผ่าน RCON แม่นยำ ดู logs ดูยอดได้ทุกที่',
+    title: 'featManageTitle',
+    desc: 'featManageDesc',
   },
 ];
 
 /** Factual, non-defamatory comparison. Competitors are described by category,
  *  never by brand, so no claim is attached to a specific company. */
 const COMPARISON: { label: string; ours: string; custom: string; foreign: string }[] = [
-  { label: 'ค่าเริ่มต้น',              ours: 'ฟรี 7 วัน แล้ว ฿99 เดือนแรก', custom: 'หลักหมื่นขึ้นไป',   foreign: 'หักเปอร์เซ็นต์จากยอดขาย' },
-  { label: 'ระยะเวลาจนเปิดขายได้',      ours: '5-10 นาที',                  custom: 'รอพัฒนาเป็นเดือน',  foreign: 'ตั้งค่าเองทั้งหมด' },
-  { label: 'PromptPay ตรวจสลิปอัตโนมัติ', ours: 'มีให้พร้อมใช้',              custom: 'ต้องพัฒนาเพิ่ม',    foreign: 'ส่วนใหญ่ไม่รองรับ' },
-  { label: 'TrueMoney อั่งเปา',          ours: 'ใช้ฟรี ไม่มีค่าธรรมเนียม',    custom: 'ต้องพัฒนาเพิ่ม',    foreign: 'ไม่รองรับ' },
-  { label: 'เชื่อมเซิร์ฟเวอร์',          ours: 'ปลั๊กอิน ไม่ต้องเปิดพอร์ต',   custom: 'ต้องทำเอง',        foreign: 'ต้องเปิดพอร์ต RCON' },
-  { label: 'อัปเดตและดูแลระบบ',          ours: 'รวมอยู่ในค่าบริการ',          custom: 'จ่ายเพิ่มทุกครั้ง',  foreign: 'ขึ้นกับแพลตฟอร์ม' },
-  { label: 'ซัพพอร์ตภาษาไทย',            ours: 'คนไทย ตอบไทย',               custom: 'ขึ้นกับผู้รับจ้าง',  foreign: 'ภาษาอังกฤษ' },
+  { label: 'cmpStartCost',              ours: 'cmpOursStart', custom: 'tensOfThousandsUp',   foreign: 'cmpForeignPercent' },
+  { label: 'cmpTimeToSell',      ours: 'cmpOursTime',                  custom: 'cmpCustomTime',  foreign: 'cmpSelfConfig' },
+  { label: 'cmpSlipAuto', ours: 'cmpOursReady',              custom: 'cmpCustomBuild',    foreign: 'mostlyUnsupported' },
+  { label: 'cmpTrueMoney',          ours: 'cmpOursFree',    custom: 'cmpCustomBuild',    foreign: 'cmpForeignNo' },
+  { label: 'cmpConnect',          ours: 'cmpOursPlugin',   custom: 'cmpForeignSelf',        foreign: 'cmpCustomPort' },
+  { label: 'cmpUpdates',          ours: 'cmpOursIncluded',          custom: 'cmpCustomPay',  foreign: 'cmpForeignDepends' },
+  { label: 'cmpThaiSupport',            ours: 'cmpOursThai',               custom: 'cmpCustomDepends',  foreign: 'footerEnglish' },
 ];
 
 /* A showcase slide is either an operator-uploaded screenshot or one of the
@@ -220,8 +221,8 @@ interface ShowcaseSlide {
 
 /** The two headline lines. The second one carries the accent colour. */
 const HEADLINE_LINES: { text: string; accent?: boolean }[] = [
-  { text: 'เปิดร้านค้ามายคราฟ' },
-  { text: 'ขายได้ตั้งแต่วันนี้', accent: true },
+  { text: 'heroOpenShop' },
+  { text: 'heroSellToday', accent: true },
 ];
 
 /* Thai stacks vowels and tone marks on top of a base consonant, so slicing the
@@ -268,6 +269,7 @@ const Caret = () => (
  * heading alone, not the entire landing page.
  */
 function TypewriterHeadline() {
+  const t = useTranslations('home');
   const reduceMotion = useReducedMotion();
   const lines = useMemo(
     () => HEADLINE_LINES.map(l => ({ ...l, clusters: toClusters(l.text) })),
@@ -292,7 +294,7 @@ function TypewriterHeadline() {
     const delay = deleting
       ? (shown > 0 ? DELETE_MS : HOLD_EMPTY_MS)
       : (shown < total ? TYPE_MS : HOLD_FULL_MS);
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       if (deleting) {
         if (shown > 0) setShown(s => s - 1);
         else setDeleting(false);
@@ -301,7 +303,7 @@ function TypewriterHeadline() {
         else setDeleting(true);
       }
     }, delay);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [animating, shown, deleting, total]);
 
   /* Walk the lines once, handing each the slice of `shown` that belongs to it.
@@ -359,6 +361,7 @@ function CountUp({ value, suffix = '' }: { value: number; suffix?: string }) {
 /* ── Section heading ─────────────────────────────────────────────────── */
 
 function SectionHead({ eyebrow, title, sub, center = true }: { eyebrow: string; title: React.ReactNode; sub?: string; center?: boolean }) {
+  const t = useTranslations('home');
   return (
     <div className={`max-w-2xl mb-12 ${center ? 'mx-auto text-center' : ''}`}>
       <span className="inline-block text-[13px] font-semibold text-primary mb-3">
@@ -380,6 +383,7 @@ function SectionHead({ eyebrow, title, sub, center = true }: { eyebrow: string; 
    pills themselves are the shops that are currently live, so nothing links to
    a site that is down. */
 function HeroShopMarquee({ shops, shopCount }: { shops: { name: string; domain: string }[]; shopCount?: number }) {
+  const t = useTranslations('home');
   if (!shops.length) return null;
   const total = shopCount ?? shops.length;
 
@@ -391,8 +395,7 @@ function HeroShopMarquee({ shops, shopCount }: { shops: { name: string; domain: 
           <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
         </span>
         <span>
-          <span className="text-foreground font-semibold tabular-nums">{total}</span> เซิร์ฟเวอร์เปิดร้านกับเราแล้ว
-        </span>
+          <span className="text-foreground font-semibold tabular-nums">{total}</span>{t('serversWithUs')}</span>
       </p>
 
       <div className="marquee-viewport relative w-full overflow-hidden">
@@ -442,6 +445,7 @@ function HeroShopMarquee({ shops, shopCount }: { shops: { name: string; domain: 
    resumes after a short idle. Sub-pixel speed is accumulated separately
    because `scrollLeft` snaps to integers. */
 function PlanRail({ children, count }: { children: React.ReactNode; count: number }) {
+  const t = useTranslations('home');
   const reduceMotion = useReducedMotion();
   const ref = useRef<HTMLDivElement>(null);
   const [atStart, setAtStart] = useState(true);
@@ -595,7 +599,7 @@ function PlanRail({ children, count }: { children: React.ReactNode; count: numbe
         className="plan-rail flex gap-5 overflow-x-auto py-10 px-1 -mx-1 items-stretch"
         tabIndex={0}
         role="region"
-        aria-label={`แพ็กเกจทั้งหมด ${count} แบบ เลื่อนซ้ายขวาเพื่อดูเพิ่มได้`}
+        aria-label={t('allPlansAria', { count })}
       >
         {children}
       </div>
@@ -608,7 +612,7 @@ function PlanRail({ children, count }: { children: React.ReactNode; count: numbe
         type="button"
         onClick={() => nudge(-1)}
         disabled={atStart}
-        aria-label="ดูแพ็กเกจก่อนหน้า"
+        aria-label={t('prevPlan')}
         className={`${arrowBase} absolute left-0 md:-left-4 top-1/2 -translate-y-1/2 z-20`}
       >
         <Icon name="chevron-left" className="text-lg" />
@@ -617,7 +621,7 @@ function PlanRail({ children, count }: { children: React.ReactNode; count: numbe
         type="button"
         onClick={() => nudge(1)}
         disabled={atEnd}
-        aria-label="ดูแพ็กเกจถัดไป"
+        aria-label={t('nextPlan')}
         className={`${arrowBase} absolute right-0 md:-right-4 top-1/2 -translate-y-1/2 z-20`}
       >
         <Icon name="chevron-right" className="text-lg" />
@@ -635,6 +639,7 @@ function PackageCard({
   easyslipFee,
   onShowEasySlip,
 }: { pkg: any; planId: PlanId; index?: number; easyslipFee: number; onShowEasySlip: () => void }) {
+  const t = useTranslations('home');
   const reduceMotion = useReducedMotion();
   // Touch devices have no hover, so the glow is armed when the card scrolls
   // into view instead. CSS picks whichever applies via @media (hover: …).
@@ -656,19 +661,19 @@ function PackageCard({
      right below it. 6 months keeps the honest claim it can actually make
      (cheapest per month, not the biggest saving as a share of the price). */
   const badge = featured
-    ? 'แนะนำ คุ้มค่าที่สุด'
+    ? t('recommendedValue')
     : planId === 'm6'
-      ? 'ถูกที่สุดต่อเดือน'
+      ? t('cheapestPerMonth')
       : isIntro
-        ? 'ลูกค้าใหม่เท่านั้น'
+        ? t('newCustomersOnly')
         : null;
 
   const unit = isTrial
-    ? `${pkg.days} วัน`
+    ? t('planDays', { n: pkg.days })
     : isIntro
-      ? 'เดือนแรก'
+      ? t('firstMonth')
       : pkg.months === 1
-        ? 'เดือน'
+        ? t('month')
         : pkg.label;
 
   return (
@@ -718,8 +723,8 @@ function PackageCard({
             <Icon name={tier.icon} className="text-[10px]" />
             {tier.label}
           </span>
-          <CardTitle className="text-lg font-semibold">{isTrial ? 'ทดลองใช้ฟรี' : pkg.label}</CardTitle>
-          <p className="text-[12px] font-semibold text-muted-foreground mt-1.5 leading-snug">{copy.audience}</p>
+          <CardTitle className="text-lg font-semibold">{isTrial ? t('trialFree') : pkg.label}</CardTitle>
+          <p className="text-[12px] font-semibold text-muted-foreground mt-1.5 leading-snug">{t(copy.audience)}</p>
           <div className="flex items-baseline flex-wrap gap-x-2 gap-y-1 mt-3">
             <span className="text-5xl font-semibold tracking-tighter text-foreground tabular-nums">
               ฿{pkg.price.toLocaleString()}
@@ -734,17 +739,17 @@ function PackageCard({
             <div className="flex items-center flex-wrap gap-1.5 mt-2.5">
               <span
                 className="text-base font-bold text-destructive/70 line-through tabular-nums"
-                aria-label={`ราคาปกติ ${discount.regular} บาท`}
+                aria-label={t('normalPriceAria', { price: discount.regular })}
               >
                 ฿{discount.regular.toLocaleString()}
               </span>
               <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[13px] font-semibold text-destructive">
                 <Icon name="arrow-down" className="text-[9px]" />
-                ลด {discount.percent}%
+                {t('discountPercent', { percent: discount.percent })}
               </span>
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[13px] font-semibold text-emerald-600">
                 <Icon name="tag" className="text-[9px]" />
-                ประหยัด ฿{discount.save.toLocaleString()}
+                {t('saveAmount', { amount: discount.save.toLocaleString() })}
               </span>
             </div>
           )}
@@ -752,15 +757,15 @@ function PackageCard({
           {/* The number that makes the long plans comparable to the short ones. */}
           {perMonth && (
             <p className="text-[12px] font-medium text-foreground/80 mt-2 tabular-nums">
-              เฉลี่ยเดือนละ ฿{perMonth.toLocaleString()}
+              {t('avgPerMonthAmount', { amount: perMonth.toLocaleString() })}
             </p>
           )}
 
           {/* One-line hook: the single reason to pick this plan over the others. */}
-          <p className="text-[13px] font-medium mt-3 leading-snug" style={{ color: tier.color }}>{copy.hook}</p>
+          <p className="text-[13px] font-medium mt-3 leading-snug" style={{ color: tier.color }}>{t(copy.hook)}</p>
           {isIntro && discount && (
             <p className="text-[12px] text-muted-foreground mt-1.5 font-medium">
-              เดือนถัดไป ฿{discount.regular.toLocaleString()}/เดือน
+              {t('nextMonthPrice', { price: discount.regular.toLocaleString() })}
             </p>
           )}
         </CardHeader>
@@ -787,7 +792,7 @@ function PackageCard({
                     p.tone === 'good' ? 'text-emerald-500' : p.tone === 'off' ? 'text-destructive/50' : 'text-primary/60'
                   }`}
                 />
-                <span>{p.text}</span>
+                <span>{t(p.text)}</span>
               </li>
             ))}
           </ul>
@@ -802,7 +807,7 @@ function PackageCard({
             asChild
           >
             <Link href={isTrial ? '/order?kind=trial' : (isIntro ? '/order?kind=intro' : `/order?months=${pkg.months}`)}>
-              {isTrial ? 'เริ่มทดลองใช้งาน' : 'สั่งซื้อแพ็กเกจ'}
+              {isTrial ? t('ctaStartTrialShort') : t('orderPlan')}
             </Link>
           </Button>
           {!isTrial && (
@@ -811,7 +816,7 @@ function PackageCard({
               className="text-[13px] font-semibold text-muted-foreground hover:text-primary flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
               <Icon name="circle-info" className="text-xs" />
-              ค่าตรวจสลิป PromptPay ฿{easyslipFee}/รายการ
+              {t('slipFeePerItem', { fee: easyslipFee })}
             </button>
           )}
         </CardFooter>
@@ -823,16 +828,20 @@ function PackageCard({
 /* ── FAQ accordion ───────────────────────────────────────────────────── */
 
 function FaqSection() {
+  const t = useTranslations('home');
+  const tFaq = useTranslations('faq');
   const [open, setOpen] = useState<number | null>(0);
   const reduceMotion = useReducedMotion();
 
   return (
     <section id="faq" className="py-20 md:py-24 bg-background border-t border-border">
       <div className="max-w-3xl mx-auto px-6">
-        <SectionHead eyebrow="คำถามที่พบบ่อย" title="ยังลังเลอยู่ใช่ไหม" sub="รวมคำถามที่เจ้าของเซิร์ฟเวอร์ถามเรามากที่สุด" />
+        <SectionHead eyebrow={t('secFaq')} title={t('stillDeciding')} sub={t('secFaqSub')} />
 
         <div className="space-y-3">
           {FAQ.map((item, i) => {
+            const qKey = `q${i + 1}` as const;
+            const aKey = `a${i + 1}` as const;
             const isOpen = open === i;
             return (
               <motion.div
@@ -850,7 +859,7 @@ function FaqSection() {
                     aria-controls={`faq-panel-${i}`}
                     className="w-full flex items-center justify-between gap-4 text-left px-5 py-4 min-h-[56px] cursor-pointer"
                   >
-                    <span className="font-bold text-foreground text-[15px] leading-snug">{item.q}</span>
+                    <span className="font-bold text-foreground text-[15px] leading-snug">{tFaq(qKey)}</span>
                     <Icon
                       name="chevron-down"
                       className={`text-muted-foreground shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180 text-primary' : ''}`}
@@ -866,7 +875,7 @@ function FaqSection() {
                 >
                   <div className="overflow-hidden">
                     <p className="px-5 pb-5 -mt-1 text-[14px] text-muted-foreground leading-relaxed font-medium">
-                      {item.a}
+                      {tFaq(aKey, { fee: EASYSLIP_FEE_MAX })}
                     </p>
                   </div>
                 </div>
@@ -882,6 +891,8 @@ function FaqSection() {
 /* ── Page ────────────────────────────────────────────────────────────── */
 
 function LandingContent() {
+  const t = useTranslations('home');
+  const locale = useLocale();
   const reduceMotion = useReducedMotion();
 
   const [packages, setPackages] = useState<Package[]>(DEFAULT_PACKAGES);
@@ -948,10 +959,10 @@ function LandingContent() {
        subscription, which includes shops whose subscription has since lapsed.
        Labelling that "เปิดใช้งาน" (currently active) would overstate it. The
        hero marquee shows this same number with the same wording. */
-    { label: 'เซิร์ฟเวอร์เปิดร้านกับเราแล้ว', num: statsData ? (statsData.total_shops || 0) : undefined, icon: 'store' },
-    { label: 'สมาชิกในระบบ',        num: statsData ? (statsData.total_users || 0) : undefined, icon: 'users' },
-    { label: 'ติดตั้งเสร็จภายใน',    text: statsData?.delivery_speed || undefined, icon: 'bolt' },
-    { label: 'รับเงินอัตโนมัติ',      text: '24 ชม.', icon: 'qrcode' },
+    { label: t('serversWithUs'), num: statsData ? (statsData.total_shops || 0) : undefined, icon: 'store' },
+    { label: t('membersInSystem'),        num: statsData ? (statsData.total_users || 0) : undefined, icon: 'users' },
+    { label: t('installedWithin'),    text: statsData?.delivery_speed || undefined, icon: 'bolt' },
+    { label: t('autoReceive'),      text: t('hours24'), icon: 'qrcode' },
   ], [statsData]);
 
   const trialPromo = promos.find(p => p.kind === 'trial');
@@ -985,7 +996,7 @@ function LandingContent() {
       <div className="promo-strip-anim bg-gradient-to-r from-primary via-amber-500 to-primary text-primary-foreground">
         <div className="max-w-7xl mx-auto px-6 py-2 flex items-center justify-center gap-2 text-center text-[12px] md:text-[13px] font-medium">
           <Icon name="sparkles" className="shrink-0" />
-          <span>ทดลองฟรี 7 วัน ไม่ต้องผูกบัตร ต่อเดือนแรกเพียง ฿99</span>
+          <span>{t('trialNoCardIntro')}</span>
         </div>
       </div>
 
@@ -1005,28 +1016,22 @@ function LandingContent() {
             {/* Broken into short lines on purpose: Thai has no spaces between
                 words, so a long unbroken paragraph is hard to scan. Each line
                 is one idea. */}
-            <p className="hero-pop-2 text-lg md:text-xl text-muted-foreground leading-relaxed mb-8 max-w-xl font-medium">
-              เว็บร้านค้าสำเร็จรูปสำหรับเซิร์ฟเวอร์มายคราฟไทย
-              <br className="hidden sm:block" />
-              ผู้เล่นเติมเงินเอง ของเข้าเกมอัตโนมัติ 24 ชม.
-              <br className="hidden sm:block" />
-              คุณไม่ต้องเขียนโค้ด ไม่ต้องนั่งเฝ้าสลิป
-            </p>
+            <p className="hero-pop-2 text-lg md:text-xl text-muted-foreground leading-relaxed mb-8 max-w-xl font-medium">{t('heroSubtitle')}<br className="hidden sm:block" />{t('playersTopUpAuto')}<br className="hidden sm:block" />{t('heroNoCode')}</p>
 
             <div className="hero-pop-2 flex flex-col sm:flex-row gap-3 mb-5">
               <Button size="lg" className="cta-sweep relative overflow-hidden h-14 px-8 text-base font-semibold rounded-full shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer" asChild>
                 <Link href={PRIMARY_CTA.href}>
-                  <Icon name="rocket" className="mr-2" /> {PRIMARY_CTA.label}
+                  <Icon name="rocket" className="mr-2" /> {t(PRIMARY_CTA.label)}
                 </Link>
               </Button>
               <Button variant="outline" size="lg" className="h-14 px-8 text-base font-bold rounded-full cursor-pointer" asChild>
-                <a href="#pricing">ดูราคาแพ็กเกจ</a>
+                <a href="#pricing">{t('ctaSeePricing')}</a>
               </Button>
             </div>
 
             {/* Objection handling right under the primary CTA */}
             <ul className="hero-pop-3 flex flex-wrap gap-x-5 gap-y-2 text-[13px] font-semibold text-muted-foreground">
-              {['ไม่ต้องผูกบัตร', 'ยกเลิกได้ทุกเมื่อ', 'พร้อมขายใน 10 นาที'].map(t => (
+              {[t('noCard'), t('pointCancelAnytime'), t('readyIn10')].map(t => (
                 <li key={t} className="flex items-center gap-1.5">
                   <Icon name="circle-check" className="text-emerald-500" /> {t}
                 </li>
@@ -1083,9 +1088,9 @@ function LandingContent() {
       <section id="how" className="py-20 md:py-24 bg-background">
         <div className="max-w-7xl mx-auto px-6">
           <SectionHead
-            eyebrow="เริ่มยังไง"
-            title={<>เปิดร้านเสร็จใน <span className="text-primary">3 ขั้นตอน</span></>}
-            sub="ไม่ต้องมีความรู้ด้านเว็บ ไม่ต้องเช่าเซิร์ฟเวอร์เพิ่ม"
+            eyebrow={t('secHowStart')}
+            title={<>{t('shopReadyIn')}<span className="text-primary">{t('threeSteps')}</span></>}
+            sub={t('heroNoWebSkill')}
           />
 
           {/* Quest chain: the three steps are connected by a line that fills
@@ -1120,10 +1125,10 @@ function LandingContent() {
                         </span>
                         <Icon name={s.icon} className="text-2xl text-primary/40 group-hover/step:text-primary/70 transition-colors" />
                       </div>
-                      <CardTitle className="text-lg leading-snug">{s.title}</CardTitle>
+                      <CardTitle className="text-lg leading-snug">{t(s.title)}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{t(s.desc)}</p>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -1137,9 +1142,9 @@ function LandingContent() {
       <section id="features" className="py-20 md:py-24 bg-secondary/50 border-y border-border">
         <div className="max-w-7xl mx-auto px-6">
           <SectionHead
-            eyebrow="ฟีเจอร์เด่น"
-            title={<>ได้ครบทุกอย่าง ตั้งแต่<span className="text-primary">วันแรก</span></>}
-            sub="ไม่ต้องซื้อปลั๊กอินเพิ่ม ไม่ต้องจ้างคนทำเว็บ ไม่ต้องดูแลเซิร์ฟเวอร์เอง"
+            eyebrow={t('secFeatures')}
+            title={<>{t('getEverythingFrom')}<span className="text-primary">{t('firstDays')}</span></>}
+            sub={t('heroNoExtras')}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -1158,10 +1163,10 @@ function LandingContent() {
                     <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4 transition-all duration-300 group-hover/feat:bg-primary group-hover/feat:text-primary-foreground group-hover/feat:scale-110 group-hover/feat:-rotate-6">
                       <Icon name={f.icon} className="text-xl" />
                     </div>
-                    <CardTitle className="text-lg group-hover/feat:text-primary transition-colors">{f.title}</CardTitle>
+                    <CardTitle className="text-lg group-hover/feat:text-primary transition-colors">{t(f.title)}</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{t(f.desc)}</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -1176,15 +1181,15 @@ function LandingContent() {
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
             <SectionHead
               center={false}
-              eyebrow="ตัวอย่างระบบ"
-              title={<>สัมผัสประสบการณ์ <span className="text-primary">ระดับพรีเมียม</span></>}
-              sub="ระบบถูกออกแบบมาให้ทันสมัย ใช้งานง่าย และรองรับทุกความต้องการของเซิร์ฟเวอร์มายคราฟ"
+              eyebrow={t('secDemo')}
+              title={<>{t('experience')}<span className="text-primary">{t('premium')}</span></>}
+              sub={t('secDemoSub')}
             />
             <div className="flex gap-2 shrink-0 mb-12">
-              <Button variant="outline" size="icon" className="rounded-full w-12 h-12 cursor-pointer" onClick={prevImage} aria-label="สไลด์ก่อนหน้า">
+              <Button variant="outline" size="icon" className="rounded-full w-12 h-12 cursor-pointer" onClick={prevImage} aria-label={t('prevSlide')}>
                 <Icon name="chevron-left" />
               </Button>
-              <Button variant="outline" size="icon" className="rounded-full w-12 h-12 cursor-pointer" onClick={nextImage} aria-label="สไลด์ถัดไป">
+              <Button variant="outline" size="icon" className="rounded-full w-12 h-12 cursor-pointer" onClick={nextImage} aria-label={t('nextSlide')}>
                 <Icon name="chevron-right" />
               </Button>
             </div>
@@ -1207,7 +1212,7 @@ function LandingContent() {
                   <button
                     className="lg:col-span-7 relative group cursor-pointer text-left"
                     onClick={() => setSelectedImage(currentIndex)}
-                    aria-label={`ดูรูปขยาย: ${showcase[currentIndex].title}`}
+                    aria-label={t('zoomAria', { title: showcase[currentIndex].title })}
                   >
                     <div className="overflow-hidden rounded-[2rem] border border-border bg-secondary/30 shadow-xl relative h-[300px] md:h-[480px] flex items-center justify-center">
                       <img
@@ -1218,8 +1223,7 @@ function LandingContent() {
                       />
                       <div className="absolute top-4 right-4 z-20 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">
                         <span className="flex items-center gap-2 bg-background/80 backdrop-blur-md px-3 py-1.5 rounded-full text-foreground text-xs font-medium border border-border shadow-sm">
-                          <Icon name="search-plus" /> ดูรูปขยาย
-                        </span>
+                          <Icon name="search-plus" />{t('zoomImage')}</span>
                       </div>
                     </div>
                   </button>
@@ -1230,9 +1234,7 @@ function LandingContent() {
                 )}
 
                 <div className="lg:col-span-5 space-y-6">
-                  <Badge variant="outline" className="text-primary border-primary/20 px-4 py-1.5 text-sm rounded-full">
-                    ตัวอย่างฟีเจอร์
-                  </Badge>
+                  <Badge variant="outline" className="text-primary border-primary/20 px-4 py-1.5 text-sm rounded-full">{t('secDemoFeature')}</Badge>
                   <h3 className="text-3xl md:text-4xl font-semibold text-foreground leading-tight">
                     {showcase[currentIndex].title}
                   </h3>
@@ -1241,9 +1243,7 @@ function LandingContent() {
                   </p>
                   {!showcase[currentIndex].src && (
                     <p className="text-[13px] text-muted-foreground flex items-center gap-2">
-                      <Icon name="hand-pointer" className="text-primary" />
-                      ลองชี้เมาส์ดูได้ นี่คือหน้าจอจริงของระบบ ไม่ใช่ภาพนิ่ง
-                    </p>
+                      <Icon name="hand-pointer" className="text-primary" />{t('liveScreenHint')}</p>
                   )}
 
                   <div className="flex gap-2.5 pt-2">
@@ -1251,7 +1251,7 @@ function LandingContent() {
                       <button
                         key={i}
                         onClick={() => setCurrentIndex(i)}
-                        aria-label={`ไปที่สไลด์ ${i + 1}: ${s.title}`}
+                        aria-label={t('slideAria', { n: i + 1, title: s.title })}
                         aria-current={i === currentIndex}
                         className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
                           i === currentIndex ? 'w-10 bg-primary' : 'w-2.5 bg-muted hover:bg-muted-foreground/40'
@@ -1290,7 +1290,7 @@ function LandingContent() {
                   size="icon"
                   className="absolute top-0 right-0 md:-top-12 md:-right-12 text-foreground hover:bg-primary/10 rounded-full cursor-pointer"
                   onClick={() => setSelectedImage(null)}
-                  aria-label="ปิดรูปขยาย"
+                  aria-label={t('closeZoom')}
                 >
                   <Icon name="times" className="text-2xl" />
                 </Button>
@@ -1308,22 +1308,22 @@ function LandingContent() {
       <section className="py-20 md:py-24 bg-secondary/40 border-b border-border">
         <div className="max-w-5xl mx-auto px-6">
           <SectionHead
-            eyebrow="เทียบให้เห็นภาพ"
-            title={<>จ้างเขียนเว็บเอง <span className="text-primary">หลักหมื่น</span> เริ่มกับเรา ฿99</>}
-            sub="เทียบกับการจ้างเขียนเว็บเอง และการใช้แพลตฟอร์มต่างประเทศ"
+            eyebrow={t('secCompare')}
+            title={<>{t('colCustom')}<span className="text-primary">{t('tensOfThousands')}</span>{t('startWithUs99')}</>}
+            sub={t('secCompareSub')}
           />
 
           <div className="overflow-x-auto -mx-6 px-6">
             <table className="w-full min-w-[640px] border-separate border-spacing-0 text-left">
-              <caption className="sr-only">ตารางเปรียบเทียบ SIAMSITE กับการจ้างเขียนเว็บเองและแพลตฟอร์มต่างประเทศ</caption>
+              <caption className="sr-only">{t('compareTableAlt')}</caption>
               <thead>
                 <tr>
                   <th scope="col" className="p-4 text-xs font-medium tracking-wider text-muted-foreground" />
                   <th scope="col" className="p-4 text-center rounded-t-2xl bg-primary text-primary-foreground font-semibold text-sm">
                     SIAMSITE
                   </th>
-                  <th scope="col" className="p-4 text-center text-sm font-bold text-muted-foreground">จ้างเขียนเว็บเอง</th>
-                  <th scope="col" className="p-4 text-center text-sm font-bold text-muted-foreground">แพลตฟอร์มต่างประเทศ</th>
+                  <th scope="col" className="p-4 text-center text-sm font-bold text-muted-foreground">{t('colCustom')}</th>
+                  <th scope="col" className="p-4 text-center text-sm font-bold text-muted-foreground">{t('colForeign')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1337,12 +1337,12 @@ function LandingContent() {
                     className="group/row"
                   >
                     <th scope="row" className="py-4 pr-4 pl-2 text-[13px] font-medium text-foreground border-t border-border align-middle group-hover/row:text-primary transition-colors">
-                      {row.label}
+                      {t(row.label)}
                     </th>
                     <td className="p-4 text-center text-[13px] font-semibold text-foreground bg-primary/5 border-t border-primary/20 align-middle group-hover/row:bg-primary/10 transition-colors">
                       <span className="inline-flex items-center gap-1.5 justify-center">
                         <Icon name="circle-check" className="text-primary shrink-0" />
-                        {row.ours}
+                        {t(row.ours)}
                       </span>
                     </td>
                     {/* Alternatives get a muted cross so the row reads at a
@@ -1350,13 +1350,13 @@ function LandingContent() {
                     <td className="p-4 text-center text-[13px] text-muted-foreground border-t border-border align-middle">
                       <span className="inline-flex items-center gap-1.5 justify-center">
                         <Icon name="circle-xmark" className="text-destructive/40 shrink-0" />
-                        {row.custom}
+                        {t(row.custom)}
                       </span>
                     </td>
                     <td className="p-4 text-center text-[13px] text-muted-foreground border-t border-border align-middle">
                       <span className="inline-flex items-center gap-1.5 justify-center">
                         <Icon name="circle-xmark" className="text-destructive/40 shrink-0" />
-                        {row.foreign}
+                        {t(row.foreign)}
                       </span>
                     </td>
                   </motion.tr>
@@ -1372,9 +1372,9 @@ function LandingContent() {
         <div className="animate-blob-drift absolute top-1/4 left-1/2 -translate-x-1/2 w-[700px] h-[700px] bg-primary/5 rounded-full blur-[130px] pointer-events-none" style={{ animationDelay: '-4s' }} />
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <SectionHead
-            eyebrow="ราคา"
-            title={<>เริ่มขายได้ในราคา <span className="text-primary">฿99</span> เดือนแรก</>}
-            sub="ทุกแพ็กเกจได้ฟีเจอร์เท่ากันหมด ต่างกันแค่ระยะเวลา เรียงจากถูกไปแพง ยิ่งจ่ายยาว ยิ่งลดเยอะ ลองฟรีก่อน 7 วันได้ ไม่ต้องผูกบัตร"
+            eyebrow={t('price')}
+            title={<>{t('startSellingAt')}<span className="text-primary">฿99</span>{t('firstMonth')}</>}
+            sub={t('planAllSameSub')}
           />
 
           <PlanRail count={planCards.length}>
@@ -1395,26 +1395,26 @@ function LandingContent() {
             <div className="mt-4 rounded-2xl border-2 border-primary/40 bg-primary/5 p-5 md:p-6 flex flex-col md:flex-row md:items-center gap-5">
               <div className="flex-1">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-[12px] font-semibold tracking-wider text-primary-foreground">
-                  <Icon name="fire" className="text-[10px]" />
-                  แนะนำที่สุด
-                </span>
+                  <Icon name="fire" className="text-[10px]" />{t('recommended')}</span>
                 <p className="text-lg md:text-xl font-semibold text-foreground mt-2.5 leading-snug">
-                  แพ็กเกจ {featuredPkg.label} จ่าย ฿{featuredPkg.price.toLocaleString()}
+                  {t('featuredPlanPay', { label: t('planMonths', { n: featuredPkg.months }), price: featuredPkg.price.toLocaleString() })}
                   <span className="text-destructive line-through font-bold text-base ml-2 tabular-nums">
                     ฿{featuredDiscount.regular.toLocaleString()}
                   </span>
                 </p>
                 <p className="text-[13px] font-semibold text-muted-foreground mt-1.5 leading-relaxed">
-                  ลด {featuredDiscount.percent}% ประหยัดไป ฿{featuredDiscount.save.toLocaleString()} เฉลี่ยเดือนละ ฿
-                  {Math.round(featuredPkg.price / featuredPkg.months).toLocaleString()}
-                  {' '}จ่ายไม่หนัก ต่ออายุน้อยลง และได้ส่วนลดแล้ว
+                  {t('featuredSavingLine', {
+                    percent: featuredDiscount.percent,
+                    save: featuredDiscount.save.toLocaleString(),
+                    perMonth: Math.round(featuredPkg.price / featuredPkg.months).toLocaleString(),
+                  })}
                 </p>
               </div>
               <Button
                 className="rounded-full font-semibold tracking-wide h-12 px-7 shrink-0 bg-primary hover:bg-primary/90 shadow-lg hover:shadow-xl cursor-pointer"
                 asChild
               >
-                <Link href={`/order?months=${featuredPkg.months}`}>เลือกแพ็กเกจนี้</Link>
+                <Link href={`/order?months=${featuredPkg.months}`}>{t('ctaChoosePlan')}</Link>
               </Button>
             </div>
           )}
@@ -1422,15 +1422,13 @@ function LandingContent() {
           {/* Shared across every plan, so it is stated once here instead of
               being repeated inside all three cards. */}
           <div className="mt-10 rounded-2xl border border-border bg-secondary/30 p-6 md:p-7">
-            <p className="text-center text-[13px] font-semibold text-foreground mb-5">
-              ทุกแพ็กเกจได้ครบเท่ากัน
-            </p>
+            <p className="text-center text-[13px] font-semibold text-foreground mb-5">{t('planAllSame')}</p>
             <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-3">
               {([
-                { icon: 'box-open', text: 'ระบบสุ่ม Loot Box แอนิเมชั่น CS:GO' },
-                { icon: 'archive', text: 'ระบบคลังเว็บ (Web Inventory)' },
-                { icon: 'arrows-rotate', text: 'อัปเดตเวอร์ชันใหม่ฟรีตลอดการใช้งาน' },
-                { icon: 'headset', text: 'ซัพพอร์ตคนไทย ตอบเร็ว' },
+                { icon: 'box-open', text: t('lootBoxAnim') },
+                { icon: 'archive', text: t('webInventory') },
+                { icon: 'arrows-rotate', text: t('freeUpdatesLong') },
+                { icon: 'headset', text: t('thaiSupportFast') },
               ] as { icon: IconName; text: string }[]).map(f => (
                 <li key={f.text} className="flex items-start gap-2.5 text-[13px] font-medium text-muted-foreground">
                   <Icon name={f.icon} className="text-primary/70 text-base mt-0.5 shrink-0" />
@@ -1441,8 +1439,7 @@ function LandingContent() {
           </div>
 
           <p className="text-center text-[12px] text-muted-foreground/80 mt-8 max-w-2xl mx-auto leading-relaxed font-medium">
-            * ค่าธรรมเนียม API ของ EasySlip ฿{easyslipFee} ต่อรายการ คิดเฉพาะการตรวจสลิป PromptPay
-            และหักจากยอดเติมเงินของผู้เล่นเท่านั้น ไม่กระทบค่าเช่ารายเดือน ส่วน TrueMoney อั่งเปา ใช้ฟรี ไม่มีค่าธรรมเนียม
+            {t('easyslipFootnoteFull', { fee: easyslipFee })}
           </p>
         </div>
       </section>
@@ -1459,18 +1456,18 @@ function LandingContent() {
             onClick={() => setShowEasySlipPlan(false)}
             role="dialog"
             aria-modal="true"
-            aria-label="รายละเอียดค่าบริการ EasySlip"
+            aria-label={t('easyslipFeeTitle')}
           >
             <div className="relative max-w-2xl w-full" onClick={e => e.stopPropagation()}>
               <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-2xl">
                 <div className="p-4 border-b border-border flex justify-between items-center bg-secondary/30">
-                  <h4 className="font-semibold text-foreground text-sm">รายละเอียดค่าบริการ EasySlip</h4>
-                  <Button variant="ghost" size="icon" onClick={() => setShowEasySlipPlan(false)} className="rounded-full w-8 h-8 cursor-pointer" aria-label="ปิด">
+                  <h4 className="font-semibold text-foreground text-sm">{t('easyslipFeeTitle')}</h4>
+                  <Button variant="ghost" size="icon" onClick={() => setShowEasySlipPlan(false)} className="rounded-full w-8 h-8 cursor-pointer" aria-label={t('close')}>
                     <Icon name="times" className="text-xs" />
                   </Button>
                 </div>
                 <div className="p-2 bg-card">
-                  <img src="/images/easy_slip_plan.png" alt="ตารางค่าบริการของ EasySlip" loading="lazy" className="w-full h-auto rounded-xl" />
+                  <img src="/images/easy_slip_plan.png" alt={t('easyslipTableAlt')} loading="lazy" className="w-full h-auto rounded-xl" />
                 </div>
               </div>
             </div>
@@ -1489,7 +1486,7 @@ function LandingContent() {
               <Link href="/" className="flex items-center gap-3 w-fit">
                 <Image
                   src="/images/logosiamsite-h256.png"
-                  alt="โลโก้ SIAMSITE"
+                  alt={t('logoAlt')}
                   width={84}
                   height={56}
                   className="h-14 w-auto object-contain"
@@ -1499,9 +1496,7 @@ function LandingContent() {
                   <span className="text-[12px] font-medium text-primary mt-1">MANAGER</span>
                 </span>
               </Link>
-              <p className="text-muted-foreground text-base leading-relaxed max-w-sm font-medium">
-                บริการแพลตฟอร์มจัดการร้านค้า Minecraft สำหรับเซิร์ฟเวอร์ไทย ที่เน้นความง่าย ความเสถียร และความเป็นมืออาชีพ
-              </p>
+              <p className="text-muted-foreground text-base leading-relaxed max-w-sm font-medium">{t('footerAbout')}</p>
               <div className="flex items-center gap-4 pt-2">
                 <a href="https://www.facebook.com/siamsitestore" target="_blank" rel="noopener noreferrer" aria-label="Facebook ของ SIAMSITE" className="w-10 h-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all">
                   <Icon name="facebook-f" />
@@ -1513,52 +1508,44 @@ function LandingContent() {
             </div>
 
             <div className="md:col-span-2 space-y-5">
-              <h3 className="font-bold text-foreground text-base">เมนูหลัก</h3>
+              <h3 className="font-bold text-foreground text-base">{t('footerMenu')}</h3>
               <ul className="space-y-3 text-muted-foreground font-semibold text-sm">
-                <li><Link href="/" className="hover:text-primary transition-colors">หน้าแรก</Link></li>
-                <li><a href="#how" className="hover:text-primary transition-colors">วิธีเริ่มต้น</a></li>
-                <li><a href="#pricing" className="hover:text-primary transition-colors">ราคาแพ็กเกจ</a></li>
-                <li><a href="#faq" className="hover:text-primary transition-colors">คำถามที่พบบ่อย</a></li>
-                <li><Link href="/solutions" className="hover:text-primary transition-colors">บริการเช่าเว็บร้านค้า</Link></li>
-                <li><Link href="/lp/เช่าเว็บร้านค้ามายคราฟ" className="hover:text-primary transition-colors">เช่าเว็บร้านค้ามายคราฟ</Link></li>
-                {/* Entry point into the English tree. Without a crawlable link from
-                    the Thai pages, /en would be reachable only via the sitemap,
-                    which discovers pages far more slowly than internal links do. */}
-                <li>
-                  <Link href="/en" hrefLang="en" className="hover:text-primary transition-colors">
-                    <Icon name="globe" className="inline-block mr-1.5 text-[13px]" />English
-                  </Link>
-                </li>
+                <li><Link href="/" className="hover:text-primary transition-colors">{t('navHome')}</Link></li>
+                <li><a href="#how" className="hover:text-primary transition-colors">{t('howToStart')}</a></li>
+                <li><a href="#pricing" className="hover:text-primary transition-colors">{t('secPricing')}</a></li>
+                <li><a href="#faq" className="hover:text-primary transition-colors">{t('secFaq')}</a></li>
+                <li><Link href="/solutions" className="hover:text-primary transition-colors">{t('footerSolutions')}</Link></li>
+                <li><Link href={locale === 'en' ? '/lp/minecraft-webshop' : '/lp/เช่าเว็บร้านค้ามายคราฟ'} className="hover:text-primary transition-colors">{t('footerRentShop')}</Link></li>
               </ul>
             </div>
 
             <div className="md:col-span-2 space-y-5">
-              <h3 className="font-bold text-foreground text-base">นโยบายและกฎหมาย</h3>
+              <h3 className="font-bold text-foreground text-base">{t('footerLegal')}</h3>
               <ul className="space-y-3 text-muted-foreground font-semibold text-sm">
-                <li><Link href="/terms" className="hover:text-primary transition-colors">ข้อกำหนดการใช้บริการ</Link></li>
-                <li><Link href="/privacy" className="hover:text-primary transition-colors">นโยบายความเป็นส่วนตัว</Link></li>
-                <li><Link href="/shop-owner-agreement" className="hover:text-primary transition-colors">ข้อตกลงเจ้าของร้าน</Link></li>
-                <li><Link href="/payment-policy" className="hover:text-primary transition-colors">การชำระเงินและการจ่ายเงิน</Link></li>
-                <li><Link href="/prohibited-content" className="hover:text-primary transition-colors">สินค้าและเนื้อหาต้องห้าม</Link></li>
-                <li><Link href="/contact" className="hover:text-primary transition-colors">ติดต่อเรา</Link></li>
+                <li><Link href="/terms" className="hover:text-primary transition-colors">{t('footerTerms')}</Link></li>
+                <li><Link href="/privacy" className="hover:text-primary transition-colors">{t('footerPrivacy')}</Link></li>
+                <li><Link href="/shop-owner-agreement" className="hover:text-primary transition-colors">{t('footerShopAgreement')}</Link></li>
+                <li><Link href="/payment-policy" className="hover:text-primary transition-colors">{t('footerPayment')}</Link></li>
+                <li><Link href="/prohibited-content" className="hover:text-primary transition-colors">{t('prohibitedContent')}</Link></li>
+                <li><Link href="/contact" className="hover:text-primary transition-colors">{t('footerContact')}</Link></li>
               </ul>
             </div>
 
             <div className="md:col-span-3 space-y-5">
-              <h3 className="font-bold text-foreground text-base">ความปลอดภัย</h3>
+              <h3 className="font-bold text-foreground text-base">{t('footerSecurity')}</h3>
               <div className="space-y-3">
                 <div className="flex items-center gap-3 p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
                   <Icon name="shield-check" className="text-emerald-500 text-xl shrink-0" />
                   <div>
-                    <p className="text-xs font-medium text-foreground">การเชื่อมต่อที่ปลอดภัย (SSL)</p>
-                    <p className="text-[12px] text-muted-foreground">เข้ารหัสข้อมูลระดับสูง</p>
+                    <p className="text-xs font-medium text-foreground">{t('footerSsl')}</p>
+                    <p className="text-[12px] text-muted-foreground">{t('footerEncryption')}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-3 rounded-2xl bg-amber-500/5 border border-amber-500/10">
                   <Icon name="qrcode" className="text-amber-500 text-xl shrink-0" />
                   <div>
-                    <p className="text-xs font-medium text-foreground">ยืนยันผ่าน PromptPay</p>
-                    <p className="text-[12px] text-muted-foreground">ตรวจสอบสลิปอัตโนมัติ</p>
+                    <p className="text-xs font-medium text-foreground">{t('footerPromptpay')}</p>
+                    <p className="text-[12px] text-muted-foreground">{t('autoSlipVerify')}</p>
                   </div>
                 </div>
               </div>
@@ -1571,10 +1558,10 @@ function LandingContent() {
             </p>
             <div className="flex items-center gap-2.5 text-[13px] font-semibold text-muted-foreground/70">
               <Icon name="lock" className="text-emerald-500/80" />
-              <span>ชำระเงินปลอดภัย</span>
+              <span>{t('securePayment')}</span>
               <span className="text-border">|</span>
               <Icon name="arrows-rotate" className="text-amber-500/80" />
-              <span>อัปเดตฟรีตลอดการใช้งาน</span>
+              <span>{t('freeUpdates')}</span>
             </div>
           </div>
         </div>

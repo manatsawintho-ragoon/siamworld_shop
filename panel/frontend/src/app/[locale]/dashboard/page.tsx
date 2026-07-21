@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { Link } from '@/i18n/navigation';
+import { useRouter } from '@/i18n/navigation';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
@@ -75,6 +76,7 @@ function StatCard({ label, value, icon, color = 'primary', subValue }: any) {
 }
 
 function DashboardContent() {
+  const t = useTranslations('dashboard');
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [subs, setSubs] = useState<Sub[]>([]);
@@ -132,10 +134,10 @@ function DashboardContent() {
   const showPromoBanner = !hasActiveShop && (!usedTrial || !usedIntro) && (trialPromo || introPromo);
 
   const FILTER_TABS = [
-    { value: 'all', label: 'ทั้งหมด', icon: 'layer-group' },
-    { value: 'active', label: 'ออนไลน์', icon: 'circle-check' },
-    { value: 'deploying', label: 'กำลังติดตั้ง', icon: 'rocket' },
-    { value: 'suspended', label: 'ถูกระงับ', icon: 'circle-pause' },
+    { value: 'all', label: t('all'), icon: 'layer-group' },
+    { value: 'active', label: t('online'), icon: 'circle-check' },
+    { value: 'deploying', label: t('installing'), icon: 'rocket' },
+    { value: 'suspended', label: t('suspended'), icon: 'circle-pause' },
   ];
 
   if (authLoading) return null;
@@ -158,7 +160,7 @@ function DashboardContent() {
             </h1>
             <p className="text-muted-foreground font-semibold flex items-center gap-2">
               <Icon name="sparkles" className="text-amber-500 text-xs" />
-              ยินดีต้อนรับกลับมา, คุณ {user?.displayName}
+              {t('welcomeBackName', { name: user?.displayName ?? '' })}
             </p>
           </motion.div>
 
@@ -170,12 +172,11 @@ function DashboardContent() {
              <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-card border border-border shadow-sm">
                 <Button variant="ghost" size="lg" asChild className="h-12 px-6 rounded-xl font-bold gap-2 hover:bg-secondary">
                   <Link href="/dashboard/topup">
-                    <Icon name="plus-circle" className="text-primary" /> เติมเงิน
-                  </Link>
+                    <Icon name="plus-circle" className="text-primary" />{t('topup')}</Link>
                 </Button>
                 <div className="h-6 w-px bg-border mx-1" />
                 <div className="px-5 py-2">
-                  <p className="text-[12px] font-semibold text-muted-foreground tracking-wider">คงเหลือ</p>
+                  <p className="text-[12px] font-semibold text-muted-foreground tracking-wider">{t('remaining')}</p>
                   <p className="text-lg font-semibold text-foreground">฿{(Number(user?.walletBalance) || 0).toLocaleString()}</p>
                 </div>
              </div>
@@ -183,20 +184,19 @@ function DashboardContent() {
              {!hasActiveShop && !usedTrial && trialPromo ? (
                <Button size="lg" asChild className="h-14 px-8 rounded-2xl font-semibold gap-3 shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20 transition-transform active:scale-95">
                  <Link href="/order?kind=trial">
-                   <Icon name="rocket" /> ทดลองฟรี {trialPromo.days} วัน
+                   <Icon name="rocket" /> {t('trialDays', { days: trialPromo.days })}
                  </Link>
                </Button>
              ) : !usedIntro && introPromo ? (
                <Button size="lg" asChild className="h-14 px-8 rounded-2xl font-semibold gap-3 shadow-lg shadow-primary/20 transition-transform active:scale-95">
                  <Link href="/order?kind=intro">
-                   <Icon name="tag" /> เดือนแรก ฿{introPromo.price}
+                   <Icon name="tag" /> {t('firstMonthAt', { price: introPromo.price })}
                  </Link>
                </Button>
              ) : (
                <Button size="lg" asChild className="h-14 px-8 rounded-2xl font-semibold gap-3 shadow-lg shadow-primary/20 transition-transform active:scale-95">
                  <Link href="/order">
-                   <Icon name="store-medical" /> สร้างร้านค้าใหม่
-                 </Link>
+                   <Icon name="store-medical" />{t('createShop')}</Link>
                </Button>
              )}
           </motion.div>
@@ -216,9 +216,9 @@ function DashboardContent() {
                     <Icon name="rocket" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[12px] font-semibold text-emerald-700 dark:text-emerald-400 mb-0.5">สิทธิ์ที่คุณได้รับ</p>
-                    <p className="text-sm font-semibold text-foreground">ทดลองฟรี {trialPromo.days} วัน</p>
-                    <p className="text-xs font-semibold text-muted-foreground">ไม่ต้องชำระเงิน · เริ่มได้เลย</p>
+                    <p className="text-[12px] font-semibold text-emerald-700 dark:text-emerald-400 mb-0.5">{t('yourBenefits')}</p>
+                    <p className="text-sm font-semibold text-foreground">{t('trialDays', { days: trialPromo.days })}</p>
+                    <p className="text-xs font-semibold text-muted-foreground">{t('noPaymentStart')}</p>
                   </div>
                   <div className="flex-shrink-0 text-emerald-600 group-hover:translate-x-1 transition-transform">
                     <Icon name="arrow-right" />
@@ -233,9 +233,9 @@ function DashboardContent() {
                     <Icon name="tag" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[12px] font-semibold text-primary mb-0.5">โปรโมชั่นพิเศษ</p>
-                    <p className="text-sm font-semibold text-foreground">เดือนแรก ฿{introPromo.price} <span className="font-semibold text-muted-foreground line-through text-xs">฿{introPromo.regularPrice}</span></p>
-                    <p className="text-xs font-semibold text-muted-foreground">ประหยัด ฿{introPromo.regularPrice - introPromo.price} · เฉพาะครั้งแรก</p>
+                    <p className="text-[12px] font-semibold text-primary mb-0.5">{t('specialPromo')}</p>
+                    <p className="text-sm font-semibold text-foreground">{t('firstMonthAt', { price: introPromo.price })} <span className="font-semibold text-muted-foreground line-through text-xs">฿{introPromo.regularPrice}</span></p>
+                    <p className="text-xs font-semibold text-muted-foreground">{t('saveAmount', { amount: (introPromo.regularPrice ?? 0) - introPromo.price })} · เฉพาะครั้งแรก</p>
                   </div>
                   <div className="flex-shrink-0 text-primary group-hover:translate-x-1 transition-transform">
                     <Icon name="arrow-right" />
@@ -249,9 +249,9 @@ function DashboardContent() {
                   <Icon name="check" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-semibold text-muted-foreground mb-0.5">ใช้สิทธิ์แล้ว</p>
-                  <p className="text-sm font-semibold text-muted-foreground">ทดลองฟรี {trialPromo.days} วัน</p>
-                  <p className="text-xs font-semibold text-muted-foreground">คุณเคยใช้สิทธิ์นี้ไปแล้ว</p>
+                  <p className="text-[12px] font-semibold text-muted-foreground mb-0.5">{t('used')}</p>
+                  <p className="text-sm font-semibold text-muted-foreground">{t('trialDays', { days: trialPromo.days })}</p>
+                  <p className="text-xs font-semibold text-muted-foreground">{t('alreadyUsed')}</p>
                 </div>
               </div>
             )}
@@ -261,9 +261,9 @@ function DashboardContent() {
                   <Icon name="check" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-semibold text-muted-foreground mb-0.5">ใช้สิทธิ์แล้ว</p>
-                  <p className="text-sm font-semibold text-muted-foreground">ทดลองเดือนแรก ฿{introPromo.price}</p>
-                  <p className="text-xs font-semibold text-muted-foreground">คุณเคยใช้สิทธิ์นี้ไปแล้ว</p>
+                  <p className="text-[12px] font-semibold text-muted-foreground mb-0.5">{t('used')}</p>
+                  <p className="text-sm font-semibold text-muted-foreground">{t('introMonthAt', { price: introPromo.price })}</p>
+                  <p className="text-xs font-semibold text-muted-foreground">{t('alreadyUsed')}</p>
                 </div>
               </div>
             )}
@@ -273,33 +273,33 @@ function DashboardContent() {
         {/* Dynamic Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
            <StatCard 
-             label="ยอดเงินคงเหลือ" 
+             label={t('walletBalance')} 
              value={`฿${(Number(user?.walletBalance) || 0).toLocaleString()}`} 
              icon="wallet" 
              color="emerald"
-             subValue="พร้อมใช้งานสำหรับแพ็กเกจ"
+             subValue={t('availableFor')}
            />
            <StatCard 
-             label="ร้านที่ออนไลน์" 
+             label={t('shopsOnline')} 
              value={activeCount} 
              icon="signal" 
              color="primary"
-             subValue="เซิร์ฟเวอร์เปิดใช้งานปกติ"
+             subValue={t('serverNormal')}
            />
            <StatCard 
-             label="จำนวนร้านทั้งหมด" 
+             label={t('totalShops')} 
              value={subs.length} 
              icon="cubes" 
              color="blue"
-             subValue="รวมแพ็กเกจที่หมดอายุ"
+             subValue={t('includeExpired')}
            />
            <a href="https://www.facebook.com/siamsitestore" target="_blank" rel="noopener noreferrer" className="block h-full">
              <StatCard 
-               label="ศูนย์ซัพพอร์ต" 
-               value="ติดต่อ" 
+               label={t('supportCenter')} 
+               value={t('contact')} 
                icon="headset" 
                color="amber"
-               subValue="ทีมงานดูแลตลอด 24 ชม."
+               subValue={t('support247')}
              />
            </a>
         </div>
@@ -310,7 +310,7 @@ function DashboardContent() {
            {/* Section Header */}
            <div className="flex flex-col md:flex-row gap-6 justify-between items-end">
               <div className="space-y-2">
-                <h3 className="text-xl font-semibold text-foreground tracking-tight">การจัดการร้านค้า</h3>
+                <h3 className="text-xl font-semibold text-foreground tracking-tight">{t('shopManagement')}</h3>
                 <div className="flex bg-card p-1.5 rounded-[1.25rem] border border-border shadow-sm overflow-x-auto hide-scrollbar">
                   {FILTER_TABS.map(tab => (
                     <button key={tab.value} onClick={() => { setFilterStatus(tab.value); setPage(1); }}
@@ -331,7 +331,7 @@ function DashboardContent() {
                 </div>
                 <input 
                   type="text" 
-                  placeholder="ค้นหาชื่อร้านหรือโดเมน..."
+                  placeholder={t('searchShops')}
                   className="w-full pl-11 pr-4 h-12 bg-card border border-border rounded-2xl text-sm font-bold transition-all focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary placeholder:text-muted-foreground/50 shadow-sm"
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)} 
@@ -352,7 +352,7 @@ function DashboardContent() {
                     <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center mx-auto text-muted-foreground/30 text-3xl">
                        <Icon name="search" />
                     </div>
-                    <p className="text-lg font-bold text-muted-foreground">ไม่พบร้านค้าที่ตรงตามการค้นหา</p>
+                    <p className="text-lg font-bold text-muted-foreground">{t('noShopsFound')}</p>
                   </motion.div>
                 ) : (
                   <motion.div 
@@ -364,11 +364,11 @@ function DashboardContent() {
                       <table className="w-full text-left min-w-[900px]">
                         <thead>
                           <tr className="border-b border-border bg-secondary/30">
-                            <th className="px-8 py-6 text-[13px] font-semibold text-muted-foreground">ข้อมูลร้านค้า</th>
-                            <th className="px-6 py-6 text-[13px] font-semibold text-muted-foreground text-center">สถานะปัจจุบัน</th>
-                            <th className="px-6 py-6 text-[13px] font-semibold text-muted-foreground">รายละเอียดแพ็กเกจ</th>
-                            <th className="px-6 py-6 text-[13px] font-semibold text-muted-foreground">อายุการใช้งาน</th>
-                            <th className="px-8 py-6 text-[13px] font-semibold text-muted-foreground text-right">แอคชั่น</th>
+                            <th className="px-8 py-6 text-[13px] font-semibold text-muted-foreground">{t('shopInfo')}</th>
+                            <th className="px-6 py-6 text-[13px] font-semibold text-muted-foreground text-center">{t('currentStatus')}</th>
+                            <th className="px-6 py-6 text-[13px] font-semibold text-muted-foreground">{t('planDetails')}</th>
+                            <th className="px-6 py-6 text-[13px] font-semibold text-muted-foreground">{t('lifetime')}</th>
+                            <th className="px-8 py-6 text-[13px] font-semibold text-muted-foreground text-right">{t('action')}</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/60">
@@ -402,7 +402,7 @@ function DashboardContent() {
                                 </td>
                                 <td className="px-6 py-6">
                                   <div className="space-y-1">
-                                    <div className="text-sm font-semibold text-foreground">{sub.package_months} เดือน</div>
+                                    <div className="text-sm font-semibold text-foreground">{t('months', { n: sub.package_months })}</div>
                                     <div className="inline-flex items-center gap-1 text-[13px] font-semibold text-emerald-600 bg-emerald-500/5 px-2 py-0.5 rounded-md border border-emerald-500/10">
                                        ฿{Number(sub.price_paid).toLocaleString()}
                                     </div>
@@ -420,11 +420,9 @@ function DashboardContent() {
                                 <td className="px-8 py-6">
                                   <div className="flex justify-end items-center gap-3">
                                     <Button variant="outline" size="sm" onClick={() => setDomainSubId(sub.id)} className="h-10 px-5 rounded-xl font-bold border-border shadow-sm hover:border-primary/40 hover:bg-card cursor-pointer transition-all">
-                                      <Icon name="globe" className="mr-2 opacity-60" /> โดเมน
-                                    </Button>
+                                      <Icon name="globe" className="mr-2 opacity-60" />{t('domain')}</Button>
                                     <Button variant="outline" size="sm" asChild className="h-10 px-5 rounded-xl font-bold border-border shadow-sm hover:border-primary/40 hover:bg-card cursor-pointer transition-all">
-                                      <Link href={`/dashboard/credentials?id=${sub.id}`} data-track="dashboard_manage_shop">
-                                        จัดการ <Icon name="angle-right" className="ml-2 opacity-50" />
+                                      <Link href={`/dashboard/credentials?id=${sub.id}`} data-track="dashboard_manage_shop">{t('manage')}<Icon name="angle-right" className="ml-2 opacity-50" />
                                       </Link>
                                     </Button>
                                     <Button 
@@ -433,8 +431,7 @@ function DashboardContent() {
                                       className={`h-10 px-5 rounded-xl font-semibold transition-all active:scale-95 cursor-pointer ${!isExpiringSoon ? 'bg-foreground hover:bg-foreground/90' : ''}`}
                                     >
                                       <Link href={`/dashboard/renew?id=${sub.id}`}>
-                                        <Icon name="bolt" className="mr-2 text-[10px]" /> ต่ออายุ
-                                      </Link>
+                                        <Icon name="bolt" className="mr-2 text-[10px]" />{t('renew')}</Link>
                                     </Button>
                                   </div>
                                 </td>
@@ -449,7 +446,7 @@ function DashboardContent() {
                     {totalPages > 1 && (
                       <div className="flex flex-col sm:flex-row items-center justify-between px-8 py-6 border-t border-border/60 bg-secondary/10 gap-4">
                         <p className="text-[13px] font-medium text-muted-foreground">
-                          แสดง {((page - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(page * ITEMS_PER_PAGE, filtered.length)} จาก {filtered.length} ร้านค้า
+                          {t('showingRange', { from: ((page - 1) * ITEMS_PER_PAGE) + 1, to: Math.min(page * ITEMS_PER_PAGE, filtered.length), total: filtered.length })}
                         </p>
                         <div className="flex items-center gap-2">
                           <Button 
@@ -488,27 +485,27 @@ function DashboardContent() {
                        <div className="w-20 h-20 rounded-[2rem] bg-primary text-white flex items-center justify-center mx-auto text-3xl shadow-xl shadow-primary/20 mb-8">
                           <Icon name="rocket" />
                        </div>
-                       <h3 className="text-3xl font-semibold text-foreground tracking-tight mb-2">ยินดีต้อนรับสู่ SIAMSITE SHOP</h3>
-                       <p className="text-muted-foreground font-semibold max-w-lg mx-auto">เริ่มต้นธุรกิจ Minecraft ของคุณด้วย 3 ขั้นตอนง่ายๆ เพื่อเตรียมตัวรับยอดขายแบบมืออาชีพ</p>
+                       <h3 className="text-3xl font-semibold text-foreground tracking-tight mb-2">{t('welcome')}</h3>
+                       <p className="text-muted-foreground font-semibold max-w-lg mx-auto">{t('startBusiness')}</p>
                     </div>
                     
                     <div className="p-12 grid grid-cols-1 md:grid-cols-3 gap-10 bg-card">
                       {[
                         {
-                          step: 1, title: 'เติมเงินเข้ากระเป๋า', icon: 'wallet',
-                          desc: 'รองรับการเติมเงินผ่าน PromptPay ตรวจสลิปไวใน 1 วินาที เพื่อเตรียมซื้อแพ็กเกจร้านค้า',
+                          step: 1, title: t('topupWallet'), icon: 'wallet',
+                          desc: t('topupHint'),
                           done: (user?.walletBalance ?? 0) > 0,
-                          action: '/dashboard/topup', actionLabel: 'ไปหน้าเติมเงิน',
+                          action: '/dashboard/topup', actionLabel: t('goTopup'),
                         },
                         {
-                          step: 2, title: 'เปิดร้านค้า', icon: 'shop',
-                          desc: 'เลือกชื่อร้านและโดเมนที่ต้องการ ระบบจะทำการติดตั้ง (Deploy) ร้านค้าของคุณให้อัตโนมัติ',
+                          step: 2, title: t('openShop'), icon: 'shop',
+                          desc: t('chooseNameHint'),
                           done: false,
                           action: null, actionLabel: null,
                         },
                         {
-                          step: 3, title: 'เชื่อมต่อเซิร์ฟเวอร์', icon: 'link',
-                          desc: 'นำรหัส RCON ไปใส่ใน Plugin AuthMe ของคุณ เพื่อเริ่มต้นการส่งไอเท็มเข้าตัวผู้เล่นทันที',
+                          step: 3, title: t('connectServer'), icon: 'link',
+                          desc: t('rconHint'),
                           done: false, action: null, actionLabel: null,
                         },
                       ].map((s) => (
@@ -529,21 +526,20 @@ function DashboardContent() {
                                 {trialPromo && !usedTrial && (
                                   <Button asChild className="rounded-xl w-full h-11 font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm active:scale-95 transition-all">
                                     <Link href="/order?kind=trial">
-                                      <Icon name="rocket" className="mr-2" /> ทดลองฟรี {trialPromo.days} วัน
+                                      <Icon name="rocket" className="mr-2" /> {t('trialDays', { days: trialPromo.days })}
                                     </Link>
                                   </Button>
                                 )}
                                 {introPromo && !usedIntro && (
                                   <Button variant={usedTrial || !trialPromo ? 'default' : 'secondary'} asChild className="rounded-xl w-full h-11 font-bold border border-border shadow-sm active:scale-95 transition-all">
                                     <Link href="/order?kind=intro">
-                                      <Icon name="tag" className="mr-2" /> เดือนแรก ฿{introPromo.price}
+                                      <Icon name="tag" className="mr-2" /> {t('firstMonthAt', { price: introPromo.price })}
                                     </Link>
                                   </Button>
                                 )}
                                 <Button variant="secondary" asChild className="rounded-xl w-full h-11 font-bold border border-border shadow-sm active:scale-95 transition-all">
                                   <Link href="/order">
-                                    <Icon name="store" className="mr-2" /> ซื้อแพ็กเกจปกติ
-                                  </Link>
+                                    <Icon name="store" className="mr-2" />{t('buyRegular')}</Link>
                                 </Button>
                               </>
                             ) : s.action && !s.done ? (
@@ -552,12 +548,9 @@ function DashboardContent() {
                               </Button>
                             ) : s.done ? (
                               <div className="h-11 flex items-center justify-center gap-2 rounded-xl bg-emerald-500/10 text-emerald-600 text-sm font-semibold border border-emerald-500/20">
-                                <Icon name="check-circle" /> เสร็จสมบูรณ์
-                              </div>
+                                <Icon name="check-circle" />{t('complete')}</div>
                             ) : (
-                              <div className="h-11 flex items-center justify-center gap-2 rounded-xl bg-secondary text-muted-foreground/50 text-xs font-semibold border border-border border-dashed">
-                                รอทำขั้นตอนก่อนหน้า
-                              </div>
+                              <div className="h-11 flex items-center justify-center gap-2 rounded-xl bg-secondary text-muted-foreground/50 text-xs font-semibold border border-border border-dashed">{t('waitPrevious')}</div>
                             )}
                           </div>
                         </div>
