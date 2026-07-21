@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { Kanit } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { ToastProvider } from '@/components/Toast';
@@ -7,10 +8,36 @@ import PageTitleManager from '@/components/PageTitle';
 import ActivityTracker from '@/components/ActivityTracker';
 import FacebookFab from '@/components/FacebookFab';
 import { FAQ } from '@/lib/faq';
+import {
+  SITE_URL,
+  SITE_NAME,
+  jsonLd,
+  organizationSchema,
+  websiteSchema,
+  ORGANIZATION_ID,
+  WEBSITE_ID,
+} from '@/lib/seo/site';
+
+/**
+ * Self-hosted Kanit. `display: 'swap'` keeps text painted during font load
+ * (no invisible-text period) and `preload` on the latin+thai subsets removes
+ * the render-blocking round trip to fonts.googleapis.com that the old
+ * <link> + CSS @import pair cost us on every page.
+ */
+const kanit = Kanit({
+  subsets: ['thai', 'latin'],
+  weight: ['300', '400', '500', '600', '700', '800', '900'],
+  display: 'swap',
+  variable: '--font-kanit',
+  preload: true,
+});
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://panel.siamsite.shop'),
-  title: 'SIAMSITE STORE | เช่าเว็บร้านค้ามายคราฟ ทดลองฟรี 7 วัน เดือนแรก ฿99',
+  metadataBase: new URL(SITE_URL),
+  // Keyword-led, brand last: Google already renders the site name above the
+  // title in the SERP, so spending the first 14 characters on "SIAMSITE STORE"
+  // pushed the actual keyword past the ~60-char truncation point.
+  title: 'เช่าเว็บร้านค้ามายคราฟ ทดลองฟรี 7 วัน เดือนแรก ฿99 | SIAMSITE',
   description: 'บริการเช่าเว็บร้านค้า Minecraft สำเร็จรูปสำหรับเซิร์ฟเวอร์ไทย เริ่มทดลองฟรี 7 วัน หรือเดือนแรกเพียง ฿99 รองรับ PromptPay ตรวจสลิปอัตโนมัติ และ TrueMoney อั่งเปา ใช้ฟรีไม่มีค่าธรรมเนียม เชื่อม RCON ตรงด้วย Bridge Plugin ไม่ต้องตั้ง VPN ติดตั้งจบใน 10 นาที',
   keywords: [
     'เช่าเว็บมายคราฟ',
@@ -33,7 +60,14 @@ export const metadata: Metadata = {
     'SIAMSITE',
   ].join(', '),
   authors: [{ name: 'SIAMSITE' }],
-  alternates: { canonical: '/' },
+  alternates: {
+    canonical: '/',
+    languages: {
+      'th-TH': `${SITE_URL}/`,
+      en: `${SITE_URL}/en`,
+      'x-default': `${SITE_URL}/`,
+    },
+  },
   openGraph: {
     title: 'SIAMSITE STORE | ทดลองฟรี 7 วัน · เดือนแรก ฿99 · ระบบเช่าร้านค้า Minecraft ครบวงจร',
     description: 'ยกระดับเซิร์ฟเวอร์มายคราฟสู่ธุรกิจระดับมืออาชีพ เริ่มทดลองฟรี 7 วัน ไม่ต้องผูกบัตร PromptPay + TrueMoney อั่งเปา + RCON ติดตั้งจบใน 10 นาที',
@@ -142,43 +176,29 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     })),
   };
 
-  const orgSchema = {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "SIAMSITE STORE",
-    "url": "https://panel.siamsite.shop",
-    "logo": "https://panel.siamsite.shop/images/logosiamsite-256.png",
-    "sameAs": ["https://www.facebook.com/siamsitestore"]
-  };
-
+  // Organization and WebSite now come from lib/seo/site.ts with stable @id values,
+  // so every other page's JSON-LD can reference the same entity by @id instead of
+  // restating a slightly different copy of the publisher on each URL.
   return (
-    <html lang="th">
+    <html lang="th" className={kanit.variable}>
       <head>
-        {/* Icons are now inline SVG via components/ui/icon.tsx (lucide-react) — no icon webfont. */}
-        <link
-          rel="preconnect"
-          href="https://fonts.googleapis.com"
-        />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800;900&display=swap"
-          rel="stylesheet"
+        {/* Icons are inline SVG via components/ui/icon.tsx (lucide-react) - no icon webfont.
+            Kanit is self-hosted by next/font, so there are no font CDN preconnects either. */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLd({ ...softwareSchema, publisher: { '@id': ORGANIZATION_ID }, isPartOf: { '@id': WEBSITE_ID } }) }}
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema).replace(/</g, '\\u003c') }}
+          dangerouslySetInnerHTML={{ __html: jsonLd(faqSchema) }}
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema).replace(/</g, '\\u003c') }}
+          dangerouslySetInnerHTML={{ __html: jsonLd(organizationSchema) }}
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema).replace(/</g, '\\u003c') }}
+          dangerouslySetInnerHTML={{ __html: jsonLd(websiteSchema) }}
         />
       </head>
       <body>

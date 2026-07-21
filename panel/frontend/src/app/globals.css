@@ -1,8 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800;900&display=swap');
+/* Kanit is self-hosted via next/font/google in app/layout.tsx, which exposes it
+   as --font-kanit. It used to be pulled twice (an @import here plus a <link> in
+   the head): the @import blocked CSS parsing and the pair cost two round trips
+   to fonts.googleapis.com before first paint. Do not re-add a webfont URL here. */
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Kanit', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-kanit), ui-sans-serif, system-ui, sans-serif;
   
   --color-background: oklch(100% 0 0); /* White */
   --color-foreground: oklch(21% 0.006 285.88); /* Slate 900 / Charcoal */
@@ -80,7 +83,7 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Kanit', sans-serif;
+    font-family: var(--font-sans);
   }
 }
 

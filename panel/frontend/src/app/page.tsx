@@ -1521,6 +1521,14 @@ function LandingContent() {
                 <li><a href="#faq" className="hover:text-primary transition-colors">คำถามที่พบบ่อย</a></li>
                 <li><Link href="/solutions" className="hover:text-primary transition-colors">บริการเช่าเว็บร้านค้า</Link></li>
                 <li><Link href="/lp/เช่าเว็บร้านค้ามายคราฟ" className="hover:text-primary transition-colors">เช่าเว็บร้านค้ามายคราฟ</Link></li>
+                {/* Entry point into the English tree. Without a crawlable link from
+                    the Thai pages, /en would be reachable only via the sitemap,
+                    which discovers pages far more slowly than internal links do. */}
+                <li>
+                  <Link href="/en" hrefLang="en" className="hover:text-primary transition-colors">
+                    <Icon name="globe" className="inline-block mr-1.5 text-[13px]" />English
+                  </Link>
+                </li>
               </ul>
             </div>
 
