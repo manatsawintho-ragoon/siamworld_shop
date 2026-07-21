@@ -143,39 +143,44 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
     >
       <div onClick={onClose} className="fixed inset-0 bg-slate-950/55" />
 
-      <div className="relative w-full max-w-[400px] bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl">
+      {/* Capped to the viewport with the form as the only scrolling part, so the
+          taller register tab can never run off the screen and the tabs and close
+          button stay reachable while scrolling it. */}
+      <div className="relative w-full max-w-[400px] max-h-[calc(100dvh-3rem)] flex flex-col bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl">
         <button
           onClick={onClose}
           aria-label="ปิด"
-          className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+          className="absolute top-2.5 right-2.5 w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer z-10"
         >
           <X size={16} />
         </button>
 
-        <div className="px-6 pt-7 pb-6 sm:px-7">
-          {/* Brand. One mark, one line of context, then straight into the form:
-              a login box does not need to sell anything. */}
-          <div className="mb-6">
+        <div className="px-5 pt-5 sm:px-6 shrink-0">
+          {/* Brand on one row with the heading rather than stacked above it:
+              same information, roughly 40px less of it. */}
+          <div className="flex items-center gap-3 mb-4 pr-8">
             <Image
               src="/images/logosiamsite-h256.png"
               alt="SIAMSITE"
               width={160}
               height={100}
               priority
-              className="h-9 w-auto object-contain mb-4"
+              className="h-8 w-auto object-contain shrink-0"
             />
-            <h2 id="auth-modal-title" className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight">
-              {isRegister ? 'สร้างบัญชีผู้ขาย' : 'เข้าสู่ระบบ'}
-            </h2>
-            <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-1">
-              {isRegister ? 'เปิดร้านค้ามายคราฟของคุณเองได้ในไม่กี่นาที' : 'จัดการร้านค้าของคุณที่ Siamsite Store Manager'}
-            </p>
+            <div className="min-w-0">
+              <h2 id="auth-modal-title" className="text-[17px] font-semibold text-slate-900 dark:text-white tracking-tight leading-tight">
+                {isRegister ? 'สร้างบัญชีผู้ขาย' : 'เข้าสู่ระบบ'}
+              </h2>
+              <p className="text-[12px] text-slate-500 dark:text-slate-400 truncate">
+                {isRegister ? 'เปิดร้านค้ามายคราฟของคุณเอง' : 'Siamsite Store Manager'}
+              </p>
+            </div>
           </div>
 
           {/* Tabs are a plain underline row. The old sliding pill needed an
               absolutely positioned element and a transition to explain itself;
               a border does the same job with nothing moving. */}
-          <div className="flex border-b border-slate-200 dark:border-slate-800 mb-6" role="tablist">
+          <div className="flex border-b border-slate-200 dark:border-slate-800" role="tablist">
             {([
               { key: 'login' as const, label: 'เข้าสู่ระบบ' },
               { key: 'register' as const, label: 'สมัครสมาชิก' },
@@ -186,7 +191,7 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
                 role="tab"
                 aria-selected={tab === t.key}
                 onClick={() => setTab(t.key)}
-                className={`flex-1 pb-2.5 text-sm font-medium cursor-pointer border-b-2 -mb-px ${
+                className={`flex-1 pb-2 text-sm font-medium cursor-pointer border-b-2 -mb-px ${
                   tab === t.key
                     ? 'border-amber-500 text-slate-900 dark:text-white'
                     : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
@@ -196,40 +201,50 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
               </button>
             ))}
           </div>
+        </div>
 
-          <form onSubmit={isRegister ? handleRegister : handleLogin} className="space-y-4" noValidate>
+        <div className="px-5 pt-4 pb-5 sm:px-6 overflow-y-auto">
+          <form onSubmit={isRegister ? handleRegister : handleLogin} className="space-y-3" noValidate>
             {isRegister ? (
               <>
-                <div>
-                  <label htmlFor="reg-name" className="auth-label">ชื่อที่แสดง</label>
-                  <input ref={firstFieldRef} id="reg-name" className="auth-input" placeholder="ชื่อ-นามสกุล" autoComplete="name" value={displayName} onChange={e => setDisplayName(e.target.value)} required />
-                </div>
-                <div>
-                  <label htmlFor="reg-phone" className="auth-label">เบอร์โทรศัพท์ <span className="auth-optional">(ไม่บังคับ)</span></label>
-                  <input id="reg-phone" type="tel" inputMode="tel" className="auth-input" placeholder="08X-XXX-XXXX" autoComplete="tel" value={phone} onChange={e => setPhone(e.target.value)} />
+                {/* Paired into two columns: these four are short values, and one
+                    field per row made the register tab taller than the viewport. */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="reg-name" className="auth-label">ชื่อที่แสดง</label>
+                    <input ref={firstFieldRef} id="reg-name" className="auth-input" placeholder="ชื่อ-นามสกุล" autoComplete="name" value={displayName} onChange={e => setDisplayName(e.target.value)} required />
+                  </div>
+                  <div>
+                    <label htmlFor="reg-phone" className="auth-label">เบอร์โทร <span className="auth-optional">(ไม่บังคับ)</span></label>
+                    <input id="reg-phone" type="tel" inputMode="tel" className="auth-input" placeholder="08X-XXX-XXXX" autoComplete="tel" value={phone} onChange={e => setPhone(e.target.value)} />
+                  </div>
                 </div>
                 <div>
                   <label htmlFor="reg-email" className="auth-label">อีเมลใช้งาน</label>
                   <input id="reg-email" type="email" inputMode="email" className="auth-input" placeholder="you@example.com" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required />
                 </div>
-                <div>
-                  <label htmlFor="reg-pass" className="auth-label">รหัสผ่าน</label>
-                  <input id="reg-pass" type="password" className="auth-input" placeholder="อย่างน้อย 8 ตัวอักษร" autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} required />
-                </div>
-                <div>
-                  <label htmlFor="reg-confirm" className="auth-label">ยืนยันรหัสผ่าน</label>
-                  <input id="reg-confirm" type="password" className="auth-input" placeholder="พิมพ์รหัสผ่านอีกครั้ง" autoComplete="new-password" value={confirm} onChange={e => setConfirm(e.target.value)} required />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="reg-pass" className="auth-label">รหัสผ่าน</label>
+                    <input id="reg-pass" type="password" className="auth-input" placeholder="8 ตัวขึ้นไป" autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} required />
+                  </div>
+                  <div>
+                    <label htmlFor="reg-confirm" className="auth-label">ยืนยันรหัสผ่าน</label>
+                    <input id="reg-confirm" type="password" className="auth-input" placeholder="พิมพ์อีกครั้ง" autoComplete="new-password" value={confirm} onChange={e => setConfirm(e.target.value)} required />
+                  </div>
                 </div>
 
-                {/* Legal consent, required before account creation */}
-                <label className="flex items-start gap-2.5 cursor-pointer select-none pt-1">
+                {/* Legal consent, required before account creation. All five
+                    documents stay named and linked: this is the record behind
+                    terms_accepted_at, so it is not the place to summarise. */}
+                <label className="flex items-start gap-2 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={acceptedTerms}
                     onChange={e => setAcceptedTerms(e.target.checked)}
                     className="mt-0.5 h-4 w-4 flex-shrink-0 accent-amber-500 cursor-pointer"
                   />
-                  <span className="text-[12px] leading-relaxed text-slate-600 dark:text-slate-300 text-left">
+                  <span className="text-[11.5px] leading-snug text-slate-600 dark:text-slate-300 text-left">
                     ฉันได้อ่านและยอมรับ
                     {LEGAL_DOCS.map((d, i) => (
                       <span key={d.slug}>
@@ -304,16 +319,21 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
             </>
           )}
 
-          <p className="mt-6 text-center text-[13px] text-slate-500 dark:text-slate-400">
-            {isRegister ? 'มีบัญชีอยู่แล้ว? ' : 'ยังไม่มีบัญชี? '}
-            <button
-              type="button"
-              onClick={() => setTab(isRegister ? 'login' : 'register')}
-              className="text-amber-600 dark:text-amber-400 font-medium hover:underline cursor-pointer"
-            >
-              {isRegister ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก'}
-            </button>
-          </p>
+          {/* Only on the login tab. On register it repeated what the tab row
+              directly above already offers, and the register tab is the one
+              fighting for vertical space. */}
+          {!isRegister && (
+            <p className="mt-5 text-center text-[13px] text-slate-500 dark:text-slate-400">
+              ยังไม่มีบัญชี?{' '}
+              <button
+                type="button"
+                onClick={() => setTab('register')}
+                className="text-amber-600 dark:text-amber-400 font-medium hover:underline cursor-pointer"
+              >
+                สมัครสมาชิก
+              </button>
+            </p>
+          )}
         </div>
       </div>
 
