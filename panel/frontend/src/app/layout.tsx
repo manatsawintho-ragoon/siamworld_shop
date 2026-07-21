@@ -24,9 +24,17 @@ import {
  * the render-blocking round trip to fonts.googleapis.com that the old
  * <link> + CSS @import pair cost us on every page.
  */
+/**
+ * Weights are deliberately limited to the five actually used in the app.
+ * next/font emits a <link rel="preload"> for every weight x subset pair, so
+ * each declared weight costs two high-priority font downloads (thai + latin)
+ * on every page. 300 had zero usages and 900 had exactly one, in an admin-only
+ * heading, so carrying them cost four preloads site-wide for nothing.
+ * Before adding a weight back, check it is actually used.
+ */
 const kanit = Kanit({
   subsets: ['thai', 'latin'],
-  weight: ['300', '400', '500', '600', '700', '800', '900'],
+  weight: ['400', '500', '600', '700', '800'],
   display: 'swap',
   variable: '--font-kanit',
   preload: true,

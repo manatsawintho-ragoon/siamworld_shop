@@ -54,7 +54,11 @@ function PreviewCard({ title, body, level }: { title: string; body: string; leve
             {new Date().toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' })}
           </span>
         </div>
-        <h2 className="text-lg font-black text-gray-800 mb-2 break-words">{title || 'หัวข้อประกาศ'}</h2>
+        {/* font-extrabold, not font-black: weight 900 was the only reason Kanit
+            shipped a 900 cut, and next/font preloads every declared weight on
+            every public page. One admin heading is not worth 2 extra preloaded
+            font files site-wide. */}
+        <h2 className="text-lg font-extrabold text-gray-800 mb-2 break-words">{title || 'หัวข้อประกาศ'}</h2>
         <p className="text-sm text-gray-600 whitespace-pre-line leading-relaxed break-words min-h-[44px]">
           {body || 'เนื้อหาประกาศจะแสดงตรงนี้…'}
         </p>
