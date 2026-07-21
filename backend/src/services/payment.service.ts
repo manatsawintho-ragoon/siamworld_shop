@@ -1,13 +1,14 @@
 import { pool } from '../database/connection';
 import { NotFoundError, ConflictError, ValidationError } from '../utils/errors';
 import { logger } from '../utils/logger';
-import { RowDataPacket } from 'mysql2';
+import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { easySlipService, EasySlipApiError } from './easyslip.service';
 import { settingsService } from './settings.service';
 import { matchReceiver } from './receiver-match';
 import { notificationService } from './notification.service';
 import { discountService } from './discount.service';
 import { truemoneyService, extractVoucherHash, TrueMoneyApiError } from './truemoney.service';
+import { campaignService } from './campaign.service';
 
 // ── PromptPay EMVCo QR payload generator ─────────────────────────────────────
 
@@ -208,13 +209,30 @@ class PaymentService {
         [userId, creditAmount, balanceBefore, balanceAfter, voucherHash, desc]
       );
       // Ledger records REAL money (`amount`), not the bonus-inflated creditAmount.
-      await conn.execute(
+      const [txResult] = await conn.execute<ResultSetHeader>(
         `INSERT INTO transactions (user_id, amount, type, method, status, reference, description)
          VALUES (?, ?, 'topup', 'truemoney', 'success', ?, ?)`,
         [userId, amount, voucherHash, desc]
       );
+      const transactionId = txResult.insertId;
 
       await conn.commit();
+
+      // Campaign points are granted AFTER the money has committed and can never
+      // roll it back. TrueMoney has no bank timestamp, so the redemption instant
+      // IS the payment instant.
+      try {
+        await campaignService.grantForTopup({
+          userId,
+          transactionId,
+          amountBaht: amount,
+          qualifiedAt: new Date(),
+        });
+      } catch (err) {
+        logger.error('Campaign grant failed after truemoney topup', {
+          userId, transactionId, error: (err as Error)?.message,
+        });
+      }
 
       logger.info('TrueMoney redeemed', { userId, paidAmount: amount, creditAmount, multiplier, voucherHash });
 
@@ -485,11 +503,12 @@ class PaymentService {
       // creditAmount. Toprank + dashboard accounting SUM transactions.amount, so
       // they must reflect actual revenue. The bonus only inflates the wallet
       // balance / wallet_logs above (the player's spendable points).
-      await conn.execute(
+      const [txResult] = await conn.execute<ResultSetHeader>(
         `INSERT INTO transactions (user_id, amount, type, method, status, reference, description)
          VALUES (?, ?, 'topup', 'slip', 'success', ?, ?)`,
         [userId, amount, transRef, slipDesc]
       );
+      const transactionId = txResult.insertId;
 
       // Consume discount code inside the credit tx so a payment rollback also
       // releases the redeem_log slot. Re-validates max_uses inside the lock.
@@ -498,6 +517,22 @@ class PaymentService {
       }
 
       await conn.commit();
+
+      // qualified_at is the BANK TRANSFER time (slipDate), not the upload time.
+      // This is both fairer (pay 23:58, verify 00:05, still counts) and safer
+      // (a slip hoarded from before the window does not qualify).
+      try {
+        await campaignService.grantForTopup({
+          userId,
+          transactionId,
+          amountBaht: amount,
+          qualifiedAt: slipDate,
+        });
+      } catch (err) {
+        logger.error('Campaign grant failed after slip topup', {
+          userId, transactionId, error: (err as Error)?.message,
+        });
+      }
 
       logger.info('Slip verified', { userId, paidAmount: amount, creditAmount, multiplier, transRef });
 
