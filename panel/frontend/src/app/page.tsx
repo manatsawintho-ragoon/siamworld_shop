@@ -929,10 +929,14 @@ function LandingContent() {
   const nextImage = () => setCurrentIndex(prev => (prev + 1) % showcase.length);
   const prevImage = () => setCurrentIndex(prev => (prev - 1 + showcase.length) % showcase.length);
 
+  /* Long enough to watch a mockup's animation loop all the way through. Each
+     mock runs a 12s worked example (the gacha reel spins, decelerates and
+     lands; the top-up flow selects, scans and confirms), so advancing at 6s
+     cut every one of them off halfway. */
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentIndex(prev => (prev + 1) % showcase.length);
-    }, 6000);
+    }, 14000);
     return () => clearInterval(interval);
   }, [showcase.length]);
 

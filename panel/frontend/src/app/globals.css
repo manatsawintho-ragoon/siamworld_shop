@@ -693,6 +693,7 @@
   --color-surface-hover: 240 253 244;
   --color-border: 187 247 208;
   --color-border-muted: 220 252 231;
+  --theme-card-border: #bbf7d0;
   --color-fg: 17 24 39;
   --color-fg-muted: 75 85 99;
   --color-fg-subtle: 107 114 128;
@@ -715,6 +716,7 @@
   --color-surface-hover: 51 65 85;
   --color-border: 51 65 85;
   --color-border-muted: 30 41 59;
+  --theme-card-border: #334155;
   --color-fg: 248 250 252;
   --color-fg-muted: 148 163 184;
   --color-fg-subtle: 100 116 139;
@@ -729,6 +731,17 @@
 .shop-skin .s-fg-subtle     { color: rgb(var(--color-fg-subtle)); }
 .shop-skin .s-primary       { color: rgb(var(--color-shop-primary)); }
 .shop-skin .s-bg-primary    { background: rgb(var(--color-shop-primary)); }
+.shop-skin .s-border-muted  { border-color: rgb(var(--color-border-muted)); }
+
+/* Copied from the shop's `.theme-sidebar-card`, the surface every sidebar
+   widget in MainLayout uses. */
+.shop-skin .s-card {
+  background: rgb(var(--color-surface));
+  border-radius: 1rem;
+  border: 1px solid var(--theme-card-border, rgb(var(--color-border)));
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.04);
+  overflow: hidden;
+}
 
 /* Copied from the shop's `.theme-price-badge` and `.btn-buy`, including the
    chunky 4px bottom shadow that gives the buy button its Minecraft feel. */
@@ -772,70 +785,103 @@
 /* ══════════════════════════════════════════════════════════════════════
    MOCKUP AMBIENT MOTION
 
-   The showcase mockups loop a short piece of the behaviour each feature is
-   actually sold on, so a visitor scrolling past sees the product working
-   rather than a still of it. This is the GIF the landing page would otherwise
-   have to ship, except it stays sharp, weighs nothing, and follows the theme.
+   Each mockup loops a full worked example of the thing its feature is sold on,
+   so a visitor sees the product being used rather than a still of it. Cycles
+   are deliberately long (12s) and staged: the point is that someone can watch
+   one all the way through and understand the flow, not catch a flicker.
 
-   Every loop is transform or opacity only, so it runs on the compositor and
-   never triggers layout or a React render. Loops are long and low-contrast on
-   purpose: this is peripheral motion that rewards a glance, not something
-   competing with the copy beside it.
+   Everything is transform, opacity or colour only, so it stays on the
+   compositor and never triggers layout or a React render. Every loop has a
+   resting state under prefers-reduced-motion.
    ══════════════════════════════════════════════════════════════════════ */
 
-/* ── Loot box: the reel spins, decelerates and lands on a prize ───────
-   Eased with a long tail so it reads as a wheel losing momentum rather than a
-   strip sliding, which is what the real spinner does. */
+/* ── Gacha: the reel spins up, decelerates over a long tail, lands under the
+   marker, then the winning frame flashes before the next run. This is the one
+   piece of motion people came to the section to see, so it gets the full
+   cycle to itself. */
 @keyframes mock-reel-spin {
-  0%       { transform: translateX(0); }
-  55%      { transform: translateX(-372px); }
-  70%      { transform: translateX(-390px); }
-  75%      { transform: translateX(-384px); }  /* settle bounce */
-  100%     { transform: translateX(-384px); }
+  0%,  4%   { transform: translateX(0); }
+  38%       { transform: translateX(-1180px); }
+  56%       { transform: translateX(-1330px); }
+  62%       { transform: translateX(-1318px); }   /* overshoot */
+  66%, 94%  { transform: translateX(-1322px); }   /* settle and hold on the prize */
+  100%      { transform: translateX(0); }
 }
 .mock-reel {
-  animation: mock-reel-spin 6s cubic-bezier(0.12, 0.72, 0.1, 1) infinite;
+  animation: mock-reel-spin 12s cubic-bezier(0.16, 0.84, 0.2, 1) infinite;
   will-change: transform;
 }
+/* A soft flash across the reel at the moment it stops. */
+@keyframes mock-win-flash {
+  0%, 63%, 100% { opacity: 0; }
+  68%           { opacity: 1; }
+  86%           { opacity: 0; }
+}
+.mock-win {
+  background: radial-gradient(circle at 50% 50%, rgb(var(--color-shop-primary) / 0.28), transparent 60%);
+  animation: mock-win-flash 12s ease-out infinite;
+}
 
-/* ── Storefront: each card takes its turn being the one just bought ─── */
+/* ── Storefront: category tabs cycle as if being browsed, and each card takes
+   its turn being hovered and bought. */
+@keyframes mock-tab-cycle {
+  0%, 2%    { background: rgb(var(--color-shop-primary)); color: #fff; border-color: transparent; box-shadow: 0 3px 0 rgb(var(--color-shop-primary-hover)); }
+  22%, 100% { background: rgb(var(--color-surface)); color: rgb(var(--color-shop-primary)); border-color: rgb(var(--color-border)); box-shadow: none; }
+}
+.mock-tab-cycle { animation: mock-tab-cycle 9.6s ease-in-out infinite; }
+
 @keyframes mock-card-cycle {
-  0%, 82%, 100% { transform: translateY(0); box-shadow: none; }
-  88%           { transform: translateY(-6px); box-shadow: 0 10px 24px -12px rgb(var(--color-shop-primary) / 0.55); }
-  94%           { transform: translateY(-3px); }
+  0%, 74%, 100% { transform: translateY(0); box-shadow: none; }
+  80%           { transform: translateY(-6px); box-shadow: 0 14px 30px -14px rgb(var(--color-shop-primary) / 0.6); }
+  90%           { transform: translateY(-4px); box-shadow: 0 10px 22px -14px rgb(var(--color-shop-primary) / 0.45); }
 }
 .mock-card-cycle {
-  animation: mock-card-cycle 5.4s ease-in-out infinite;
+  animation: mock-card-cycle 12s ease-in-out infinite;
+  will-change: transform;
+}
+/* The artwork lifts a beat after its card, the way the real card scales its
+   image on hover. */
+@keyframes mock-art-zoom {
+  0%, 74%, 100% { transform: scale(1); }
+  82%, 90%      { transform: scale(1.1); }
+}
+.mock-item-art, .mock-box-art {
+  animation: mock-art-zoom 12s ease-in-out infinite;
   will-change: transform;
 }
 
-/* ── Inventory: items claim themselves one after another ───────────── */
+/* ── Inventory: an unclaimed row is highlighted, its button presses, and the
+   row settles: the full "รับเข้าเกม" gesture rather than a colour blink. */
 @keyframes mock-claim-cycle {
-  0%, 70%, 100% { border-color: rgb(var(--color-border)); }
-  80%           { border-color: rgb(var(--color-shop-primary)); transform: translateX(3px); }
-  90%           { transform: translateX(0); }
+  0%, 58%, 100% { border-color: rgb(var(--color-border)); transform: translateX(0); }
+  66%           { border-color: rgb(var(--color-shop-primary)); transform: translateX(4px); }
+  78%           { border-color: rgb(var(--color-shop-primary)); transform: translateX(0); }
+  90%           { border-color: rgb(var(--color-border)); }
 }
 .mock-claim-cycle {
-  animation: mock-claim-cycle 4.8s ease-in-out infinite;
+  animation: mock-claim-cycle 12s ease-in-out infinite;
   will-change: transform;
 }
+@keyframes mock-claim-press {
+  0%, 62%, 100% { transform: translateY(0); box-shadow: 0 4px 0 rgb(var(--color-shop-primary-shadow)); }
+  70%           { transform: translateY(4px); box-shadow: 0 0 0 rgb(var(--color-shop-primary-shadow)); }
+  80%           { transform: translateY(0); box-shadow: 0 4px 0 rgb(var(--color-shop-primary-shadow)); }
+}
+.mock-claim-btn { animation: mock-claim-press 12s ease-in-out infinite; }
 
-/* ── Top-up: the selection walks the amount grid ─────────────────────
-   Reproduces the moment of choosing, which is the only interaction on that
-   screen before the QR appears. */
+/* ── Top-up: the whole payment flow, in order. The selection walks the amount
+   grid, the QR is scanned, and the slip clears. */
 @keyframes mock-amount-cycle {
-  0%, 12%, 100% { background: rgb(var(--color-shop-primary)); color: #fff; border-color: transparent; }
-  20%, 92%      { background: rgb(var(--color-surface)); color: rgb(var(--color-fg)); border-color: rgb(var(--color-border)); }
+  0%, 6%     { background: rgb(var(--color-shop-primary)); color: #fff; border-color: transparent; }
+  14%, 100%  { background: rgb(var(--color-surface)); color: rgb(var(--color-fg)); border-color: rgb(var(--color-border)); }
 }
-.mock-amount-cycle {
-  animation: mock-amount-cycle 3s ease-in-out infinite;
-}
+.mock-amount-cycle { animation: mock-amount-cycle 8.4s ease-in-out infinite; }
 
-/* ── Top-up: a scan line crossing the QR, as a phone camera would ──── */
 @keyframes mock-qr-scan {
-  0%        { transform: translateY(-100%); opacity: 0; }
-  10%, 60%  { opacity: 1; }
-  70%, 100% { transform: translateY(1000%); opacity: 0; }
+  0%        { transform: translateY(-120%); opacity: 0; }
+  8%, 46%   { opacity: 1; }
+  54%       { transform: translateY(1100%); opacity: 0; }
+  100%      { transform: translateY(1100%); opacity: 0; }
 }
 .mock-qr-scan {
   position: absolute;
@@ -843,57 +889,78 @@
   right: 0;
   height: 3px;
   background: linear-gradient(90deg, transparent, rgb(var(--color-shop-primary)), transparent);
-  animation: mock-qr-scan 3.2s ease-in-out infinite;
+  animation: mock-qr-scan 12s ease-in-out infinite;
   will-change: transform;
 }
+/* The confirmation only appears once the scan line has finished. */
+@keyframes mock-slip-confirm {
+  0%, 56%   { opacity: 0; transform: translateY(6px); }
+  64%, 92%  { opacity: 1; transform: translateY(0); }
+  100%      { opacity: 0; transform: translateY(6px); }
+}
+.mock-slip {
+  animation: mock-slip-confirm 12s ease-in-out infinite;
+  will-change: transform, opacity;
+}
 
-/* ── Admin dashboard: the chart draws itself, then holds ─────────────
-   Uses stroke-dashoffset, so the line is traced exactly along its own path. */
+/* ── Sidebar top-up board: rows arrive one after another, as the live list does. */
+@keyframes mock-board-row {
+  0%, 8%    { opacity: 0.35; transform: translateX(-6px); }
+  18%, 100% { opacity: 1; transform: translateX(0); }
+}
+.mock-board-row {
+  animation: mock-board-row 12s ease-out infinite;
+  will-change: transform, opacity;
+}
+
+/* ── Admin dashboard: the chart traces itself, then the dots land. */
 @keyframes mock-chart-draw {
   0%        { stroke-dashoffset: 1000; }
-  45%, 100% { stroke-dashoffset: 0; }
+  40%, 100% { stroke-dashoffset: 0; }
 }
 .mock-chart-line {
   stroke-dasharray: 1000;
-  animation: mock-chart-draw 7s ease-out infinite;
+  animation: mock-chart-draw 12s ease-out infinite;
 }
 @keyframes mock-chart-dot {
-  0%, 22%   { opacity: 0; transform: scale(0.4); }
-  32%, 100% { opacity: 1; transform: scale(1); }
+  0%, 18%   { opacity: 0; transform: scale(0.4); }
+  28%, 100% { opacity: 1; transform: scale(1); }
 }
 .mock-chart-dot {
   transform-box: fill-box;
   transform-origin: center;
-  animation: mock-chart-dot 7s ease-out infinite;
+  animation: mock-chart-dot 12s ease-out infinite;
 }
 
-/* ── Admin dashboard: the headline figure ticking over ───────────────
-   A nudge and a brightening rather than counting digits: the number is a
-   sample, and animating it upward every few seconds would read as a claim
-   about revenue that keeps growing. */
+/* The headline figure nudges rather than counting upward. It is sample data,
+   and animating it climbing would read as a claim about revenue. */
 @keyframes mock-count {
   0%, 88%, 100% { opacity: 1; transform: translateY(0); }
   92%           { opacity: 0.55; transform: translateY(-2px); }
 }
 .mock-count {
   display: inline-block;
-  animation: mock-count 5s ease-in-out infinite;
+  animation: mock-count 12s ease-in-out infinite;
   will-change: transform;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mock-reel,
-  .mock-card-cycle,
-  .mock-claim-cycle,
-  .mock-amount-cycle,
-  .mock-qr-scan,
-  .mock-chart-line,
-  .mock-chart-dot,
-  .mock-count { animation: none !important; }
-  /* Without the draw animation the dashed line would never be filled in. */
+  .mock-reel, .mock-win,
+  .mock-tab-cycle, .mock-card-cycle, .mock-item-art, .mock-box-art,
+  .mock-claim-cycle, .mock-claim-btn,
+  .mock-amount-cycle, .mock-qr-scan, .mock-slip, .mock-board-row,
+  .mock-chart-line, .mock-chart-dot, .mock-count { animation: none !important; }
+
+  /* Resting states, so every screen still makes sense standing still. */
   .mock-chart-line { stroke-dasharray: none; }
-  .mock-qr-scan { display: none; }
-  /* The amount grid keeps one selected item so the screen still makes sense. */
+  .mock-qr-scan, .mock-win { display: none; }
+  .mock-slip { opacity: 1; transform: none; }
+  .mock-board-row { opacity: 1; transform: none; }
+  .mock-tab-cycle:first-child {
+    background: rgb(var(--color-shop-primary));
+    color: #fff;
+    border-color: transparent;
+  }
   .mock-amount-cycle:nth-child(2) {
     background: rgb(var(--color-shop-primary));
     color: #fff;

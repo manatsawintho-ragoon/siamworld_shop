@@ -418,42 +418,140 @@ function MiniChart() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-   SHOP MOCKS
-   Rendered inside `.shop-skin`, which carries the deployed shop's green
-   palette. Class names follow frontend/src/components/ProductCard.tsx.
+   SHOP MOCKS (the site a player sees)
+
+   Transcribed from `frontend/src/`:
+     shell       components/MainLayout.tsx  (280px sidebar + content grid)
+     nav         components/Navbar.tsx      (NavLink: label over Thai subLabel)
+     item card   components/ProductCard.tsx
+     shop page   app/shop/page.tsx
+     gacha       app/lootbox/page.tsx
+     wallet      app/topup/page.tsx
+
+   Rendered inside `.shop-skin`, which carries the deployed shop's own green
+   tokens. Sizes, radii, shadow values and Thai copy are the ones those files
+   use; the shop draws with Font Awesome and lucide where the panel has only
+   lucide, so icons are the nearest equivalent.
    ══════════════════════════════════════════════════════════════════════ */
 
-/** The shop's navbar, as the deployed site renders it. */
+/** Desktop nav row: icon + English label above the Thai sublabel, as NavLink. */
 function ShopNav({ active }: { active: string }) {
   const links = [
     { label: 'Home', sub: 'หน้าแรก', icon: 'house-signal' as IconName },
     { label: 'Itemshop', sub: 'ร้านค้าไอเท็ม', icon: 'shopping-cart' as IconName },
     { label: 'Gacha', sub: 'กล่องสุ่ม', icon: 'box-open' as IconName },
     { label: 'Topup', sub: 'เติมเงิน', icon: 'coins' as IconName },
+    { label: 'Download', sub: 'ดาวน์โหลด', icon: 'download' as IconName },
   ];
   return (
-    <div className="s-surface border-b s-border px-6 py-3 flex items-center gap-6">
-      <span className="flex items-center gap-2 shrink-0">
-        <span className="w-9 h-9 rounded-lg s-bg-primary grid place-items-center text-white">
-          <Icon name="cube" />
-        </span>
-        <span className="s-fg font-bold text-[15px]">ระบบร้านค้ามายคราฟ</span>
-      </span>
-      <span className="flex items-center gap-1 ml-4">
-        {links.map(l => (
-          <span
-            key={l.label}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 ${active === l.label ? 's-bg-primary text-white' : 's-fg-muted'}`}
-          >
-            <Icon name={l.icon} className="text-sm" />
-            <span className="leading-none">
-              <span className="block text-[13px] font-bold">{l.label}</span>
-              <span className="block text-[10px] opacity-80">{l.sub}</span>
+    <div className="s-surface border-b s-border shadow-sm">
+      <div className="max-w-7xl mx-auto px-6">
+        <nav className="flex items-center w-full justify-center">
+          {links.map(l => {
+            const isActive = active === l.label;
+            return (
+              <span
+                key={l.label}
+                className="flex flex-col items-center justify-center min-w-[120px] py-2.5"
+                style={isActive ? { backgroundColor: 'rgb(var(--color-shop-primary) / 0.12)', color: 'rgb(var(--color-shop-primary-hover))' } : undefined}
+              >
+                <span className="flex items-center gap-2 mb-1">
+                  <Icon name={l.icon} className={`text-[18px] ${isActive ? '' : 's-fg-muted'}`} />
+                  <span className={`font-bold text-[15px] ${isActive ? '' : 's-fg'}`}>{l.label}</span>
+                </span>
+                <span className={`text-[10px] font-bold opacity-80 ${isActive ? '' : 's-fg-muted'}`}>{l.sub}</span>
+              </span>
+            );
+          })}
+        </nav>
+      </div>
+    </div>
+  );
+}
+
+/** The 280px column MainLayout puts beside every page: member card, then the
+ *  live DAILY TOPUP board. */
+function ShopSidebar() {
+  const board = [
+    { name: 'Kiritoz', amount: 1200 },
+    { name: 'MinnieCraft', amount: 850 },
+    { name: 'BankZaa', amount: 500 },
+    { name: 'NongMint', amount: 300 },
+  ];
+  return (
+    <div className="w-[280px] shrink-0 space-y-5">
+      <div className="s-card">
+        <div className="relative px-6 py-5 border-b s-border-muted">
+          <span className="absolute top-0 left-0 right-0 h-1" style={{ background: 'linear-gradient(to right, rgb(var(--color-shop-primary-light)), rgb(var(--color-shop-primary)), rgb(var(--color-shop-primary-light)))' }} />
+          <div className="flex items-center gap-4">
+            <span className="w-14 h-14 rounded-2xl border-2 p-0.5 s-surface shadow-sm shrink-0 grid place-items-center" style={{ borderColor: 'rgb(var(--color-shop-primary) / 0.2)' }}>
+              <span className="w-full h-full rounded-xl s-surface-hover grid place-items-center">
+                <Icon name="user" className="text-lg s-fg-muted" />
+              </span>
             </span>
+            <span className="min-w-0">
+              <span className="block s-fg font-bold text-[15px] truncate">Kiritoz</span>
+              <span className="block text-[11px] s-fg-subtle">สมาชิกทั่วไป</span>
+            </span>
+          </div>
+        </div>
+        <div className="px-5 py-4 border-b s-border-muted grid grid-cols-2 gap-3">
+          <span className="block">
+            <span className="block text-[10px] font-bold s-fg-subtle">ยอดเงิน</span>
+            <span className="block text-sm font-bold s-primary tabular-nums">฿ 1,240</span>
           </span>
-        ))}
-      </span>
-      <span className="ml-auto px-4 py-2 rounded-lg border s-border s-fg-muted text-[13px] font-bold">ล็อกอิน</span>
+          <span className="block">
+            <span className="block text-[10px] font-bold s-fg-subtle">ไอเท็มในคลัง</span>
+            <span className="block text-sm font-bold s-fg tabular-nums">6</span>
+          </span>
+        </div>
+      </div>
+
+      <div className="s-card">
+        <div className="relative px-5 py-4 border-b s-border-muted flex items-center gap-3">
+          <span className="absolute top-0 left-0 right-0 h-1" style={{ background: 'linear-gradient(to right, rgb(var(--color-shop-primary-light)), rgb(var(--color-shop-primary)), rgb(var(--color-shop-primary-light)))' }} />
+          <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border s-border" style={{ backgroundColor: 'rgb(var(--color-shop-primary) / 0.1)' }}>
+            <Icon name="calendar-day" className="text-sm s-primary" />
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block s-fg font-bold text-sm leading-none">DAILY TOPUP</span>
+            <span className="block s-fg-subtle text-[10px] mt-0.5">เติมเงินล่าสุดวันนี้</span>
+          </span>
+          <span className="mock-live relative flex h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: 'rgb(var(--color-shop-primary))' }} />
+        </div>
+        <div className="px-3 py-3 space-y-1">
+          {board.map((r, i) => (
+            <div key={r.name} className="mock-row mock-board-row flex items-center gap-2.5 px-3 py-2 rounded-xl" style={{ animationDelay: `${i * 1.2}s` }}>
+              <span className="w-5 flex items-center justify-center shrink-0">
+                <span className="text-xs font-bold" style={{ color: 'rgb(var(--color-shop-primary-light))' }}>{i + 1}</span>
+              </span>
+              <span className="w-7 h-7 rounded-lg shrink-0 s-surface-hover border s-border-muted grid place-items-center">
+                <Icon name="user" className="text-[11px] s-fg-subtle" />
+              </span>
+              <span className="text-xs font-bold truncate flex-1 s-fg">{r.name}</span>
+              <span className="flex items-center gap-1 shrink-0 rounded-lg px-2 py-0.5 border s-border" style={{ backgroundColor: 'rgb(var(--color-shop-primary) / 0.1)' }}>
+                <Icon name="coins" className="text-[10px] s-primary" />
+                <span className="text-[11px] font-bold tabular-nums" style={{ color: 'rgb(var(--color-shop-primary-hover))' }}>
+                  {r.amount.toLocaleString()}
+                </span>
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** MainLayout's outer grid: nav, then a 280px sidebar beside the content. */
+function ShopShell({ active, children }: { active: string; children: React.ReactNode }) {
+  return (
+    <div className="shop-skin h-full flex flex-col">
+      <ShopNav active={active} />
+      <div className="flex-1 min-h-0 max-w-[1536px] mx-auto w-full px-6 pt-6 pb-6 flex gap-6 items-start overflow-hidden">
+        <ShopSidebar />
+        <div className="flex-1 min-w-0">{children}</div>
+      </div>
     </div>
   );
 }
@@ -464,7 +562,10 @@ function ProductCardMock({ name, price, original, sold, category, seq = 0 }: {
 }) {
   const discount = original ? Math.round((1 - price / original) * 100) : 0;
   return (
-    <article className="mock-tile mock-card-cycle group relative flex flex-col s-surface border s-border rounded-xl overflow-hidden" style={{ animationDelay: `${seq * 0.9}s` }}>
+    <article
+      className="mock-tile mock-card-cycle group relative flex flex-col s-surface border s-border rounded-xl overflow-hidden"
+      style={{ animationDelay: `${seq * 1.6}s` }}
+    >
       <div className="relative aspect-[3/4] s-surface-hover overflow-hidden">
         <span className="absolute top-2 left-2 z-10 flex items-center gap-1 s-surface s-fg-muted text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm border s-border">
           <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: 'rgb(var(--color-shop-primary))' }} />
@@ -472,20 +573,20 @@ function ProductCardMock({ name, price, original, sold, category, seq = 0 }: {
         </span>
         {discount > 0 && (
           <span
-            className="absolute top-2 right-2 z-10 flex items-center gap-1 text-white text-[11px] font-semibold px-2 py-0.5 rounded-md shadow-lg"
+            className="absolute top-2 right-2 z-10 flex items-center gap-1 text-white text-[11px] font-bold px-2 py-0.5 rounded-md shadow-lg"
             style={{ background: 'rgb(var(--color-error))' }}
           >
             <Icon name="tag" className="text-[9px]" /> -{discount}%
           </span>
         )}
-        <span className="w-full h-full flex items-center justify-center">
+        <span className="mock-item-art w-full h-full flex items-center justify-center">
           <Icon name="cube" className="text-5xl s-fg-subtle opacity-40" />
         </span>
         <span className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent px-3 py-6 flex items-end justify-between gap-2">
           {discount > 0 && original
-            ? <span className="text-white/80 text-xs font-medium line-through tabular-nums leading-none">{original.toLocaleString()} ฿</span>
+            ? <span className="text-white/80 text-xs font-medium line-through tabular-nums leading-none drop-shadow-md">{original.toLocaleString()} ฿</span>
             : <span />}
-          <span className="s-price-badge text-sm font-semibold px-3 py-2 rounded-lg tabular-nums leading-none shrink-0">
+          <span className="s-price-badge text-sm font-bold px-3 py-2 rounded-lg tabular-nums leading-none shrink-0">
             {price.toLocaleString()} ฿
           </span>
         </span>
@@ -495,7 +596,7 @@ function ProductCardMock({ name, price, original, sold, category, seq = 0 }: {
         <span className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-500/10 border border-orange-500/20 w-fit">
           <Icon name="fire" className="text-[10px] text-orange-500" />
           <span className="text-[11px] font-bold text-orange-600">
-            ขายแล้ว <span className="tabular-nums font-semibold">{sold.toLocaleString()}</span> ชิ้น
+            ขายแล้ว <span className="tabular-nums font-bold">{sold.toLocaleString()}</span> ชิ้น
           </span>
         </span>
         <span className="inline-flex items-center gap-1 mt-1.5 mb-1 text-[10px] font-bold s-primary">
@@ -514,97 +615,172 @@ const SHOP_ITEMS = [
   { name: '490 Crystal', price: 49, sold: 27, category: 'Crystals' },
   { name: 'ยศ VIP 30 วัน', price: 149, original: 199, sold: 23, category: 'Ranks' },
   { name: 'Furniture Set', price: 25, original: 30, sold: 6, category: 'Furniture' },
-  { name: 'ดาบเวทมนตร์', price: 89, sold: 41, category: 'Items' },
+];
+
+const SHOP_TABS = [
+  { name: 'ทั้งหมด', count: 19 },
+  { name: 'Crystals', count: 8 },
+  { name: 'Ranks', count: 5 },
+  { name: 'Furniture', count: 4 },
 ];
 
 export function StorefrontMock() {
   return (
-    <ScaledMock designWidth={1180} designHeight={760}>
+    <ScaledMock designWidth={1440} designHeight={900}>
       <Frame url="yourshop.siamsite.shop/shop">
-        <div className="shop-skin h-full flex flex-col">
-          <ShopNav active="Itemshop" />
-          <div className="p-6 flex-1">
-            <h1 className="text-xl font-bold s-fg flex items-center gap-2 mb-4">
-              <Icon name="store" className="s-primary" /> ร้านค้าไอเท็ม
-            </h1>
-            <div className="flex items-center gap-2 mb-5 flex-wrap">
-              {['ทั้งหมด', 'Crystals', 'Ranks', 'Furniture', 'Items'].map((c, i) => (
-                <span
-                  key={c}
-                  className={`mock-chip px-3 py-1.5 rounded-lg text-[13px] font-bold border ${
-                    i === 0 ? 's-bg-primary text-white border-transparent' : 's-surface s-fg-muted s-border'
-                  }`}
-                >
-                  {c}
-                </span>
-              ))}
-              <span className="ml-auto relative">
-                <span className="block w-56 s-surface border s-border rounded-lg pl-8 pr-3 py-1.5 text-[13px] s-fg-subtle">
-                  ค้นหาสินค้า...
-                </span>
-                <Icon name="search" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs s-fg-subtle" />
-              </span>
+        <ShopShell active="Itemshop">
+          <div className="space-y-4">
+            <div>
+              <h1 className="text-xl font-bold s-fg flex items-center gap-2">
+                <Icon name="store" className="text-[20px] s-primary" />
+                ITEMSHOP
+              </h1>
+              <p className="s-fg-subtle text-xs mt-0.5">ร้านค้าไอเท็มและยศ</p>
             </div>
-            <div className="grid grid-cols-5 gap-4">
-              {SHOP_ITEMS.map((it, i) => <ProductCardMock key={it.name} {...it} seq={i} />)}
+
+            <div className="s-surface rounded-2xl shadow-md border s-border overflow-hidden">
+              {/* Filter row: the active tab carries a 3px bottom shadow, as on the real page */}
+              <div className="px-4 py-2.5 border-b s-border flex items-center gap-2 flex-wrap">
+                {SHOP_TABS.map((t, i) => (
+                  <span
+                    key={t.name}
+                    className="mock-tab-cycle flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold border s-border s-surface"
+                    style={{ animationDelay: `${i * 2.4}s` }}
+                  >
+                    {t.name}
+                    <span className="mock-tab-count text-[10px] font-bold px-1.5 py-0.5 rounded-full s-surface-hover s-fg-subtle">
+                      {t.count}
+                    </span>
+                  </span>
+                ))}
+                <span className="ml-auto flex items-center gap-2 shrink-0">
+                  <span className="py-1.5 pl-2.5 pr-7 rounded-lg border s-border s-surface text-xs s-fg">เรียงปกติ</span>
+                  <span className="relative">
+                    <Icon name="search" className="w-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] s-fg-subtle" />
+                    <span className="block pl-7 pr-7 py-1.5 rounded-lg border s-border s-surface text-xs s-fg-subtle w-44">
+                      ค้นหาสินค้า...
+                    </span>
+                  </span>
+                  <span className="text-xs s-fg-subtle font-bold shrink-0">19 ชิ้น</span>
+                </span>
+              </div>
+
+              <div className="p-6">
+                <div className="grid grid-cols-4 gap-4">
+                  {SHOP_ITEMS.map((it, i) => <ProductCardMock key={it.name} {...it} seq={i} />)}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </ShopShell>
       </Frame>
     </ScaledMock>
   );
 }
 
-export function LootboxMock() {
-  const reel: TierKey[] = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'rare', 'common', 'epic'];
+/** Gacha card, transcribed from app/lootbox/page.tsx. */
+function BoxCardMock({ name, price, original, badge, seq }: {
+  name: string; price: number; original?: number; badge?: 'HOT' | 'LIMITED'; seq: number;
+}) {
+  const disc = original ? Math.round((1 - price / original) * 100) : 0;
   return (
-    <ScaledMock designWidth={1180} designHeight={760}>
-      <Frame url="yourshop.siamsite.shop/lootbox">
-        <div className="shop-skin h-full flex flex-col">
-          <ShopNav active="Gacha" />
-          <div className="p-6 flex-1 flex flex-col">
-            <h1 className="text-xl font-bold s-fg flex items-center gap-2 mb-4">
-              <Icon name="box-open" className="s-primary" /> กล่องสุ่ม
-            </h1>
+    <article
+      className="mock-tile mock-card-cycle group relative flex flex-col s-surface border s-border rounded-xl overflow-hidden"
+      style={{ animationDelay: `${seq * 1.6}s` }}
+    >
+      <div className="relative aspect-[3/4] overflow-hidden" style={{ background: 'rgb(var(--color-shop-primary) / 0.08)' }}>
+        {badge === 'LIMITED' && (
+          <span className="absolute top-1.5 left-1.5 z-10 flex items-center gap-0.5 bg-violet-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm leading-none">
+            <Icon name="gem" className="text-[8px]" /> LIMITED
+          </span>
+        )}
+        {badge === 'HOT' && (
+          <span className="absolute top-1.5 left-1.5 z-10 flex items-center gap-0.5 bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm leading-none">
+            <Icon name="fire" className="text-[8px]" /> HOT
+          </span>
+        )}
+        {disc > 0 && (
+          <span
+            className="absolute top-1.5 right-1.5 z-10 flex items-center gap-0.5 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md shadow-md leading-none"
+            style={{ background: 'rgb(var(--color-error))' }}
+          >
+            <Icon name="tag" className="text-[8px]" />-{disc}%
+          </span>
+        )}
+        <span className="mock-box-art w-full h-full flex items-center justify-center">
+          <Icon name="gift" className="text-5xl s-primary opacity-70" />
+        </span>
+        <span className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent px-3 py-6 flex items-end justify-end">
+          <span className="s-price-badge text-sm font-bold px-3 py-2 rounded-lg tabular-nums leading-none">
+            {price.toLocaleString()} ฿
+          </span>
+        </span>
+      </div>
+      <div className="p-3 flex flex-col flex-1 s-surface">
+        <p className="s-fg font-bold text-sm leading-tight truncate">{name}</p>
+        <span className="s-btn-buy w-full mt-auto pt-3 pb-2.5 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 min-h-[40px]">
+          <Icon name="box-open" className="text-[11px]" /> เปิดกล่อง
+        </span>
+      </div>
+    </article>
+  );
+}
 
-            <div className="relative s-surface border s-border rounded-xl overflow-hidden mb-5">
-              <div className="mock-reel flex gap-3 p-5">
-                {reel.map((t, i) => {
-                  const tier = getTier(t);
-                  return (
-                    <div
-                      key={i}
-                      className="mock-reel-item w-[120px] shrink-0 rounded-xl border-2 flex flex-col items-center justify-center py-6 gap-2"
-                      style={{ borderColor: tier.color, backgroundColor: `${tier.color}14` }}
-                    >
-                      <Icon name={tier.icon} className="text-2xl" style={{ color: tier.color }} />
-                      <span className="text-[11px] font-bold" style={{ color: tier.color }}>{tier.label}</span>
-                    </div>
-                  );
-                })}
-              </div>
-              <span className="absolute inset-y-0 left-1/2 w-1 -translate-x-1/2" style={{ background: 'rgb(var(--color-shop-primary))' }} />
+export function LootboxMock() {
+  /* Rarity colours come from the shared map, so the reel can never disagree
+     with the real spinner about what EPIC looks like. */
+  const reel: TierKey[] = ['common', 'uncommon', 'rare', 'epic', 'common', 'legendary', 'rare', 'epic', 'uncommon', 'common'];
+  return (
+    <ScaledMock designWidth={1440} designHeight={900}>
+      <Frame url="yourshop.siamsite.shop/lootbox">
+        <ShopShell active="Gacha">
+          <div className="space-y-4">
+            <div>
+              <h1 className="text-xl font-bold s-fg flex items-center gap-2">
+                <Icon name="box-open" className="text-[20px] s-primary" />
+                GACHA
+              </h1>
+              <p className="s-fg-subtle text-xs mt-0.5">กล่องสุ่มไอเท็มและยศ</p>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { name: 'กล่องธรรมดา', price: 29 },
-                { name: 'กล่องพรีเมียม', price: 99 },
-                { name: 'กล่องตำนาน', price: 249 },
-              ].map(b => (
-                <div key={b.name} className="mock-tile s-surface border s-border rounded-xl p-4 flex flex-col items-center gap-3">
-                  <span className="w-16 h-16 rounded-xl s-surface-hover grid place-items-center">
-                    <Icon name="gift" className="text-2xl s-primary" />
-                  </span>
-                  <span className="s-fg font-bold text-sm">{b.name}</span>
-                  <span className="s-btn-buy w-full py-2.5 text-xs font-bold rounded-lg text-center">
-                    เปิดกล่อง {b.price} ฿
-                  </span>
+            {/* Spinner: the reel runs, decelerates and lands under the marker */}
+            <div className="s-surface rounded-2xl shadow-md border s-border overflow-hidden">
+              <div className="px-4 py-2.5 border-b s-border flex items-center justify-between">
+                <span className="text-[13px] font-bold s-fg">กำลังสุ่ม: กล่องพรีเมียม</span>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgb(var(--color-shop-primary) / 0.12)', color: 'rgb(var(--color-shop-primary-hover))' }}>
+                  เปิดได้ 3 ครั้ง
+                </span>
+              </div>
+              <div className="relative overflow-hidden">
+                <div className="mock-reel flex gap-3 p-5">
+                  {reel.map((t, i) => {
+                    const tier = getTier(t);
+                    return (
+                      <div
+                        key={i}
+                        className="mock-reel-item w-[130px] shrink-0 rounded-xl border-2 flex flex-col items-center justify-center py-6 gap-2"
+                        style={{ borderColor: tier.color, backgroundColor: `${tier.color}14` }}
+                      >
+                        <Icon name={tier.icon} className="text-2xl" style={{ color: tier.color }} />
+                        <span className="text-[11px] font-bold" style={{ color: tier.color }}>{tier.label}</span>
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
+                {/* Marker the reel lands under */}
+                <span className="absolute inset-y-0 left-1/2 w-1 -translate-x-1/2 z-10" style={{ background: 'rgb(var(--color-shop-primary))' }} />
+                <span className="mock-win absolute inset-0 pointer-events-none" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 gap-4">
+              <BoxCardMock name="กล่องธรรมดา" price={29} seq={0} />
+              <BoxCardMock name="กล่องพรีเมียม" price={99} original={129} badge="HOT" seq={1} />
+              <BoxCardMock name="กล่องตำนาน" price={249} badge="LIMITED" seq={2} />
+              <BoxCardMock name="กล่องเทศกาล" price={99} original={149} seq={3} />
             </div>
           </div>
-        </div>
+        </ShopShell>
       </Frame>
     </ScaledMock>
   );
@@ -614,46 +790,62 @@ export function InventoryMock() {
   const slots: { tier: TierKey; name: string; claimed: boolean }[] = [
     { tier: 'legendary', name: 'ดาบมังกร', claimed: false },
     { tier: 'epic', name: 'เกราะเพชร', claimed: false },
-    { tier: 'rare', name: 'คทาน้ำแข็ง', claimed: true },
+    { tier: 'rare', name: 'คทาน้ำแข็ง', claimed: false },
     { tier: 'uncommon', name: 'โล่เหล็ก', claimed: true },
-    { tier: 'common', name: 'คบเพลิง x16', claimed: true },
     { tier: 'epic', name: 'ปีกนางฟ้า', claimed: false },
+    { tier: 'common', name: 'คบเพลิง x16', claimed: true },
   ];
   return (
-    <ScaledMock designWidth={1180} designHeight={760}>
+    <ScaledMock designWidth={1440} designHeight={900}>
       <Frame url="yourshop.siamsite.shop/inventory">
-        <div className="shop-skin h-full flex flex-col">
-          <ShopNav active="Home" />
-          <div className="p-6 flex-1">
-            <h1 className="text-xl font-bold s-fg flex items-center gap-2 mb-4">
-              <Icon name="archive" className="s-primary" /> คลังเว็บของคุณ
-            </h1>
-            <div className="grid grid-cols-3 gap-4">
-              {slots.map((s, i) => {
-                const tier = getTier(s.tier);
-                return (
-                  <div key={s.name} className="mock-tile mock-claim-cycle s-surface border s-border rounded-xl p-4 flex items-center gap-4" style={{ animationDelay: `${i * 0.7}s` }}>
-                    <span
-                      className="w-14 h-14 rounded-xl grid place-items-center shrink-0 border-2"
-                      style={{ backgroundColor: `${tier.color}14`, borderColor: tier.color, color: tier.color }}
+        <ShopShell active="Home">
+          <div className="space-y-4">
+            <div>
+              <h1 className="text-xl font-bold s-fg flex items-center gap-2">
+                <Icon name="archive" className="text-[20px] s-primary" />
+                INVENTORY
+              </h1>
+              <p className="s-fg-subtle text-xs mt-0.5">คลังเว็บ กดรับไอเท็มเข้าเกมได้ทุกเมื่อ</p>
+            </div>
+
+            <div className="s-surface rounded-2xl shadow-md border s-border overflow-hidden">
+              <div className="px-4 py-2.5 border-b s-border flex items-center gap-2">
+                <span className="text-[13px] font-bold s-fg">ไอเท็มของคุณ</span>
+                <span className="text-xs s-fg-subtle font-bold ml-auto">6 ชิ้น</span>
+              </div>
+              <div className="p-6 grid grid-cols-3 gap-4">
+                {slots.map((s, i) => {
+                  const tier = getTier(s.tier);
+                  return (
+                    <div
+                      key={s.name}
+                      className={`mock-tile s-surface border s-border rounded-xl p-4 flex items-center gap-4 ${s.claimed ? '' : 'mock-claim-cycle'}`}
+                      style={{ animationDelay: `${i * 1.5}s` }}
                     >
-                      <Icon name={tier.icon} className="text-xl" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block s-fg font-bold text-sm truncate">{s.name}</span>
-                      <span className="block text-[11px] font-bold mt-0.5" style={{ color: tier.color }}>{tier.label}</span>
-                    </span>
-                    {s.claimed ? (
-                      <span className="text-[11px] font-bold px-2.5 py-1 rounded-md bg-emerald-500/12 text-emerald-600 shrink-0">รับแล้ว</span>
-                    ) : (
-                      <span className="s-btn-buy text-[11px] font-bold px-3 py-2 rounded-lg shrink-0">รับเข้าเกม</span>
-                    )}
-                  </div>
-                );
-              })}
+                      <span
+                        className="w-14 h-14 rounded-xl grid place-items-center shrink-0 border-2"
+                        style={{ backgroundColor: `${tier.color}14`, borderColor: tier.color, color: tier.color }}
+                      >
+                        <Icon name={tier.icon} className="text-xl" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block s-fg font-bold text-sm truncate">{s.name}</span>
+                        <span className="block text-[11px] font-bold mt-0.5" style={{ color: tier.color }}>{tier.label}</span>
+                      </span>
+                      {s.claimed ? (
+                        <span className="text-[11px] font-bold px-2.5 py-1 rounded-md shrink-0" style={{ backgroundColor: 'rgb(var(--color-shop-primary) / 0.12)', color: 'rgb(var(--color-shop-primary-hover))' }}>
+                          รับแล้ว
+                        </span>
+                      ) : (
+                        <span className="mock-claim-btn s-btn-buy text-[11px] font-bold px-3 py-2 rounded-lg shrink-0">รับเข้าเกม</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </div>
+        </ShopShell>
       </Frame>
     </ScaledMock>
   );
@@ -661,50 +853,68 @@ export function InventoryMock() {
 
 export function TopupMock() {
   return (
-    <ScaledMock designWidth={1180} designHeight={760}>
+    <ScaledMock designWidth={1440} designHeight={900}>
       <Frame url="yourshop.siamsite.shop/topup">
-        <div className="shop-skin h-full flex flex-col">
-          <ShopNav active="Topup" />
-          <div className="p-6 flex-1">
-            <h1 className="text-xl font-bold s-fg flex items-center gap-2 mb-4">
-              <Icon name="coins" className="s-primary" /> เติมเงินเข้ากระเป๋า
-            </h1>
-            <div className="grid grid-cols-2 gap-6">
-              <div className="s-surface border s-border rounded-xl p-5 space-y-4">
-                <div className="flex gap-2">
-                  <span className="flex-1 py-2.5 rounded-lg text-center text-[13px] font-bold s-bg-primary text-white">PromptPay</span>
-                  <span className="flex-1 py-2.5 rounded-lg text-center text-[13px] font-bold border s-border s-fg-muted">TrueMoney อั่งเปา</span>
-                </div>
-                <span className="block text-[13px] font-bold s-fg-muted">เลือกจำนวนเงิน</span>
-                <div className="grid grid-cols-3 gap-2">
-                  {[50, 100, 300, 500, 1000, 2000].map((a, i) => (
-                    <span
-                      key={a}
-                      className="mock-tile mock-amount-cycle py-2.5 rounded-lg text-center text-[13px] font-bold border tabular-nums s-surface s-fg s-border"
-                      style={{ animationDelay: `${i * 0.5}s` }}
-                    >
-                      {a.toLocaleString()} ฿
-                    </span>
-                  ))}
-                </div>
-                <span className="s-btn-buy block w-full py-3 rounded-lg text-center text-sm font-bold">
-                  สร้าง QR ชำระเงิน
+        <ShopShell active="Topup">
+          <div className="space-y-4">
+            <div>
+              <h1 className="text-xl font-bold s-fg flex items-center gap-2">
+                <Icon name="coins" className="text-[20px] s-primary" />
+                TOPUP
+              </h1>
+              <p className="s-fg-subtle text-xs mt-0.5">เติมเงินเข้ากระเป๋าเพื่อซื้อไอเท็ม</p>
+            </div>
+
+            <div className="s-surface rounded-2xl shadow-md border s-border overflow-hidden">
+              <div className="px-4 py-2.5 border-b s-border flex gap-2">
+                <span className="px-3 py-1.5 rounded-lg text-[12px] font-bold text-white" style={{ background: 'rgb(var(--color-shop-primary))', boxShadow: '0 3px 0 rgb(var(--color-shop-primary-hover))' }}>
+                  PromptPay
+                </span>
+                <span className="px-3 py-1.5 rounded-lg text-[12px] font-bold border s-border s-surface s-primary">
+                  TrueMoney อั่งเปา
                 </span>
               </div>
-              <div className="s-surface border s-border rounded-xl p-5 flex flex-col items-center justify-center gap-4">
-                {/* A QR stand-in, not a scannable code: a real one on a marketing
-                    page would be a payment target nobody controls. */}
-                <span className="mock-qr relative w-40 h-40 rounded-xl grid place-items-center overflow-hidden" style={{ background: 'rgb(var(--color-fg))' }}>
-                  <Icon name="qrcode" className="text-6xl" style={{ color: 'rgb(var(--color-surface))' }} />
-                  <span className="mock-qr-scan" />
-                </span>
-                <span className="block text-sm font-bold s-fg">สแกนแล้วอัปโหลดสลิป</span>
-                <span className="block text-[13px] s-fg-muted text-center">ระบบตรวจสลิปอัตโนมัติ เงินเข้าภายในไม่กี่วินาที</span>
-                <span className="text-[11px] font-bold px-3 py-1.5 rounded-full bg-emerald-500/12 text-emerald-600">ตรวจสอบอัตโนมัติ 24 ชม.</span>
+
+              <div className="p-6 grid grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <span className="block text-[13px] font-bold s-fg">เลือกจำนวนเงิน</span>
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {[50, 100, 300, 500, 1000, 2000].map((a, i) => (
+                      <span
+                        key={a}
+                        className="mock-tile mock-amount-cycle py-3 rounded-lg text-center text-[13px] font-bold border tabular-nums s-surface s-fg s-border"
+                        style={{ animationDelay: `${i * 1.4}s` }}
+                      >
+                        {a.toLocaleString()} ฿
+                      </span>
+                    ))}
+                  </div>
+                  <span className="block text-[13px] font-bold s-fg pt-2">หรือระบุเอง</span>
+                  <span className="block w-full px-3 py-2.5 rounded-lg border s-border s-surface text-[13px] s-fg-subtle">
+                    กรอกจำนวนเงิน
+                  </span>
+                  <span className="s-btn-buy block w-full py-3 rounded-lg text-center text-sm font-bold">
+                    สร้าง QR ชำระเงิน
+                  </span>
+                </div>
+
+                <div className="s-surface-hover border s-border rounded-xl p-6 flex flex-col items-center justify-center gap-4">
+                  {/* A QR stand-in, not a scannable code: a real one on a marketing
+                      page would be a payment target nobody controls. */}
+                  <span className="mock-qr relative w-44 h-44 rounded-xl grid place-items-center overflow-hidden" style={{ background: 'rgb(var(--color-fg))' }}>
+                    <Icon name="qrcode" className="text-7xl" style={{ color: 'rgb(var(--color-surface))' }} />
+                    <span className="mock-qr-scan" />
+                  </span>
+                  <span className="block text-sm font-bold s-fg">สแกนแล้วอัปโหลดสลิป</span>
+                  <span className="mock-slip flex items-center gap-2 text-[12px] font-bold px-3 py-2 rounded-lg" style={{ backgroundColor: 'rgb(var(--color-shop-primary) / 0.12)', color: 'rgb(var(--color-shop-primary-hover))' }}>
+                    <Icon name="circle-check" className="text-[12px]" />
+                    ตรวจสลิปสำเร็จ เงินเข้าแล้ว
+                  </span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </ShopShell>
       </Frame>
     </ScaledMock>
   );
