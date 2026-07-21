@@ -148,7 +148,9 @@ function NavbarContent() {
           </div>
 
           <div className="hidden md:flex items-center gap-4">
-            <LanguageSwitcher />
+            {/* Not in /admin: the operator back office is Thai-only, and a
+                control that silently sends you elsewhere is worse than none. */}
+            {!pathname.startsWith('/admin') && <LanguageSwitcher />}
 
             <button onClick={toggleDark} className="text-muted-foreground hover:text-foreground transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-secondary cursor-pointer">
               <Icon name={isDark ? 'sun' : 'moon'} className={`text-sm`} />
@@ -224,7 +226,7 @@ function NavbarContent() {
           <div className="md:hidden flex items-center gap-3">
             {/* compact: flag + chevron only, so the mobile bar keeps room for
                 the theme toggle and the hamburger */}
-            <LanguageSwitcher compact />
+            {!pathname.startsWith('/admin') && <LanguageSwitcher compact />}
 
             <button onClick={toggleDark} className="text-muted-foreground w-8 h-8 flex items-center justify-center cursor-pointer">
               <Icon name={isDark ? 'sun' : 'moon'} className={`text-sm`} />

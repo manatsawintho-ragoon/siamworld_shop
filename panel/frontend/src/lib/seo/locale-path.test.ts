@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { localeOf, localePath, hasDirectCounterpart } from '@/lib/seo/locale-path';
+import {
+  localeOf,
+  localePath,
+  hasDirectCounterpart,
+  switchPath,
+  switchHasCounterpart,
+} from '@/lib/seo/locale-path';
 
 /**
  * Characterisation tests: these pin the behaviour that exists today so the
@@ -89,5 +95,53 @@ describe('hasDirectCounterpart', () => {
 
   it('is false for a landing page with no counterpart', () => {
     expect(hasDirectCounterpart('/lp/ไม่มีอยู่จริง', 'en')).toBe(false);
+  });
+});
+
+/**
+ * switchPath is what the navbar switcher actually calls. Its input is the
+ * UNPREFIXED path from next-intl's usePathname, and its output must stay
+ * unprefixed: the router adds the locale. A regression here silently sends
+ * users to /en/en/... or drops them on the hub from a page that exists.
+ */
+describe('switchPath', () => {
+  it('passes ordinary routes through untouched, in both directions', () => {
+    expect(switchPath('/terms', 'en')).toBe('/terms');
+    expect(switchPath('/terms', 'th')).toBe('/terms');
+    expect(switchPath('/dashboard/topup', 'en')).toBe('/dashboard/topup');
+    expect(switchPath('/', 'en')).toBe('/');
+  });
+
+  it('never prefixes the locale itself', () => {
+    expect(switchPath('/solutions', 'en')).not.toContain('/en/');
+  });
+
+  it('remaps landing slugs, which differ per language', () => {
+    expect(switchPath('/lp/ทางเลือกแทน-tebex', 'en')).toBe('/lp/tebex-alternative');
+    expect(switchPath('/lp/tebex-alternative', 'th')).toBe(
+      '/lp/' + encodeURIComponent('ทางเลือกแทน-tebex'),
+    );
+  });
+
+  it('falls back to the hub for a landing page with no counterpart', () => {
+    expect(switchPath('/lp/does-not-exist', 'th')).toBe('/solutions');
+    expect(switchPath('/lp/ไม่มีอยู่จริง', 'en')).toBe('/solutions');
+  });
+
+  it('strips query and hash', () => {
+    expect(switchPath('/solutions?utm=x', 'en')).toBe('/solutions');
+    expect(switchPath('/#pricing', 'en')).toBe('/');
+  });
+});
+
+describe('switchHasCounterpart', () => {
+  it('is true for ordinary routes, which now exist in both locales', () => {
+    expect(switchHasCounterpart('/terms', 'en')).toBe(true);
+    expect(switchHasCounterpart('/dashboard', 'en')).toBe(true);
+  });
+
+  it('tracks whether a landing page has a mapped twin', () => {
+    expect(switchHasCounterpart('/lp/ทางเลือกแทน-tebex', 'en')).toBe(true);
+    expect(switchHasCounterpart('/lp/does-not-exist', 'th')).toBe(false);
   });
 });

@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname } from '@/i18n/navigation';
 import { Icon } from '@/components/ui/icon';
 import { FlagTH, FlagEN } from '@/components/ui/flags';
-import { localeOf, localePath, hasDirectCounterpart, type Locale } from '@/lib/seo/locale-path';
+import { switchPath, switchHasCounterpart, type Locale } from '@/lib/seo/locale-path';
+import { useLocale } from 'next-intl';
 
 const LOCALES: { code: Locale; label: string; Flag: typeof FlagTH }[] = [
   { code: 'th', label: 'ไทย', Flag: FlagTH },
@@ -24,7 +25,7 @@ export default function LanguageSwitcher({ compact = false }: { compact?: boolea
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const active = localeOf(pathname);
+  const active = useLocale() as Locale;
   const ActiveFlag = active === 'en' ? FlagEN : FlagTH;
 
   useEffect(() => {
@@ -46,7 +47,15 @@ export default function LanguageSwitcher({ compact = false }: { compact?: boolea
   const choose = (code: Locale) => {
     setOpen(false);
     if (code === active) return;
-    router.push(localePath(pathname, code));
+    // next-intl's usePathname returns the path WITHOUT a locale prefix, and its
+    // router applies the target locale's prefix. switchPath therefore returns
+    // an unprefixed path and never adds '/en' itself: the locale option is what
+    // turns /terms into /en/terms.
+    //
+    // replace, not push: a language switch is a correction of the current view,
+    // not a step in history. Otherwise Back lands you on the same page in the
+    // language you just rejected.
+    router.replace(switchPath(pathname, code), { locale: code });
   };
 
   return (
@@ -78,10 +87,12 @@ export default function LanguageSwitcher({ compact = false }: { compact?: boolea
         >
           {LOCALES.map(({ code, label, Flag }) => {
             const isActive = code === active;
-            // Untranslated areas (dashboard, order, legal) still switch, but the
-            // menu says the destination is the home page instead of implying
-            // this page exists in the other language.
-            const direct = isActive || hasDirectCounterpart(pathname, code);
+            // Since the [locale] migration every customer route exists in both
+            // languages, so this is normally true. The exception is a landing
+            // page with no counterpart in the other language: that falls back to
+            // the solutions hub, and the menu labels it rather than pretending
+            // the page exists.
+            const direct = isActive || switchHasCounterpart(pathname, code);
             return (
               <button
                 key={code}
@@ -98,7 +109,7 @@ export default function LanguageSwitcher({ compact = false }: { compact?: boolea
                 ) : (
                   !direct && (
                     <span className="text-[11px] text-muted-foreground">
-                      {code === 'en' ? 'home' : 'หน้าแรก'}
+                      {code === 'en' ? 'guides' : 'รวมบริการ'}
                     </span>
                   )
                 )}

@@ -50,7 +50,44 @@ const EN_TO_TH_LANDING: Record<string, string> = Object.entries(TH_TO_EN_LANDING
   {} as Record<string, string>,
 );
 
-export type Locale = 'th' | 'en';
+export type { Locale } from '@/i18n/routing';
+import type { Locale } from '@/i18n/routing';
+
+/**
+ * Switcher path resolution for the next-intl world.
+ *
+ * Takes the UNPREFIXED pathname that next-intl's usePathname returns, and
+ * returns an unprefixed path for the target locale. The caller passes the
+ * locale to router.replace, which applies the prefix, so nothing here should
+ * ever add '/en' itself.
+ *
+ * After the [locale] migration every customer route exists in both languages,
+ * so the path normally passes through untouched. Landing pages are the one
+ * exception: their slugs are language-specific because the pages are separate
+ * content rather than translations.
+ */
+export function switchPath(pathname: string, target: Locale): string {
+  const path = pathname.split(/[?#]/)[0].replace(/\/+$/, '') || '/';
+
+  if (!path.startsWith('/lp/')) return path;
+
+  const slug = decodeURIComponent(path.slice('/lp/'.length));
+  const twin = target === 'en' ? TH_TO_EN_LANDING[slug] : EN_TO_TH_LANDING[slug];
+  if (!twin) return '/solutions';
+
+  return target === 'en' ? `/lp/${twin}` : `/lp/${encodeURIComponent(twin)}`;
+}
+
+/**
+ * Whether the switch lands on the equivalent page rather than a fallback. Used
+ * by the switcher to label a destination it cannot deliver honestly.
+ */
+export function switchHasCounterpart(pathname: string, target: Locale): boolean {
+  const path = pathname.split(/[?#]/)[0].replace(/\/+$/, '') || '/';
+  if (!path.startsWith('/lp/')) return true;
+  const slug = decodeURIComponent(path.slice('/lp/'.length));
+  return Boolean(target === 'en' ? TH_TO_EN_LANDING[slug] : EN_TO_TH_LANDING[slug]);
+}
 
 /** Which language a path currently renders in. */
 export function localeOf(pathname: string): Locale {
