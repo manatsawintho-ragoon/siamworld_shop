@@ -315,3 +315,267 @@
   .quest-line { transform: scaleX(1); transition: none; }
   .quest-node { transition: none; }
 }
+/* ══════════════════════════════════════════════════════════════════════
+   ADMIN PANEL DESIGN LAYER
+
+   The admin panel is an internal data tool, not a marketing surface. It
+   deliberately does not share the landing page's motion, gradients or large
+   playful radii. Everything here is scoped to `.admin-shell` (set on the admin
+   layout root) so none of it leaks into customer-facing pages, and so the
+   admin panel keeps its own neutral palette instead of following a customer
+   theme.
+
+   Amber is the single accent: active nav item, primary action, focus ring.
+   Nothing else is coloured unless the colour carries meaning (status, money,
+   destructive). That restraint is what keeps a screen full of numbers
+   readable.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.admin-shell {
+  --admin-radius: 10px;
+  --admin-radius-sm: 7px;
+  /* Row/---cell rhythm is defined once so every table and list on every page
+     lands on the same grid. */
+  --admin-cell-y: 0.75rem;
+  --admin-cell-x: 1rem;
+}
+
+/* No motion anywhere in the admin panel. The loading spinner is the single
+   exception: it is feedback, not decoration.
+
+   Framer Motion animates inline styles frame by frame and would ignore this
+   rule entirely, which is why the admin pages import it nowhere. */
+.admin-shell *:not(.animate-spin),
+.admin-shell *:not(.animate-spin)::before,
+.admin-shell *:not(.animate-spin)::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* ── Typography ────────────────────────────────────────────────────────
+   The old panel leaned on 9-10px uppercase text with wide letter-spacing for
+   nearly every label. It looked tidy in a mockup and was genuinely hard to
+   read at a glance, especially in Thai, which has no capital forms and gets
+   no benefit from `uppercase`. Sizes here start at 13px and stay sentence
+   case. */
+.admin-shell .admin-h1 {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-foreground);
+}
+@media (min-width: 640px) {
+  .admin-shell .admin-h1 { font-size: 1.5rem; line-height: 2rem; }
+}
+.admin-shell .admin-sub {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  line-height: 1.35rem;
+  color: var(--color-muted-foreground);
+}
+.admin-shell .admin-section-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-foreground);
+}
+/* Field label and column header share one look, so a form and a table read as
+   the same system. */
+.admin-shell .admin-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-secondary-foreground);
+  margin-bottom: 0.375rem;
+}
+.admin-shell .admin-meta {
+  font-size: 0.8125rem;
+  color: var(--color-muted-foreground);
+}
+.admin-shell .admin-num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* ── Surfaces ──────────────────────────────────────────────────────────── */
+.admin-shell .admin-card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--admin-radius);
+}
+.admin-shell .admin-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.admin-shell .admin-card-body { padding: 1rem; }
+@media (min-width: 640px) {
+  .admin-shell .admin-card-head { padding: 0.875rem 1.25rem; }
+  .admin-shell .admin-card-body { padding: 1.25rem; }
+}
+
+/* ── Tables ────────────────────────────────────────────────────────────
+   Below `md` every table collapses into one stacked card per row, with the
+   column header repeated per cell via `data-label`. That is the reason the
+   admin panel never scrolls sideways on a phone: there is no wide table left
+   to scroll. Each `<td>` must carry `data-label`; a cell with an empty
+   `data-label` (an actions cell, say) renders full width with no prefix. */
+.admin-shell .admin-table { width: 100%; border-collapse: collapse; text-align: left; }
+.admin-shell .admin-table thead th {
+  padding: 0.625rem var(--admin-cell-x);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-muted-foreground);
+  background: var(--color-secondary);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+.admin-shell .admin-table tbody tr { border-bottom: 1px solid var(--color-border); }
+.admin-shell .admin-table tbody tr:last-child { border-bottom: 0; }
+.admin-shell .admin-table td {
+  padding: var(--admin-cell-y) var(--admin-cell-x);
+  font-size: 0.875rem;
+  color: var(--color-foreground);
+  vertical-align: middle;
+}
+@media (hover: hover) {
+  .admin-shell .admin-table tbody tr:hover { background: var(--color-secondary); }
+}
+
+@media (max-width: 767px) {
+  .admin-shell .admin-table,
+  .admin-shell .admin-table tbody,
+  .admin-shell .admin-table tr,
+  .admin-shell .admin-table td { display: block; width: 100%; }
+  .admin-shell .admin-table thead { display: none; }
+  .admin-shell .admin-table tbody tr {
+    border: 1px solid var(--color-border);
+    border-radius: var(--admin-radius-sm);
+    padding: 0.75rem 0.875rem;
+    margin-bottom: 0.625rem;
+  }
+  .admin-shell .admin-table tbody tr:last-child { margin-bottom: 0; }
+  .admin-shell .admin-table td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.3125rem 0;
+    text-align: right;
+  }
+  .admin-shell .admin-table td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    text-align: left;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-muted-foreground);
+  }
+  /* Cells that are their own block (an actions row, a wide summary) opt out of
+     the label/value split by leaving `data-label` empty. */
+  .admin-shell .admin-table td[data-label='']::before { display: none; }
+  .admin-shell .admin-table td[data-label=''] {
+    display: block;
+    text-align: left;
+    padding-top: 0.625rem;
+  }
+}
+
+/* ── Controls ──────────────────────────────────────────────────────────
+   44px minimum height on every interactive control: comfortable with a mouse,
+   and an actual thumb target on a phone. */
+.admin-shell .admin-input,
+.admin-shell .admin-select,
+.admin-shell .admin-textarea {
+  width: 100%;
+  min-height: 2.5rem;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--admin-radius-sm);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-foreground);
+  outline: none;
+}
+.admin-shell .admin-textarea { min-height: 6rem; resize: vertical; }
+.admin-shell .admin-input::placeholder,
+.admin-shell .admin-textarea::placeholder { color: var(--color-muted-foreground); }
+.admin-shell .admin-input:focus,
+.admin-shell .admin-select:focus,
+.admin-shell .admin-textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+.admin-shell .admin-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  padding: 0 0.875rem;
+  border-radius: var(--admin-radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.admin-shell .admin-btn:hover { background: var(--color-secondary); }
+.admin-shell .admin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.admin-shell .admin-btn-primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+  font-weight: 600;
+}
+.admin-shell .admin-btn-primary:hover { background: color-mix(in srgb, var(--color-primary) 88%, black); }
+.admin-shell .admin-btn-danger {
+  background: var(--color-background);
+  border-color: color-mix(in srgb, var(--color-destructive) 40%, transparent);
+  color: var(--color-destructive);
+}
+.admin-shell .admin-btn-danger:hover { background: color-mix(in srgb, var(--color-destructive) 8%, transparent); }
+.admin-shell .admin-btn-sm { min-height: 2rem; padding: 0 0.625rem; font-size: 0.8125rem; }
+
+.admin-shell .admin-btn:focus-visible,
+.admin-shell .admin-input:focus-visible,
+.admin-shell a:focus-visible,
+.admin-shell button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Small neutral tag for counts and inline facts. Status colours live in
+   StatusBadge, not here, so there is one source of truth for them. */
+.admin-shell .admin-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-secondary-foreground);
+  white-space: nowrap;
+}
+
+/* Toolbars above a list wrap instead of scrolling, and every child stretches
+   to full width on a phone so nothing ends up half off-screen. */
+.admin-shell .admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  align-items: center;
+}
+@media (max-width: 639px) {
+  .admin-shell .admin-toolbar > * { flex: 1 1 100%; }
+}

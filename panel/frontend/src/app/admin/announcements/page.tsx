@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import api from '@/lib/api';
-import { Megaphone, Plus, Pencil, Trash2, Eye, EyeOff, Loader2, X, List, Wand2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Eye, EyeOff, Loader2, X, List, Wand2 } from 'lucide-react';
 
 interface Announcement {
   id: number;
@@ -185,19 +185,13 @@ export default function AnnouncementsPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-5">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-orange-100 flex items-center justify-center">
-            <Megaphone className="w-5 h-5 text-orange-600" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold">ประกาศอัพเดท</h1>
-            <p className="text-xs text-muted-foreground">เผยแพร่แล้วจะเด้งเป็น popup ในหลังบ้านของทุกร้าน</p>
-          </div>
+    <div className="max-w-4xl space-y-4">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="admin-h1">ประกาศอัพเดท</h2>
+          <p className="admin-sub">ประกาศที่เผยแพร่จะแสดงเป็น popup ในหลังบ้านของทุกร้าน</p>
         </div>
-        <button onClick={() => { setErr(''); setEditing({ ...blank }); }}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-bold hover:brightness-110">
+        <button onClick={() => { setErr(''); setEditing({ ...blank }); }} className="admin-btn admin-btn-primary">
           <Plus className="w-4 h-4" /> สร้างประกาศ
         </button>
       </div>
@@ -211,17 +205,17 @@ export default function AnnouncementsPage() {
           {items.map(a => {
             const lm = levelMeta(a.level);
             return (
-              <div key={a.id} className="rounded-xl border border-border bg-card p-4">
+              <div key={a.id} className="admin-card p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${lm.cls}`}>{lm.label}</span>
+                      <span className={`text-[12px] font-medium px-2 py-0.5 rounded-full ${lm.cls}`}>{lm.label}</span>
                       {a.is_published
-                        ? <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">เผยแพร่แล้ว</span>
-                        : <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">ฉบับร่าง</span>}
-                      <h3 className="font-bold text-sm truncate">{a.title}</h3>
+                        ? <span className="text-[12px] font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">เผยแพร่แล้ว</span>
+                        : <span className="text-[12px] font-medium px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">ฉบับร่าง</span>}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1.5 whitespace-pre-line line-clamp-3">{a.body}</p>
+                    <h3 className="font-medium text-[15px] text-foreground mt-1.5 break-words">{a.title}</h3>
+                    <p className="text-[13px] text-muted-foreground mt-1 whitespace-pre-line line-clamp-3">{a.body}</p>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <button title={a.is_published ? 'ยกเลิกเผยแพร่' : 'เผยแพร่'} onClick={() => togglePublish(a)}
@@ -246,48 +240,47 @@ export default function AnnouncementsPage() {
           onMouseDown={e => { downOnBackdrop.current = e.target === e.currentTarget; }}
           onClick={e => { if (downOnBackdrop.current && e.target === e.currentTarget) setEditing(null); }}
         >
-          <div className="bg-card rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-5">
+          <div className="admin-shell bg-card border border-border rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold">{editing.id ? 'แก้ไขประกาศ' : 'สร้างประกาศ'}</h2>
               <button onClick={() => setEditing(null)} className="p-1 text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
             </div>
-            {err && <div className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-3">{err}</div>}
+            {err && <div className="text-[13px] text-destructive bg-destructive/8 border border-destructive/25 rounded-md px-3 py-2 mb-3">{err}</div>}
 
             <div className="grid md:grid-cols-2 gap-5">
               {/* ── Form ── */}
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground">หัวข้อ</label>
-                  <input value={editing.title} maxLength={200} onChange={e => setEditing({ ...editing, title: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" placeholder="เช่น อัพเดทแดชบอร์ดใหม่" />
+                  <label htmlFor="ann-title" className="admin-label">หัวข้อ</label>
+                  <input id="ann-title" value={editing.title} maxLength={200} onChange={e => setEditing({ ...editing, title: e.target.value })}
+                    className="admin-input" placeholder="เช่น อัพเดทแดชบอร์ดใหม่" />
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-bold text-muted-foreground">เนื้อหา</label>
+                    <label htmlFor="ann-body" className="admin-label mb-0">เนื้อหา</label>
                     <div className="flex items-center gap-1">
-                      <button type="button" onClick={addBullet}
-                        className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-md border border-border text-muted-foreground hover:bg-secondary">
+                      <button type="button" onClick={addBullet} className="admin-btn admin-btn-sm">
                         <List className="w-3.5 h-3.5" /> หัวข้อย่อย
                       </button>
-                      <button type="button" onClick={runTidy}
-                        className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-md border border-border text-muted-foreground hover:bg-secondary">
+                      <button type="button" onClick={runTidy} className="admin-btn admin-btn-sm">
                         <Wand2 className="w-3.5 h-3.5" /> จัดระเบียบ
                       </button>
                     </div>
                   </div>
-                  <textarea ref={taRef} value={editing.body} rows={9}
+                  <textarea id="ann-body" ref={taRef} value={editing.body} rows={9}
                     onKeyDown={onBodyKeyDown}
                     onChange={e => setEditing({ ...editing, body: e.target.value })}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm resize-y font-mono leading-relaxed"
-                    placeholder={'พิมพ์เนื้อหา…\nEnter หลัง "• " จะขึ้น bullet ใหม่อัตโนมัติ\nกด Tab เพื่อเยื้อง'} />
-                  <p className="text-[11px] text-muted-foreground mt-1">Enter ต่อ bullet อัตโนมัติ · Tab = เยื้อง · ปุ่มจัดระเบียบช่วยจัด spacing ให้</p>
+                    className="admin-textarea font-mono leading-relaxed"
+                    placeholder={'พิมพ์เนื้อหา\nEnter หลัง "• " จะขึ้น bullet ใหม่อัตโนมัติ\nกด Tab เพื่อเยื้อง'} />
+                  <p className="admin-meta mt-1.5">Enter ต่อ bullet อัตโนมัติ, Tab เยื้อง, ปุ่มจัดระเบียบช่วยจัด spacing ให้</p>
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground">ระดับ</label>
+                  <span className="admin-label">ระดับ</span>
                   <div className="mt-1 flex gap-2">
                     {LEVELS.map(l => (
                       <button key={l.value} type="button" onClick={() => setEditing({ ...editing, level: l.value })}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${editing.level === l.value ? l.cls + ' border-transparent' : 'border-border text-muted-foreground'}`}>
+                        aria-pressed={editing.level === l.value}
+                        className={`admin-btn admin-btn-sm ${editing.level === l.value ? l.cls + ' border-transparent' : ''}`}>
                         {l.label}
                       </button>
                     ))}
@@ -297,19 +290,18 @@ export default function AnnouncementsPage() {
 
               {/* ── Live preview ── */}
               <div>
-                <label className="text-xs font-bold text-muted-foreground">ตัวอย่างที่ร้านจะเห็น (realtime)</label>
-                <div className="mt-1 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 p-5 flex items-start justify-center min-h-[280px]">
+                <span className="admin-label">ตัวอย่างที่ร้านจะเห็น</span>
+                <div className="rounded-md border border-border bg-secondary p-4 flex items-start justify-center min-h-[260px]">
                   <PreviewCard title={editing.title} body={editing.body} level={editing.level} />
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-2 pt-4 mt-1">
-              <p className="text-[11px] text-muted-foreground">บันทึกแล้วยังเป็นฉบับร่าง กดปุ่มรูปตา (เผยแพร่) เพื่อส่งให้ทุกร้าน</p>
-              <div className="flex gap-2">
-                <button onClick={() => setEditing(null)} className="px-4 py-2 rounded-lg text-sm font-bold text-muted-foreground hover:bg-secondary">ยกเลิก</button>
-                <button onClick={save} disabled={saving}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-bold hover:brightness-110 disabled:opacity-60">
+            <div className="flex items-center justify-between gap-3 flex-wrap pt-4 mt-1 border-t border-border">
+              <p className="admin-meta">บันทึกแล้วยังเป็นฉบับร่าง กดปุ่มรูปตาเพื่อเผยแพร่ให้ทุกร้าน</p>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <button onClick={() => setEditing(null)} className="admin-btn flex-1 sm:flex-none">ยกเลิก</button>
+                <button onClick={save} disabled={saving} className="admin-btn admin-btn-primary flex-1 sm:flex-none">
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />} บันทึก
                 </button>
               </div>

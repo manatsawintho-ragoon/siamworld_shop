@@ -5,10 +5,6 @@ import { useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import { SkeletonTable } from '@/components/SkeletonLoader';
 import EmptyState from '@/components/EmptyState';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { motion, AnimatePresence } from 'framer-motion';
 import { activityLabel } from '@/lib/activityLabels';
 import { Icon, type IconName } from '@/components/ui/icon';
 
@@ -18,17 +14,20 @@ interface AuditLog {
   display_name: string; email: string;
 }
 
-const ACTION_MAP: Record<string, { label: string; variant: string; colorClass: string; icon: string }> = {
-  wallet_credit:        { label: 'เพิ่มเงิน',      variant: 'success',     colorClass: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20', icon: 'arrow-down' },
-  wallet_debit:         { label: 'หักเงิน',        variant: 'destructive', colorClass: 'bg-rose-500/10 text-rose-600 border-rose-500/20', icon: 'arrow-up' },
-  remove_subscription:  { label: 'ลบร้านค้า',     variant: 'destructive', colorClass: 'bg-rose-500/10 text-rose-600 border-rose-500/20', icon: 'trash' },
-  update_settings:      { label: 'แก้ไขตั้งค่า',  variant: 'default',     colorClass: 'bg-primary/10 text-primary border-primary/20', icon: 'gear' },
-  verify_slip:          { label: 'ยืนยันสลิป',    variant: 'success',     colorClass: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20', icon: 'circle-check' },
-  reject_slip:          { label: 'ปฏิเสธสลิป',    variant: 'warning',     colorClass: 'bg-amber-500/10 text-amber-600 border-amber-500/20', icon: 'circle-xmark' },
-  edit_user:            { label: 'แก้ไขผู้ใช้',   variant: 'outline',     colorClass: 'bg-blue-500/10 text-blue-600 border-blue-500/20', icon: 'user-pen' },
-  update_mc_ip:         { label: 'แก้ไข MC IP',   variant: 'outline',     colorClass: 'bg-slate-500/10 text-slate-600 border-slate-500/20', icon: 'shield-halved' },
-  page_view:            { label: 'เปิดหน้า',      variant: 'secondary',   colorClass: 'bg-violet-500/10 text-violet-600 border-violet-500/20', icon: 'eye' },
-  feature_click:        { label: 'กดใช้งาน',     variant: 'secondary',   colorClass: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20', icon: 'hand-pointer' },
+/* Action label only. The old map also carried a colour per action, which put
+   ten competing tints in one dense log and made scanning harder rather than
+   easier; the action name already says what happened. */
+const ACTION_LABEL: Record<string, string> = {
+  wallet_credit:       'เพิ่มเงิน',
+  wallet_debit:        'หักเงิน',
+  remove_subscription: 'ลบร้านค้า',
+  update_settings:     'แก้ไขตั้งค่า',
+  verify_slip:         'ยืนยันสลิป',
+  reject_slip:         'ปฏิเสธสลิป',
+  edit_user:           'แก้ไขผู้ใช้',
+  update_mc_ip:        'แก้ไข MC IP',
+  page_view:           'เปิดหน้า',
+  feature_click:       'กดใช้งาน',
 };
 
 const FILTERS = [
@@ -72,184 +71,111 @@ function Content() {
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div className="space-y-6 pb-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-          <div className="flex items-center gap-4 mb-1">
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg bg-secondary/50 hover:bg-secondary transition-all" asChild>
-              <Link href="/admin">
-                <Icon name="arrow-left" className="text-xs" />
-              </Link>
-            </Button>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              Audit Logs <span className="text-primary text-xl opacity-20">/</span>
-            </h1>
-          </div>
-          <p className="text-muted-foreground font-medium text-sm flex items-center gap-2">
-            <Icon name="clock-rotate-left" className="text-primary text-xs" />
-            บันทึกเหตุการณ์ การกระทำ และการใช้งานของผู้ใช้ (ใคร ทำอะไร เมื่อไหร่)
-          </p>
-        </motion.div>
-        
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-2.5 bg-card border border-border p-1.5 rounded-xl shadow-sm">
-           <div className="px-3 py-1.5">
-             <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">Total Logs</p>
-             <p className="text-lg font-bold text-foreground leading-none">{total.toLocaleString('th-TH')}</p>
-           </div>
-           <div className="w-px h-6 bg-border/60" />
-           <Button onClick={load} variant="ghost" size="icon" className="h-9 w-9 rounded-lg hover:bg-secondary transition-all active:scale-95">
-             <Icon name="arrows-rotate" className="text-xs" />
-           </Button>
-        </motion.div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="flex items-center gap-1.5 bg-card border border-border p-1.5 rounded-xl shadow-sm w-fit">
-          {FILTERS.map((f) => (
-            <Button
-              key={f.key}
-              onClick={() => selectFilter(f.key)}
-              variant={category === f.key ? 'default' : 'ghost'}
-              size="sm"
-              className="h-8 rounded-lg text-xs font-bold"
-            >
-              <Icon name={f.icon as IconName} className="mr-1.5 text-[10px]" />{f.label}
-            </Button>
-          ))}
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="admin-h1">บันทึกเหตุการณ์</h2>
+          <p className="admin-sub">ใคร ทำอะไร เมื่อไหร่ ทั้งหมด {total.toLocaleString('th-TH')} รายการ</p>
         </div>
-        {q && (
-          <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-xl px-3 py-2 w-fit">
-            <Icon name="filter" className="text-primary text-[10px]" />
-            <span className="text-xs font-bold text-primary">กรอง: <span className="font-mono">{q}</span></span>
-            <Link href="/admin/audit-logs" className="text-primary/60 hover:text-primary transition-colors">
-              <Icon name="xmark" className="text-xs" />
-            </Link>
-          </div>
-        )}
+        <button onClick={load} className="admin-btn" disabled={loading}>
+          <Icon name="arrows-rotate" className={loading ? 'animate-spin' : ''} /> รีเฟรช
+        </button>
       </div>
 
-      {/* List */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-        {loading ? (
-          <Card className="rounded-3xl border-border shadow-sm overflow-hidden bg-white dark:bg-card">
-            <SkeletonTable rows={10} />
-          </Card>
-        ) : logs.length === 0 ? (
-          <Card className="rounded-3xl border-border shadow-sm p-16 bg-white dark:bg-card">
-            <EmptyState icon="clock-rotate-left" title="ไม่พบประวัติการใช้งาน" description="ยังไม่มีการบันทึกกิจกรรมใดๆ ในขณะนี้" />
-          </Card>
-        ) : (
-          <Card className="rounded-3xl border-border shadow-sm overflow-hidden bg-white dark:bg-card">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[1000px]">
-                <thead>
-                  <tr className="bg-secondary/30">
-                    <th className="px-6 py-4 text-[9px] font-bold text-muted-foreground uppercase tracking-widest border-b border-border/60">วัน-เวลา</th>
-                    <th className="px-6 py-4 text-[9px] font-bold text-muted-foreground uppercase tracking-widest border-b border-border/60">ผู้ดำเนินการ</th>
-                    <th className="px-6 py-4 text-[9px] font-bold text-muted-foreground uppercase tracking-widest border-b border-border/60 text-center">กิจกรรม</th>
-                    <th className="px-6 py-4 text-[9px] font-bold text-muted-foreground uppercase tracking-widest border-b border-border/60">รายละเอียด</th>
-                    <th className="px-6 py-4 text-[9px] font-bold text-muted-foreground uppercase tracking-widest border-b border-border/60 text-right">IP Address</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60">
-                  <AnimatePresence mode="popLayout">
-                    {logs.map((log, idx) => {
-                      const act = ACTION_MAP[log.action] || { label: log.action, variant: 'secondary', colorClass: 'bg-secondary text-muted-foreground', icon: 'circle-info' };
-                      return (
-                        <motion.tr 
-                          key={log.id} 
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: idx * 0.02 }}
-                          className="hover:bg-secondary/20 transition-all duration-300 group"
-                        >
-                          <td className="px-6 py-4">
-                            <p className="text-xs font-bold text-foreground tracking-tight">
-                              {new Date(log.created_at).toLocaleDateString('th-TH', { dateStyle: 'medium' })}
-                            </p>
-                            <p className="text-[9px] font-bold text-muted-foreground mt-0.5 uppercase tracking-wider">
-                              {new Date(log.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                            </p>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-[9px] font-bold text-muted-foreground border border-border group-hover:border-primary/30 transition-all">
-                                {log.display_name?.charAt(0) || 'S'}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-xs font-bold text-foreground truncate max-w-[150px] tracking-tight group-hover:text-primary transition-colors">{log.display_name || 'System'}</p>
-                                <p className="text-[9px] font-bold text-muted-foreground truncate max-w-[150px] mt-0.5 opacity-60">{log.email || 'auto-trigger'}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <Badge className={`px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest border-none rounded-md shadow-sm ${act.colorClass}`}>
-                              <Icon name={act.icon as IconName} className="mr-1.5" />
-                              {act.label}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-4">
-                            <p className="text-[11px] text-foreground/80 leading-relaxed line-clamp-2 max-w-[350px] font-semibold tracking-tight">
-                              {log.category === 'activity' ? activityLabel(log.action, log.details) : log.details}
-                            </p>
-                            {log.category === 'activity' && (
-                              <p className="text-[9px] font-mono text-muted-foreground/60 truncate max-w-[350px] mt-0.5">{log.details}</p>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <Badge variant="outline" className="font-mono text-[9px] font-bold border-border bg-secondary/30 px-2 py-0.5 rounded-lg text-muted-foreground/80">
-                              {log.ip_address || '-'}
-                            </Badge>
-                          </td>
-                        </motion.tr>
-                      );
-                    })}
-                  </AnimatePresence>
-                </tbody>
-              </table>
-            </div>
+      <div className="admin-card admin-card-body">
+        <div className="admin-toolbar">
+          <div className="flex gap-1.5" role="group" aria-label="กรองประเภทเหตุการณ์">
+            {FILTERS.map(f => (
+              <button
+                key={f.key}
+                onClick={() => selectFilter(f.key)}
+                aria-pressed={category === f.key}
+                className={`admin-btn admin-btn-sm flex-1 ${category === f.key ? 'admin-btn-primary' : ''}`}
+              >
+                <Icon name={f.icon as IconName} className="text-[13px]" />{f.label}
+              </button>
+            ))}
+          </div>
+          {q && (
+            <span className="admin-chip sm:ml-auto">
+              <span className="font-mono">{q}</span>
+              <Link href="/admin/audit-logs" aria-label="ล้างตัวกรอง" className="text-muted-foreground hover:text-foreground">
+                <Icon name="xmark" className="text-[11px]" />
+              </Link>
+            </span>
+          )}
+        </div>
+      </div>
 
-            {pages > 1 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-border/60 bg-secondary/10 gap-4">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                  Showing <span className="text-foreground">{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)}</span> of <span className="text-foreground">{total}</span>
-                </p>
-                <div className="flex items-center gap-2.5 bg-background border border-border p-1.5 rounded-2xl shadow-sm">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    disabled={page <= 1} 
-                    onClick={() => setPage(p => Math.max(1, p - 1))} 
-                    className="h-8 w-8 rounded-lg active:scale-95 disabled:opacity-30 transition-all"
-                  >
-                    <Icon name="chevron-left" className="text-[10px]" />
-                  </Button>
-                  <div className="px-3 flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-foreground">{page}</span>
-                    <span className="text-[9px] font-bold text-muted-foreground opacity-40 uppercase tracking-widest">of</span>
-                    <span className="text-xs font-bold text-muted-foreground/60">{pages}</span>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    disabled={page >= pages} 
-                    onClick={() => setPage(p => Math.min(pages, p + 1))} 
-                    className="h-8 w-8 rounded-lg active:scale-95 disabled:opacity-30 transition-all"
-                  >
-                    <Icon name="chevron-right" className="text-[10px]" />
-                  </Button>
-                </div>
+      {loading ? (
+        <div className="admin-card"><SkeletonTable rows={10} /></div>
+      ) : logs.length === 0 ? (
+        <div className="admin-card p-10">
+          <EmptyState icon="clock-rotate-left" title="ไม่พบประวัติการใช้งาน" description="ยังไม่มีการบันทึกกิจกรรม" />
+        </div>
+      ) : (
+        <div className="admin-card">
+          <div className="p-3 md:p-0">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>วัน-เวลา</th>
+                  <th>ผู้ดำเนินการ</th>
+                  <th>กิจกรรม</th>
+                  <th>รายละเอียด</th>
+                  <th className="text-right">IP</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.map(log => {
+                  const label = ACTION_LABEL[log.action] || log.action;
+                  const detail = log.category === 'activity' ? activityLabel(log.action, log.details) : log.details;
+                  return (
+                    <tr key={log.id}>
+                      <td data-label="วัน-เวลา" className="admin-meta whitespace-nowrap">
+                        {new Date(log.created_at).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'medium' })}
+                      </td>
+                      <td data-label="ผู้ดำเนินการ">
+                        <span className="block text-foreground">{log.display_name || 'ระบบ'}</span>
+                        <span className="block admin-meta break-all">{log.email || 'auto-trigger'}</span>
+                      </td>
+                      <td data-label="กิจกรรม"><span className="admin-chip">{label}</span></td>
+                      <td data-label="รายละเอียด" className="md:max-w-[360px]">
+                        <span className="block text-[14px] text-foreground break-words">{detail}</span>
+                        {log.category === 'activity' && (
+                          <span className="block admin-meta font-mono break-all mt-0.5">{log.details}</span>
+                        )}
+                      </td>
+                      <td data-label="IP" className="admin-meta font-mono md:text-right">{log.ip_address || '-'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {pages > 1 && (
+            <div className="flex items-center justify-between gap-3 flex-wrap px-4 py-3 border-t border-border">
+              <p className="admin-meta">
+                แสดง {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, total)} จาก {total} รายการ
+              </p>
+              <div className="flex items-center gap-2">
+                <button className="admin-btn admin-btn-sm" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>
+                  <Icon name="chevron-left" className="text-[11px]" /> ก่อนหน้า
+                </button>
+                <span className="admin-meta admin-num">{page} / {pages}</span>
+                <button className="admin-btn admin-btn-sm" disabled={page >= pages} onClick={() => setPage(p => Math.min(pages, p + 1))}>
+                  ถัดไป <Icon name="chevron-right" className="text-[11px]" />
+                </button>
               </div>
-            )}
-          </Card>
-        )}
-      </motion.div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 export default function AuditLogsPage() {
-  return <Suspense fallback={<div className="p-8"><SkeletonTable rows={10} /></div>}><Content /></Suspense>;
+  return <Suspense fallback={<div className="p-4"><SkeletonTable rows={10} /></div>}><Content /></Suspense>;
 }

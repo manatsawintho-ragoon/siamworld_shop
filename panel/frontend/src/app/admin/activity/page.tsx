@@ -4,12 +4,8 @@ import Link from 'next/link';
 import api from '@/lib/api';
 import { SkeletonTable } from '@/components/SkeletonLoader';
 import EmptyState from '@/components/EmptyState';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { motion } from 'framer-motion';
 import { PATH_LABELS, FEATURE_LABELS } from '@/lib/activityLabels';
-import { Icon, type IconName } from '@/components/ui/icon';
+import { Icon } from '@/components/ui/icon';
 
 interface PageRow { path: string; views: number; users: number; }
 interface FeatureRow { feature: string; clicks: number; users: number; }
@@ -35,26 +31,67 @@ function fromDays(days: number): string {
   return d.toISOString().slice(0, 19).replace('T', ' ');
 }
 
+/** Proportion bar. Static width, no transition: it is a reading aid for
+ *  ranking rows against each other, not an effect. */
 function Bar({ value, max }: { value: number; max: number }) {
-  const pct = max > 0 ? Math.max(4, Math.round((value / max) * 100)) : 0;
+  const pct = max > 0 ? Math.max(3, Math.round((value / max) * 100)) : 0;
   return (
-    <div className="w-full h-1.5 rounded-full bg-secondary/60 overflow-hidden">
-      <div className="h-full rounded-full bg-primary/70" style={{ width: `${pct}%` }} />
+    <div className="w-full h-1 rounded-full bg-secondary overflow-hidden" aria-hidden="true">
+      <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
     </div>
   );
 }
 
-function StatCard({ icon, label, value }: { icon: IconName; label: string; value: number }) {
+function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <Card className="rounded-2xl border-border shadow-sm p-5 bg-white dark:bg-card flex items-center gap-4">
-      <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-        <Icon name={icon} />
+    <div className="admin-card p-3.5">
+      <p className="text-[13px] text-muted-foreground">{label}</p>
+      <p className="admin-num text-xl font-semibold text-foreground mt-1">{value.toLocaleString('th-TH')}</p>
+    </div>
+  );
+}
+
+/** One ranked list. Pages and features differ only in their labels, so they
+ *  share this component rather than duplicating the row markup. */
+function HotspotList({
+  title, rows, emptyText,
+}: {
+  title: string;
+  rows: { key: string; label: string; raw: string; count: number; users: number }[];
+  emptyText: string;
+}) {
+  const max = rows[0]?.count || 0;
+  return (
+    <section className="admin-card">
+      <div className="admin-card-head">
+        <h3 className="admin-section-title">{title}</h3>
       </div>
-      <div>
-        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-1">{label}</p>
-        <p className="text-2xl font-bold text-foreground leading-none">{value.toLocaleString('th-TH')}</p>
-      </div>
-    </Card>
+      {rows.length === 0 ? (
+        <p className="admin-meta text-center py-8">{emptyText}</p>
+      ) : (
+        <ul className="divide-y divide-border">
+          {rows.map(r => (
+            <li key={r.key}>
+              <Link href={detailLink(r.raw)} className="block px-4 py-3 hover:bg-secondary">
+                <div className="flex items-baseline justify-between gap-3 mb-1.5">
+                  <span className="min-w-0">
+                    <span className="block text-[14px] font-medium text-foreground truncate">{r.label}</span>
+                    <span className="block admin-meta font-mono truncate">{r.raw}</span>
+                  </span>
+                  <span className="flex items-baseline gap-2.5 shrink-0">
+                    <span className="admin-meta admin-num">{r.users} คน</span>
+                    <span className="admin-num text-[15px] font-semibold text-foreground">
+                      {r.count.toLocaleString('th-TH')}
+                    </span>
+                  </span>
+                </div>
+                <Bar value={r.count} max={max} />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -73,125 +110,66 @@ function Content() {
 
   useEffect(() => { load(); }, [load]);
 
-  const maxViews = data?.pages?.[0]?.views || 0;
-  const maxClicks = data?.features?.[0]?.clicks || 0;
-
   return (
-    <div className="space-y-6 pb-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-          <div className="flex items-center gap-4 mb-1">
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg bg-secondary/50 hover:bg-secondary transition-all" asChild>
-              <Link href="/admin"><Icon name="arrow-left" className="text-xs" /></Link>
-            </Button>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              พฤติกรรมการใช้งาน <span className="text-primary text-xl opacity-20">/</span>
-            </h1>
-          </div>
-          <p className="text-muted-foreground font-medium text-sm flex items-center gap-2">
-            <Icon name="fire" className="text-primary text-xs" />
-            หน้าและฟีเจอร์ที่ลูกค้าใช้งานมากที่สุด (hotspots) ในแผงควบคุม
-          </p>
-        </motion.div>
-
-        <div className="flex items-center gap-1.5 bg-card border border-border p-1.5 rounded-xl shadow-sm">
-          {RANGES.map((r) => (
-            <Button
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="admin-h1">พฤติกรรมการใช้งาน</h2>
+          <p className="admin-sub">หน้าและฟีเจอร์ที่ลูกค้าใช้มากที่สุดในแผงควบคุม</p>
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {RANGES.map(r => (
+            <button
               key={r.days}
               onClick={() => setDays(r.days)}
-              variant={days === r.days ? 'default' : 'ghost'}
-              size="sm"
-              className="h-8 rounded-lg text-xs font-bold"
+              aria-pressed={days === r.days}
+              className={`admin-btn admin-btn-sm ${days === r.days ? 'admin-btn-primary' : ''}`}
             >
               {r.label}
-            </Button>
+            </button>
           ))}
-          <div className="w-px h-6 bg-border/60" />
-          <Button onClick={load} variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-secondary transition-all active:scale-95">
-            <Icon name="arrows-rotate" className="text-xs" />
-          </Button>
+          <button onClick={load} className="admin-btn admin-btn-sm" disabled={loading} aria-label="รีเฟรช">
+            <Icon name="arrows-rotate" className={loading ? 'animate-spin text-[13px]' : 'text-[13px]'} />
+          </button>
         </div>
       </div>
 
-      {/* Totals */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard icon="eye" label="Page Views" value={data?.totals.totalViews || 0} />
-        <StatCard icon="hand-pointer" label="Feature Clicks" value={data?.totals.totalClicks || 0} />
-        <StatCard icon="users" label="ผู้ใช้ที่ active" value={data?.totals.activeUsers || 0} />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <StatCard label="จำนวนการเปิดหน้า" value={data?.totals.totalViews || 0} />
+        <StatCard label="จำนวนการกดใช้ฟีเจอร์" value={data?.totals.totalClicks || 0} />
+        <StatCard label="ผู้ใช้ที่มีการเคลื่อนไหว" value={data?.totals.activeUsers || 0} />
       </div>
 
       {loading ? (
-        <Card className="rounded-3xl border-border shadow-sm overflow-hidden bg-white dark:bg-card"><SkeletonTable rows={8} /></Card>
+        <div className="admin-card"><SkeletonTable rows={8} /></div>
       ) : !data || (data.pages.length === 0 && data.features.length === 0) ? (
-        <Card className="rounded-3xl border-border shadow-sm p-16 bg-white dark:bg-card">
+        <div className="admin-card p-10">
           <EmptyState icon="fire" title="ยังไม่มีข้อมูลการใช้งาน" description="ยังไม่มีการบันทึกการเคลื่อนไหวในช่วงเวลานี้" />
-        </Card>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Top pages */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <Card className="rounded-3xl border-border shadow-sm overflow-hidden bg-white dark:bg-card">
-              <div className="px-6 py-4 border-b border-border/60 bg-secondary/20 flex items-center gap-2.5">
-                <Icon name="eye" className="text-primary text-sm" />
-                <h2 className="text-sm font-bold text-foreground tracking-tight">หน้าที่เข้าชมมากที่สุด</h2>
-              </div>
-              <div className="divide-y divide-border/60">
-                {data.pages.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-muted-foreground">ไม่มีข้อมูล</div>
-                ) : data.pages.map((p) => (
-                  <Link key={p.path} href={detailLink(p.path)} className="block px-6 py-3.5 hover:bg-secondary/20 transition-colors group/row">
-                    <div className="flex items-center justify-between gap-3 mb-2">
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-foreground truncate tracking-tight group-hover/row:text-primary transition-colors">{PATH_LABELS[p.path] || p.path}</p>
-                        <p className="text-[9px] font-mono text-muted-foreground/70 truncate mt-0.5">{p.path}</p>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="text-[9px] font-bold text-primary opacity-0 group-hover/row:opacity-100 transition-opacity whitespace-nowrap">ดูล่าสุด <Icon name="arrow-right" className="text-[8px]" /></span>
-                        <Badge variant="outline" className="text-[9px] font-bold border-border bg-secondary/30 rounded-lg">
-                          <Icon name="user" className="mr-1 opacity-60" />{p.users}
-                        </Badge>
-                        <span className="text-sm font-bold text-foreground tabular-nums">{p.views.toLocaleString('th-TH')}</span>
-                      </div>
-                    </div>
-                    <Bar value={p.views} max={maxViews} />
-                  </Link>
-                ))}
-              </div>
-            </Card>
-          </motion.div>
-
-          {/* Top features */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-            <Card className="rounded-3xl border-border shadow-sm overflow-hidden bg-white dark:bg-card">
-              <div className="px-6 py-4 border-b border-border/60 bg-secondary/20 flex items-center gap-2.5">
-                <Icon name="hand-pointer" className="text-primary text-sm" />
-                <h2 className="text-sm font-bold text-foreground tracking-tight">ฟีเจอร์ที่ใช้มากที่สุด</h2>
-              </div>
-              <div className="divide-y divide-border/60">
-                {data.features.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-muted-foreground">ยังไม่มีการกดปุ่มที่ติดตาม</div>
-                ) : data.features.map((f) => (
-                  <Link key={f.feature} href={detailLink(f.feature)} className="block px-6 py-3.5 hover:bg-secondary/20 transition-colors group/row">
-                    <div className="flex items-center justify-between gap-3 mb-2">
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-foreground truncate tracking-tight group-hover/row:text-primary transition-colors">{FEATURE_LABELS[f.feature] || f.feature}</p>
-                        <p className="text-[9px] font-mono text-muted-foreground/70 truncate mt-0.5">{f.feature}</p>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="text-[9px] font-bold text-primary opacity-0 group-hover/row:opacity-100 transition-opacity whitespace-nowrap">ดูล่าสุด <Icon name="arrow-right" className="text-[8px]" /></span>
-                        <Badge variant="outline" className="text-[9px] font-bold border-border bg-secondary/30 rounded-lg">
-                          <Icon name="user" className="mr-1 opacity-60" />{f.users}
-                        </Badge>
-                        <span className="text-sm font-bold text-foreground tabular-nums">{f.clicks.toLocaleString('th-TH')}</span>
-                      </div>
-                    </div>
-                    <Bar value={f.clicks} max={maxClicks} />
-                  </Link>
-                ))}
-              </div>
-            </Card>
-          </motion.div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
+          <HotspotList
+            title="หน้าที่เข้าชมมากที่สุด"
+            emptyText="ไม่มีข้อมูล"
+            rows={data.pages.map(p => ({
+              key: p.path,
+              label: PATH_LABELS[p.path] || p.path,
+              raw: p.path,
+              count: p.views,
+              users: p.users,
+            }))}
+          />
+          <HotspotList
+            title="ฟีเจอร์ที่ใช้มากที่สุด"
+            emptyText="ยังไม่มีการกดปุ่มที่ติดตาม"
+            rows={data.features.map(f => ({
+              key: f.feature,
+              label: FEATURE_LABELS[f.feature] || f.feature,
+              raw: f.feature,
+              count: f.clicks,
+              users: f.users,
+            }))}
+          />
         </div>
       )}
     </div>
@@ -199,5 +177,5 @@ function Content() {
 }
 
 export default function ActivityPage() {
-  return <Suspense fallback={<div className="p-8"><SkeletonTable rows={8} /></div>}><Content /></Suspense>;
+  return <Suspense fallback={<div className="p-4"><SkeletonTable rows={8} /></div>}><Content /></Suspense>;
 }

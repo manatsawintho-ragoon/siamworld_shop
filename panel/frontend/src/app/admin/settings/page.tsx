@@ -1,38 +1,27 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
-import Link from 'next/link';
 import api from '@/lib/api';
 import { useToast } from '@/components/Toast';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Icon, type IconName } from '@/components/ui/icon';
+import { Icon } from '@/components/ui/icon';
 
 type Settings = Record<string, string>;
 
-function Section({ icon, title, desc, children, delay = 0 }: {
-  icon: IconName; title: string; desc?: string; children: React.ReactNode; delay?: number;
+/** One settings group. A plain titled card: the old version wrapped each group
+ *  in an icon tile with its own hover scale, which added decoration to a screen
+ *  whose whole job is reading and editing field values. */
+function Section({ title, desc, children }: {
+  title: string; desc?: string; children: React.ReactNode;
 }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}>
-      <Card className="rounded-3xl border-border shadow-sm overflow-hidden bg-white dark:bg-card group hover:border-primary/20 transition-all duration-500">
-        <CardHeader className="px-6 py-6 border-b border-border/60 bg-secondary/10">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-sm flex-shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
-              <Icon name={icon} className="text-lg" />
-            </div>
-            <div className="min-w-0">
-              <CardTitle className="text-base font-bold tracking-tight uppercase leading-tight">{title}</CardTitle>
-              {desc && <CardDescription className="text-[10px] font-bold uppercase tracking-widest mt-1 opacity-60">{desc}</CardDescription>}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-6 space-y-6">
-          {children}
-        </CardContent>
-      </Card>
-    </motion.div>
+    <section className="admin-card">
+      <div className="admin-card-head">
+        <div className="min-w-0">
+          <h3 className="admin-section-title">{title}</h3>
+          {desc && <p className="admin-meta mt-0.5">{desc}</p>}
+        </div>
+      </div>
+      <div className="admin-card-body space-y-4">{children}</div>
+    </section>
   );
 }
 
@@ -43,57 +32,29 @@ function Field({
   onChange: (k: string, v: string) => void;
   type?: string; placeholder?: string; hint?: string;
 }) {
-  const [reveal, setReveal] = useState(false);
-  const isSecret = type === 'password';
-  const inputType = isSecret && !reveal ? 'password' : 'text';
-
+  const id = `set-${name}`;
   return (
-    <div className="space-y-1.5 group/field">
-      <label className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest ml-1 transition-colors group-focus-within/field:text-primary">
-        {label}
-      </label>
-      <div className="relative">
-        <input
-          type={inputType}
-          className={`w-full bg-secondary/30 border-2 border-transparent rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:bg-white focus:border-primary/20 focus:ring-4 focus:ring-primary/5 transition-all text-foreground placeholder:text-muted-foreground/40 ${isSecret ? 'pr-12' : ''}`}
-          placeholder={placeholder}
-          value={value}
-          onChange={e => onChange(name, e.target.value)}
-        />
-        {isSecret && (
-          <button 
-            type="button" 
-            onClick={() => setReveal(r => !r)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all cursor-pointer"
-          >
-            <Icon name={reveal ? 'eye-slash' : 'eye'} className={`text-[10px]`} />
-          </button>
-        )}
-      </div>
-      {hint && (
-        <p className="text-[9px] text-muted-foreground flex items-start gap-1.5 leading-relaxed font-bold uppercase tracking-wider ml-1 opacity-50">
-          <Icon name="circle-info" className="text-primary/60 text-[8px] mt-0.5 flex-shrink-0" />
-          <span>{hint}</span>
-        </p>
-      )}
+    <div>
+      <label htmlFor={id} className="admin-label">{label}</label>
+      <input
+        id={id}
+        type={type}
+        className="admin-input"
+        placeholder={placeholder}
+        value={value}
+        onChange={e => onChange(name, e.target.value)}
+      />
+      {hint && <p className="admin-meta mt-1.5">{hint}</p>}
     </div>
   );
 }
 
 function InfoBanner({ variant, children }: { variant: 'warning' | 'info'; children: React.ReactNode }) {
   const cls = variant === 'warning'
-    ? 'bg-amber-500/5 border-amber-500/20 text-amber-700 dark:text-amber-400'
-    : 'bg-blue-500/5 border-blue-500/20 text-blue-700 dark:text-blue-400';
-  const icon = variant === 'warning' ? 'triangle-exclamation' : 'circle-info';
-  const iconCls = variant === 'warning' ? 'text-amber-500' : 'text-blue-500';
-  
+    ? 'border-amber-500/30 bg-amber-500/5 text-amber-800 dark:text-amber-300'
+    : 'border-blue-500/30 bg-blue-500/5 text-blue-800 dark:text-blue-300';
   return (
-    <div className={`flex items-start gap-3 p-4 border-2 rounded-2xl shadow-sm ${cls}`}>
-      <div className={`w-9 h-9 rounded-lg bg-white flex items-center justify-center flex-shrink-0 shadow-sm ${iconCls}`}>
-        <Icon name={icon} className="text-sm" />
-      </div>
-      <p className="text-[10px] font-bold uppercase tracking-wider leading-relaxed">{children}</p>
-    </div>
+    <p className={`text-[13px] leading-relaxed border rounded-md p-3 ${cls}`}>{children}</p>
   );
 }
 
@@ -177,229 +138,176 @@ export default function AdminSettingsPage() {
   };
 
   if (loading) return (
-    <div className="p-12 text-center flex flex-col items-center gap-6">
-      <div className="w-16 h-16 rounded-[2rem] bg-primary/10 flex items-center justify-center text-primary text-2xl">
-         <Icon name="circle-notch" className="animate-spin" />
-      </div>
-      <p className="text-xs font-black text-muted-foreground uppercase tracking-[0.3em]">System Initialization...</p>
+    <div className="p-10 text-center">
+      <Icon name="circle-notch" className="animate-spin text-primary text-xl" />
+      <p className="admin-meta mt-3">กำลังโหลดการตั้งค่า</p>
     </div>
   );
 
   return (
-    <form onSubmit={save} className="space-y-6 pb-32">
-      {/* Header Area */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-          <div className="flex items-center gap-4 mb-1">
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg bg-secondary/50 hover:bg-secondary transition-all" asChild>
-              <Link href="/admin">
-                <Icon name="arrow-left" className="text-xs" />
-              </Link>
-            </Button>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              Settings <span className="text-primary text-xl opacity-20">/</span>
-            </h1>
-          </div>
-          <p className="text-muted-foreground font-medium text-sm flex items-center gap-2">
-            <Icon name="sliders" className="text-primary text-xs" />
-            กำหนดค่าโครงสร้างพื้นฐาน, การชำระเงิน, และระบบการแจ้งเตือน
-          </p>
-        </motion.div>
-        
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-           <Button type="submit" disabled={saving} className="rounded-xl font-bold gap-2 h-11 px-6 shadow-md shadow-primary/20 active:scale-95 transition-all">
-             {saving ? <Icon name="spinner" className="animate-spin" /> : <Icon name="floppy-disk" />} 
-             บันทึกการตั้งค่า
-           </Button>
-        </motion.div>
+    <form onSubmit={save} className="space-y-4">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="admin-h1">ตั้งค่าระบบ</h2>
+          <p className="admin-sub">โครงสร้างพื้นฐาน การชำระเงิน และการแจ้งเตือน</p>
+        </div>
+        <button type="submit" disabled={saving} className="admin-btn admin-btn-primary">
+          {saving ? <Icon name="spinner" className="animate-spin" /> : <Icon name="floppy-disk" />}
+          บันทึกการตั้งค่า
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
-        <div className="space-y-6">
-          {/* Panel info */}
-          <Section icon="id-card" title="ข้อมูลแผงควบคุม" desc="System Branding & Control Domain" delay={0.1}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+        <div className="space-y-4">
+          <Section title="ข้อมูลแผงควบคุม" desc="ชื่อและโดเมนของแผงควบคุม">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="ชื่อแผงควบคุม" name="panel_name" value={settings['panel_name'] || ''} onChange={set} placeholder="SIAMSITE STORE" />
               <Field label="โดเมนแผงควบคุม" name="panel_domain" value={settings['panel_domain'] || ''} onChange={set} placeholder="panel.siamsite.shop" />
             </div>
           </Section>
 
-          {/* Pricing */}
-          <Section icon="tag" title="ราคาแพ็กเกจ" desc="Subscription Model Pricing (THB)" delay={0.2}>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Field label="1 เดือน (1 Month)" name="price_1month" value={settings['price_1month'] || ''} onChange={set} type="number" placeholder="350" />
-              <Field label="3 เดือน (3 Months)" name="price_3months" value={settings['price_3months'] || ''} onChange={set} type="number" placeholder="900" />
-              <Field label="6 เดือน (6 Months)" name="price_6months" value={settings['price_6months'] || ''} onChange={set} type="number" placeholder="1700" />
+          <Section title="ราคาแพ็กเกจ" desc="ราคาค่าบริการรายเดือน หน่วยเป็นบาท">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Field label="1 เดือน" name="price_1month" value={settings['price_1month'] || ''} onChange={set} type="number" placeholder="249" />
+              <Field label="3 เดือน" name="price_3months" value={settings['price_3months'] || ''} onChange={set} type="number" placeholder="599" />
+              <Field label="6 เดือน" name="price_6months" value={settings['price_6months'] || ''} onChange={set} type="number" placeholder="1099" />
             </div>
           </Section>
 
-          {/* Payment */}
-          <Section icon="qrcode" title="ระบบรับชำระเงิน" desc="Merchant & EasySlip Integration" delay={0.3}>
+          <Section title="ระบบรับชำระเงิน" desc="บัญชี PromptPay และการตรวจสลิปด้วย EasySlip">
             <InfoBanner variant="warning">
-              ลูกค้าโอนเงินมาที่บัญชี PromptPay นี้ และระบบใช้ EasySlip ตรวจสอบสลิปอัตโนมัติ
-              API Key ขอได้ที่ document.easyslip.com
+              ลูกค้าโอนเงินมาที่บัญชี PromptPay นี้ และระบบใช้ EasySlip ตรวจสอบสลิปอัตโนมัติ ขอ API Key ได้ที่ document.easyslip.com
             </InfoBanner>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="PromptPay ID" name="promptpay_id" value={settings['promptpay_id'] || ''} onChange={set}
                 placeholder="0812345678" hint="เบอร์โทร 10 หลัก หรือเลขประจำตัว 13 หลัก" />
               <Field label="ชื่อบัญชี PromptPay" name="promptpay_name" value={settings['promptpay_name'] || ''} onChange={set} placeholder="ชื่อ นามสกุล" />
             </div>
             <Field label="EasySlip API Key" name="easyslip_api_key" value={settings['easyslip_api_key'] || ''} onChange={set}
-              type="password" placeholder="••••••••••••••••" hint="ใช้สำหรับตรวจสอบสลิปอัตโนมัติผ่าน EasySlip API" />
+              type="password" placeholder="กรอก API Key" hint="ใช้ตรวจสอบสลิปอัตโนมัติผ่าน EasySlip API" />
           </Section>
 
-          {/* Cloudflare Turnstile (CAPTCHA) */}
-          <Section icon="shield-halved" title="CAPTCHA (Cloudflare Turnstile)" desc="Bot Protection on Login & Register" delay={0.35}>
+          <Section title="CAPTCHA (Cloudflare Turnstile)" desc="ป้องกันบอทที่หน้าเข้าสู่ระบบและสมัครสมาชิก">
             <InfoBanner variant="info">
-              สมัครฟรีที่ <b>dash.cloudflare.com → Turnstile</b> เลือก widget mode &quot;Managed&quot;
-              คัดลอก Site Key (Public) และ Secret Key มาวางที่ช่องด้านล่าง แล้วเปิดสวิตช์เพื่อบังคับใช้
+              สมัครฟรีที่ dash.cloudflare.com เมนู Turnstile เลือก widget mode &quot;Managed&quot; แล้วนำ Site Key และ Secret Key มากรอกด้านล่าง
             </InfoBanner>
-            <div className="flex items-center justify-between gap-4 p-4 bg-secondary/30 rounded-2xl border border-border">
-              <div>
-                <p className="text-xs font-black uppercase tracking-wider">เปิดใช้งาน CAPTCHA</p>
-                <p className="text-[10px] font-bold text-muted-foreground mt-0.5">ต้องใส่ทั้ง Site Key และ Secret Key ก่อนเปิด</p>
+            <div className="flex items-center justify-between gap-4 border border-border rounded-md p-3">
+              <div className="min-w-0">
+                <p className="text-[14px] font-medium text-foreground">เปิดใช้งาน CAPTCHA</p>
+                <p className="admin-meta mt-0.5">ต้องกรอกทั้ง Site Key และ Secret Key ก่อนเปิด</p>
               </div>
               <button
                 type="button"
                 onClick={() => set('enable_turnstile', settings['enable_turnstile'] === '1' ? '0' : '1')}
-                className={`relative w-12 h-7 rounded-full transition-colors flex-shrink-0 ${settings['enable_turnstile'] === '1' ? 'bg-primary' : 'bg-secondary border border-border'}`}
                 aria-pressed={settings['enable_turnstile'] === '1'}
+                className={`admin-btn admin-btn-sm shrink-0 ${settings['enable_turnstile'] === '1' ? 'admin-btn-primary' : ''}`}
               >
-                <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-sm transition-all ${settings['enable_turnstile'] === '1' ? 'left-6' : 'left-1'}`} />
+                {settings['enable_turnstile'] === '1' ? 'เปิดอยู่' : 'ปิดอยู่'}
               </button>
             </div>
             <Field label="Site Key (Public)" name="turnstile_site_key" value={settings['turnstile_site_key'] || ''} onChange={set}
-              placeholder="0x4AAAAAAA..." hint="โชว์ได้ ไม่ลับ ใช้บน frontend" />
+              placeholder="0x4AAAAAAA..." hint="เปิดเผยได้ ใช้ฝั่งหน้าเว็บ" />
             <Field label="Secret Key" name="turnstile_secret" value={settings['turnstile_secret'] || ''} onChange={set}
-              type="password" placeholder="0x4AAAAAAA..." hint="ใช้ตรวจสอบ token บน backend เก็บเป็นความลับ" />
+              type="password" placeholder="0x4AAAAAAA..." hint="ใช้ตรวจ token ฝั่งเซิร์ฟเวอร์ เก็บเป็นความลับ" />
           </Section>
         </div>
 
-        <div className="space-y-8">
-          {/* Infrastructure */}
-          <Section icon="server" title="โครงสร้างพื้นฐาน" desc="Nginx Proxy Manager Config" delay={0.4}>
-            <Field label="URL ของ NPM (Internal/Public)" name="npm_url" value={settings['npm_url'] || ''} onChange={set} placeholder="http://172.18.0.1:81" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-4">
+          <Section title="โครงสร้างพื้นฐาน" desc="การเชื่อมต่อ Nginx Proxy Manager">
+            <Field label="URL ของ NPM" name="npm_url" value={settings['npm_url'] || ''} onChange={set} placeholder="http://172.18.0.1:81" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="อีเมลแอดมิน NPM" name="npm_email" value={settings['npm_email'] || ''} onChange={set} type="email" />
               <Field label="รหัสผ่านแอดมิน NPM" name="npm_password" value={settings['npm_password'] || ''} onChange={set} type="password" />
             </div>
             <Field label="IP สำหรับ Forward (Gateway)" name="npm_forward_host" value={settings['npm_forward_host'] || ''} onChange={set}
-              placeholder="172.18.0.1" hint="IP ของเครื่องแม่ข่ายในการทำ Proxy Forwarding" />
-            <div className="pt-4 border-t border-border/60">
-              <Button type="button" variant="outline" onClick={fixNpm} disabled={fixingNpm} className="w-full font-bold h-12 rounded-xl bg-slate-50 border-2 hover:bg-white active:scale-95 transition-all text-[10px] uppercase tracking-wider gap-2">
-                {fixingNpm ? <Icon name="spinner" className="animate-spin" /> : <Icon name="wand-magic-sparkles" />} 
-                Repair System NPM Proxy
-              </Button>
-            </div>
+              placeholder="172.18.0.1" hint="IP ของเครื่องแม่ข่ายที่ใช้ทำ Proxy Forwarding" />
+            <button type="button" onClick={fixNpm} disabled={fixingNpm} className="admin-btn w-full">
+              {fixingNpm ? <Icon name="spinner" className="animate-spin" /> : <Icon name="wand-magic-sparkles" />}
+              ซ่อม NPM Proxy ของแผงควบคุม
+            </button>
           </Section>
 
-          {/* Notifications */}
-          <Section icon="bell" title="การแจ้งเตือน" desc="แจ้งเตือนหมดอายุทางอีเมล (Resend)" delay={0.5}>
-            <p className="text-xs text-muted-foreground leading-relaxed mb-1">
-              ระบบจะส่งอีเมลแจ้งลูกค้าก่อนร้านหมดอายุตามจำนวนวันด้านล่าง และส่งอีเมลแจ้งอีกครั้งเมื่อร้านถูกระงับ
-              <span className="block mt-1">ใช้การตั้งค่าอีเมล (Resend) ในหัวข้อด้านล่าง</span>
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Field label="แจ้งล่วงหน้า (วัน)" name="notify_days_before" value={settings['notify_days_before'] || '3,1'} onChange={set} placeholder="3,1" hint="คั่นด้วยเครื่องหมายคอมม่า , เช่น 3,1" />
+          <Section title="การแจ้งเตือนหมดอายุ" desc="ส่งอีเมลเตือนลูกค้าก่อนร้านหมดอายุและเมื่อถูกระงับ">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Field label="แจ้งล่วงหน้า (วัน)" name="notify_days_before" value={settings['notify_days_before'] || '3,1'} onChange={set}
+                placeholder="3,1" hint="คั่นด้วยคอมม่า เช่น 3,1" />
               <Field label="ระงับหลังหมดอายุ (วัน)" name="auto_suspend_days" value={settings['auto_suspend_days'] || '1'} onChange={set} type="number" />
             </div>
-            <div className="pt-4 border-t border-border/60 flex">
-              <Button type="button" variant="secondary" onClick={runNotify} className="flex-1 h-12 rounded-xl font-bold text-[10px] uppercase tracking-wider active:scale-95 transition-all gap-2 shadow-sm">
-                <Icon name="paper-plane" className="text-primary text-[10px]" /> Send Now
-              </Button>
-            </div>
+            <button type="button" onClick={runNotify} className="admin-btn w-full">
+              <Icon name="paper-plane" /> ส่งแจ้งเตือนทันที
+            </button>
           </Section>
 
-          {/* Email (Resend) */}
-          <Section icon="envelope" title="อีเมลยืนยัน (Resend)" desc="Welcome Email After Deploy" delay={0.55}>
+          <Section title="อีเมลระบบ (Resend)" desc="อีเมลต้อนรับหลังติดตั้งร้านสำเร็จ">
             <InfoBanner variant="info">
-              เมื่อลูกค้า deploy ร้านสำเร็จ ระบบจะส่งอีเมลภาษาไทยพร้อมคู่มือเริ่มต้นใช้งานให้อัตโนมัติ
-              สมัคร API Key ฟรีได้ที่ <b>resend.com</b> (3,000 อีเมล/เดือน)
+              เมื่อลูกค้าติดตั้งร้านสำเร็จ ระบบจะส่งอีเมลภาษาไทยพร้อมคู่มือเริ่มต้นให้อัตโนมัติ สมัคร API Key ฟรีได้ที่ resend.com (3,000 อีเมลต่อเดือน)
             </InfoBanner>
             <Field label="Resend API Key" name="resend_api_key" value={settings['resend_api_key'] || ''} onChange={set}
-              type="password" placeholder="re_••••••••••••" hint="API Key จาก resend.com → API Keys" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Field label="ชื่อผู้ส่ง (From Name)" name="email_from_name" value={settings['email_from_name'] || ''} onChange={set}
-                placeholder="SIAMSITE STORE" />
-              <Field label="อีเมลผู้ส่ง (From)" name="email_from" value={settings['email_from'] || ''} onChange={set}
+              type="password" placeholder="re_..." hint="API Key จาก resend.com เมนู API Keys" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Field label="ชื่อผู้ส่ง" name="email_from_name" value={settings['email_from_name'] || ''} onChange={set} placeholder="SIAMSITE STORE" />
+              <Field label="อีเมลผู้ส่ง" name="email_from" value={settings['email_from'] || ''} onChange={set}
                 type="email" placeholder="noreply@siamsite.shop" hint="ต้อง verify โดเมนใน Resend ก่อน" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Field label="Reply-To (ตัวเลือก)" name="email_reply_to" value={settings['email_reply_to'] || ''} onChange={set}
-                type="email" placeholder="support@siamsite.shop" hint="เมื่อลูกค้ากดตอบกลับ จะส่งมาที่อีเมลนี้" />
-              <Field label="อีเมล Support (โชว์ในอีเมล)" name="support_email" value={settings['support_email'] || ''} onChange={set}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Field label="Reply-To (ไม่บังคับ)" name="email_reply_to" value={settings['email_reply_to'] || ''} onChange={set}
+                type="email" placeholder="support@siamsite.shop" hint="ปลายทางเมื่อลูกค้ากดตอบกลับ" />
+              <Field label="อีเมล Support ที่แสดงในอีเมล" name="support_email" value={settings['support_email'] || ''} onChange={set}
                 type="email" placeholder="support@siamsite.shop" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="Facebook Page" name="support_facebook" value={settings['support_facebook'] || ''} onChange={set}
-                placeholder="https://facebook.com/siamsite" hint="URL Facebook Page สำหรับติดต่อ support" />
+                placeholder="https://facebook.com/siamsite" hint="ลิงก์เพจสำหรับติดต่อ support" />
               <Field label="Discord Server" name="support_discord" value={settings['support_discord'] || ''} onChange={set}
-                placeholder="https://discord.gg/xxxx" hint="ลิงก์เชิญเข้า Discord server" />
+                placeholder="https://discord.gg/xxxx" hint="ลิงก์เชิญเข้า Discord" />
             </div>
-            <div className="pt-4 border-t border-border/60 space-y-3">
-              <input
-                type="email"
-                className="w-full bg-secondary/30 border-2 border-transparent rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:bg-white focus:border-primary/20 focus:ring-4 focus:ring-primary/5 transition-all text-foreground placeholder:text-muted-foreground/40"
-                placeholder="ส่งทดสอบไปอีเมลนี้ (เช่น your@email.com)"
-                value={testEmailTo}
-                onChange={e => setTestEmailTo(e.target.value)}
-              />
-              <Button type="button" variant="outline" onClick={testEmail} disabled={testingEmail} className="w-full h-12 rounded-xl font-bold text-[10px] uppercase tracking-wider active:scale-95 transition-all gap-2 bg-white border-2">
-                {testingEmail ? <Icon name="spinner" className="animate-spin" /> : <Icon name="paper-plane" className="text-primary text-base" />}
+            <div className="pt-3 border-t border-border space-y-2.5">
+              <div>
+                <label htmlFor="test-email-to" className="admin-label">ส่งอีเมลทดสอบไปที่</label>
+                <input
+                  id="test-email-to"
+                  type="email"
+                  className="admin-input"
+                  placeholder="your@email.com"
+                  value={testEmailTo}
+                  onChange={e => setTestEmailTo(e.target.value)}
+                />
+              </div>
+              <button type="button" onClick={testEmail} disabled={testingEmail} className="admin-btn w-full">
+                {testingEmail ? <Icon name="spinner" className="animate-spin" /> : <Icon name="paper-plane" />}
                 ส่งอีเมลทดสอบ
-              </Button>
+              </button>
             </div>
           </Section>
 
-          {/* Cloudflare DNS */}
-          <Section icon="cloud" title="Cloudflare DNS" desc="Automated Record Orchestration" delay={0.6}>
+          <Section title="Cloudflare DNS" desc="สร้าง DNS record อัตโนมัติเมื่อติดตั้งร้านใหม่">
             <InfoBanner variant="info">
-              ระบบจะสร้าง DNS A record (DNS-only) อัตโนมัติทุกครั้งเมื่อ deploy ร้านค้าใหม่
-              รองรับทั้ง <b>API Token</b> (แนะนำ: สิทธิ์ Zone:DNS:Edit เฉพาะ zone นี้) และ <b>Global API Key</b>
+              ระบบจะสร้าง DNS A record (DNS-only) อัตโนมัติทุกครั้งที่ติดตั้งร้านใหม่ รองรับทั้ง API Token (แนะนำ สิทธิ์ Zone:DNS:Edit เฉพาะ zone นี้) และ Global API Key
             </InfoBanner>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Field label="Cloudflare Email" name="cloudflare_email" value={settings['cloudflare_email'] || ''} onChange={set} type="email" placeholder="ใส่เฉพาะถ้าใช้ Global API Key" />
-              <Field label="API Token หรือ Global API Key" name="cloudflare_api_key" value={settings['cloudflare_api_key'] || ''} onChange={set} type="password" placeholder="••••••••" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Field label="Cloudflare Email" name="cloudflare_email" value={settings['cloudflare_email'] || ''} onChange={set}
+                type="email" placeholder="ใส่เฉพาะกรณีใช้ Global API Key" />
+              <Field label="API Token หรือ Global API Key" name="cloudflare_api_key" value={settings['cloudflare_api_key'] || ''} onChange={set} type="password" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="Cloudflare Zone ID" name="cloudflare_zone_id" value={settings['cloudflare_zone_id'] || ''} onChange={set}
-                placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" hint="Zone ID ของโดเมนหลักใน Cloudflare" />
+                hint="Zone ID ของโดเมนหลักใน Cloudflare" />
               <Field label="Server Public IP" name="server_ip" value={settings['server_ip'] || ''} onChange={set}
-                placeholder="1.2.3.4" hint="DNS จะชี้ Subdomain มาที่ไอพีนี้อัตโนมัติ" />
+                placeholder="1.2.3.4" hint="Subdomain จะชี้มาที่ IP นี้อัตโนมัติ" />
             </div>
           </Section>
         </div>
       </div>
 
-      {/* Floating Save Bar */}
-      <AnimatePresence>
-        <motion.div 
-          initial={{ opacity: 0, y: 100 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="fixed bottom-6 left-0 right-0 z-50 px-6 pointer-events-none"
-        >
-          <div className="max-w-xl mx-auto pointer-events-auto">
-            <div className="bg-slate-950/90 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl p-3 flex items-center justify-between gap-4">
-               <div className="hidden md:flex items-center gap-3 ml-4">
-                  <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-primary shadow-inner">
-                    <Icon name="microchip" className="text-sm" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-white uppercase tracking-widest leading-none">System Engine</p>
-                    <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mt-1">Ready for updates</p>
-                  </div>
-               </div>
-               <Button type="submit" disabled={saving} className="flex-1 h-12 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-primary/20 transition-all active:scale-95 group relative overflow-hidden">
-                  <span className="relative z-10 flex items-center justify-center gap-2">
-                    {saving ? <Icon name="spinner" className="animate-spin" /> : <Icon name="check-double" className="text-[10px]" />} 
-                    {saving ? 'Saving...' : 'Commit Settings'}
-                  </span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary/80 to-primary group-hover:scale-110 transition-transform duration-500" />
-               </Button>
-            </div>
-          </div>
-        </motion.div>
-      </AnimatePresence>
+      {/* Save is repeated at the end of a long form so it is reachable without
+          scrolling back to the top. No floating bar: it covered content on a
+          phone and needed motion to justify itself. */}
+      <div className="flex justify-end pt-1">
+        <button type="submit" disabled={saving} className="admin-btn admin-btn-primary w-full sm:w-auto">
+          {saving ? <Icon name="spinner" className="animate-spin" /> : <Icon name="floppy-disk" />}
+          บันทึกการตั้งค่า
+        </button>
+      </div>
     </form>
   );
 }

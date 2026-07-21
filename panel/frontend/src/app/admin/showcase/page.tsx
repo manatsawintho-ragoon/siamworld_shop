@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import api from '@/lib/api';
 import {
-  GalleryHorizontalEnd, Plus, Pencil, Trash2, Eye, EyeOff, Loader2, X,
+  Plus, Pencil, Trash2, Eye, EyeOff, Loader2, X,
   ArrowUp, ArrowDown, Upload, ImageOff,
 } from 'lucide-react';
 
@@ -133,19 +133,13 @@ export default function ShowcasePage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-5">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-indigo-100 flex items-center justify-center">
-            <GalleryHorizontalEnd className="w-5 h-5 text-indigo-600" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold">ตัวอย่างฟีเจอร์ (หน้าแรก)</h1>
-            <p className="text-xs text-muted-foreground">จัดการสไลด์โชว์ฟีเจอร์บนหน้า Landing เปลี่ยนรูปและข้อความได้ทุกเมื่อ</p>
-          </div>
+    <div className="max-w-4xl space-y-4">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="admin-h1">ตัวอย่างฟีเจอร์</h2>
+          <p className="admin-sub">สไลด์โชว์ฟีเจอร์บนหน้าแรก เปลี่ยนรูปและข้อความได้ทุกเมื่อ</p>
         </div>
-        <button onClick={() => { setErr(''); setEditing({ ...blank }); }}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-bold hover:brightness-110">
+        <button onClick={() => { setErr(''); setEditing({ ...blank }); }} className="admin-btn admin-btn-primary">
           <Plus className="w-4 h-4" /> เพิ่มสไลด์
         </button>
       </div>
@@ -159,40 +153,40 @@ export default function ShowcasePage() {
       ) : (
         <div className="space-y-3">
           {reordering && (
-            <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-              <Loader2 className="w-3 h-3 animate-spin" /> กำลังบันทึกลำดับ...
+            <p className="admin-meta flex items-center gap-1.5">
+              <Loader2 className="w-3 h-3 animate-spin" /> กำลังบันทึกลำดับ
             </p>
           )}
           {items.map((s, i) => (
-            <div key={s.id} className="rounded-xl border border-border bg-card p-3 flex items-center gap-3">
-              <div className="flex flex-col gap-1 flex-shrink-0">
+            <div key={s.id} className="admin-card p-3 flex flex-wrap sm:flex-nowrap items-center gap-3">
+              <div className="flex sm:flex-col gap-1 flex-shrink-0 order-1">
                 <button disabled={i === 0} onClick={() => move(i, -1)}
                   className="p-1 rounded-md hover:bg-secondary text-muted-foreground disabled:opacity-30 disabled:cursor-not-allowed"><ArrowUp className="w-4 h-4" /></button>
                 <button disabled={i === items.length - 1} onClick={() => move(i, 1)}
                   className="p-1 rounded-md hover:bg-secondary text-muted-foreground disabled:opacity-30 disabled:cursor-not-allowed"><ArrowDown className="w-4 h-4" /></button>
               </div>
-              <div className="w-24 h-16 rounded-lg overflow-hidden bg-secondary flex-shrink-0 border border-border">
+              <div className="w-20 h-14 rounded-md overflow-hidden bg-secondary flex-shrink-0 border border-border order-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={s.image_data} alt={s.title} className="w-full h-full object-cover" />
               </div>
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 basis-full sm:basis-auto order-4 sm:order-3">
                 <div className="flex items-center gap-2">
                   {s.is_active
-                    ? <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">แสดงอยู่</span>
-                    : <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">ซ่อน</span>}
-                  <h3 className="font-bold text-sm truncate">{s.title}</h3>
+                    ? <span className="text-[12px] font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">แสดงอยู่</span>
+                    : <span className="text-[12px] font-medium px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">ซ่อน</span>}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{s.description}</p>
+                <h3 className="font-medium text-[15px] text-foreground mt-1 break-words">{s.title}</h3>
+                <p className="text-[13px] text-muted-foreground mt-0.5 line-clamp-2">{s.description}</p>
               </div>
-              <div className="flex items-center gap-1 flex-shrink-0">
+              <div className="flex items-center gap-1 flex-shrink-0 ml-auto order-3 sm:order-4">
                 <button title={s.is_active ? 'ซ่อน' : 'แสดง'} onClick={() => toggleActive(s)}
-                  className={`p-2 rounded-lg hover:bg-secondary ${s.is_active ? 'text-green-600' : 'text-muted-foreground'}`}>
+                  className={`p-2 rounded-md hover:bg-secondary ${s.is_active ? 'text-emerald-600' : 'text-muted-foreground'}`}>
                   {s.is_active ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                 </button>
                 <button title="แก้ไข" onClick={() => { setErr(''); setEditing({ id: s.id, title: s.title, description: s.description, image_data: s.image_data }); }}
                   className="p-2 rounded-lg hover:bg-secondary text-muted-foreground"><Pencil className="w-4 h-4" /></button>
                 <button title="ลบ" onClick={() => remove(s)}
-                  className="p-2 rounded-lg hover:bg-red-50 text-red-500"><Trash2 className="w-4 h-4" /></button>
+                  className="p-2 rounded-md hover:bg-destructive/8 text-destructive"><Trash2 className="w-4 h-4" /></button>
               </div>
             </div>
           ))}
@@ -202,44 +196,43 @@ export default function ShowcasePage() {
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
           onClick={e => { if (e.target === e.currentTarget) setEditing(null); }}>
-          <div className="bg-card rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-5">
+          <div className="admin-shell bg-card border border-border rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold">{editing.id ? 'แก้ไขสไลด์' : 'เพิ่มสไลด์'}</h2>
               <button onClick={() => setEditing(null)} className="p-1 text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
             </div>
-            {err && <div className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-3">{err}</div>}
+            {err && <div className="text-[13px] text-destructive bg-destructive/8 border border-destructive/25 rounded-md px-3 py-2 mb-3">{err}</div>}
 
             <div className="grid md:grid-cols-2 gap-5">
               {/* ── Form ── */}
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground">หัวข้อ</label>
-                  <input value={editing.title} maxLength={200} onChange={e => setEditing({ ...editing, title: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" placeholder="เช่น ระบบกล่องสุ่ม Gacha" />
+                  <label htmlFor="sc-title" className="admin-label">หัวข้อ</label>
+                  <input id="sc-title" value={editing.title} maxLength={200} onChange={e => setEditing({ ...editing, title: e.target.value })}
+                    className="admin-input" placeholder="เช่น ระบบกล่องสุ่ม Gacha" />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground">คำอธิบาย</label>
-                  <textarea value={editing.description} rows={4} maxLength={2000}
+                  <label htmlFor="sc-desc" className="admin-label">คำอธิบาย</label>
+                  <textarea id="sc-desc" value={editing.description} rows={4} maxLength={2000}
                     onChange={e => setEditing({ ...editing, description: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm resize-y"
-                    placeholder="อธิบายฟีเจอร์สั้น ๆ" />
+                    className="admin-textarea"
+                    placeholder="อธิบายฟีเจอร์สั้นๆ" />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground">รูปภาพ</label>
+                  <span className="admin-label">รูปภาพ</span>
                   <input ref={fileRef} type="file" accept="image/*" onChange={onPickImage} className="hidden" />
-                  <button type="button" onClick={() => fileRef.current?.click()}
-                    className="mt-1 w-full inline-flex items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-background px-3 py-2 text-sm font-bold text-muted-foreground hover:bg-secondary">
+                  <button type="button" onClick={() => fileRef.current?.click()} className="admin-btn w-full">
                     <Upload className="w-4 h-4" /> {editing.image_data ? 'เปลี่ยนรูป' : 'อัปโหลดรูป'}
                   </button>
-                  <p className="text-[11px] text-muted-foreground mt-1">รูปจะถูกย่อขนาดอัตโนมัติเพื่อให้โหลดเร็ว</p>
+                  <p className="admin-meta mt-1.5">รูปจะถูกย่อขนาดอัตโนมัติเพื่อให้โหลดเร็ว</p>
                 </div>
               </div>
 
               {/* ── Live preview ── */}
               <div>
-                <label className="text-xs font-bold text-muted-foreground">ตัวอย่างที่หน้าแรกจะแสดง</label>
-                <div className="mt-1 rounded-xl border border-border bg-secondary/30 p-4 space-y-3 min-h-[280px]">
-                  <div className="rounded-xl overflow-hidden bg-background border border-border h-[160px] flex items-center justify-center">
+                <span className="admin-label">ตัวอย่างที่หน้าแรกจะแสดง</span>
+                <div className="rounded-md border border-border bg-secondary p-4 space-y-3 min-h-[260px]">
+                  <div className="rounded-md overflow-hidden bg-background border border-border h-[160px] flex items-center justify-center">
                     {editing.image_data
                       ? /* eslint-disable-next-line @next/next/no-img-element */
                         <img src={editing.image_data} alt="preview" className="max-w-full max-h-full object-contain" />
@@ -252,10 +245,9 @@ export default function ShowcasePage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-4 mt-1">
-              <button onClick={() => setEditing(null)} className="px-4 py-2 rounded-lg text-sm font-bold text-muted-foreground hover:bg-secondary">ยกเลิก</button>
-              <button onClick={save} disabled={saving}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-bold hover:brightness-110 disabled:opacity-60">
+            <div className="flex gap-2 pt-4 mt-1 border-t border-border">
+              <button onClick={() => setEditing(null)} className="admin-btn flex-1 sm:flex-none sm:ml-auto">ยกเลิก</button>
+              <button onClick={save} disabled={saving} className="admin-btn admin-btn-primary flex-1 sm:flex-none">
                 {saving && <Loader2 className="w-4 h-4 animate-spin" />} บันทึก
               </button>
             </div>
