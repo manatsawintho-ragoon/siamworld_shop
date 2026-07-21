@@ -262,7 +262,7 @@ function DashboardContent() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-0.5">ใช้สิทธิ์แล้ว</p>
-                  <p className="text-sm font-black text-muted-foreground">เดือนแรกพิเศษ ฿{introPromo.price}</p>
+                  <p className="text-sm font-black text-muted-foreground">ทดลองเดือนแรก ฿{introPromo.price}</p>
                   <p className="text-xs font-semibold text-muted-foreground">คุณเคยใช้สิทธิ์นี้ไปแล้ว</p>
                 </div>
               </div>

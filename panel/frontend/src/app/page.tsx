@@ -41,15 +41,20 @@ interface Promo {
   regularPrice: number;
 }
 
+/* Fallbacks only. The live numbers come from /api/subscriptions/packages, but
+   these are what the prerendered HTML shows, so they are kept in step with the
+   configured prices (`price_1month` / `price_3months` / `price_6months`).
+   `save` is the regular cost of the same span (months x 1-month price) minus
+   what the package actually costs. */
 const DEFAULT_PACKAGES: Package[] = [
-  { months: 1, price: 350,  label: '1 เดือน',  save: 0,   kind: 'regular' },
-  { months: 3, price: 945,  label: '3 เดือน',  save: 105, kind: 'regular' },
-  { months: 6, price: 1785, label: '6 เดือน',  save: 315, kind: 'regular' },
+  { months: 1, price: 249,  label: '1 เดือน',  save: 0,   kind: 'regular' },
+  { months: 3, price: 599,  label: '3 เดือน',  save: 148, kind: 'regular' },
+  { months: 6, price: 1099, label: '6 เดือน',  save: 395, kind: 'regular' },
 ];
 
 const DEFAULT_PROMOS: Promo[] = [
-  { kind: 'trial', months: 0, days: 7, price: 0,  label: 'ทดลองฟรี 7 วัน', regularPrice: 350 },
-  { kind: 'intro', months: 1,           price: 99, label: 'เดือนแรกพิเศษ',  regularPrice: 350 },
+  { kind: 'trial', months: 0, days: 7, price: 0,  label: 'ทดลองฟรี 7 วัน', regularPrice: 249 },
+  { kind: 'intro', months: 1,           price: 99, label: 'ทดลองเดือนแรก', regularPrice: 249 },
 ];
 
 /** The single primary action on this page. Every hero/section CTA points here. */
@@ -61,9 +66,9 @@ const PRIMARY_CTA = { href: '/order?kind=trial', label: 'เริ่มทด�
    and the few points that actually differ, and the shared list is rendered
    once below the grid.
 
-   The tier ranking is deliberate: the recommended card is EPIC, not
-   LEGENDARY. It should read as the smart pick rather than the maxed-out one,
-   which leaves LEGENDARY meaningful for the longest plan. */
+   Tier rank tracks price, so the rail reads as one ladder: COMMON (free trial)
+   through LEGENDARY (6 months). The recommended card is EPIC, not LEGENDARY:
+   it should read as the smart pick rather than the maxed-out one. */
 interface TierCopy {
   tier: TierKey;
   /** Who this plan suits, one short line under the title. */
@@ -82,11 +87,14 @@ const PAID_POINTS: TierCopy['points'] = [
 
 export type PlanId = 'trial' | 'intro' | 'm1' | 'm3' | 'm6';
 
-/* The three tiers the user sees first are COMMON, EPIC and LEGENDARY, so they
-   are ordered first. UNCOMMON and RARE sit to their right and are reached by
-   dragging, which keeps the default view to three readable cards while still
-   showing every plan. */
-const PLAN_ORDER: PlanId[] = ['trial', 'intro', 'm6', 'm1', 'm3'];
+/* Cheapest to most expensive: ฿0, ฿99, ฿249, ฿599, ฿1099. A price ladder is
+   the order a buyer expects, and it means the discount on each card grows as
+   you drag right. The recommended plan (m3) sits off the initial viewport on
+   narrow screens, so it is also called out in a strip under the rail. */
+const PLAN_ORDER: PlanId[] = ['trial', 'intro', 'm1', 'm3', 'm6'];
+
+/** The plan the page actively recommends. Gets the featured card treatment. */
+const FEATURED_PLAN: PlanId = 'm3';
 
 const TIER_COPY: Record<PlanId, TierCopy> = {
   trial: {
@@ -101,30 +109,45 @@ const TIER_COPY: Record<PlanId, TierCopy> = {
     ],
   },
   intro: {
-    tier: 'epic',
+    tier: 'uncommon',
     audience: 'พร้อมเปิดขายจริงเดือนนี้',
-    hook: 'เริ่มต้นถูกที่สุด ลดจาก ฿350 เหลือ ฿99',
+    hook: 'จ่ายเดือนแรกถูกที่สุด ยกเลิกได้ทุกเมื่อ',
     points: [...PAID_POINTS, { icon: 'shield-check', text: 'ยกเลิกได้ทุกเมื่อ ไม่มีสัญญาผูกมัด' }],
   },
-  m6: {
-    tier: 'legendary',
-    audience: 'เปิดยาว อยากล็อกราคาไว้',
-    hook: 'จ่ายทีเดียว ประหยัดที่สุด',
-    points: [...PAID_POINTS, { icon: 'arrows-rotate', text: 'จ่ายครั้งเดียว ไม่ต้องต่อทุกเดือน' }],
-  },
   m1: {
-    tier: 'uncommon',
+    tier: 'rare',
     audience: 'อยากจ่ายเป็นรายเดือน',
     hook: 'ยืดหยุ่นที่สุด จ่ายเท่าที่ใช้',
     points: [...PAID_POINTS, { icon: 'shield-check', text: 'ยกเลิกได้ทุกเมื่อ' }],
   },
   m3: {
-    tier: 'rare',
-    audience: 'เปิดต่อเนื่องระยะกลาง',
-    hook: 'คุ้มขึ้น แต่ยังไม่ต้องจ่ายยาว',
+    tier: 'epic',
+    audience: 'เปิดขายจริงจัง อยากได้ส่วนลดแล้ว',
+    hook: 'จ่ายไม่หนัก แต่ได้ส่วนลดแล้ว จุดที่คุ้มค่าที่สุด',
     points: [...PAID_POINTS, { icon: 'arrows-rotate', text: 'ต่ออายุน้อยลง เหลือ 4 เดือนครั้ง' }],
   },
+  m6: {
+    tier: 'legendary',
+    audience: 'เปิดยาว อยากล็อกราคาไว้',
+    hook: 'จ่ายทีเดียว เฉลี่ยต่อเดือนถูกที่สุด',
+    points: [...PAID_POINTS, { icon: 'arrows-rotate', text: 'จ่ายครั้งเดียว ไม่ต้องต่อทุกเดือน' }],
+  },
 };
+
+/* ── Discount maths ──────────────────────────────────────────────────
+   Two shapes arrive from the API: packages carry `save` (regular cost of the
+   same span minus the package price) and promos carry `regularPrice`. Both
+   reduce to the same three numbers, so the cards render one way regardless of
+   which endpoint a plan came from. A plan with neither is simply not on sale. */
+interface Discount { regular: number; save: number; percent: number }
+
+function getDiscount(pkg: { price: number; save?: number; regularPrice?: number }): Discount | null {
+  const price = Number(pkg.price);
+  const regular = Number(pkg.regularPrice ?? price + Number(pkg.save || 0));
+  const save = regular - price;
+  if (!(save > 0) || !(regular > 0)) return null;
+  return { regular, save, percent: Math.round((save / regular) * 100) };
+}
 
 const STEPS: { icon: IconName; title: string; desc: string }[] = [
   {
@@ -193,38 +216,64 @@ const DEFAULT_SHOWCASE: ShowcaseSlide[] = [
 
 /* ── Animated headline ───────────────────────────────────────────────── */
 
-/** Headline split into Thai word chunks. Thai has no inter-word spaces, so the
- *  segmentation is declared here rather than derived from whitespace. */
-const HEADLINE_WORDS: { text: string; accent?: boolean }[] = [
-  { text: 'เปิด' },
-  { text: 'ร้านค้า' },
-  { text: 'มายคราฟ' },
-  { text: 'ขายได้', accent: true },
-  { text: 'ตั้งแต่', accent: true },
-  { text: 'วันนี้', accent: true },
+/** The two headline lines. The second one carries the accent colour. */
+const HEADLINE_LINES: { text: string; accent?: boolean }[] = [
+  { text: 'เปิดร้านค้ามายคราฟ' },
+  { text: 'ขายได้ตั้งแต่วันนี้', accent: true },
 ];
 
-const TYPE_MS = 260;
-const DELETE_MS = 130;
-const HOLD_FULL_MS = 2400;
-const HOLD_EMPTY_MS = 700;
+/* Thai stacks vowels and tone marks on top of a base consonant, so slicing the
+   raw string mid-cluster would leave a mark stranded on its own and change the
+   glyph width. The text is therefore split into base+marks clusters and the
+   animation advances one cluster at a time. Segmenting with an explicit mark
+   range rather than Intl.Segmenter keeps the server and the client identical,
+   which matters because the first render is server-side. */
+const THAI_MARKS = /[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/;
+
+function toClusters(text: string): string[] {
+  const out: string[] = [];
+  for (const ch of text) {
+    if (out.length && THAI_MARKS.test(ch)) out[out.length - 1] += ch;
+    else out.push(ch);
+  }
+  return out;
+}
+
+const TYPE_MS = 62;
+const DELETE_MS = 28;
+const HOLD_FULL_MS = 2600;
+const HOLD_EMPTY_MS = 600;
+
+const Caret = () => (
+  <span
+    aria-hidden="true"
+    className="animate-caret inline-block w-[4px] md:w-[5px] h-[0.8em] bg-primary ml-1 align-middle rounded-full"
+  />
+);
 
 /**
- * Types the headline in one word at a time, then erases it word by word.
+ * Types the headline one character at a time and erases it the same way, so the
+ * caret glides through the text instead of whole words popping in and out.
  *
- * Every word stays in the DOM the whole time and is only toggled with
- * `visibility`, so:
- *   - the full H1 text is always present for crawlers and screen readers
- *   - hidden words keep occupying their space, so the line never reflows (no CLS)
- *   - the server-rendered HTML shows the complete headline; the animation only
+ * Each line is rendered twice: a full-text copy at zero opacity that reserves
+ * the exact box, and the animated slice absolutely positioned on top. That way
+ *   - the complete H1 text is always in the DOM for crawlers and screen readers
+ *   - the line never reflows as characters appear or vanish (no CLS)
+ *   - the server-rendered HTML shows the finished headline; the animation only
  *     starts after hydration, so there is no hydration mismatch
  *
- * Kept as its own component so its ~4 state updates per second re-render this
+ * Kept as its own component so its per-character state updates re-render this
  * heading alone, not the entire landing page.
  */
 function TypewriterHeadline() {
   const reduceMotion = useReducedMotion();
-  const [shown, setShown] = useState(HEADLINE_WORDS.length);
+  const lines = useMemo(
+    () => HEADLINE_LINES.map(l => ({ ...l, clusters: toClusters(l.text) })),
+    []
+  );
+  const total = useMemo(() => lines.reduce((n, l) => n + l.clusters.length, 0), [lines]);
+
+  const [shown, setShown] = useState(total);
   const [deleting, setDeleting] = useState(false);
   const [animating, setAnimating] = useState(false);
 
@@ -238,57 +287,44 @@ function TypewriterHeadline() {
 
   useEffect(() => {
     if (!animating) return;
-    let delay: number;
-    if (!deleting) {
-      delay = shown < HEADLINE_WORDS.length ? TYPE_MS : HOLD_FULL_MS;
-    } else {
-      delay = shown > 0 ? DELETE_MS : HOLD_EMPTY_MS;
-    }
+    const delay = deleting
+      ? (shown > 0 ? DELETE_MS : HOLD_EMPTY_MS)
+      : (shown < total ? TYPE_MS : HOLD_FULL_MS);
     const t = setTimeout(() => {
-      if (!deleting) {
-        if (shown < HEADLINE_WORDS.length) setShown(s => s + 1);
-        else setDeleting(true);
-      } else {
+      if (deleting) {
         if (shown > 0) setShown(s => s - 1);
         else setDeleting(false);
+      } else {
+        if (shown < total) setShown(s => s + 1);
+        else setDeleting(true);
       }
     }, delay);
     return () => clearTimeout(t);
-  }, [animating, shown, deleting]);
+  }, [animating, shown, deleting, total]);
 
-  const lead = HEADLINE_WORDS.filter(w => !w.accent);
-  const accent = HEADLINE_WORDS.filter(w => w.accent);
-  const leadCount = lead.length;
-  const caretAfter = Math.max(0, Math.min(shown, HEADLINE_WORDS.length)) - 1;
-
-  const Caret = () => (
-    <span
-      aria-hidden="true"
-      className="animate-caret inline-block w-[4px] md:w-[5px] h-[0.8em] bg-primary ml-1 align-middle rounded-full"
-    />
-  );
+  /* Walk the lines once, handing each the slice of `shown` that belongs to it.
+     The caret sits on whichever line the animation is currently working
+     through, and parks on the last line once the headline is complete. */
+  let start = 0;
+  const rendered = lines.map((l, i) => {
+    const end = start + l.clusters.length;
+    const count = Math.max(0, Math.min(shown - start, l.clusters.length));
+    const hasCaret = animating && shown >= start && (shown < end || i === lines.length - 1);
+    start = end;
+    return { ...l, count, hasCaret };
+  });
 
   return (
     <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.15] mb-6 tracking-tight text-foreground">
-      <span className="block">
-        {lead.map((w, i) => (
-          <span key={i} style={{ visibility: i < shown ? 'visible' : 'hidden' }}>
-            {w.text}
+      {rendered.map((l, i) => (
+        <span key={i} className={`relative block ${l.accent ? 'text-primary mt-2' : ''}`}>
+          <span className="opacity-0">{l.text}</span>
+          <span aria-hidden="true" className="absolute inset-0 select-none pointer-events-none">
+            {animating ? l.clusters.slice(0, l.count).join('') : l.text}
+            {l.hasCaret && <Caret />}
           </span>
-        ))}
-        {/* caretAfter is -1 while the line is empty, which keeps the caret
-            parked at the start during the pause before typing restarts. */}
-        {animating && caretAfter < leadCount && <Caret />}
-      </span>
-
-      <span className="relative inline-block text-primary mt-2">
-        {accent.map((w, i) => (
-          <span key={i} style={{ visibility: leadCount + i < shown ? 'visible' : 'hidden' }}>
-            {w.text}
-          </span>
-        ))}
-        {animating && caretAfter >= leadCount && <Caret />}
-      </span>
+        </span>
+      ))}
     </h1>
   );
 }
@@ -593,12 +629,10 @@ function PlanRail({ children, count }: { children: React.ReactNode; count: numbe
 function PackageCard({
   pkg,
   planId,
-  isPromo = false,
-  isTrial = false,
   index = 0,
   easyslipFee,
   onShowEasySlip,
-}: { pkg: any; planId: PlanId; isPromo?: boolean; isTrial?: boolean; index?: number; easyslipFee: number; onShowEasySlip: () => void }) {
+}: { pkg: any; planId: PlanId; index?: number; easyslipFee: number; onShowEasySlip: () => void }) {
   const reduceMotion = useReducedMotion();
   // Touch devices have no hover, so the glow is armed when the card scrolls
   // into view instead. CSS picks whichever applies via @media (hover: …).
@@ -607,9 +641,37 @@ function PackageCard({
   const copy = TIER_COPY[planId];
   const tier = getTier(copy.tier);
 
+  const isTrial = planId === 'trial';
+  const isIntro = planId === 'intro';
+  const featured = planId === FEATURED_PLAN;
+
+  /* The free trial is not "100% off", it is free, so it skips the discount
+     block entirely and lets the ฿0 speak for itself. */
+  const discount = isTrial ? null : getDiscount(pkg);
+  const perMonth = pkg.months > 1 ? Math.round(pkg.price / pkg.months) : null;
+
+  /* One badge per card at most, and never one that repeats the discount pill
+     right below it. 6 months keeps the honest claim it can actually make
+     (cheapest per month, not the biggest saving as a share of the price). */
+  const badge = featured
+    ? 'แนะนำ คุ้มค่าที่สุด'
+    : planId === 'm6'
+      ? 'ถูกที่สุดต่อเดือน'
+      : isIntro
+        ? 'ลูกค้าใหม่เท่านั้น'
+        : null;
+
+  const unit = isTrial
+    ? `${pkg.days} วัน`
+    : isIntro
+      ? 'เดือนแรก'
+      : pkg.months === 1
+        ? 'เดือน'
+        : pkg.label;
+
   return (
     <motion.div
-      className={`h-full ${isPromo ? 'z-10' : ''}`}
+      className={`h-full ${featured ? 'z-10' : ''}`}
       initial={reduceMotion ? false : { opacity: 0, y: 24, scale: 0.96 }}
       whileInView={{ opacity: 1, y: 0, scale: 1 }}
       viewport={{ once: true, amount: 0.2 }}
@@ -618,30 +680,33 @@ function PackageCard({
     >
       <Card
         className={`landing-tier-card flex flex-col relative h-full overflow-hidden border-2 rounded-2xl ${armed ? 'tier-armed' : ''} ${
-          isPromo
+          featured
             ? 'card-sheen landing-tier-featured shadow-2xl bg-card scale-[1.04] md:scale-[1.06] z-10'
             : 'bg-card/70 shadow-sm'
         }`}
         style={{
           ['--tier' as string]: tier.color,
           ['--tier-glow' as string]: tier.glow,
-          borderColor: isPromo ? tier.color : undefined,
+          borderColor: featured ? tier.color : undefined,
         }}
       >
         {/* Rarity strip: the tier colour reads before any text does. It starts
-            below the badge row so the "คุ้มที่สุด" badge never sits on top of
-            it. */}
+            below the badge row so the badge never sits on top of it. */}
         <div className="absolute inset-x-0 top-0 h-1.5" style={{ backgroundColor: tier.color }} aria-hidden="true" />
 
-        {isPromo && (
+        {badge && (
           <div className="absolute top-1.5 left-0 right-0 flex justify-center z-20">
-            <Badge className="bg-primary text-primary-foreground rounded-t-none px-4 py-1 text-[10px] uppercase tracking-wider font-black shadow-lg border-none whitespace-nowrap">
-              คุ้มที่สุด
+            <Badge
+              className={`rounded-t-none px-4 py-1 text-[10px] uppercase tracking-wider font-black shadow-lg border-none whitespace-nowrap ${
+                featured ? 'bg-primary text-primary-foreground' : 'bg-foreground/85 text-background'
+              }`}
+            >
+              {badge}
             </Badge>
           </div>
         )}
 
-        <CardHeader className={isPromo ? 'pb-4 pt-11' : 'pb-4 pt-8'}>
+        <CardHeader className={badge ? 'pb-4 pt-11' : 'pb-4 pt-8'}>
           {/* Tier is stated in text as well as colour, so it survives both
               colour-blindness and greyscale printing. */}
           <span
@@ -654,25 +719,48 @@ function PackageCard({
           <CardTitle className="text-lg font-black">{isTrial ? 'ทดลองใช้ฟรี' : pkg.label}</CardTitle>
           <p className="text-[12px] font-semibold text-muted-foreground mt-1.5 leading-snug">{copy.audience}</p>
           <div className="flex items-baseline flex-wrap gap-x-2 gap-y-1 mt-3">
-            {isPromo && pkg.regularPrice && (
-              <span className="text-xl font-bold text-muted-foreground/60 line-through tabular-nums" aria-label={`ราคาปกติ ${pkg.regularPrice} บาท`}>
-                ฿{pkg.regularPrice}
-              </span>
-            )}
-            <span className="text-5xl font-black tracking-tighter text-foreground tabular-nums">฿{pkg.price}</span>
-            <span className="text-sm font-bold text-muted-foreground">
-              /{pkg.days ? `${pkg.days} วัน` : (pkg.months === 1 ? 'เดือนแรก' : pkg.label)}
+            <span className="text-5xl font-black tracking-tighter text-foreground tabular-nums">
+              ฿{pkg.price.toLocaleString()}
             </span>
+            <span className="text-sm font-bold text-muted-foreground">/{unit}</span>
           </div>
-          {isPromo && pkg.regularPrice > pkg.price && (
-            <span className="inline-flex w-fit items-center gap-1 mt-2 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-black text-emerald-600">
-              <Icon name="tag" className="text-[10px]" />
-              ประหยัด ฿{pkg.regularPrice - pkg.price} เดือนแรก
-            </span>
+
+          {/* Discounted plans state the same thing three ways, because each
+              answers a different question: what it used to cost, how deep the
+              cut is, and how many baht stay in your pocket. */}
+          {discount && (
+            <div className="flex items-center flex-wrap gap-1.5 mt-2.5">
+              <span
+                className="text-base font-bold text-destructive/70 line-through tabular-nums"
+                aria-label={`ราคาปกติ ${discount.regular} บาท`}
+              >
+                ฿{discount.regular.toLocaleString()}
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-black text-destructive">
+                <Icon name="arrow-down" className="text-[9px]" />
+                ลด {discount.percent}%
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-black text-emerald-600">
+                <Icon name="tag" className="text-[9px]" />
+                ประหยัด ฿{discount.save.toLocaleString()}
+              </span>
+            </div>
           )}
+
+          {/* The number that makes the long plans comparable to the short ones. */}
+          {perMonth && (
+            <p className="text-[12px] font-bold text-foreground/80 mt-2 tabular-nums">
+              เฉลี่ยเดือนละ ฿{perMonth.toLocaleString()}
+            </p>
+          )}
+
           {/* One-line hook: the single reason to pick this plan over the others. */}
           <p className="text-[13px] font-bold mt-3 leading-snug" style={{ color: tier.color }}>{copy.hook}</p>
-          {isPromo && <p className="text-[12px] text-muted-foreground mt-1.5 font-medium">เดือนถัดไป ฿{pkg.regularPrice ?? 350}/เดือน</p>}
+          {isIntro && discount && (
+            <p className="text-[12px] text-muted-foreground mt-1.5 font-medium">
+              เดือนถัดไป ฿{discount.regular.toLocaleString()}/เดือน
+            </p>
+          )}
         </CardHeader>
 
         {/* Plan-specific points only. The list shared by every plan is
@@ -706,12 +794,12 @@ function PackageCard({
         <CardFooter className="pt-0 flex-col items-stretch gap-3">
           <Button
             className={`w-full rounded-full font-black tracking-wide h-12 transition-all cursor-pointer ${
-              isPromo ? 'bg-primary hover:bg-primary/90 shadow-lg hover:shadow-xl' : 'bg-background border-2 border-border hover:bg-secondary text-foreground'
+              featured ? 'bg-primary hover:bg-primary/90 shadow-lg hover:shadow-xl' : 'bg-background border-2 border-border hover:bg-secondary text-foreground'
             }`}
-            variant={isPromo ? 'default' : 'outline'}
+            variant={featured ? 'default' : 'outline'}
             asChild
           >
-            <Link href={isTrial ? '/order?kind=trial' : (isPromo ? '/order?kind=intro' : `/order?months=${pkg.months}`)}>
+            <Link href={isTrial ? '/order?kind=trial' : (isIntro ? '/order?kind=intro' : `/order?months=${pkg.months}`)}>
               {isTrial ? 'เริ่มทดลองใช้งาน' : 'สั่งซื้อแพ็กเกจ'}
             </Link>
           </Button>
@@ -861,6 +949,12 @@ function LandingContent() {
     };
     return PLAN_ORDER.filter(id => byId[id]).map(id => ({ id, pkg: byId[id] }));
   }, [trialPromo, introPromo, packages]);
+
+  /* The recommended plan again, outside the rail. The rail is a price ladder,
+     so on a narrow screen the recommendation starts off-viewport; this strip
+     puts it in front of everyone without breaking the ordering. */
+  const featuredPkg = planCards.find(p => p.id === FEATURED_PLAN)?.pkg;
+  const featuredDiscount = featuredPkg ? getDiscount(featuredPkg) : null;
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
@@ -1260,7 +1354,7 @@ function LandingContent() {
           <SectionHead
             eyebrow="ราคา"
             title={<>เริ่มขายได้ในราคา <span className="text-primary">฿99</span> เดือนแรก</>}
-            sub="ทุกแพ็กเกจได้ฟีเจอร์เท่ากันหมด ต่างกันแค่ระยะเวลา ยิ่งจ่ายยาว ยิ่งถูกต่อเดือน ลองฟรีก่อน 7 วันได้ ไม่ต้องผูกบัตร"
+            sub="ทุกแพ็กเกจได้ฟีเจอร์เท่ากันหมด ต่างกันแค่ระยะเวลา เรียงจากถูกไปแพง ยิ่งจ่ายยาว ยิ่งลดเยอะ ลองฟรีก่อน 7 วันได้ ไม่ต้องผูกบัตร"
           />
 
           <PlanRail count={planCards.length}>
@@ -1269,8 +1363,6 @@ function LandingContent() {
                 <PackageCard
                   pkg={p.pkg}
                   planId={p.id}
-                  isTrial={p.id === 'trial'}
-                  isPromo={p.id === 'intro'}
                   index={i}
                   easyslipFee={easyslipFee}
                   onShowEasySlip={() => setShowEasySlipPlan(true)}
@@ -1278,6 +1370,34 @@ function LandingContent() {
               </div>
             ))}
           </PlanRail>
+
+          {featuredPkg && featuredDiscount && (
+            <div className="mt-4 rounded-2xl border-2 border-primary/40 bg-primary/5 p-5 md:p-6 flex flex-col md:flex-row md:items-center gap-5">
+              <div className="flex-1">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-[10px] font-black uppercase tracking-wider text-primary-foreground">
+                  <Icon name="fire" className="text-[10px]" />
+                  แนะนำที่สุด
+                </span>
+                <p className="text-lg md:text-xl font-black text-foreground mt-2.5 leading-snug">
+                  แพ็กเกจ {featuredPkg.label} จ่าย ฿{featuredPkg.price.toLocaleString()}
+                  <span className="text-destructive line-through font-bold text-base ml-2 tabular-nums">
+                    ฿{featuredDiscount.regular.toLocaleString()}
+                  </span>
+                </p>
+                <p className="text-[13px] font-semibold text-muted-foreground mt-1.5 leading-relaxed">
+                  ลด {featuredDiscount.percent}% ประหยัดไป ฿{featuredDiscount.save.toLocaleString()} เฉลี่ยเดือนละ ฿
+                  {Math.round(featuredPkg.price / featuredPkg.months).toLocaleString()}
+                  {' '}จ่ายไม่หนัก ต่ออายุน้อยลง และได้ส่วนลดแล้ว
+                </p>
+              </div>
+              <Button
+                className="rounded-full font-black tracking-wide h-12 px-7 shrink-0 bg-primary hover:bg-primary/90 shadow-lg hover:shadow-xl cursor-pointer"
+                asChild
+              >
+                <Link href={`/order?months=${featuredPkg.months}`}>เลือกแพ็กเกจนี้</Link>
+              </Button>
+            </div>
+          )}
 
           {/* Shared across every plan, so it is stated once here instead of
               being repeated inside all three cards. */}

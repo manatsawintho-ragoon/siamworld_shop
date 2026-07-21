@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Icon, type IconName } from '@/components/ui/icon';
 
 // Used until live package prices load from the backend.
-const FALLBACK_PRESETS = [100, 350, 500, 945, 1000, 1785];
+const FALLBACK_PRESETS = [100, 249, 500, 599, 1000, 1099];
 type PkgPrice = { months: number; price: number; label: string };
 const STEPS = ['เลือกยอด', 'สแกน QR', 'แนบสลิป', 'สำเร็จ'];
 const STEP_MAP: Record<string, number> = { amount: 0, qr: 1, slip: 2, done: 3 };
@@ -366,7 +366,7 @@ export default function TopupPage() {
                       ยอดที่ตรงกับแพ็กเกจ: <br/>
                       {packages.length
                         ? packages.map(p => `฿${p.price.toLocaleString()} (${p.label})`).join(' · ')
-                        : '฿350 (1 เดือน), ฿945 (3 เดือน), ฿1,785 (6 เดือน)'}
+                        : '฿249 (1 เดือน), ฿599 (3 เดือน), ฿1,099 (6 เดือน)'}
                     </p>
                   </div>
                 </CardContent>

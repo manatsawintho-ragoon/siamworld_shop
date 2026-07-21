@@ -95,7 +95,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       },
       {
         "@type": "Offer",
-        "name": "เดือนแรกพิเศษ ฿99",
+        "name": "ทดลองเดือนแรก ฿99",
         "price": "99",
         "priceCurrency": "THB",
         "availability": "https://schema.org/InStock",
@@ -104,21 +104,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       {
         "@type": "Offer",
         "name": "แพ็กเกจ 1 เดือน",
-        "price": "350",
+        "price": "249",
         "priceCurrency": "THB",
         "availability": "https://schema.org/InStock"
       },
       {
         "@type": "Offer",
         "name": "แพ็กเกจ 3 เดือน",
-        "price": "945",
+        "price": "599",
         "priceCurrency": "THB",
         "availability": "https://schema.org/InStock"
       },
       {
         "@type": "Offer",
         "name": "แพ็กเกจ 6 เดือน",
-        "price": "1785",
+        "price": "1099",
         "priceCurrency": "THB",
         "availability": "https://schema.org/InStock"
       }

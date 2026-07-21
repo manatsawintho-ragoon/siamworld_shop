@@ -164,7 +164,7 @@ class EmailService {
     </div>` : ''}
     ${sub.kind === 'intro' ? `
     <div style="margin:16px 28px 0;padding:12px 14px;background:${SOFT};border-left:3px solid ${AMBER};border-radius:6px;font-size:12px;color:${INK};line-height:1.6;">
-      <b style="font-family:'Prompt',sans-serif;color:${AMBER};">โปรเดือนแรก ฿99</b> เดือนถัดไปราคาปกติ ฿350/เดือน
+      <b style="font-family:'Prompt',sans-serif;color:${AMBER};">โปรเดือนแรก ฿99</b> เดือนถัดไปราคาปกติ ฿249/เดือน
     </div>` : ''}
 
     <!-- Thank you + closing -->

@@ -60,7 +60,7 @@ function RenewContent() {
   useEffect(() => {
     if (!selectedSubData) { setSelection(null); return; }
     if (canUseIntro && introPromo) {
-      setSelection({ kind: 'intro', price: introPromo.price, label: 'เดือนแรกพิเศษ (1 เดือน)', months: 1 });
+      setSelection({ kind: 'intro', price: introPromo.price, label: 'ทดลองเดือนแรก (1 เดือน)', months: 1 });
     } else if (packages.length) {
       const first = packages[0];
       setSelection({ kind: 'regular', months: first.months, price: first.price, label: first.label, save: first.save });
@@ -203,7 +203,7 @@ function RenewContent() {
                 <CardContent className="space-y-4">
                   {canUseIntro && introPromo && (
                     <div
-                      onClick={() => setSelection({ kind: 'intro', price: introPromo.price, label: 'เดือนแรกพิเศษ (1 เดือน)', months: 1 })}
+                      onClick={() => setSelection({ kind: 'intro', price: introPromo.price, label: 'ทดลองเดือนแรก (1 เดือน)', months: 1 })}
                       className={`relative p-5 rounded-xl border-2 transition-all cursor-pointer flex items-center gap-4 ${
                         selection?.kind === 'intro'
                           ? 'bg-emerald-500/10 border-emerald-500 shadow-md'

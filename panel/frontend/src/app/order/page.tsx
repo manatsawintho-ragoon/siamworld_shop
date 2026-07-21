@@ -78,7 +78,7 @@ function OrderContent() {
   const orderLabel = orderKind === 'trial'
     ? `ทดลองฟรี ${trialPromo?.days || 7} วัน`
     : orderKind === 'intro'
-      ? `เดือนแรกพิเศษ ฿${introPromo?.price || 99}`
+      ? `ทดลองเดือนแรก ฿${introPromo?.price || 99}`
       : (selectedPkg?.label || '-');
 
   const validateName = (v: string) => {
@@ -266,7 +266,7 @@ function OrderContent() {
                       <p className="text-sm font-extrabold text-foreground truncate">
                         {orderKind === 'trial'
                           ? `ทดลองฟรี ${trialPromo?.days || 7} วัน · ฿0`
-                          : `เดือนแรกพิเศษ ฿${introPromo?.price || 99} (ปกติ ฿${introPromo?.regularPrice || 350})`}
+                          : `ทดลองเดือนแรก ฿${introPromo?.price || 99} (ปกติ ฿${introPromo?.regularPrice || 249})`}
                       </p>
                     </div>
                     <button

@@ -34,9 +34,9 @@ export type SubscriptionKind = 'regular' | 'trial' | 'intro';
 class SubscriptionService {
   async getPackages() {
     const s = await settingsService.getAll();
-    const p1 = Number(s['price_1month']  || 350);
-    const p3 = Number(s['price_3months'] || 945);
-    const p6 = Number(s['price_6months'] || 1785);
+    const p1 = Number(s['price_1month']  || 249);
+    const p3 = Number(s['price_3months'] || 599);
+    const p6 = Number(s['price_6months'] || 1099);
     return [
       { kind: 'regular' as const, months: 1, price: p1, label: '1 เดือน', save: 0 },
       { kind: 'regular' as const, months: 3, price: p3, label: '3 เดือน', save: p1 * 3 - p3 },
@@ -57,7 +57,7 @@ class SubscriptionService {
       label: string;
       regularPrice: number;
     }> = [];
-    const regularPrice = Number(s['price_1month'] || 350);
+    const regularPrice = Number(s['price_1month'] || 249);
     if (enableTrial) {
       promos.push({
         kind: 'trial',
@@ -73,7 +73,7 @@ class SubscriptionService {
         kind: 'intro',
         months: 1,
         price: Number(s['intro_price'] || 99),
-        label: 'เดือนแรกพิเศษ',
+        label: 'ทดลองเดือนแรก',
         regularPrice,
       });
     }
