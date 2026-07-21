@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
 import Navbar from '@/components/Navbar';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 
 interface Ticket {
   id: number;

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import Navbar from '@/components/Navbar';
 import { LANDING_PAGES, CLUSTERS } from '@/lib/seo/keywords';
 import { Icon, type IconName } from '@/components/ui/icon';

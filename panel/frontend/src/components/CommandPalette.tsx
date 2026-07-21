@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 import api from '@/lib/api';
 import { Icon, type IconName } from '@/components/ui/icon';
 

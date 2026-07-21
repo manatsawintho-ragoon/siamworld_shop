@@ -1,5 +1,5 @@
 import React from 'react';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import Navbar from '@/components/Navbar';
 import { LEGAL_DOCS, LEGAL_UPDATED_TH, LEGAL_VERSION, CONTACT, OPERATOR } from '@/lib/legal';
 import { Icon, type IconName } from '@/components/ui/icon';

@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { getEnRelated, EN_CLUSTERS } from '@/lib/seo/keywords.en';

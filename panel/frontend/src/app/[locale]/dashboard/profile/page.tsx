@@ -1,9 +1,9 @@
 'use client';
 import { useEffect, useState, FormEvent } from 'react';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 import api from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';

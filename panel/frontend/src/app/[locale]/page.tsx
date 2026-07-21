@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import { setRequestLocale } from 'next-intl/server';
 import Home_ from '@/components/marketing/ThaiHome';
-import { FAQ } from '@/lib/faq';
+import { FAQ, EASYSLIP_FEE_MAX } from '@/lib/faq';
+import { getTranslations } from 'next-intl/server';
 import {
   SITE_URL,
   SITE_NAME,
@@ -72,8 +73,9 @@ export function generateMetadata({
   return { alternates };
 }
 
-export default function Home({ params: { locale } }: { params: { locale: string } }) {
+export default async function Home({ params: { locale } }: { params: { locale: string } }) {
   setRequestLocale(locale);
+  const tFaq = await getTranslations('faq');
 
   // ONE homepage for both languages.
   //
@@ -116,10 +118,12 @@ export default function Home({ params: { locale } }: { params: { locale: string 
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
     inLanguage: locale,
-    mainEntity: FAQ.map((item) => ({
+    // Reads the same messages the page renders, so the structured data is in
+    // the page's language and can never describe unseen questions.
+    mainEntity: FAQ.map((_, i) => ({
       '@type': 'Question',
-      name: item.q,
-      acceptedAnswer: { '@type': 'Answer', text: item.a },
+      name: tFaq(`q${i + 1}`),
+      acceptedAnswer: { '@type': 'Answer', text: tFaq(`a${i + 1}`, { fee: EASYSLIP_FEE_MAX }) },
     })),
   };
 

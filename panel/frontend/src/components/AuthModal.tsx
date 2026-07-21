@@ -1,9 +1,9 @@
 'use client';
 import { useState, FormEvent, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 import api from '@/lib/api';
 import TurnstileWidget from './TurnstileWidget';
 import { LEGAL_DOCS, LEGAL_VERSION } from '@/lib/legal';
