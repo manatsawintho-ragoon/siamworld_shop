@@ -114,12 +114,18 @@ function getStatusInfo(c: Campaign): { label: string; className: string; dot: st
 }
 
 // ─── Datetime <-> datetime-local helpers ────────────────────────────────────
-// Matches this file's own convention of a lossless round trip through
-// toISOString: what goes in via <input type="datetime-local"> comes back out
-// unchanged, so editing an unrelated field never silently shifts the window.
-
+// <input type="datetime-local"> has no timezone: the browser reads and writes
+// its value as LOCAL wall clock. Both helpers must therefore agree on local,
+// or the round trip silently shifts the window by the UTC offset (7h here) on
+// every edit-and-resave. fromLocalInput already parses as local, so
+// toLocalInput must emit local wall clock too - NOT toISOString(), which is UTC.
 const toLocalInput = (iso: string) => {
-  try { return new Date(iso).toISOString().slice(0, 16); } catch { return ''; }
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60_000)
+      .toISOString().slice(0, 16);
+  } catch { return ''; }
 };
 const fromLocalInput = (value: string) => new Date(value).toISOString();
 
