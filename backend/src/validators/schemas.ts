@@ -302,7 +302,9 @@ export const campaignSchema = z.object({
   endsAt: z.coerce.date(),
   dailyStartTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).optional().nullable(),
   dailyEndTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).optional().nullable(),
-  weekdayMask: z.number().int().min(0).max(127).optional().nullable(),
+  // 0 matches no weekday at all (the campaign would silently never grant
+  // points); null already means "every day", so reject 0 but keep null valid.
+  weekdayMask: z.number().int().min(1, 'เลือกอย่างน้อย 1 วัน หรือเว้นว่างไว้เพื่อใช้ทุกวัน').max(127).optional().nullable(),
   maxPointsPerUser: z.number().int().positive().optional().nullable(),
   maxPointsBudget: z.number().int().positive().optional().nullable(),
   pointsExpireDays: z.number().int().min(0).max(3650).default(30),

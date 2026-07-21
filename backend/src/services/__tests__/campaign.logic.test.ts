@@ -117,6 +117,10 @@ describe('isCampaignActiveAt', () => {
       expect(isCampaignActiveAt({ ...base, weekday_mask: 0 }, new Date('2026-08-08T05:00:00Z'))).toBe(false);
     });
   });
+
+  it('is inactive for an unparseable instant (NaN must never match a window)', () => {
+    expect(isCampaignActiveAt(base, new Date('not-a-date'))).toBe(false);
+  });
 });
 
 describe('selectCampaignAt', () => {
@@ -147,6 +151,9 @@ describe('selectCampaignAt', () => {
       rule({ id: 2, points_per_baht: 0.3 }),
     ], when);
     expect(picked?.id).toBe(2);
+  });
+  it('returns null for an invalid instant (unparseable date must never select a campaign)', () => {
+    expect(selectCampaignAt([rule({ id: 1 })], new Date('not-a-date'))).toBeNull();
   });
 });
 

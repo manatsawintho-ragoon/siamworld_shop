@@ -50,6 +50,7 @@ export function isCampaignActiveAt(c: CampaignWindow, when: Date): boolean {
   if (c.deleted_at !== null) return false;
 
   const t = when.getTime();
+  if (Number.isNaN(t)) return false;   // an unparseable date must never match a window
   if (t < c.starts_at.getTime()) return false;
   if (t > c.ends_at.getTime()) return false;
 

@@ -335,7 +335,13 @@ class CampaignService {
 
   /** Manual admin adjustment. Positive grants, negative deducts. Reason is mandatory. */
   async grantManual(userId: number, points: number, reason: string, expireDays: number): Promise<void> {
-    const expiresAt = new Date(Date.now() + expireDays * 86_400_000);
+    // A negative grant is an admin penalty (debt). It must use the same
+    // far-future expiry as automated clawback debt (see revokeForTransaction
+    // above) - otherwise the caller-supplied expireDays would let the debt
+    // expire and the player could simply wait out the penalty.
+    const expiresAt = points < 0
+      ? new Date('2099-12-31 23:59:59')
+      : new Date(Date.now() + expireDays * 86_400_000);
     await pool.execute(
       `INSERT INTO point_lots
          (user_id, campaign_id, points_granted, points_remaining,

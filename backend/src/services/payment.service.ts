@@ -177,6 +177,7 @@ class PaymentService {
       : `ซองของขวัญ TrueMoney ฿${amount}`;
 
     const conn = await pool.getConnection();
+    let released = false;
     try {
       await conn.beginTransaction();
 
@@ -217,6 +218,11 @@ class PaymentService {
       const transactionId = txResult.insertId;
 
       await conn.commit();
+      // Release the pooled connection now, before the campaign grant below.
+      // grantForTopup takes up to 4 more connections from this same pool; holding
+      // this one while it awaits risks pool exhaustion under concurrent top-ups.
+      conn.release();
+      released = true;
 
       // Campaign points are granted AFTER the money has committed and can never
       // roll it back. TrueMoney has no bank timestamp, so the redemption instant
@@ -254,7 +260,7 @@ class PaymentService {
 
       return { amount: creditAmount, paid_amount: amount, multiplier, voucherHash, balanceAfter, ownerName };
     } catch (err) {
-      await conn.rollback();
+      if (!released) await conn.rollback();
       // Reconciliation safety: the money is already in the shop wallet, but the
       // DB credit failed. Alert loudly so an admin can credit manually.
       if (!(err instanceof ConflictError)) {
@@ -274,7 +280,7 @@ class PaymentService {
       }
       throw err;
     } finally {
-      conn.release();
+      if (!released) conn.release();
     }
   }
 
@@ -446,6 +452,7 @@ class PaymentService {
     // Uses FOR UPDATE lock on slip_logs to prevent race conditions where the same
     // transRef is submitted concurrently by multiple requests.
     const conn = await pool.getConnection();
+    let released = false;
     try {
       await conn.beginTransaction();
 
@@ -517,6 +524,11 @@ class PaymentService {
       }
 
       await conn.commit();
+      // Release the pooled connection now, before the campaign grant below.
+      // grantForTopup takes up to 4 more connections from this same pool; holding
+      // this one while it awaits risks pool exhaustion under concurrent top-ups.
+      conn.release();
+      released = true;
 
       // qualified_at is the BANK TRANSFER time (slipDate), not the upload time.
       // This is both fairer (pay 23:58, verify 00:05, still counts) and safer
@@ -563,10 +575,10 @@ class PaymentService {
         balanceAfter,
       };
     } catch (err) {
-      await conn.rollback();
+      if (!released) await conn.rollback();
       throw err;
     } finally {
-      conn.release();
+      if (!released) conn.release();
     }
   }
 }
