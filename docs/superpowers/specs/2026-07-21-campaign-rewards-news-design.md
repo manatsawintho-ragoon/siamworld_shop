@@ -234,7 +234,13 @@ campaignService.grantForTopup({
 |--------|----------------|
 | EasySlip | bank transfer time from the verified slip |
 | TrueMoney | redemption time |
-| Admin manual top-up | wallet credit time |
+
+**Admin balance edits do not grant points.** `user.service.updateUserProfile`
+sets an absolute balance as a correction, writes no `transactions` row, and is
+therefore both semantically wrong to reward and impossible to make idempotent
+(the transaction id is the idempotency key). Admins grant points explicitly via
+`POST /api/admin/campaigns/points/grant`, which requires a reason and is
+audited.
 
 Compared in `Asia/Bangkok`. This is simultaneously the fairest rule (pay 23:58,
 verify 00:05, still counts) and the least exploitable (a slip hoarded from last
