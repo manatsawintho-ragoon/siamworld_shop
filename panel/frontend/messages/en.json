@@ -17,6 +17,9 @@
     "profile": "Profile",
     "adminPanel": "Admin panel",
     "logout": "Sign out",
-    "changeLanguage": "Change language"
+    "changeLanguage": "Change language",
+    "login": "Sign in",
+    "register": "Create account",
+    "topup": "Top up"
   }
 }

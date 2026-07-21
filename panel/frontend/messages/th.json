@@ -17,6 +17,9 @@
     "profile": "โปรไฟล์ส่วนตัว",
     "adminPanel": "แผงควบคุมแอดมิน",
     "logout": "ออกจากระบบ",
-    "changeLanguage": "เปลี่ยนภาษา"
+    "changeLanguage": "เปลี่ยนภาษา",
+    "login": "เข้าสู่ระบบ",
+    "register": "สมัครสมาชิก",
+    "topup": "เติมเงิน"
   }
 }
