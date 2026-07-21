@@ -7,15 +7,12 @@ import { routing } from '@/i18n/routing';
 import AppProviders from '@/components/AppProviders';
 import '../globals.css';
 import FacebookFab from '@/components/FacebookFab';
-import { FAQ } from '@/lib/faq';
 import {
   SITE_URL,
-  SITE_NAME,
   jsonLd,
   organizationSchema,
   websiteSchema,
   ORGANIZATION_ID,
-  WEBSITE_ID,
 } from '@/lib/seo/site';
 
 /**
@@ -24,7 +21,38 @@ import {
  * the render-blocking round trip to fonts.googleapis.com that the old
  * <link> + CSS @import pair cost us on every page.
  */
-export const metadata: Metadata = {
+export function generateMetadata({
+  params: { locale },
+}: {
+  params: { locale: string };
+}): Metadata {
+  // Defaults for any page in this tree that does not set its own. Static Thai
+  // metadata here meant English pages inherited a Thai title and description,
+  // which is wrong in the browser tab, wrong in the SERP, and a language
+  // mismatch signal to Google.
+  if (locale === 'en') {
+    return {
+      metadataBase: new URL(SITE_URL),
+      title: 'Minecraft Webshop Platform | SIAMSITE',
+      description:
+        'Hosted Minecraft webshop for Thai and SEA servers: AuthMe login, PromptPay and TrueMoney top-ups, and automatic RCON item delivery.',
+      authors: [{ name: 'SIAMSITE' }],
+      openGraph: {
+        siteName: 'SIAMSITE STORE',
+        locale: 'en_US',
+        type: 'website',
+        images: [{ url: `${SITE_URL}/dashboard-admin.png`, width: 1200, height: 630, alt: 'SIAMSITE admin dashboard' }],
+      },
+      twitter: { card: 'summary_large_image' },
+      robots: {
+        index: true,
+        follow: true,
+        googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
+      },
+    };
+  }
+
+  return {
   metadataBase: new URL(SITE_URL),
   // Keyword-led, brand last: Google already renders the site name above the
   // title in the SERP, so spending the first 14 characters on "SIAMSITE STORE"
@@ -93,7 +121,8 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
-};
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: '#f59e0b',
@@ -142,74 +171,11 @@ export default async function LocaleRootLayout({
   const fontClass =
     locale === 'en' ? kanitLatin.variable : `${kanitLatin.variable} ${kanitThai.variable}`;
 
-  const softwareSchema = {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "SIAMSITE STORE",
-    "operatingSystem": "Web",
-    "applicationCategory": "BusinessApplication",
-    "description": "ระบบเช่าเว็บร้านค้า Minecraft สำเร็จรูป รองรับ PromptPay + EasySlip + RCON พร้อมทดลองฟรี 7 วัน",
-    "url": "https://panel.siamsite.shop",
-    "offers": [
-      {
-        "@type": "Offer",
-        "name": "ทดลองฟรี 7 วัน",
-        "price": "0",
-        "priceCurrency": "THB",
-        "availability": "https://schema.org/InStock",
-        "category": "Free Trial",
-        "eligibleDuration": { "@type": "QuantitativeValue", "value": 7, "unitCode": "DAY" }
-      },
-      {
-        "@type": "Offer",
-        "name": "ทดลองเดือนแรก ฿99",
-        "price": "99",
-        "priceCurrency": "THB",
-        "availability": "https://schema.org/InStock",
-        "category": "Introductory Offer"
-      },
-      {
-        "@type": "Offer",
-        "name": "แพ็กเกจ 1 เดือน",
-        "price": "249",
-        "priceCurrency": "THB",
-        "availability": "https://schema.org/InStock"
-      },
-      {
-        "@type": "Offer",
-        "name": "แพ็กเกจ 3 เดือน",
-        "price": "599",
-        "priceCurrency": "THB",
-        "availability": "https://schema.org/InStock"
-      },
-      {
-        "@type": "Offer",
-        "name": "แพ็กเกจ 6 เดือน",
-        "price": "1099",
-        "priceCurrency": "THB",
-        "availability": "https://schema.org/InStock"
-      }
-    ]
-    // NOTE: no aggregateRating here. Google's review snippet policy disallows
-    // self-serving ratings that aren't backed by real, user-submitted reviews
-    // shown on the page. Re-add only when genuine reviews are collected and
-    // rendered.
-  };
-
-  // Mirrors the FAQ rendered on the landing page. Both read FAQ from
-  // lib/faq.ts so the structured data can never describe questions that
-  // aren't actually visible on the page.
-  const faqSchema = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": FAQ.map(item => ({
-      "@type": "Question",
-      "name": item.q,
-      "acceptedAnswer": { "@type": "Answer", "text": item.a },
-    })),
-  };
-
-  // Organization and WebSite now come from lib/seo/site.ts with stable @id values,
+  // Only site-wide entities live here. SoftwareApplication and FAQPage moved to
+  // the homepage: they were emitted on EVERY page, so /order and /en/order
+  // carried a Thai FAQPage describing questions that page never renders, which
+  // breaks Google's requirement that FAQ markup match visible content.
+  // Organization and WebSite come from lib/seo/site.ts with stable @id values,
   // so every other page's JSON-LD can reference the same entity by @id instead of
   // restating a slightly different copy of the publisher on each URL.
   return (
@@ -217,14 +183,6 @@ export default async function LocaleRootLayout({
       <head>
         {/* Icons are inline SVG via components/ui/icon.tsx (lucide-react) - no icon webfont.
             Kanit is self-hosted by next/font, so there are no font CDN preconnects either. */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: jsonLd({ ...softwareSchema, publisher: { '@id': ORGANIZATION_ID }, isPartOf: { '@id': WEBSITE_ID } }) }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: jsonLd(faqSchema) }}
-        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: jsonLd(organizationSchema) }}
