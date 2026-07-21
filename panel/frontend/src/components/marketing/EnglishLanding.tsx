@@ -1,45 +1,12 @@
-import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
-import { EN_LANDING_PAGES, getEnLandingBySlug, getEnRelated, EN_CLUSTERS } from '@/lib/seo/keywords.en';
+import { getEnRelated, EN_CLUSTERS } from '@/lib/seo/keywords.en';
+import type { LandingPage } from '@/lib/seo/keywords';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { SITE_URL, SITE_NAME, abs, jsonLd, ORGANIZATION_ID } from '@/lib/seo/site';
 
-export const dynamicParams = false;
-
-export function generateStaticParams() {
-  return EN_LANDING_PAGES.map((p) => ({ slug: p.slug }));
-}
-
-export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
-  const page = getEnLandingBySlug(params.slug);
-  if (!page) return {};
-  const url = `/en/lp/${page.slug}`;
-  return {
-    title: page.title,
-    description: page.description,
-    keywords: page.keywords.join(', '),
-    // English pages are self-canonical. They have no Thai twin at a matching
-    // path, so they declare only their own language rather than pointing an
-    // hreflang pair at a page that does not exist (a non-reciprocal pair makes
-    // Google discard the whole annotation).
-    alternates: { canonical: url },
-    openGraph: {
-      title: page.title,
-      description: page.description,
-      url,
-      type: 'article',
-      locale: 'en_US',
-    },
-    twitter: { card: 'summary_large_image', title: page.title, description: page.description },
-  };
-}
-
-export default function EnglishLandingPage({ params }: { params: { slug: string } }) {
-  const page = getEnLandingBySlug(params.slug);
-  if (!page) notFound();
+export default function EnglishLanding({ page }: { page: LandingPage }) {
 
   const related = getEnRelated(page);
   const cluster = EN_CLUSTERS[page.cluster];

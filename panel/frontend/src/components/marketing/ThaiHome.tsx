@@ -1583,7 +1583,7 @@ function LandingContent() {
   );
 }
 
-export default function LandingPage() {
+export default function ThaiHome() {
   return (
     <>
       {/* Only the search-param reader sits behind Suspense, so the page itself

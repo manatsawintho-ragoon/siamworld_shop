@@ -1,42 +1,12 @@
-import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
-import { LANDING_PAGES, getLandingBySlug, getRelated, CLUSTERS } from '@/lib/seo/keywords';
+import { getRelated, CLUSTERS, type LandingPage } from '@/lib/seo/keywords';
 import { Icon, type IconName } from '@/components/ui/icon';
 
 const BASE = 'https://panel.siamsite.shop';
 
-export const dynamicParams = false;
-
-export function generateStaticParams() {
-  return LANDING_PAGES.map((p) => ({ slug: p.slug }));
-}
-
-export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
-  const page = getLandingBySlug(decodeURIComponent(params.slug));
-  if (!page) return {};
-  const url = `/lp/${encodeURIComponent(page.slug)}`;
-  return {
-    title: page.title,
-    description: page.description,
-    keywords: page.keywords.join(', '),
-    alternates: { canonical: url },
-    openGraph: {
-      title: page.title,
-      description: page.description,
-      url,
-      type: 'article',
-      locale: 'th_TH',
-    },
-    twitter: { card: 'summary_large_image', title: page.title, description: page.description },
-  };
-}
-
-export default function LandingPageView({ params }: { params: { slug: string } }) {
-  const page = getLandingBySlug(decodeURIComponent(params.slug));
-  if (!page) notFound();
+export default function ThaiLanding({ page }: { page: LandingPage }) {
 
   const related = getRelated(page);
   const cluster = CLUSTERS[page.cluster];

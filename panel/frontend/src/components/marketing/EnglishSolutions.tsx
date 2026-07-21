@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function EnglishSolutionsHub() {
+export default function EnglishSolutions() {
   const byCluster = Object.keys(EN_CLUSTERS)
     .map((key) => ({
       key,

@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function SolutionsHub() {
+export default function ThaiSolutions() {
   const byCluster = Object.keys(CLUSTERS).map((key) => ({
     key,
     meta: CLUSTERS[key],

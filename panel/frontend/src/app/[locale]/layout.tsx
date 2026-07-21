@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from 'next';
-import { fontVariables } from '@/lib/fonts';
-import './globals.css';
-import { AuthProvider } from '@/context/AuthContext';
-import { ToastProvider } from '@/components/Toast';
-import SessionToastBridge from '@/components/SessionToastBridge';
-import PageTitleManager from '@/components/PageTitle';
-import ActivityTracker from '@/components/ActivityTracker';
+import { kanitLatin, kanitThai } from '@/lib/fonts';
+import { notFound } from 'next/navigation';
+import { NextIntlClientProvider } from 'next-intl';
+import { getMessages, setRequestLocale } from 'next-intl/server';
+import { routing } from '@/i18n/routing';
+import AppProviders from '@/components/AppProviders';
+import '../globals.css';
 import FacebookFab from '@/components/FacebookFab';
 import { FAQ } from '@/lib/faq';
 import {
@@ -52,14 +52,15 @@ export const metadata: Metadata = {
     'SIAMSITE',
   ].join(', '),
   authors: [{ name: 'SIAMSITE' }],
-  alternates: {
-    canonical: '/',
-    languages: {
-      'th-TH': `${SITE_URL}/`,
-      en: `${SITE_URL}/en`,
-      'x-default': `${SITE_URL}/`,
-    },
-  },
+  // NO `alternates` here. Metadata inherits down the tree, so a canonical set
+  // on the layout was being applied to every page that did not override it:
+  // /terms, /privacy and /contact were all telling Google they were duplicates
+  // of the homepage, which suppresses them from the index. Verified live on
+  // production before this change.
+  //
+  // The homepage declares its own canonical and hreflang pair in
+  // app/[locale]/page.tsx. Pages without an explicit canonical now emit none,
+  // and Google self-canonicalises, which is the correct default.
   openGraph: {
     title: 'SIAMSITE STORE | ทดลองฟรี 7 วัน · เดือนแรก ฿99 · ระบบเช่าร้านค้า Minecraft ครบวงจร',
     description: 'ยกระดับเซิร์ฟเวอร์มายคราฟสู่ธุรกิจระดับมืออาชีพ เริ่มทดลองฟรี 7 วัน ไม่ต้องผูกบัตร PromptPay + TrueMoney อั่งเปา + RCON ติดตั้งจบใน 10 นาที',
@@ -100,7 +101,47 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+/**
+ * Pre-renders both locales at build time. Without this the whole [locale]
+ * subtree becomes dynamic and the panel loses its static pages.
+ */
+export function generateStaticParams() {
+  return routing.locales.map((locale) => ({ locale }));
+}
+
+export default async function LocaleRootLayout({
+  children,
+  params: { locale },
+}: {
+  children: React.ReactNode;
+  params: { locale: string };
+}) {
+  if (!routing.locales.includes(locale as never)) notFound();
+
+  // Required for static rendering: at build time there is no request for
+  // next-intl to infer the locale from.
+  setRequestLocale(locale);
+  const messages = await getMessages();
+
+  // English pages render no Thai glyphs, so they only apply the Latin variable.
+  //
+  // NOTE: this does NOT reduce preloading, which was the original hope.
+  // next/font emits a <link rel="preload"> for every font instance imported
+  // into a route's module graph, regardless of whether its CSS variable is
+  // applied. Because this layout imports both instances, all 10 files preload
+  // on both locales (measured: 10 on /en and 10 on /). Making preloading
+  // locale-aware would require the two locales to resolve different layout
+  // modules, which the App Router does not offer.
+  //
+  // The alternative is preload: false in lib/fonts.ts, letting the
+  // unicode-range on each instance pull only the subsets a page actually
+  // renders. That genuinely would cut English pages to the Latin files, at the
+  // cost of discovering fonts during CSS parse rather than up front, which
+  // hurts the Thai-speaking majority. Left as-is deliberately; it is a real
+  // tradeoff, not an oversight.
+  const fontClass =
+    locale === 'en' ? kanitLatin.variable : `${kanitLatin.variable} ${kanitThai.variable}`;
+
   const softwareSchema = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
@@ -172,7 +213,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   // so every other page's JSON-LD can reference the same entity by @id instead of
   // restating a slightly different copy of the publisher on each URL.
   return (
-    <html lang="th" className={fontVariables}>
+    <html lang={locale} className={fontClass}>
       <head>
         {/* Icons are inline SVG via components/ui/icon.tsx (lucide-react) - no icon webfont.
             Kanit is self-hosted by next/font, so there are no font CDN preconnects either. */}
@@ -194,7 +235,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        <ToastProvider><AuthProvider><SessionToastBridge /><PageTitleManager /><ActivityTracker />{children}<FacebookFab /></AuthProvider></ToastProvider>
+        <NextIntlClientProvider messages={messages}>
+          <AppProviders>
+            {children}
+            <FacebookFab />
+          </AppProviders>
+        </NextIntlClientProvider>
       </body>
     </html>
   );
