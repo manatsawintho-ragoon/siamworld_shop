@@ -3,10 +3,11 @@
 /* ── Coded product mockups ─────────────────────────────────────────────
    These replace the screenshots the landing page used to ship.
 
-   The markup is transcribed from the running apps, not approximated:
-   `DashboardMock` follows `panel/frontend/src/app/dashboard/page.tsx`, and the
-   shop mockups follow `frontend/src/components/ProductCard.tsx` and the shop
-   pages around it. Class names, radii, weights, badge shapes and Thai copy are
+   The markup is transcribed from the customer website's own source, not
+   approximated: `DashboardMock` follows `frontend/src/app/admin/page.tsx` and
+   `admin/layout.tsx`, and the shop mockups follow
+   `frontend/src/components/ProductCard.tsx` and the shop pages around it.
+   Class names, radii, weights, shadow values, badge shapes and Thai copy are
    the ones those screens actually use.
 
    Two details make them read as screenshots rather than as an impression of
@@ -14,10 +15,12 @@
 
    1. They are laid out at the real screen width and scaled down as a whole
       (see ScaledMock), so no size is ever re-guessed at a smaller scale.
-   2. The shop mockups render inside `.shop-skin`, which carries the deployed
-      shop's own green palette read from a live shop's stylesheet. The seller's
-      panel is amber and the player's shop is green; showing both in amber
-      would be showing a product that does not exist.
+   2. Each screen gets its own real palette. The player-facing shop renders
+      inside `.shop-skin`, carrying the green tokens read off a live shop's
+      stylesheet. The shop's admin area has a fixed palette of its own (dark
+      #18191c sidebar, #f4f5f7 work area, #f97316 accent) and does not follow
+      any theme, so that mock is fixed too. Rendering either in the panel's
+      amber would be showing a product that does not exist.
 
    Sample content is shaped like the real data (price, original_price,
    sold_count, category) at realistic price points, but the item names are
@@ -54,156 +57,363 @@ function Frame({ url, children }: { url: string; children: React.ReactNode }) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-   HERO: the seller's panel dashboard
-   Transcribed from app/dashboard/page.tsx: the StatCard shape (14x14 rounded-2xl
-   icon tile, 13px label, 3xl value, 12px sub), the shop table with its
-   rounded-2xl cube tile and emerald price pill, and the wallet cluster.
+   HERO: the shop's own admin dashboard
+
+   Transcribed from `frontend/src/app/admin/page.tsx` and `admin/layout.tsx`,
+   which is the screen a server owner actually spends their time in.
+
+   Its palette is fixed and does not follow a theme, so this mock is fixed too:
+   a #18191c sidebar with a #22c55e wordmark beside a #f4f5f7 work area, orange
+   #f97316 for chart and counts, and the green #168d41 top-up card. The chunky
+   `0 4px 0` bottom shadow on every card is that screen's signature, so it is
+   reproduced exactly rather than softened into a normal drop shadow.
+
+   The shop app draws with Font Awesome; the panel dropped that CDN for a
+   lucide registry, so icons are mapped to their closest lucide equivalent.
+   That is the one place these mocks knowingly differ from the original.
    ══════════════════════════════════════════════════════════════════════ */
 
-const DASH_STATS: { label: string; value: string; sub: string; icon: IconName; color: string }[] = [
-  { label: 'ยอดเงินคงเหลือ', value: '฿1,240', sub: 'พร้อมใช้งานสำหรับแพ็กเกจ', icon: 'wallet', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' },
-  { label: 'ร้านที่ออนไลน์', value: '2', sub: 'เซิร์ฟเวอร์เปิดใช้งานปกติ', icon: 'signal', color: 'bg-primary/10 text-primary border-primary/20' },
-  { label: 'จำนวนร้านทั้งหมด', value: '2', sub: 'รวมแพ็กเกจที่หมดอายุ', icon: 'cubes', color: 'bg-blue-500/10 text-blue-600 border-blue-500/20' },
-  { label: 'ศูนย์ซัพพอร์ต', value: 'ติดต่อ', sub: 'ทีมงานดูแลตลอด 24 ชม.', icon: 'headset', color: 'bg-amber-500/10 text-amber-600 border-amber-500/20' },
+/** The card shadow used by every panel on the shop's admin dashboard. */
+const SHOP_CARD = 'bg-white rounded-2xl border border-gray-200/70 shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)]';
+
+const SHOP_SIDEBAR: { label: string; icon: IconName; active?: boolean; cat?: string }[] = [
+  { label: 'แดชบอร์ด', icon: 'chart-area', active: true },
+  { cat: 'MANAGEMENT', label: 'ระบบจัดการสมาชิก', icon: 'users' },
+  { label: 'จัดการโค้ดไอเท็ม', icon: 'ticket' },
+  { label: 'ระบบร้านค้า', icon: 'store' },
+  { cat: 'PAGE MANAGER', label: 'ตั้งค่าหน้าเว็บไซต์', icon: 'gears' },
+  { label: 'Appearance / Theme', icon: 'wand-magic-sparkles' },
+  { cat: 'SYSTEM', label: 'จัดการเซิร์ฟเวอร์', icon: 'server' },
+  { label: 'ผู้เล่นออนไลน์', icon: 'signal' },
+  { label: 'ระบบเติมเงิน', icon: 'wallet' },
 ];
 
-const DASH_SHOPS = [
-  { name: 'mycraft', domain: 'mycraft.siamsite.shop', months: 3, price: '599', left: 'เหลือ 62 วัน' },
-  { name: 'skyblock', domain: 'skyblock.siamsite.shop', months: 6, price: '1,099', left: 'เหลือ 148 วัน' },
+const TOP_ITEMS = [
+  { medal: '🥇', name: '100 Crystal', count: 119, revenue: 1190 },
+  { medal: '🥈', name: '490 Crystal', count: 27, revenue: 1323 },
+  { medal: '🥉', name: 'ยศ VIP 30 วัน', count: 23, revenue: 3427 },
+  { medal: '#4', name: 'Furniture Set', count: 6, revenue: 150 },
 ];
+
+const TOP_BOXES = [
+  { medal: '🥇', name: 'กล่องพรีเมียม', count: 84, revenue: 8316 },
+  { medal: '🥈', name: 'กล่องตำนาน', count: 41, revenue: 10209 },
+  { medal: '🥉', name: 'กล่องธรรมดา', count: 33, revenue: 957 },
+  { medal: '#4', name: 'กล่องเทศกาล', count: 12, revenue: 1188 },
+];
+
+/** Reproduces the shop admin's `DeltaBadge`: green delta line + last-month line. */
+function DeltaBadge({ delta, pct, last, suffix = '', dark = false }: {
+  delta: string; pct: string; last: string; suffix?: string; dark?: boolean;
+}) {
+  return (
+    <div className="mt-3 space-y-0.5">
+      <p className={`text-[10px] font-bold flex items-center gap-1 flex-wrap ${dark ? 'text-white/90' : 'text-emerald-600'}`}>
+        <Icon name="arrow-up" className="text-[9px]" />
+        <span>+{delta}{suffix}</span>
+        <span className="opacity-80">(+{pct}%)</span>
+        <span className={`font-medium ${dark ? 'text-white/60' : 'text-gray-400'}`}>เทียบเดือนก่อน</span>
+      </p>
+      <p className={`text-[10px] ${dark ? 'text-white/50' : 'text-gray-400'}`}>
+        เดือนที่แล้ว <span className={`font-semibold ${dark ? 'text-white/80' : 'text-gray-600'}`}>{last}{suffix}</span>
+      </p>
+    </div>
+  );
+}
+
+function RankColumn({ title, icon, tint, rows, unit }: {
+  title: string; icon: IconName; tint: string;
+  rows: { medal: string; name: string; count: number; revenue: number }[]; unit: string;
+}) {
+  return (
+    <div className={`${SHOP_CARD} overflow-hidden`}>
+      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/60 flex items-center gap-2">
+        <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${tint}`}>
+          <Icon name={icon} className="text-xs" />
+        </span>
+        <h3 className="font-bold text-gray-900 text-[13px]">{title}</h3>
+      </div>
+      <div className="divide-y divide-gray-100">
+        {rows.map((r, i) => (
+          <div key={i} className="mock-row flex items-center gap-2.5 px-4 py-2.5">
+            <span className="w-5 shrink-0 flex items-center justify-center text-sm leading-none">
+              {r.medal.startsWith('#') ? <span className="text-[10px] font-bold text-gray-500">{r.medal}</span> : r.medal}
+            </span>
+            <span className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${tint}`}>
+              <Icon name="cube" className="text-[11px]" />
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-[12px] font-bold text-gray-800 truncate">{r.name}</span>
+              <span className="block text-[10px] text-gray-500">หมวดหมู่: ไอเท็ม</span>
+            </span>
+            <span className="text-right shrink-0">
+              <span className="block text-[11px] font-bold text-gray-800">
+                {r.count} <span className="text-[10px] font-normal text-gray-500">{unit}</span>
+              </span>
+              <span className="block text-[10px] text-gray-500">฿{r.revenue.toLocaleString()}</span>
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function DashboardMock() {
   return (
-    <ScaledMock designWidth={1180} designHeight={760}>
-      <Frame url="panel.siamsite.shop/dashboard">
-        <div className="p-8 space-y-8 bg-background h-full">
-          {/* Header row, as in the real dashboard: title + wallet cluster */}
-          <div className="flex items-center justify-between gap-8">
-            <div className="space-y-1">
-              <h1 className="text-4xl font-semibold tracking-tight text-foreground">Dashboard</h1>
-              <p className="text-muted-foreground font-medium flex items-center gap-2">
-                <Icon name="sparkles" className="text-amber-500 text-xs" />
-                ยินดีต้อนรับกลับมา, คุณ Manatsawin
-              </p>
-            </div>
-            <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-card border border-border shadow-sm">
-              <span className="h-12 px-6 rounded-xl font-medium flex items-center gap-2 text-foreground">
-                <Icon name="plus-circle" className="text-primary" /> เติมเงิน
-              </span>
-              <span className="h-6 w-px bg-border mx-1" />
-              <span className="px-5 py-2 block">
-                <span className="block text-[12px] font-medium text-muted-foreground">คงเหลือ</span>
-                <span className="block text-lg font-semibold text-foreground">฿1,240</span>
+    <ScaledMock designWidth={1440} designHeight={900}>
+      <Frame url="yourshop.siamsite.shop/admin">
+        <div className="h-full flex bg-[#f4f5f7] text-gray-800">
+          {/* Dark sidebar, as in admin/layout.tsx */}
+          <aside className="w-[260px] shrink-0 bg-[#18191c] flex flex-col">
+            <div className="h-[72px] flex items-center px-6 border-b border-gray-800 shrink-0">
+              <span className="flex flex-col">
+                <span className="font-bold text-white text-lg tracking-wide leading-none">SIAMSITE</span>
+                <span className="text-[10px] font-bold text-[#22c55e] tracking-[0.2em] mt-1">ADMIN PANEL</span>
               </span>
             </div>
-          </div>
-
-          {/* StatCards: same 14x14 tile, 3xl value, 12px sub as the real one */}
-          <div className="grid grid-cols-4 gap-6">
-            {DASH_STATS.map(s => (
-              <div key={s.label} className="mock-tile bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-                <div className="p-6 flex items-center gap-5">
-                  <span className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 text-xl border shadow-sm ${s.color}`}>
-                    <Icon name={s.icon} />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-[13px] font-medium text-muted-foreground mb-1">{s.label}</span>
-                    <span className="mock-tile-value block text-3xl font-semibold text-foreground tracking-tight leading-none">{s.value}</span>
-                    <span className="block text-[12px] font-medium text-muted-foreground/80 mt-1.5">{s.sub}</span>
+            <nav className="flex-1 py-5 px-3 space-y-1">
+              {SHOP_SIDEBAR.map((m, i) => (
+                <div key={i}>
+                  {m.cat && (
+                    <h4 className="px-4 text-[10px] font-bold text-gray-500 mb-2 mt-4 tracking-wider">{m.cat}</h4>
+                  )}
+                  <span
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium ${
+                      m.active ? 'bg-[#16a34a]/15 text-[#22c55e]' : 'text-gray-400'
+                    }`}
+                  >
+                    <Icon name={m.icon} className="w-5 text-center text-[13px]" />
+                    {m.label}
                   </span>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </nav>
+          </aside>
 
-          {/* Shop table */}
-          <div>
-            <div className="flex items-end justify-between gap-6 mb-6">
-              <div className="space-y-2">
-                <h3 className="text-xl font-semibold text-foreground tracking-tight">การจัดการร้านค้า</h3>
-                <div className="flex bg-card p-1.5 rounded-[1.25rem] border border-border shadow-sm">
-                  {['ทั้งหมด', 'ใช้งานอยู่', 'หมดอายุ'].map((t, i) => (
-                    <span
-                      key={t}
-                      className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap ${
-                        i === 0 ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20' : 'text-muted-foreground'
-                      }`}
-                    >
-                      {t}
+          {/* Work area */}
+          <div className="flex-1 min-w-0 p-6 space-y-5 overflow-hidden">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                  <Icon name="chart-area" className="text-[#f97316]" /> แดชบอร์ด
+                </h1>
+                <p className="text-xs text-gray-400 mt-0.5">ภาพรวมระบบทั้งหมด</p>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-50 text-[#f97316] text-[10px] font-bold border border-orange-100">
+                  <Icon name="calendar-day" className="text-[9px]" />
+                  ข้อมูลเดือน มีนาคม 2569
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 text-[10px] font-bold border border-emerald-100">
+                  <span className="mock-live w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  อัปเดตสด
+                </span>
+                <span className="mock-buy flex items-center gap-1.5 px-3.5 py-2 bg-[#1e2735] text-white rounded-lg text-[11px] font-bold shadow-[0_4px_0_#38404d]">
+                  <Icon name="arrows-rotate" className="text-[10px]" /> รีเฟรช
+                </span>
+              </div>
+            </div>
+
+            {/* Row 1: chart + top-up card + two revenue cards */}
+            <div className="grid grid-cols-4 gap-4 items-stretch">
+              <div className={`col-span-2 ${SHOP_CARD} overflow-hidden flex flex-col`}>
+                <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/60 flex items-center justify-between gap-3 shrink-0">
+                  <span className="flex items-center gap-2.5 min-w-0">
+                    <span className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
+                      <Icon name="chart-area" className="text-orange-500 text-xs" />
                     </span>
-                  ))}
+                    <h3 className="font-bold text-gray-900 text-sm truncate">สถิติระบบ (30 วันล่าสุด)</h3>
+                  </span>
+                  <span className="flex bg-gray-100 rounded-lg p-0.5 shrink-0">
+                    {['รายวัน', 'รายสัปดาห์', 'รายเดือน'].map((t, i) => (
+                      <span
+                        key={t}
+                        className={`px-2.5 py-1 rounded-md text-[10px] font-bold ${i === 0 ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'}`}
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </span>
+                </div>
+                <div className="flex-1 flex flex-col min-h-0 px-4 pt-2 pb-3">
+                  <div className="flex-1 min-h-0">
+                    <MiniChart />
+                  </div>
+                  <div className="shrink-0 flex justify-center gap-5 pt-2 text-[10px] font-bold">
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#f97316]" /><span className="text-gray-500">สมาชิกใหม่</span></span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /><span className="text-gray-500">ยอดขาย Item (฿)</span></span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-purple-500" /><span className="text-gray-500">ยอดเติมเงิน (฿)</span></span>
+                  </div>
                 </div>
               </div>
-              <span className="relative w-80 block">
-                <span className="absolute inset-y-0 left-4 flex items-center">
-                  <Icon name="search" className="text-muted-foreground/60 text-sm" />
-                </span>
-                <span className="block w-full pl-11 pr-4 h-12 bg-card border border-border rounded-2xl text-sm font-medium text-muted-foreground/60 shadow-sm leading-[3rem]">
-                  ค้นหาชื่อร้านหรือโดเมน...
-                </span>
-              </span>
+
+              <div className="col-span-2 flex flex-col gap-4">
+                <div className="mock-tile flex-1 bg-[#168d41] rounded-2xl p-5 text-white border border-[#1faa4f]/30 shadow-[0_4px_0_#0f6530,0_2px_24px_rgba(22,141,65,0.45)] relative overflow-hidden">
+                  <span className="absolute -right-6 -top-6 w-32 h-32 bg-black/10 rounded-full blur-2xl pointer-events-none" />
+                  <span className="absolute right-16 bottom-0 w-20 h-20 bg-white/5 rounded-full blur-xl pointer-events-none" />
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-white text-[11px] font-bold mb-1 tracking-wide opacity-70">ยอดเติมเดือนนี้</p>
+                      <h2 className="text-4xl font-bold leading-tight tracking-tight text-white">
+                        <span className="mock-count">48,250</span> <span className="text-base font-medium text-white/60">บาท</span>
+                      </h2>
+                      <p className="text-[10px] text-white/60 mt-1">สะสมทั้งหมด <span className="font-bold text-white/90">612,480 ฿</span></p>
+                    </div>
+                    <span className="w-11 h-11 bg-black/15 border border-white/20 rounded-xl flex items-center justify-center shrink-0">
+                      <Icon name="wallet" className="text-white text-sm" />
+                    </span>
+                  </div>
+                  <DeltaBadge delta="7,900" pct="19.6" last="40,350" suffix=" ฿" dark />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className={`mock-tile ${SHOP_CARD} p-5`}>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">รายได้ Item เดือนนี้</p>
+                        <h2 className="text-2xl font-bold text-gray-800 leading-tight">
+                          21,430 <span className="text-xs font-medium text-gray-400">บาท</span>
+                        </h2>
+                        <p className="text-[10px] text-gray-400 mt-1">สะสม <span className="font-bold text-gray-600">288,120 ฿</span> · 1,842 ชิ้น</p>
+                      </div>
+                      <span className="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center shrink-0">
+                        <Icon name="shopping-cart" className="text-sm" />
+                      </span>
+                    </div>
+                    <DeltaBadge delta="3,120" pct="17.0" last="18,310" suffix=" ฿" />
+                  </div>
+
+                  <div className={`mock-tile ${SHOP_CARD} p-5`}>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">รายได้ Gacha เดือนนี้</p>
+                        <h2 className="text-2xl font-bold text-gray-800 leading-tight">
+                          14,880 <span className="text-xs font-medium text-gray-400">บาท</span>
+                        </h2>
+                        <p className="text-[10px] text-gray-400 mt-1">สะสม <span className="font-bold text-gray-600">176,540 ฿</span> · 970 ครั้ง</p>
+                      </div>
+                      <span className="w-10 h-10 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center shrink-0">
+                        <Icon name="dice" className="text-sm" />
+                      </span>
+                    </div>
+                    <DeltaBadge delta="2,240" pct="17.7" last="12,640" suffix=" ฿" />
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="bg-card border border-border rounded-[2.5rem] shadow-sm overflow-hidden">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-border bg-secondary/30">
-                    <th className="px-8 py-6 text-[13px] font-semibold text-muted-foreground">ข้อมูลร้านค้า</th>
-                    <th className="px-6 py-6 text-[13px] font-semibold text-muted-foreground text-center">สถานะปัจจุบัน</th>
-                    <th className="px-6 py-6 text-[13px] font-semibold text-muted-foreground">รายละเอียดแพ็กเกจ</th>
-                    <th className="px-6 py-6 text-[13px] font-semibold text-muted-foreground">อายุการใช้งาน</th>
-                    <th className="px-8 py-6 text-[13px] font-semibold text-muted-foreground text-right">แอคชั่น</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {DASH_SHOPS.map(s => (
-                    <tr key={s.name} className="mock-row border-b border-border last:border-0">
-                      <td className="px-8 py-6">
-                        <span className="flex items-center gap-5">
-                          <span className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border-2 bg-secondary border-transparent text-muted-foreground">
-                            <Icon name="cube" className="text-lg" />
-                          </span>
-                          <span>
-                            <span className="block font-semibold text-foreground text-base tracking-tight leading-tight">{s.name}</span>
-                            <span className="block text-[13px] font-medium text-muted-foreground mt-1 opacity-80">{s.domain}</span>
-                          </span>
-                        </span>
-                      </td>
-                      <td className="px-6 py-6 text-center">
-                        <span className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-md text-[12px] font-medium bg-emerald-500/12 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          เปิดใช้งาน
-                        </span>
-                      </td>
-                      <td className="px-6 py-6">
-                        <span className="block text-sm font-semibold text-foreground">{s.months} เดือน</span>
-                        <span className="inline-flex items-center gap-1 text-[13px] font-semibold text-emerald-600 bg-emerald-500/5 px-2 py-0.5 rounded-md border border-emerald-500/10 mt-1">
-                          ฿{s.price}
-                        </span>
-                      </td>
-                      <td className="px-6 py-6">
-                        <span className="p-3 bg-secondary/50 rounded-2xl border border-border/50 inline-block min-w-[140px] text-center text-[13px] font-medium text-foreground">
-                          {s.left}
-                        </span>
-                      </td>
-                      <td className="px-8 py-6">
-                        <span className="flex justify-end items-center gap-3">
-                          <span className="h-10 px-5 rounded-xl font-medium border border-border shadow-sm flex items-center text-sm text-foreground">โดเมน</span>
-                          <span className="h-10 px-5 rounded-xl font-medium border border-border shadow-sm flex items-center text-sm text-foreground">จัดการ</span>
-                          <span className="mock-buy h-10 px-5 rounded-xl font-semibold bg-foreground text-background flex items-center gap-2 text-sm">
-                            <Icon name="bolt" className="text-[10px]" /> ต่ออายุ
-                          </span>
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {/* Row 2: four KPI cards, two with a left accent rule */}
+            <div className="grid grid-cols-4 gap-4">
+              <div className={`mock-tile ${SHOP_CARD} p-5 border-l-4 border-l-blue-500`}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">ยอดเงินคงเหลือในระบบรวม</p>
+                    <h2 className="text-2xl font-bold text-gray-800 leading-tight">39,615 <span className="text-xs font-medium text-gray-400">บาท</span></h2>
+                  </div>
+                  <span className="w-10 h-10 bg-violet-50 text-violet-500 rounded-xl flex items-center justify-center shrink-0">
+                    <Icon name="sack-dollar" className="text-sm" />
+                  </span>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-3 flex items-center gap-1">
+                  <Icon name="users" className="text-gray-300 text-[9px]" />
+                  เงินคงอยู่ใน Wallet ผู้ใช้ทั้งหมด
+                </p>
+              </div>
+
+              <div className={`mock-tile ${SHOP_CARD} p-5 border-l-4 border-l-green-500`}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">ยอดใช้จ่ายรวม</p>
+                    <h2 className="text-2xl font-bold text-gray-800 leading-tight">464,660 <span className="text-xs font-medium text-gray-400">บาท</span></h2>
+                  </div>
+                  <span className="w-10 h-10 bg-violet-50 text-violet-500 rounded-xl flex items-center justify-center shrink-0">
+                    <Icon name="receipt" className="text-sm" />
+                  </span>
+                </div>
+                <DeltaBadge delta="5,360" pct="17.3" last="30,950" suffix=" ฿" />
+              </div>
+
+              <div className={`mock-tile ${SHOP_CARD} p-5`}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">สมาชิกทั้งหมด</p>
+                    <h2 className="text-2xl font-bold text-gray-800 leading-tight">1,284 <span className="text-sm font-medium text-gray-400">คน</span></h2>
+                  </div>
+                  <span className="w-10 h-10 bg-orange-50 text-[#f97316] rounded-xl flex items-center justify-center shrink-0">
+                    <Icon name="users" className="text-sm" />
+                  </span>
+                </div>
+                <DeltaBadge delta="96" pct="8.1" last="1,188" />
+              </div>
+
+              <div className={`mock-tile ${SHOP_CARD} p-5`}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">สินค้าทั้งหมด</p>
+                    <h2 className="text-2xl font-bold text-gray-800 leading-tight">19 <span className="text-sm font-medium text-gray-400">ชิ้น</span></h2>
+                  </div>
+                  <span className="w-10 h-10 bg-orange-50 text-[#f97316] rounded-xl flex items-center justify-center shrink-0">
+                    <Icon name="box-open" className="text-sm" />
+                  </span>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-3">รายการสินค้าที่พร้อมขาย</p>
+              </div>
+            </div>
+
+            {/* Row 3: ranking columns */}
+            <div className="grid grid-cols-2 gap-4">
+              <RankColumn title="ไอเท็มขายดี" icon="trophy" tint="bg-amber-50 text-amber-500" rows={TOP_ITEMS} unit="ชิ้น" />
+              <RankColumn title="Gacha ยอดนิยม" icon="trophy" tint="bg-purple-50 text-purple-500" rows={TOP_BOXES} unit="ครั้ง" />
             </div>
           </div>
         </div>
       </Frame>
     </ScaledMock>
+  );
+}
+
+/** The dashboard's three-series line chart, drawn with the same colours and
+ *  the same flat 3-gridline treatment as `MiniLineChart` in the shop app. */
+function MiniChart() {
+  const W = 520, H = 150, PX = 26, PY = 8;
+  const series = [
+    { color: '#f97316', vals: [12, 18, 15, 24, 20, 30, 27, 36, 33, 42] },
+    { color: '#3b82f6', vals: [30, 26, 38, 34, 46, 41, 55, 49, 62, 58] },
+    { color: '#a855f7', vals: [20, 28, 24, 35, 31, 44, 39, 52, 47, 60] },
+  ];
+  const max = 70;
+  const x = (i: number) => PX + (i * (W - PX * 2)) / (series[0].vals.length - 1);
+  const y = (v: number) => PY + (H - PY * 2) * (1 - v / max);
+  return (
+    <svg viewBox={`0 0 ${W} ${H + 18}`} className="w-full h-full block" preserveAspectRatio="none">
+      {[0, 0.5, 1].map((p, i) => {
+        const gy = PY + (H - PY * 2) * (1 - p);
+        return (
+          <g key={i}>
+            <line x1={PX} y1={gy} x2={W - PX} y2={gy} stroke="#f0f0f0" strokeWidth="1" />
+            <text x={PX - 6} y={gy + 3.5} textAnchor="end" fill="#c4c9d4" fontSize="9">{Math.round(max * p)}</text>
+          </g>
+        );
+      })}
+      {series.map((s, si) => (
+        <path
+          key={s.color}
+          className="mock-chart-line"
+          style={{ animationDelay: `${si * 0.25}s` }}
+          d={s.vals.map((v, i) => `${i ? 'L' : 'M'}${x(i)},${y(v)}`).join(' ')}
+          fill="none" stroke={s.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        />
+      ))}
+      {series.map((s, si) => s.vals.map((v, i) => (
+        <circle
+          key={`${s.color}-${i}`}
+          className="mock-chart-dot"
+          style={{ animationDelay: `${si * 0.25 + i * 0.09}s` }}
+          cx={x(i)} cy={y(v)} r="3" fill={s.color} stroke="white" strokeWidth="1.5"
+        />
+      )))}
+    </svg>
   );
 }
 
@@ -249,12 +459,12 @@ function ShopNav({ active }: { active: string }) {
 }
 
 /** One product card, transcribed from ProductCard.tsx. */
-function ProductCardMock({ name, price, original, sold, category }: {
-  name: string; price: number; original?: number; sold: number; category: string;
+function ProductCardMock({ name, price, original, sold, category, seq = 0 }: {
+  name: string; price: number; original?: number; sold: number; category: string; seq?: number;
 }) {
   const discount = original ? Math.round((1 - price / original) * 100) : 0;
   return (
-    <article className="mock-tile group relative flex flex-col s-surface border s-border rounded-xl overflow-hidden">
+    <article className="mock-tile mock-card-cycle group relative flex flex-col s-surface border s-border rounded-xl overflow-hidden" style={{ animationDelay: `${seq * 0.9}s` }}>
       <div className="relative aspect-[3/4] s-surface-hover overflow-hidden">
         <span className="absolute top-2 left-2 z-10 flex items-center gap-1 s-surface s-fg-muted text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm border s-border">
           <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: 'rgb(var(--color-shop-primary))' }} />
@@ -336,7 +546,7 @@ export function StorefrontMock() {
               </span>
             </div>
             <div className="grid grid-cols-5 gap-4">
-              {SHOP_ITEMS.map(it => <ProductCardMock key={it.name} {...it} />)}
+              {SHOP_ITEMS.map((it, i) => <ProductCardMock key={it.name} {...it} seq={i} />)}
             </div>
           </div>
         </div>
@@ -358,7 +568,7 @@ export function LootboxMock() {
             </h1>
 
             <div className="relative s-surface border s-border rounded-xl overflow-hidden mb-5">
-              <div className="flex gap-3 p-5">
+              <div className="mock-reel flex gap-3 p-5">
                 {reel.map((t, i) => {
                   const tier = getTier(t);
                   return (
@@ -419,10 +629,10 @@ export function InventoryMock() {
               <Icon name="archive" className="s-primary" /> คลังเว็บของคุณ
             </h1>
             <div className="grid grid-cols-3 gap-4">
-              {slots.map(s => {
+              {slots.map((s, i) => {
                 const tier = getTier(s.tier);
                 return (
-                  <div key={s.name} className="mock-tile s-surface border s-border rounded-xl p-4 flex items-center gap-4">
+                  <div key={s.name} className="mock-tile mock-claim-cycle s-surface border s-border rounded-xl p-4 flex items-center gap-4" style={{ animationDelay: `${i * 0.7}s` }}>
                     <span
                       className="w-14 h-14 rounded-xl grid place-items-center shrink-0 border-2"
                       style={{ backgroundColor: `${tier.color}14`, borderColor: tier.color, color: tier.color }}
@@ -470,9 +680,8 @@ export function TopupMock() {
                   {[50, 100, 300, 500, 1000, 2000].map((a, i) => (
                     <span
                       key={a}
-                      className={`mock-tile py-2.5 rounded-lg text-center text-[13px] font-bold border tabular-nums ${
-                        i === 1 ? 's-bg-primary text-white border-transparent' : 's-surface s-fg s-border'
-                      }`}
+                      className="mock-tile mock-amount-cycle py-2.5 rounded-lg text-center text-[13px] font-bold border tabular-nums s-surface s-fg s-border"
+                      style={{ animationDelay: `${i * 0.5}s` }}
                     >
                       {a.toLocaleString()} ฿
                     </span>
@@ -485,75 +694,14 @@ export function TopupMock() {
               <div className="s-surface border s-border rounded-xl p-5 flex flex-col items-center justify-center gap-4">
                 {/* A QR stand-in, not a scannable code: a real one on a marketing
                     page would be a payment target nobody controls. */}
-                <span className="w-40 h-40 rounded-xl grid place-items-center" style={{ background: 'rgb(var(--color-fg))' }}>
+                <span className="mock-qr relative w-40 h-40 rounded-xl grid place-items-center overflow-hidden" style={{ background: 'rgb(var(--color-fg))' }}>
                   <Icon name="qrcode" className="text-6xl" style={{ color: 'rgb(var(--color-surface))' }} />
+                  <span className="mock-qr-scan" />
                 </span>
                 <span className="block text-sm font-bold s-fg">สแกนแล้วอัปโหลดสลิป</span>
                 <span className="block text-[13px] s-fg-muted text-center">ระบบตรวจสลิปอัตโนมัติ เงินเข้าภายในไม่กี่วินาที</span>
                 <span className="text-[11px] font-bold px-3 py-1.5 rounded-full bg-emerald-500/12 text-emerald-600">ตรวจสอบอัตโนมัติ 24 ชม.</span>
               </div>
-            </div>
-          </div>
-        </div>
-      </Frame>
-    </ScaledMock>
-  );
-}
-
-export function ShopAdminMock() {
-  const rows = [
-    { player: 'Kiritoz', item: 'ยศ VIP 30 วัน', price: '฿149' },
-    { player: 'MinnieCraft', item: '490 Crystal', price: '฿49' },
-    { player: 'BankZaa', item: 'Furniture Set', price: '฿25' },
-    { player: 'NongMint', item: 'ดาบเวทมนตร์', price: '฿89' },
-  ];
-  return (
-    <ScaledMock designWidth={1180} designHeight={760}>
-      <Frame url="yourshop.siamsite.shop/admin">
-        <div className="shop-skin h-full flex">
-          <div className="w-56 shrink-0 s-surface border-r s-border p-4 space-y-1">
-            <span className="block s-fg font-bold text-sm px-3 py-2">จัดการร้านค้า</span>
-            {['ภาพรวม', 'สินค้า', 'กล่องสุ่ม', 'คำสั่งซื้อ', 'ผู้ใช้งาน', 'ตั้งค่า'].map((m, i) => (
-              <span
-                key={m}
-                className={`block px-3 py-2 rounded-lg text-[13px] font-bold ${i === 3 ? 's-bg-primary text-white' : 's-fg-muted'}`}
-              >
-                {m}
-              </span>
-            ))}
-          </div>
-          <div className="flex-1 p-6 space-y-5 min-w-0">
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { l: 'ยอดขายวันนี้', v: '฿3,280' },
-                { l: 'คำสั่งซื้อ', v: '18' },
-                { l: 'ผู้เล่นออนไลน์', v: '42' },
-              ].map(s => (
-                <div key={s.l} className="mock-tile s-surface border s-border rounded-xl p-4">
-                  <span className="block text-[13px] font-bold s-fg-muted">{s.l}</span>
-                  <span className="mock-tile-value block text-2xl font-bold s-fg tabular-nums mt-1">{s.v}</span>
-                </div>
-              ))}
-            </div>
-            <div className="s-surface border s-border rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b s-border flex items-center justify-between">
-                <span className="text-sm font-bold s-fg">คำสั่งซื้อล่าสุด</span>
-                <span className="text-[11px] font-bold px-2 py-1 rounded-md bg-emerald-500/12 text-emerald-600">ส่งเข้าเกมอัตโนมัติ</span>
-              </div>
-              {rows.map(r => (
-                <div key={r.player} className="mock-row flex items-center gap-4 px-4 py-3 border-b s-border last:border-0">
-                  <span className="w-9 h-9 rounded-lg s-surface-hover grid place-items-center text-[13px] font-bold s-fg shrink-0">
-                    {r.player.charAt(0)}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] font-bold s-fg truncate">{r.player}</span>
-                    <span className="block text-[11px] s-fg-muted truncate">{r.item}</span>
-                  </span>
-                  <span className="text-[13px] font-bold s-fg tabular-nums shrink-0">{r.price}</span>
-                  <span className="text-[11px] font-bold px-2 py-1 rounded-md bg-emerald-500/12 text-emerald-600 shrink-0">ส่งแล้ว</span>
-                  <Icon name="chevron-right" className="mock-row-arrow text-[11px] s-fg-subtle shrink-0" />
-                </div>
-              ))}
             </div>
           </div>
         </div>
@@ -581,12 +729,6 @@ export const MOCK_SLIDES: MockSlide[] = [
     Mock: StorefrontMock,
   },
   {
-    key: 'shop-admin',
-    title: 'หลังร้านสำหรับเจ้าของเซิร์ฟเวอร์',
-    desc: 'ดูยอดขาย คำสั่งซื้อ และผู้เล่นออนไลน์ได้จากที่เดียว ทุกคำสั่งซื้อส่งเข้าเกมอัตโนมัติ',
-    Mock: ShopAdminMock,
-  },
-  {
     key: 'lootbox',
     title: 'กล่องสุ่มพร้อมแอนิเมชั่น',
     desc: 'ระบบสุ่มแบบ CS:GO พร้อมระดับความหายาก ตั้งอัตราการออกของแต่ละชิ้นได้เอง',
@@ -605,9 +747,9 @@ export const MOCK_SLIDES: MockSlide[] = [
     Mock: TopupMock,
   },
   {
-    key: 'dashboard',
-    title: 'แผงควบคุมร้านค้าของคุณ',
-    desc: 'จัดการทุกร้านที่คุณเปิด ดูวันหมดอายุ ต่ออายุ และตั้งโดเมนของตัวเองได้จากหน้าเดียว',
+    key: 'admin',
+    title: 'หลังร้านสำหรับเจ้าของเซิร์ฟเวอร์',
+    desc: 'ดูยอดเติมเงิน รายได้ Item และ Gacha เทียบกับเดือนก่อน พร้อมอันดับไอเท็มขายดี ทั้งหมดอัปเดตสด',
     Mock: DashboardMock,
   },
 ];

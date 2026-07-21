@@ -768,3 +768,135 @@
   transform-origin: top left;
   will-change: transform;
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   MOCKUP AMBIENT MOTION
+
+   The showcase mockups loop a short piece of the behaviour each feature is
+   actually sold on, so a visitor scrolling past sees the product working
+   rather than a still of it. This is the GIF the landing page would otherwise
+   have to ship, except it stays sharp, weighs nothing, and follows the theme.
+
+   Every loop is transform or opacity only, so it runs on the compositor and
+   never triggers layout or a React render. Loops are long and low-contrast on
+   purpose: this is peripheral motion that rewards a glance, not something
+   competing with the copy beside it.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Loot box: the reel spins, decelerates and lands on a prize ───────
+   Eased with a long tail so it reads as a wheel losing momentum rather than a
+   strip sliding, which is what the real spinner does. */
+@keyframes mock-reel-spin {
+  0%       { transform: translateX(0); }
+  55%      { transform: translateX(-372px); }
+  70%      { transform: translateX(-390px); }
+  75%      { transform: translateX(-384px); }  /* settle bounce */
+  100%     { transform: translateX(-384px); }
+}
+.mock-reel {
+  animation: mock-reel-spin 6s cubic-bezier(0.12, 0.72, 0.1, 1) infinite;
+  will-change: transform;
+}
+
+/* ── Storefront: each card takes its turn being the one just bought ─── */
+@keyframes mock-card-cycle {
+  0%, 82%, 100% { transform: translateY(0); box-shadow: none; }
+  88%           { transform: translateY(-6px); box-shadow: 0 10px 24px -12px rgb(var(--color-shop-primary) / 0.55); }
+  94%           { transform: translateY(-3px); }
+}
+.mock-card-cycle {
+  animation: mock-card-cycle 5.4s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* ── Inventory: items claim themselves one after another ───────────── */
+@keyframes mock-claim-cycle {
+  0%, 70%, 100% { border-color: rgb(var(--color-border)); }
+  80%           { border-color: rgb(var(--color-shop-primary)); transform: translateX(3px); }
+  90%           { transform: translateX(0); }
+}
+.mock-claim-cycle {
+  animation: mock-claim-cycle 4.8s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* ── Top-up: the selection walks the amount grid ─────────────────────
+   Reproduces the moment of choosing, which is the only interaction on that
+   screen before the QR appears. */
+@keyframes mock-amount-cycle {
+  0%, 12%, 100% { background: rgb(var(--color-shop-primary)); color: #fff; border-color: transparent; }
+  20%, 92%      { background: rgb(var(--color-surface)); color: rgb(var(--color-fg)); border-color: rgb(var(--color-border)); }
+}
+.mock-amount-cycle {
+  animation: mock-amount-cycle 3s ease-in-out infinite;
+}
+
+/* ── Top-up: a scan line crossing the QR, as a phone camera would ──── */
+@keyframes mock-qr-scan {
+  0%        { transform: translateY(-100%); opacity: 0; }
+  10%, 60%  { opacity: 1; }
+  70%, 100% { transform: translateY(1000%); opacity: 0; }
+}
+.mock-qr-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgb(var(--color-shop-primary)), transparent);
+  animation: mock-qr-scan 3.2s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* ── Admin dashboard: the chart draws itself, then holds ─────────────
+   Uses stroke-dashoffset, so the line is traced exactly along its own path. */
+@keyframes mock-chart-draw {
+  0%        { stroke-dashoffset: 1000; }
+  45%, 100% { stroke-dashoffset: 0; }
+}
+.mock-chart-line {
+  stroke-dasharray: 1000;
+  animation: mock-chart-draw 7s ease-out infinite;
+}
+@keyframes mock-chart-dot {
+  0%, 22%   { opacity: 0; transform: scale(0.4); }
+  32%, 100% { opacity: 1; transform: scale(1); }
+}
+.mock-chart-dot {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mock-chart-dot 7s ease-out infinite;
+}
+
+/* ── Admin dashboard: the headline figure ticking over ───────────────
+   A nudge and a brightening rather than counting digits: the number is a
+   sample, and animating it upward every few seconds would read as a claim
+   about revenue that keeps growing. */
+@keyframes mock-count {
+  0%, 88%, 100% { opacity: 1; transform: translateY(0); }
+  92%           { opacity: 0.55; transform: translateY(-2px); }
+}
+.mock-count {
+  display: inline-block;
+  animation: mock-count 5s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mock-reel,
+  .mock-card-cycle,
+  .mock-claim-cycle,
+  .mock-amount-cycle,
+  .mock-qr-scan,
+  .mock-chart-line,
+  .mock-chart-dot,
+  .mock-count { animation: none !important; }
+  /* Without the draw animation the dashed line would never be filled in. */
+  .mock-chart-line { stroke-dasharray: none; }
+  .mock-qr-scan { display: none; }
+  /* The amount grid keeps one selected item so the screen still makes sense. */
+  .mock-amount-cycle:nth-child(2) {
+    background: rgb(var(--color-shop-primary));
+    color: #fff;
+    border-color: transparent;
+  }
+}
