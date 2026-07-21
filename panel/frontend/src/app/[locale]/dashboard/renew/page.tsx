@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState, Suspense } from 'react';
+import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { useRouter } from '@/i18n/navigation';
 import { Link } from '@/i18n/navigation';
@@ -21,6 +22,7 @@ type RenewOption =
   | { kind: 'regular'; months: number; price: number; label: string; save: number };
 
 function RenewContent() {
+  const t = useTranslations('renew');
   const { user, loading, refreshUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -61,7 +63,7 @@ function RenewContent() {
   useEffect(() => {
     if (!selectedSubData) { setSelection(null); return; }
     if (canUseIntro && introPromo) {
-      setSelection({ kind: 'intro', price: introPromo.price, label: 'ทดลองเดือนแรก (1 เดือน)', months: 1 });
+      setSelection({ kind: 'intro', price: introPromo.price, label: t('introFirstMonth'), months: 1 });
     } else if (packages.length) {
       const first = packages[0];
       setSelection({ kind: 'regular', months: first.months, price: first.price, label: first.label, save: first.save });
@@ -83,11 +85,11 @@ function RenewContent() {
       await refreshUser();
       setRenewedShop(selectedSubData?.shop_name || '');
       setDone(true);
-      toast.success('ต่ออายุสำเร็จ', `ต่ออายุ ${selectedSubData?.shop_name} เป็นเวลา ${selection.label} แล้ว`);
+      toast.success(t('renewed'), t('renewedDetail', { shop: selectedSubData?.shop_name ?? '', duration: selection.label }));
     } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error || 'ต่ออายุไม่สำเร็จ';
+      const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error || t('renewFailed');
       setError(msg);
-      toast.error('ต่ออายุไม่สำเร็จ', msg);
+      toast.error(t('renewFailed'), msg);
     } finally { setSubmitting(false); }
   };
 
@@ -106,9 +108,9 @@ function RenewContent() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">ต่ออายุแพ็กเกจ</h1>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">{t('title')}</h1>
             <p className="text-sm text-muted-foreground mt-0.5 font-medium">
-              ยอดเงินคงเหลือ: <span className="font-bold text-emerald-600 dark:text-emerald-400">฿{balance.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
+              {t('walletBalanceLabel')} <span className="font-bold text-emerald-600 dark:text-emerald-400">฿{balance.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
             </p>
           </div>
         </div>
@@ -119,13 +121,13 @@ function RenewContent() {
               <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-3xl mb-6">
                 <Icon name="check" />
               </div>
-              <h2 className="text-2xl font-bold text-foreground mb-2">ต่ออายุสำเร็จแล้ว!</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-2">{t('renewedBang')}</h2>
               <p className="text-sm text-muted-foreground mb-8">
-                ร้านค้า <span className="font-bold text-foreground">{renewedShop}</span> ได้รับการต่ออายุเป็นเวลา <span className="font-bold text-primary">{selection?.label}</span>
+                {t('shop')} <span className="font-bold text-foreground">{renewedShop}</span> {t('renewedFor')} <span className="font-bold text-primary">{selection?.label}</span>
               </p>
               <Button className="w-full rounded-full cursor-pointer" asChild>
                 <Link href="/dashboard">
-                  <Icon name="gauge-high" className="mr-2" /> กลับไปยังแดชบอร์ด
+                  <Icon name="gauge-high" className="mr-2" /> {t('backToDashboard')}
                 </Link>
               </Button>
             </CardContent>
@@ -141,14 +143,14 @@ function RenewContent() {
                     <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                       <Icon name="store" />
                     </div>
-                    เลือกร้านค้า
+                    {t('chooseShop')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {subs.length === 0 ? (
                     <div className="text-center py-8 text-sm text-muted-foreground">
                       <Icon name="store-slash" className="text-3xl mb-3 opacity-50 block" />
-                      ยังไม่มีร้านค้าให้เลือก
+                      {t('noShops')}
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -171,7 +173,7 @@ function RenewContent() {
                                 <div className="flex items-center gap-2">
                                   <span className="text-sm font-bold text-foreground truncate">{sub.shop_name}</span>
                                   {isExpiring && (
-                                    <Badge variant="destructive" className="px-1.5 py-0 text-[12px]">กำลังจะหมดอายุ</Badge>
+                                    <Badge variant="destructive" className="px-1.5 py-0 text-[12px]">{t('expiringSoon')}</Badge>
                                   )}
                                 </div>
                                 <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1 font-semibold">
@@ -198,13 +200,13 @@ function RenewContent() {
                     <div className="w-8 h-8 rounded-lg bg-secondary text-foreground flex items-center justify-center">
                       <Icon name="box-open" />
                     </div>
-                    เลือกระยะเวลา
+                    {t('chooseDuration')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {canUseIntro && introPromo && (
                     <div
-                      onClick={() => setSelection({ kind: 'intro', price: introPromo.price, label: 'ทดลองเดือนแรก (1 เดือน)', months: 1 })}
+                      onClick={() => setSelection({ kind: 'intro', price: introPromo.price, label: t('introFirstMonth'), months: 1 })}
                       className={`relative p-5 rounded-xl border-2 transition-all cursor-pointer flex items-center gap-4 ${
                         selection?.kind === 'intro'
                           ? 'bg-emerald-500/10 border-emerald-500 shadow-md'
@@ -215,13 +217,13 @@ function RenewContent() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-[12px] font-semibold text-emerald-700 dark:text-emerald-400">โปรเดือนแรก · ครั้งแรก</span>
+                          <span className="text-[12px] font-semibold text-emerald-700 dark:text-emerald-400">{t('introOnce')}</span>
                         </div>
                         <p className="text-sm font-semibold text-foreground">
-                          ต่ออายุ 1 เดือน <span className="text-emerald-600">฿{introPromo.price}</span>
+                          {t('renew1Month')} <span className="text-emerald-600">฿{introPromo.price}</span>
                           <span className="ml-2 font-semibold text-muted-foreground line-through text-xs">฿{introPromo.regularPrice}</span>
                         </p>
-                        <p className="text-xs font-semibold text-muted-foreground">ประหยัด ฿{introPromo.regularPrice - introPromo.price} · เฉพาะร้านที่กำลังทดลอง</p>
+                        <p className="text-xs font-semibold text-muted-foreground">{t('savePrice', { amount: introPromo.regularPrice - introPromo.price })} · {t('trialOnly')}</p>
                       </div>
                       {selection?.kind === 'intro' && <Icon name="check-circle" className="text-emerald-600 text-lg flex-shrink-0" />}
                     </div>
@@ -240,7 +242,7 @@ function RenewContent() {
                           <div className={`font-extrabold text-2xl my-1.5 ${isSelected ? 'text-white' : 'text-primary'}`}>฿{p.price.toLocaleString()}</div>
                           {p.save > 0 ? (
                             <Badge variant={isSelected ? "outline" : "success"} className={`mt-1 text-[12px] ${isSelected ? 'border-white/40 bg-transparent text-white' : ''}`}>
-                              ประหยัด ฿{p.save}
+                              {t('savePrice', { amount: p.save })}
                             </Badge>
                           ) : <div className="h-[22px] mt-1" />}
                         </div>
@@ -259,31 +261,31 @@ function RenewContent() {
                     <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                       <Icon name="receipt" />
                     </div>
-                    สรุปรายการ
+                    {t('summary')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4 text-sm bg-secondary/30 p-4 rounded-xl border border-border">
                     {selectedSubData && (
                       <div className="flex justify-between items-center pb-3 border-b border-border/50">
-                        <span className="text-muted-foreground font-medium">ร้านค้า</span>
+                        <span className="text-muted-foreground font-medium">{t('shop')}</span>
                         <span className="text-foreground font-bold truncate max-w-[130px]">{selectedSubData.shop_name}</span>
                       </div>
                     )}
                     <div className="flex justify-between items-center pb-3 border-b border-border/50">
-                      <span className="text-muted-foreground font-medium">ระยะเวลา</span>
+                      <span className="text-muted-foreground font-medium">{t('duration')}</span>
                       <span className="text-foreground font-bold">{selection?.label || '-'}</span>
                     </div>
                     <div className="flex justify-between items-center pb-3 border-b border-border/50">
-                      <span className="text-muted-foreground font-medium">ราคาแพ็กเกจ</span>
+                      <span className="text-muted-foreground font-medium">{t('planPrice')}</span>
                       <span className="text-primary font-bold text-lg">฿{price.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between items-center pb-3 border-b border-border/50">
-                      <span className="text-muted-foreground font-medium">ยอดเงินคงเหลือ</span>
+                      <span className="text-muted-foreground font-medium">{t('walletBalance')}</span>
                       <span className="text-foreground font-semibold">฿{balance.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div className="flex justify-between items-center pt-1">
-                      <span className="text-muted-foreground font-medium">ยอดหลังต่ออายุ</span>
+                      <span className="text-muted-foreground font-medium">{t('balanceAfter')}</span>
                       <span className={`font-bold text-lg ${insufficient ? 'text-destructive' : 'text-emerald-600 dark:text-emerald-400'}`}>
                         ฿{(balance - price).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                       </span>
@@ -295,8 +297,8 @@ function RenewContent() {
                     <div className="w-full text-xs text-destructive mb-1 flex items-start gap-2 bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-3 font-semibold">
                       <Icon name="triangle-exclamation" className="mt-0.5 flex-shrink-0" />
                       <span>
-                        ยอดเงินคงเหลือไม่เพียงพอ{' '}
-                        <Link href="/dashboard/topup" className="underline font-bold hover:opacity-80">เติมเงินเข้ากระเป๋า</Link>
+                        {t('insufficient')}{' '}
+                        <Link href="/dashboard/topup" className="underline font-bold hover:opacity-80">{t('topupWallet')}</Link>
                       </span>
                     </div>
                   )}
@@ -313,8 +315,8 @@ function RenewContent() {
                     disabled={!selectedSub || !selection || insufficient || submitting}
                     onClick={handleRenew}>
                     {submitting
-                      ? <><Icon name="spinner" className="mr-2 animate-spin" /> กำลังดำเนินการ...</>
-                      : <><Icon name="rotate-right" className="mr-2" /> ยืนยันการต่ออายุ</>}
+                      ? <><Icon name="spinner" className="mr-2 animate-spin" /> {t('processing')}</>
+                      : <><Icon name="rotate-right" className="mr-2" /> {t('confirmRenew')}</>}
                   </Button>
                 </CardFooter>
               </Card>
