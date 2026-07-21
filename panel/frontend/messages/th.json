@@ -422,14 +422,14 @@
     "iceStaff": "คทาน้ำแข็ง",
     "people": "คน",
     "torch16": "คบเพลิง x16",
-    "times": "ครั้ง",
+    "times": "{n} ครั้ง",
     "webInvClaim": "คลังเว็บ กดรับไอเท็มเข้าเกมได้ทุกเมื่อ",
     "webInvKeep": "คลังเว็บ เก็บของไว้รับทีหลัง",
     "searchProducts": "ค้นหาสินค้า...",
     "manageServer": "จัดการเซิร์ฟเวอร์",
     "manageCodes": "จัดการโค้ดไอเท็ม",
     "shopDesc": "จัดหมวดหมู่ ตั้งราคา ตั้งส่วนลด และเปิดขายได้เองทั้งหมด ผู้เล่นกดซื้อแล้วของเข้าเกมทันที",
-    "pieces": "ชิ้น",
+    "pieces": "{n} ชิ้น",
     "buyNow": "ซื้อเลย!",
     "dragonSword": "ดาบมังกร",
     "download": "ดาวน์โหลด",
@@ -500,7 +500,9 @@
     "yourItems": "ไอเท็มของคุณ",
     "bestSellers": "ไอเท็มขายดี",
     "itemsInInventory": "ไอเท็มในคลัง",
-    "enterAmount": "กรอกจำนวนเงิน"
+    "enterAmount": "กรอกจำนวนเงิน",
+    "angpaoWord": "อั่งเปา",
+    "timesUnit": "{n} ครั้ง"
   },
   "dashboard": {
     "shopManagement": "การจัดการร้านค้า",

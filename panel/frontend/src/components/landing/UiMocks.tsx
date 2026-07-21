@@ -9,7 +9,8 @@ import { useTranslations } from 'next-intl';
  */
 function useMockText() {
   const t = useTranslations('mock');
-  return (key: string): string => (t.has(key as never) ? t(key as never) : key);
+  return (key: string, values?: Record<string, string | number>): string =>
+    t.has(key as never) ? t(key as never, values as never) : key;
 }
 
 
@@ -666,7 +667,7 @@ export function StorefrontMock() {
                     <Icon name="search" className="w-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] s-fg-subtle" />
                     <span className="block pl-7 pr-7 py-1.5 rounded-lg border s-border s-surface text-xs s-fg-subtle w-44">{t('searchProducts')}</span>
                   </span>
-                  <span className="text-xs s-fg-subtle font-bold shrink-0">19 ชิ้น</span>
+                  <span className="text-xs s-fg-subtle font-bold shrink-0">{t('pieces', { n: 19 })}</span>
                 </span>
               </div>
 
@@ -816,7 +817,7 @@ export function InventoryMock() {
             <div className="s-surface rounded-2xl shadow-md border s-border overflow-hidden">
               <div className="px-4 py-2.5 border-b s-border flex items-center gap-2">
                 <span className="text-[13px] font-bold s-fg">{t('yourItems')}</span>
-                <span className="text-xs s-fg-subtle font-bold ml-auto">6 ชิ้น</span>
+                <span className="text-xs s-fg-subtle font-bold ml-auto">{t('pieces', { n: 6 })}</span>
               </div>
               <div className="p-6 grid grid-cols-3 gap-4">
                 {slots.map((s, i) => {
@@ -875,7 +876,7 @@ export function TopupMock() {
                   PromptPay
                 </span>
                 <span className="px-3 py-1.5 rounded-lg text-[12px] font-bold border s-border s-surface s-primary">
-                  TrueMoney อั่งเปา
+                  TrueMoney {t('angpaoWord')}
                 </span>
               </div>
 

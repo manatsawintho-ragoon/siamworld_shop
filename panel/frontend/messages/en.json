@@ -422,14 +422,14 @@
     "iceStaff": "Ice Staff",
     "people": "players",
     "torch16": "Torch x16",
-    "times": "times",
+    "times": "{n} opens",
     "webInvClaim": "Web inventory: claim items into the game anytime",
     "webInvKeep": "Web inventory: keep items and claim later",
     "searchProducts": "Search products...",
     "manageServer": "Server management",
     "manageCodes": "Item code management",
     "shopDesc": "Categorise, price, discount and publish entirely on your own. Players buy and the item arrives in game immediately.",
-    "pieces": "pcs",
+    "pieces": "{n} pcs",
     "buyNow": "Buy now",
     "dragonSword": "Dragon Sword",
     "download": "Download",
@@ -500,7 +500,9 @@
     "yourItems": "Your items",
     "bestSellers": "Best sellers",
     "itemsInInventory": "Items in inventory",
-    "enterAmount": "Enter an amount"
+    "enterAmount": "Enter an amount",
+    "angpaoWord": "Angpao",
+    "timesUnit": "{n} opens"
   },
   "dashboard": {
     "shopManagement": "Shop management",
