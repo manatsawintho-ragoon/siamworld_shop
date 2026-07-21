@@ -298,6 +298,11 @@ class UserService {
         }
       }
 
+      // NOTE: no campaign points here on purpose. This sets an ABSOLUTE balance
+      // as an admin correction, has no `transactions` row (so no idempotency
+      // key), and is not a top-up. To give a player points, use
+      // POST /api/admin/campaigns/points/grant, which requires a reason and is
+      // audited.
       if (data.balance !== undefined) {
         const [walletRows] = await conn.execute<RowDataPacket[]>('SELECT balance FROM wallets WHERE user_id = ? FOR UPDATE', [userId]);
         const currentBalance = walletRows.length > 0 ? parseFloat(walletRows[0].balance) : 0;

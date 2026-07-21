@@ -8,10 +8,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import QRCode from 'qrcode';
 import { useSettings } from '@/context/SettingsContext';
 import { useAdminAlert } from '@/components/AdminAlert';
+import { useActiveCampaign } from '@/components/CampaignBanner';
 import {
   Zap, ChevronLeft, QrCode, Store, X, Info, Clock, Hourglass, Lock,
   Loader2, CheckCircle2, RefreshCw, ReceiptText, UploadCloud, Tag,
-  ShoppingCart, Check, CheckCheck,
+  ShoppingCart, Check, CheckCheck, Sparkles,
 } from 'lucide-react';
 
 type Step = 'amount' | 'qr' | 'upload' | 'success';
@@ -53,6 +54,7 @@ export default function PromptPayTopupPage() {
   const router = useRouter();
   const { alert } = useAdminAlert();
   const { settings } = useSettings();
+  const campaign = useActiveCampaign();
 
   const ppEnabled = settings['promptpay_enabled'] !== 'false';
   const bonusEnabled = (settings['topup_bonus_promptpay_enabled'] ?? settings['topup_bonus_enabled']) === 'true';
@@ -266,6 +268,27 @@ export default function PromptPayTopupPage() {
                   <input type="number" value={custom} onChange={e => setCustom(e.target.value)}
                     placeholder="ระบุจำนวนเงินอื่นๆ..." className="w-full pl-10 pr-4 py-3 rounded-lg border-2 border-border-muted bg-surface-hover text-base font-black text-foreground focus:outline-none focus:border-[#003b80] transition-all" />
                 </div>
+
+                {/* Campaign points nudge - tied to the amount actually entered above */}
+                {campaign && (
+                  <div className={`rounded-lg px-3 py-2 flex items-center gap-2 border text-[11px] font-bold ${
+                    selectedAmount < campaign.minTopupAmount
+                      ? 'bg-warning/10 border-warning/25 text-warning'
+                      : 'bg-primary/10 border-primary/25 text-primary'
+                  }`}>
+                    {selectedAmount < campaign.minTopupAmount ? (
+                      <>
+                        <Info className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={2.25} />
+                        เติมอีก ฿{(campaign.minTopupAmount - selectedAmount).toLocaleString()} จึงจะได้รับแต้มแคมเปญ
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={2.25} />
+                        จะได้รับ {Math.floor(selectedAmount * campaign.pointsPerBaht).toLocaleString()} point
+                      </>
+                    )}
+                  </div>
+                )}
 
                 {hasBonus ? (
                   <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-3">

@@ -5,10 +5,12 @@ import { api, getToken } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { useAdminAlert } from '@/components/AdminAlert';
 import { useRouter } from 'next/navigation';
+import { fmtDate } from '@/lib/dateFormat';
 import {
   User, Shield, UserCheck, Mail, Calendar, Coins, ArrowDown, ArrowUp,
   ShoppingBag, Key, Lock, CheckCircle2, Loader2, Save, History, Receipt,
   Clock, X, ChevronLeft, ChevronRight, Ticket, RotateCcw, Circle,
+  Star, Gift, AlertTriangle,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -40,6 +42,16 @@ interface Pagination {
   total: number;
 }
 
+interface PointLot {
+  id: number;
+  campaign_id: number;
+  points_granted: number;
+  points_remaining: number;
+  qualified_at: string;
+  expires_at: string;
+  reason: string;
+}
+
 const TX_CONFIG: Record<string, { label: string; Icon: LucideIcon; tint: string }> = {
   topup:        { label: 'เติมเงิน', Icon: ArrowDown, tint: '34 197 94' },
   purchase:     { label: 'ซื้อของ',  Icon: ArrowUp,   tint: '239 68 68' },
@@ -62,6 +74,11 @@ export default function ProfilePage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [pagination, setPagination]     = useState<Pagination>({ page: 1, totalPages: 1, total: 0 });
   const [txLoading, setTxLoading]       = useState(true);
+
+  // Campaign points (Task 7 endpoint) - balance can be negative (clawback debt).
+  const [pointsBalance, setPointsBalance] = useState(0);
+  const [pointsLots, setPointsLots]       = useState<PointLot[]>([]);
+  const [pointsLoading, setPointsLoading] = useState(true);
 
   // Change password form
   const [currentPw, setCurrentPw]   = useState('');
@@ -90,6 +107,26 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!authLoading && user) loadTx(1);
+  }, [authLoading, user]);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      api('/campaign/points', { token: getToken()! })
+        .then(d => {
+          setPointsBalance(Number((d as any).balance) || 0);
+          setPointsLots(((d as any).lots as PointLot[]) || []);
+        })
+        .catch(() => {
+          // Campaign points are optional: most shops have zero campaigns, and
+          // during a deploy the backend can come up before migrations run
+          // (table not created yet). Fail silently to the hidden state -
+          // no card, no error toast - a player should never see an error
+          // because an optional feature happened to be unavailable.
+          setPointsBalance(0);
+          setPointsLots([]);
+        })
+        .finally(() => setPointsLoading(false));
+    }
   }, [authLoading, user]);
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -122,6 +159,11 @@ export default function ProfilePage() {
   const inputCls = 'w-full pl-9 pr-3.5 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-foreground-subtle bg-surface';
 
   const isPositive = (type: string) => type === 'topup' || type === 'refund';
+
+  // Lots come back soonest-expiring first; a clawback lot (negative remaining)
+  // doesn't "expire" in any way that matters to the player, so the expiry
+  // hint only ever points at a real, spendable lot.
+  const soonestExpiringLot = pointsLots.find(l => l.points_remaining > 0) ?? null;
 
   const stats = profile ? [
     { Icon: ArrowDown,   tint: '34 197 94',  label: 'เติมเงินรวม', value: `฿${profile.total_topup.toLocaleString()}` },
@@ -232,6 +274,62 @@ export default function ProfilePage() {
             )}
           </div>
         </div>
+
+        {/* ── Campaign Points ──
+            Most shops run zero campaigns; only render this card once we actually
+            know the player has campaign point history, so the other ~12 tenants
+            never see a permanent "0 point" card they never opted into. */}
+        {(pointsBalance !== 0 || pointsLots.length > 0) && (
+          <div className={CARD}>
+            <div className={SECTION_HEADER}>
+              <div className="w-8 h-8 rounded-lg bg-accent/12 flex items-center justify-center flex-shrink-0">
+                <Star className="w-3.5 h-3.5 text-accent" strokeWidth={2.25} />
+              </div>
+              <div>
+                <h3 className="font-bold text-foreground text-sm">แต้มแคมเปญ</h3>
+                <p className="text-[11px] text-foreground-subtle">แต้มสะสมจากแคมเปญเติมเงิน</p>
+              </div>
+            </div>
+
+            <div className="p-5">
+              {pointsLoading ? (
+                <div className="h-10 w-40 bg-surface-hover rounded animate-pulse" />
+              ) : pointsLots.length === 0 ? (
+                <div className="flex flex-col items-center justify-center text-center py-6 text-foreground-subtle">
+                  <Gift className="w-7 h-7 mb-2 opacity-40" strokeWidth={1.75} />
+                  <p className="text-sm font-medium">ยังไม่มีแต้มแคมเปญ เติมเงินช่วงแคมเปญเพื่อรับแต้ม</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-accent/12 flex items-center justify-center flex-shrink-0">
+                      <Star className="w-4 h-4 text-accent" strokeWidth={2.25} />
+                    </div>
+                    <p className={`font-black text-2xl tabular-nums leading-none ${pointsBalance < 0 ? 'text-error' : 'text-foreground'}`}>
+                      {pointsBalance.toLocaleString()} <span className="text-sm font-bold text-foreground-subtle">point</span>
+                    </p>
+                  </div>
+
+                  {pointsBalance < 0 && (
+                    <div className="flex items-start gap-2 bg-error/10 border border-error/20 rounded-xl px-3 py-2.5">
+                      <AlertTriangle className="w-4 h-4 text-error mt-0.5 flex-shrink-0" strokeWidth={2.25} />
+                      <p className="text-[11px] font-bold text-error leading-relaxed">
+                        ยอดแต้มติดลบจากการยกเลิกรายการเติมเงิน แต้มที่ได้รับใหม่จะถูกหักคืนก่อน
+                      </p>
+                    </div>
+                  )}
+
+                  {soonestExpiringLot && (
+                    <div className="flex items-center gap-1.5 text-[11px] font-bold text-foreground-subtle">
+                      <Clock className="w-3 h-3 flex-shrink-0" strokeWidth={2.25} />
+                      {soonestExpiringLot.points_remaining.toLocaleString()} point จะหมดอายุ {fmtDate(soonestExpiringLot.expires_at).date}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* ── Change Password ── */}
         <div className={CARD}>

@@ -16,7 +16,9 @@ export type AuditActionType =
   | 'admin_wallet_adjust' | 'admin_user_role' | 'admin_user_edit' | 'admin_user_delete' | 'admin_user_transfer'
   | 'admin_user_ban' | 'admin_user_unban' | 'admin_user_restore'
   // System
-  | 'admin_settings' | 'admin_rcon_cmd';
+  | 'admin_settings' | 'admin_rcon_cmd'
+  // Top-up campaigns
+  | 'campaign_create' | 'campaign_update' | 'campaign_delete' | 'campaign_points_grant';
 
 interface AuditParams {
   userId: number;

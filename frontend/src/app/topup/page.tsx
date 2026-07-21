@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useSettings } from '@/context/SettingsContext';
 import { useAdminAlert } from '@/components/AdminAlert';
+import CampaignBanner from '@/components/CampaignBanner';
 import { Zap, QrCode, Wallet, ChevronRight, AlertTriangle } from 'lucide-react';
 
 // Per-method bonus resolver (mirrors backend resolveTopupBonus, with legacy fallback).
@@ -37,6 +38,12 @@ export default function TopupSelectPage() {
   return (
     <MainLayout>
       <div className="max-w-4xl mx-auto space-y-4 pb-8 font-prompt">
+
+        {/* Campaign banner - shown above the method chooser so a player sees
+            the offer before picking PromptPay/TrueMoney. The amount input
+            itself lives one screen further in, on the PromptPay page, so the
+            progress nudge is mounted there instead (see that page). */}
+        <CampaignBanner />
 
         {/* Header */}
         <div className="bg-surface border-2 border-primary/30 rounded-xl p-4 shadow-theme-sm">

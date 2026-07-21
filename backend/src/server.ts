@@ -22,6 +22,7 @@ import shopRoutes from './routes/shop.routes';
 import adminRoutes from './routes/admin.routes';
 import publicRoutes from './routes/public.routes';
 import setupRoutes from './routes/setup.routes';
+import campaignRoutes from './routes/campaign.routes';
 
 const app = express();
 const server = http.createServer(app);
@@ -147,6 +148,7 @@ app.use('/api/wallet', walletRoutes);
 app.use('/api/shop', shopRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/campaign', campaignRoutes);
 
 // Health check — includes DB and Redis liveness
 app.get('/api/health', async (_req, res) => {

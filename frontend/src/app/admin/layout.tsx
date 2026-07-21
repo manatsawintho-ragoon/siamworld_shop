@@ -21,6 +21,7 @@ const MENU_CATEGORIES = [
     items: [
       { href: '/admin/users', icon: 'fa-users', label: 'ระบบจัดการสมาชิก' },
       { href: '/admin/codes', icon: 'fa-ticket-alt', label: 'จัดการโค้ดไอเท็ม' },
+      { href: '/admin/campaigns', icon: 'fa-bullhorn', label: 'แคมเปญเติมเงิน' },
       {
         id: 'shop',
         icon: 'fa-store',
