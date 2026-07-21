@@ -143,7 +143,7 @@ class CampaignService {
 
       const [lots] = await conn.execute<RowDataPacket[]>(
         `SELECT id, user_id, campaign_id, points_granted, points_remaining
-         FROM point_lots WHERE source_transaction_id = ? FOR UPDATE`,
+         FROM point_lots WHERE source_transaction_id = ? AND revoked_at IS NULL FOR UPDATE`,
         [transactionId]
       );
       if (lots.length === 0) { await conn.commit(); return { revoked: 0, debt: 0 }; }
@@ -153,12 +153,21 @@ class CampaignService {
 
       for (const lot of lots) {
         const plan = planClawback(lot as any);
+
+        // Stamp every selected lot as revoked, whether or not points_remaining
+        // changed - a fully-spent lot (reduce=0, debt>0) must never be
+        // re-selected by a retried or duplicate revoke call.
         if (plan.reduceRemainingBy > 0) {
           await conn.execute(
-            'UPDATE point_lots SET points_remaining = points_remaining - ? WHERE id = ?',
+            'UPDATE point_lots SET points_remaining = points_remaining - ?, revoked_at = NOW() WHERE id = ?',
             [plan.reduceRemainingBy, lot.id]
           );
           revoked += plan.reduceRemainingBy;
+        } else {
+          await conn.execute(
+            'UPDATE point_lots SET revoked_at = NOW() WHERE id = ?',
+            [lot.id]
+          );
         }
         if (plan.debtToRecord > 0) {
           // Debt never expires, so it cannot be waited out.

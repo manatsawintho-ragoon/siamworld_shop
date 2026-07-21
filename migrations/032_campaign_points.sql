@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS point_lots (
   expires_at   DATETIME NOT NULL,
   source_transaction_id INT DEFAULT NULL,
   reason VARCHAR(255) DEFAULT NULL,
+  revoked_at DATETIME DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY idx_grant_once (source_transaction_id, campaign_id),
