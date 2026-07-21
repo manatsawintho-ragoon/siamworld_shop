@@ -1,0 +1,22 @@
+{
+  "common": {
+    "startTrial": "Start the free trial",
+    "seePricing": "See pricing",
+    "contactUs": "Contact us",
+    "loading": "Loading",
+    "save": "Save",
+    "cancel": "Cancel",
+    "back": "Back"
+  },
+  "nav": {
+    "home": "Home",
+    "features": "Features",
+    "pricing": "Pricing",
+    "solutions": "Solutions",
+    "dashboard": "Dashboard",
+    "profile": "Profile",
+    "adminPanel": "Admin panel",
+    "logout": "Sign out",
+    "changeLanguage": "Change language"
+  }
+}
