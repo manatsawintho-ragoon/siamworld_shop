@@ -289,3 +289,36 @@ export const redeemCodeSchema = z.object({
   code:     z.string().min(1, 'Code is required').max(100),
   serverId: z.number().int().positive().optional(),
 });
+
+// ─── Top-up Campaigns ────────────────────────────────────────
+
+export const campaignSchema = z.object({
+  name: z.string().min(1, 'ต้องระบุชื่อแคมเปญ').max(255),
+  description: z.string().max(2000).optional().nullable(),
+  bannerImage: z.string().max(500).optional().nullable(),
+  pointsPerBaht: z.number().positive('อัตราแต้มต้องมากกว่า 0').max(1000),
+  minTopupAmount: z.number().min(0).default(0),
+  startsAt: z.coerce.date(),
+  endsAt: z.coerce.date(),
+  dailyStartTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).optional().nullable(),
+  dailyEndTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).optional().nullable(),
+  weekdayMask: z.number().int().min(0).max(127).optional().nullable(),
+  maxPointsPerUser: z.number().int().positive().optional().nullable(),
+  maxPointsBudget: z.number().int().positive().optional().nullable(),
+  pointsExpireDays: z.number().int().min(0).max(3650).default(30),
+  paused: z.boolean().default(false),
+  active: z.boolean().default(true),
+})
+  .refine(d => d.endsAt > d.startsAt, {
+    message: 'เวลาสิ้นสุดต้องมากกว่าเวลาเริ่ม', path: ['endsAt'],
+  })
+  .refine(d => (d.dailyStartTime == null) === (d.dailyEndTime == null), {
+    message: 'ต้องระบุเวลาเริ่มและสิ้นสุดรายวันคู่กัน', path: ['dailyEndTime'],
+  });
+
+export const grantPointsSchema = z.object({
+  userId: z.number().int().positive(),
+  points: z.number().int().refine(n => n !== 0, 'จำนวนแต้มต้องไม่เป็น 0'),
+  reason: z.string().min(1, 'ต้องระบุเหตุผล').max(255),
+  expireDays: z.number().int().min(1).max(3650).default(365),
+});

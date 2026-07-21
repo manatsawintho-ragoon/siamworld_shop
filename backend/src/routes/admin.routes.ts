@@ -14,6 +14,7 @@ import { auditService } from '../services/audit.service';
 import { easySlipService } from '../services/easyslip.service';
 import { notificationService } from '../services/notification.service';
 import { announcementService } from '../services/announcement.service';
+import { campaignService } from '../services/campaign.service';
 import {
   createProductSchema, updateProductSchema,
   createServerSchema, updateServerSchema,
@@ -24,6 +25,7 @@ import {
   createRedeemCodeSchema, updateRedeemCodeSchema,
   createLootBoxCategorySchema, updateLootBoxCategorySchema,
   releaseSchema,
+  campaignSchema, grantPointsSchema,
 } from '../validators/schemas';
 
 const router = Router();
@@ -1377,6 +1379,58 @@ router.post('/announcements/:id/dismiss', async (req: Request, res: Response, ne
     const id = parseInt(req.params.id, 10);
     if (!id) { res.status(400).json({ success: false, error: 'id ไม่ถูกต้อง' }); return; }
     await announcementService.dismiss(id, req.user!.userId);
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+// ─── Top-up Campaigns ───────────────────────────────────────
+
+router.get('/campaigns', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const campaigns = await campaignService.listAll();
+    res.json({ success: true, campaigns });
+  } catch (err) { next(err); }
+});
+
+router.get('/campaigns/:id/stats', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const stats = await campaignService.stats(id);
+    res.json({ success: true, stats });
+  } catch (err) { next(err); }
+});
+
+router.post('/campaigns', validate(campaignSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = await campaignService.create(req.body);
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'campaign_create', description: `สร้างแคมเปญ "${req.body.name}"`, refId: String(id), meta: { name: req.body.name } });
+    res.json({ success: true, id });
+  } catch (err) { next(err); }
+});
+
+router.put('/campaigns/:id', validate(campaignSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    await campaignService.update(id, req.body);
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'campaign_update', description: `แก้ไขแคมเปญ "${req.body.name}"`, refId: String(id), meta: { name: req.body.name } });
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+router.delete('/campaigns/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    await campaignService.softDelete(id);
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'campaign_delete', description: `ลบแคมเปญ ID ${id}`, refId: String(id) });
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+router.post('/campaigns/points/grant', validate(grantPointsSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { userId, points, reason, expireDays } = req.body;
+    await campaignService.grantManual(userId, points, reason, expireDays);
+    auditService.log({ userId: req.user!.userId, username: req.user!.username, actionType: 'campaign_points_grant', description: `ปรับแต้มผู้ใช้ ID ${userId}: ${points > 0 ? '+' : ''}${points} (${reason})`, refId: String(userId), meta: { targetUserId: userId, points, reason, expireDays } });
     res.json({ success: true });
   } catch (err) { next(err); }
 });

@@ -216,6 +216,97 @@ class CampaignService {
     );
     return rows;
   }
+
+  // ─── Admin CRUD ──────────────────────────────────────────────
+
+  /** Every campaign including paused and soft-deleted, newest first. */
+  async listAll(): Promise<RowDataPacket[]> {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      `SELECT c.*,
+              COALESCE((SELECT SUM(points_granted) FROM point_lots
+                        WHERE campaign_id = c.id AND points_granted > 0), 0) AS points_issued,
+              COALESCE((SELECT COUNT(DISTINCT user_id) FROM point_lots
+                        WHERE campaign_id = c.id AND points_granted > 0), 0) AS participants
+       FROM campaigns c
+       WHERE c.deleted_at IS NULL
+       ORDER BY c.starts_at DESC`
+    );
+    return rows;
+  }
+
+  async create(d: any): Promise<number> {
+    const [r] = await pool.execute<ResultSetHeader>(
+      `INSERT INTO campaigns
+         (name, description, banner_image, points_per_baht, min_topup_amount,
+          starts_at, ends_at, daily_start_time, daily_end_time, weekday_mask,
+          max_points_per_user, max_points_budget, points_expire_days, paused, active)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [d.name, d.description ?? null, d.bannerImage ?? null, d.pointsPerBaht,
+       d.minTopupAmount, d.startsAt, d.endsAt, d.dailyStartTime ?? null,
+       d.dailyEndTime ?? null, d.weekdayMask ?? null, d.maxPointsPerUser ?? null,
+       d.maxPointsBudget ?? null, d.pointsExpireDays, d.paused ? 1 : 0, d.active ? 1 : 0]
+    );
+    return r.insertId;
+  }
+
+  /**
+   * Edits apply FORWARD ONLY. Already-issued lots keep their points, their
+   * rate_applied and their expires_at - this method never touches point_lots.
+   */
+  async update(id: number, d: any): Promise<void> {
+    await pool.execute(
+      `UPDATE campaigns SET
+         name=?, description=?, banner_image=?, points_per_baht=?, min_topup_amount=?,
+         starts_at=?, ends_at=?, daily_start_time=?, daily_end_time=?, weekday_mask=?,
+         max_points_per_user=?, max_points_budget=?, points_expire_days=?, paused=?, active=?
+       WHERE id=?`,
+      [d.name, d.description ?? null, d.bannerImage ?? null, d.pointsPerBaht,
+       d.minTopupAmount, d.startsAt, d.endsAt, d.dailyStartTime ?? null,
+       d.dailyEndTime ?? null, d.weekdayMask ?? null, d.maxPointsPerUser ?? null,
+       d.maxPointsBudget ?? null, d.pointsExpireDays, d.paused ? 1 : 0,
+       d.active ? 1 : 0, id]
+    );
+  }
+
+  /** Soft-delete. Issued lots survive and stay spendable. */
+  async softDelete(id: number): Promise<void> {
+    await pool.execute('UPDATE campaigns SET deleted_at = NOW() WHERE id = ?', [id]);
+  }
+
+  /** Dashboard figures for one campaign, including outstanding liability. */
+  async stats(id: number): Promise<Record<string, number>> {
+    const [[row]] = await pool.execute<RowDataPacket[]>(
+      `SELECT
+         COALESCE(SUM(CASE WHEN points_granted > 0 THEN points_granted END), 0) AS issued,
+         COALESCE(SUM(CASE WHEN points_granted > 0 AND expires_at > NOW()
+                           THEN points_remaining END), 0) AS outstanding,
+         COALESCE(SUM(CASE WHEN points_granted > 0 AND expires_at <= NOW()
+                           THEN points_remaining END), 0) AS expired_unspent,
+         COUNT(DISTINCT user_id) AS participants
+       FROM point_lots WHERE campaign_id = ?`,
+      [id]
+    ) as unknown as [RowDataPacket[], unknown];
+    const issued = Number(row.issued);
+    return {
+      issued,
+      outstanding: Number(row.outstanding),
+      expiredUnspent: Number(row.expired_unspent),
+      participants: Number(row.participants),
+      redeemed: issued - Number(row.outstanding) - Number(row.expired_unspent),
+    };
+  }
+
+  /** Manual admin adjustment. Positive grants, negative deducts. Reason is mandatory. */
+  async grantManual(userId: number, points: number, reason: string, expireDays: number): Promise<void> {
+    const expiresAt = new Date(Date.now() + expireDays * 86_400_000);
+    await pool.execute(
+      `INSERT INTO point_lots
+         (user_id, campaign_id, points_granted, points_remaining,
+          qualified_at, expires_at, reason)
+       VALUES (?, NULL, ?, ?, NOW(), ?, ?)`,
+      [userId, points, points, expiresAt, reason]
+    );
+  }
 }
 
 export const campaignService = new CampaignService();
