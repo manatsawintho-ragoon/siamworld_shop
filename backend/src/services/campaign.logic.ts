@@ -71,3 +71,64 @@ export function isCampaignActiveAt(c: CampaignWindow, when: Date): boolean {
 
   return true;
 }
+
+export interface CampaignRule extends CampaignWindow {
+  id: number;
+  points_per_baht: number;
+  min_topup_amount: number;
+  max_points_per_user: number | null;
+  max_points_budget: number | null;
+  points_expire_days: number;
+}
+
+/**
+ * The single campaign that applies at `when`.
+ *
+ * Overlapping campaigns do NOT stack: the highest rate wins, ties broken by
+ * lowest id so the choice is deterministic and reproducible in support tickets.
+ */
+export function selectCampaignAt(list: CampaignRule[], when: Date): CampaignRule | null {
+  const active = list.filter(c => isCampaignActiveAt(c, when));
+  if (active.length === 0) return null;
+  return active.reduce((best, c) => {
+    if (c.points_per_baht > best.points_per_baht) return c;
+    if (c.points_per_baht === best.points_per_baht && c.id < best.id) return c;
+    return best;
+  });
+}
+
+/**
+ * Points earned by a qualifying top-up, after both caps.
+ *
+ * A partially-available cap grants the remainder rather than zero: the player
+ * gets what is left and is told honestly, which beats silently zeroing them.
+ */
+export function computeGrant(args: {
+  amountBaht: number;
+  campaign: CampaignRule;
+  userAlreadyGranted: number;
+  campaignAlreadyGranted: number;
+}): { points: number; capped: 'none' | 'user' | 'budget' } {
+  const { amountBaht, campaign, userAlreadyGranted, campaignAlreadyGranted } = args;
+
+  if (amountBaht < campaign.min_topup_amount) return { points: 0, capped: 'none' };
+
+  let points = Math.floor(amountBaht * campaign.points_per_baht);
+  let capped: 'none' | 'user' | 'budget' = 'none';
+
+  if (campaign.max_points_budget !== null) {
+    const room = Math.max(0, campaign.max_points_budget - campaignAlreadyGranted);
+    if (room < points) { points = room; capped = 'budget'; }
+  }
+  if (campaign.max_points_per_user !== null) {
+    const room = Math.max(0, campaign.max_points_per_user - userAlreadyGranted);
+    if (room < points) { points = room; capped = 'user'; }
+  }
+
+  return { points: Math.max(0, points), capped };
+}
+
+/** Frozen onto the lot at grant time. Later campaign edits never change it. */
+export function computeExpiry(campaign: CampaignRule): Date {
+  return new Date(campaign.ends_at.getTime() + campaign.points_expire_days * 86_400_000);
+}

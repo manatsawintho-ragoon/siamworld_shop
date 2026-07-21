@@ -1,4 +1,4 @@
-import { bangkokParts, isCampaignActiveAt, CampaignWindow } from '../campaign.logic';
+import { bangkokParts, isCampaignActiveAt, CampaignWindow, selectCampaignAt, computeGrant, computeExpiry, CampaignRule } from '../campaign.logic';
 
 // Base: a campaign running all of August 2026 UTC, no masks.
 const base: CampaignWindow = {
@@ -11,6 +11,26 @@ const base: CampaignWindow = {
   active: 1,
   deleted_at: null,
 };
+
+const rule = (over: Partial<CampaignRule> = {}): CampaignRule => ({
+  id: 1,
+  starts_at: new Date('2026-08-01T00:00:00Z'),
+  ends_at:   new Date('2026-08-31T23:59:59Z'),
+  daily_start_time: null,
+  daily_end_time: null,
+  weekday_mask: null,
+  paused: 0,
+  active: 1,
+  deleted_at: null,
+  points_per_baht: 0.1,
+  min_topup_amount: 0,
+  max_points_per_user: null,
+  max_points_budget: null,
+  points_expire_days: 30,
+  ...over,
+});
+
+const when = new Date('2026-08-10T10:00:00Z');
 
 describe('bangkokParts', () => {
   it('shifts UTC to UTC+7', () => {
@@ -95,5 +115,99 @@ describe('isCampaignActiveAt', () => {
     it('a zero mask matches nothing', () => {
       expect(isCampaignActiveAt({ ...base, weekday_mask: 0 }, new Date('2026-08-08T05:00:00Z'))).toBe(false);
     });
+  });
+});
+
+describe('selectCampaignAt', () => {
+  it('returns null when nothing is active', () => {
+    expect(selectCampaignAt([rule({ paused: 1 })], when)).toBeNull();
+  });
+  it('returns the only active campaign', () => {
+    expect(selectCampaignAt([rule({ id: 7 })], when)?.id).toBe(7);
+  });
+  it('picks the highest rate when several overlap (never stacks)', () => {
+    const picked = selectCampaignAt([
+      rule({ id: 1, points_per_baht: 0.1 }),
+      rule({ id: 2, points_per_baht: 0.5 }),
+      rule({ id: 3, points_per_baht: 0.2 }),
+    ], when);
+    expect(picked?.id).toBe(2);
+  });
+  it('ignores inactive campaigns when picking the highest rate', () => {
+    const picked = selectCampaignAt([
+      rule({ id: 1, points_per_baht: 0.1 }),
+      rule({ id: 2, points_per_baht: 9.9, paused: 1 }),
+    ], when);
+    expect(picked?.id).toBe(1);
+  });
+  it('breaks a rate tie deterministically by lowest id', () => {
+    const picked = selectCampaignAt([
+      rule({ id: 5, points_per_baht: 0.3 }),
+      rule({ id: 2, points_per_baht: 0.3 }),
+    ], when);
+    expect(picked?.id).toBe(2);
+  });
+});
+
+describe('computeGrant', () => {
+  it('computes points at the linear rate', () => {
+    expect(computeGrant({
+      amountBaht: 500, campaign: rule(), userAlreadyGranted: 0, campaignAlreadyGranted: 0,
+    })).toEqual({ points: 50, capped: 'none' });
+  });
+  it('floors fractional points', () => {
+    expect(computeGrant({
+      amountBaht: 55, campaign: rule({ points_per_baht: 0.1 }), userAlreadyGranted: 0, campaignAlreadyGranted: 0,
+    })).toEqual({ points: 5, capped: 'none' });
+  });
+  it('grants nothing below min_topup_amount', () => {
+    expect(computeGrant({
+      amountBaht: 40, campaign: rule({ min_topup_amount: 50 }), userAlreadyGranted: 0, campaignAlreadyGranted: 0,
+    })).toEqual({ points: 0, capped: 'none' });
+  });
+  it('grants at exactly min_topup_amount', () => {
+    expect(computeGrant({
+      amountBaht: 50, campaign: rule({ min_topup_amount: 50 }), userAlreadyGranted: 0, campaignAlreadyGranted: 0,
+    })).toEqual({ points: 5, capped: 'none' });
+  });
+  it('clamps to the per-user cap and reports it', () => {
+    expect(computeGrant({
+      amountBaht: 1000, campaign: rule({ max_points_per_user: 60 }), userAlreadyGranted: 40, campaignAlreadyGranted: 0,
+    })).toEqual({ points: 20, capped: 'user' });
+  });
+  it('returns zero when the per-user cap is already exhausted', () => {
+    expect(computeGrant({
+      amountBaht: 1000, campaign: rule({ max_points_per_user: 60 }), userAlreadyGranted: 60, campaignAlreadyGranted: 0,
+    })).toEqual({ points: 0, capped: 'user' });
+  });
+  it('clamps to the campaign budget and reports it', () => {
+    expect(computeGrant({
+      amountBaht: 1000, campaign: rule({ max_points_budget: 500 }), userAlreadyGranted: 0, campaignAlreadyGranted: 480,
+    })).toEqual({ points: 20, capped: 'budget' });
+  });
+  it('applies the tighter of the two caps', () => {
+    expect(computeGrant({
+      amountBaht: 1000,
+      campaign: rule({ max_points_per_user: 50, max_points_budget: 500 }),
+      userAlreadyGranted: 45, campaignAlreadyGranted: 490,
+    })).toEqual({ points: 5, capped: 'user' });
+  });
+  it('never returns negative points', () => {
+    expect(computeGrant({
+      amountBaht: 100, campaign: rule({ max_points_per_user: 10 }), userAlreadyGranted: 999, campaignAlreadyGranted: 0,
+    })).toEqual({ points: 0, capped: 'user' });
+  });
+});
+
+describe('computeExpiry', () => {
+  it('expires N days after the campaign ends', () => {
+    expect(computeExpiry(rule({
+      ends_at: new Date('2026-08-31T00:00:00Z'), points_expire_days: 30,
+    }))).toEqual(new Date('2026-09-30T00:00:00Z'));
+  });
+  it('supports a zero grace (expires at campaign end)', () => {
+    expect(computeExpiry(rule({
+      ends_at: new Date('2026-08-31T00:00:00Z'), points_expire_days: 0,
+    }))).toEqual(new Date('2026-08-31T00:00:00Z'));
   });
 });
