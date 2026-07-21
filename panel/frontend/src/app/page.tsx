@@ -1039,17 +1039,6 @@ function LandingContent() {
             <div className="relative z-20">
               <DashboardMock />
             </div>
-            <div className="absolute -bottom-5 -left-3 md:-left-6 bg-card border border-border p-4 rounded-2xl shadow-xl z-30 animate-float-y">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-lg">
-                  <Icon name="check" />
-                </div>
-                <div>
-                  <p className="font-bold text-sm text-foreground">ออนไลน์ทันที</p>
-                  <p className="text-xs text-muted-foreground">หลังชำระเงินเสร็จสิ้น</p>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>

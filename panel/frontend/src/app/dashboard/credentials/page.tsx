@@ -44,10 +44,12 @@ function CredRow({ label, value, icon, secret }: { label: string; value: string 
         {icon && <div className="w-8 h-8 rounded-lg bg-secondary text-foreground flex items-center justify-center">
           <Icon name={icon} className="text-sm" />
         </div>}
-        <span className="text-xs font-medium text-muted-foreground">{label}</span>
+        <span className="text-[13px] text-muted-foreground">{label}</span>
       </div>
-      <div className="flex items-center gap-3 min-w-0 bg-secondary/30 px-3 py-1.5 rounded-lg border border-border">
-        <span className={`text-sm font-semibold truncate ${secret && !show ? 'text-muted-foreground' : 'text-foreground'}`}>{display}</span>
+      {/* The value is the thing people came here to read and copy, so it is set
+          in mono at a size that survives being read off a phone. */}
+      <div className="flex items-center gap-3 min-w-0 bg-secondary/40 px-3 py-2 rounded-lg border border-border">
+        <span className={`text-[14px] font-mono truncate ${secret && !show ? 'text-muted-foreground tracking-widest' : 'text-foreground'}`}>{display}</span>
         {secret && (
           <button onClick={() => setShow(v => !v)} className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 cursor-pointer">
             <Icon name={show ? 'eye-slash' : 'eye'} className={`text-xs`} />
@@ -166,7 +168,7 @@ function AdminCredentialCard({ cred, error, busy, onRefetch, onRegen, onSetPw }:
             <p className="text-sm font-semibold text-muted-foreground mb-3">
               <Icon name="triangle-exclamation" className="mr-2 text-amber-500" />โหลดบัญชีแอดมินไม่สำเร็จ
             </p>
-            <Button variant="outline" onClick={onRefetch} className="rounded-full font-bold cursor-pointer">
+            <Button variant="outline" onClick={onRefetch} className="rounded-full font-medium cursor-pointer">
               <Icon name="rotate-right" className="mr-2" />ลองใหม่
             </Button>
           </div>
@@ -184,15 +186,15 @@ function AdminCredentialCard({ cred, error, busy, onRefetch, onRegen, onSetPw }:
             )}
             <div className="mt-5 flex flex-wrap gap-3">
               {cred.rotating ? (
-                <Button onClick={onSetPw} disabled={busy} className="cursor-pointer font-bold rounded-full">
+                <Button onClick={onSetPw} disabled={busy} className="cursor-pointer font-medium rounded-full">
                   <Icon name="lock" className="mr-2" /> ตั้งรหัสถาวรของคุณเอง
                 </Button>
               ) : (
                 <>
-                  <Button variant="outline" onClick={onSetPw} disabled={busy} className="cursor-pointer font-bold rounded-full">
+                  <Button variant="outline" onClick={onSetPw} disabled={busy} className="cursor-pointer font-medium rounded-full">
                     <Icon name="pen" className="mr-2" /> เปลี่ยนรหัส
                   </Button>
-                  <Button variant="outline" onClick={onRegen} disabled={busy} className="cursor-pointer font-bold rounded-full">
+                  <Button variant="outline" onClick={onRegen} disabled={busy} className="cursor-pointer font-medium rounded-full">
                     <Icon name="rotate" className="mr-2" /> กลับไปใช้รหัสหมุน
                   </Button>
                 </>
@@ -216,11 +218,11 @@ function StepCard({ n, title, children, done, warn }: { n: number; title: string
   return (
     <Card className={`border shadow-none transition-all ${done ? 'bg-emerald-500/5 border-emerald-500/30' : warn ? 'bg-amber-500/5 border-amber-500/30' : 'bg-background border-border'}`}>
       <CardContent className="p-5 flex gap-4">
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5 ${done ? 'bg-emerald-500 text-white' : warn ? 'bg-amber-500 text-white' : 'bg-primary text-primary-foreground'}`}>
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 mt-0.5 ${done ? 'bg-emerald-500 text-white' : warn ? 'bg-amber-500 text-white' : 'bg-primary text-primary-foreground'}`}>
           {done ? <Icon name="check" className="text-xs" /> : n}
         </div>
         <div className="flex-1 min-w-0">
-          <p className={`text-sm font-bold tracking-tight mb-2 ${done ? 'text-emerald-600 dark:text-emerald-400' : warn ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'}`}>{title}</p>
+          <p className={`text-sm font-medium tracking-tight mb-2 ${done ? 'text-emerald-600 dark:text-emerald-400' : warn ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'}`}>{title}</p>
           {children}
         </div>
       </CardContent>
@@ -258,7 +260,7 @@ function CommandCard({ label, desc, code, lang = 'bash', tone = 'neutral' }: {
     : tone === 'yaml'   ? 'border-amber-500/40 bg-amber-500/5'
     :                     'border-border bg-background';
   return (
-    <div className={`rounded-2xl border-2 overflow-hidden ${accent}`}>
+    <div className={`rounded-xl border-2 overflow-hidden ${accent}`}>
       <div className="px-4 py-3 flex items-start justify-between gap-3 border-b border-border/40">
         <div className="min-w-0">
           <p className="text-[13px] font-medium text-foreground leading-tight">{label}</p>
@@ -471,7 +473,7 @@ function CredContent() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">ข้อมูลร้านค้า</h1>
+            <h1 className="text-2xl font-semibold text-foreground tracking-tight">ข้อมูลร้านค้า</h1>
             {creds && <p className="text-sm font-semibold text-muted-foreground mt-0.5">{creds.domain}</p>}
           </div>
         </div>
@@ -480,7 +482,7 @@ function CredContent() {
           <Card className="border-destructive/30 bg-destructive/5 mb-8">
             <CardContent className="p-6 text-center">
               <Icon name="circle-exclamation" className="text-destructive text-3xl mb-3" />
-              <p className="text-sm font-bold text-destructive">{error}</p>
+              <p className="text-sm font-medium text-destructive">{error}</p>
             </CardContent>
           </Card>
         )}
@@ -509,12 +511,12 @@ function CredContent() {
                 <CredRow label="ชื่อร้าน" value={creds.shopName} icon="font" />
                 <CredRow label="URL เว็บไซต์" value={`https://${creds.domain}`} icon="globe" />
                 <div className="mt-6 flex flex-wrap gap-3">
-                  <Button asChild className="cursor-pointer font-bold rounded-full">
+                  <Button asChild className="cursor-pointer font-medium rounded-full">
                     <a href={`https://${creds.domain}`} target="_blank" rel="noopener noreferrer">
                       <Icon name="arrow-up-right-from-square" className="mr-2" /> เปิดเว็บร้านค้า
                     </a>
                   </Button>
-                  <Button variant="outline" asChild className="cursor-pointer font-bold rounded-full">
+                  <Button variant="outline" asChild className="cursor-pointer font-medium rounded-full">
                     <a href={creds.setupUrl} target="_blank" rel="noopener noreferrer">
                       <Icon name="wand-magic-sparkles" className="mr-2" /> เริ่มตั้งค่าเว็บครั้งแรก
                     </a>
@@ -557,16 +559,16 @@ function CredContent() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-3">
-                    <Button variant="outline" size="sm" onClick={() => handleAction('start')} disabled={actionLoading} className="cursor-pointer font-bold text-emerald-600 border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500 hover:text-white">
+                    <Button variant="outline" size="sm" onClick={() => handleAction('start')} disabled={actionLoading} className="cursor-pointer font-medium text-emerald-600 border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500 hover:text-white">
                       <Icon name="play" className="mr-1.5" /> เริ่มเซิร์ฟเวอร์
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleAction('restart')} disabled={actionLoading} className="cursor-pointer font-bold text-amber-600 border-amber-500/30 bg-amber-500/5 hover:bg-amber-500 hover:text-white">
+                    <Button variant="outline" size="sm" onClick={() => handleAction('restart')} disabled={actionLoading} className="cursor-pointer font-medium text-amber-600 border-amber-500/30 bg-amber-500/5 hover:bg-amber-500 hover:text-white">
                       <Icon name="rotate-right" className="mr-1.5" /> รีสตาร์ท
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleAction('stop')} disabled={actionLoading} className="cursor-pointer font-bold text-destructive border-destructive/30 bg-destructive/5 hover:bg-destructive hover:text-white">
+                    <Button variant="outline" size="sm" onClick={() => handleAction('stop')} disabled={actionLoading} className="cursor-pointer font-medium text-destructive border-destructive/30 bg-destructive/5 hover:bg-destructive hover:text-white">
                       <Icon name="stop" className="mr-1.5" /> หยุดเซิร์ฟเวอร์
                     </Button>
-                    <Button variant="secondary" size="sm" onClick={handleLogs} disabled={actionLoading} className="cursor-pointer font-bold ml-auto">
+                    <Button variant="secondary" size="sm" onClick={handleLogs} disabled={actionLoading} className="cursor-pointer font-medium ml-auto">
                       <Icon name="terminal" className="mr-1.5" /> ดู Logs ของระบบ
                     </Button>
                   </div>
@@ -577,9 +579,9 @@ function CredContent() {
             {/* Logs Modal */}
             {showLogs && (
               <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm" onClick={() => setShowLogs(false)}>
-                <div className="bg-slate-950 rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col border border-slate-800 shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+                <div className="bg-slate-950 rounded-xl w-full max-w-4xl max-h-[85vh] flex flex-col border border-slate-800 shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
                   <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900">
-                    <h3 className="text-white font-bold text-sm flex items-center gap-2">
+                    <h3 className="text-white font-semibold text-sm flex items-center gap-2">
                       <Icon name="terminal" className="text-blue-400" /> Container Logs
                     </h3>
                     <button onClick={() => setShowLogs(false)} className="text-slate-400 hover:text-white transition-colors cursor-pointer w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-800">
@@ -613,37 +615,37 @@ function CredContent() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* ── A. None ── */}
                   <div onClick={() => setMode('none')}
-                    className={`p-5 rounded-2xl border-2 transition-all cursor-pointer relative ${mode === 'none'
+                    className={`p-5 rounded-xl border-2 transition-all cursor-pointer relative ${mode === 'none'
                       ? 'bg-emerald-500/5 border-emerald-500 shadow-sm'
                       : 'bg-background border-border hover:border-emerald-500/30'}`}>
                     <Badge className="absolute -top-2 left-4 bg-emerald-500 text-white text-[12px] font-extrabold">มือใหม่</Badge>
                     <div className="flex items-center gap-3 mb-3 mt-1">
                       <Icon name="circle-check" className={`text-xl ${mode === 'none' ? 'text-emerald-500' : 'text-muted-foreground'}`} />
-                      <span className={`text-base font-bold ${mode === 'none' ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
+                      <span className={`text-base font-semibold ${mode === 'none' ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
                         ไม่เชื่อมต่อ
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed font-medium">
                       ไม่ต้องตั้งค่าใดๆ ระบบแยกอิสระ<br />
-                      <span className="text-emerald-600 dark:text-emerald-400 font-bold mt-1 block">✓ ปลอดภัย 100% เซิร์ฟดับเว็บไม่พัง</span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-medium mt-1 block">✓ ปลอดภัย 100% เซิร์ฟดับเว็บไม่พัง</span>
                     </p>
                   </div>
 
                   {/* ── B. Bridge ── */}
                   <div onClick={() => setMode('bridge')}
-                    className={`p-5 rounded-2xl border-2 transition-all cursor-pointer relative ${mode === 'bridge'
+                    className={`p-5 rounded-xl border-2 transition-all cursor-pointer relative ${mode === 'bridge'
                       ? 'bg-primary/5 border-primary shadow-sm'
                       : 'bg-background border-border hover:border-primary/50'}`}>
                     <Badge className="absolute -top-2 left-4 bg-primary text-primary-foreground text-[12px] font-extrabold">แนะนำ</Badge>
                     <div className="flex items-center gap-3 mb-3 mt-1">
                       <Icon name="bolt" className={`text-xl ${mode === 'bridge' ? 'text-primary' : 'text-muted-foreground'}`} />
-                      <span className={`text-base font-bold ${mode === 'bridge' ? 'text-primary' : 'text-foreground'}`}>
+                      <span className={`text-base font-semibold ${mode === 'bridge' ? 'text-primary' : 'text-foreground'}`}>
                         Bridge Plugin
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed font-medium">
                       เชื่อมต่อผ่านปลั๊กอิน .jar ตัวเดียว<br />
-                      <span className="text-emerald-600 dark:text-emerald-400 font-bold mt-1 block">✓ ใช้รหัสเดียวกับในเกมได้ทันที</span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-medium mt-1 block">✓ ใช้รหัสเดียวกับในเกมได้ทันที</span>
                     </p>
                   </div>
 
@@ -662,7 +664,7 @@ function CredContent() {
                       <Icon name="bullseye" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-foreground mb-1">ไม่ต้องตั้งค่าการเชื่อมต่อใดๆ</h3>
+                      <h3 className="font-semibold text-foreground mb-1">ไม่ต้องตั้งค่าการเชื่อมต่อใดๆ</h3>
                       <p className="text-sm text-muted-foreground font-medium">
                         เว็บร้านค้าของคุณใช้ฐานข้อมูลแยกต่างหาก ผู้เล่นสามารถลงทะเบียนบนหน้าเว็บเพื่อเริ่มใช้งานได้ทันที
                       </p>
@@ -682,7 +684,7 @@ function CredContent() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20">
-                      <p className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
+                      <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
                         <Icon name="key" className="text-amber-500" />
                         ผู้เล่นต้องสมัครเว็บด้วย "ชื่อเดียวกับในเกม"
                       </p>
@@ -716,7 +718,7 @@ function CredContent() {
                 <Card className="shadow-md border-primary/40">
                   <CardHeader className="pb-3 bg-primary/5">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center font-extrabold text-lg">1</div>
+                      <div className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-extrabold text-lg">1</div>
                       <div>
                         <CardTitle className="text-base">เซิร์ฟ MC ของคุณรันบนระบบไหน?</CardTitle>
                         <CardDescription className="font-medium mt-0.5">เลือกก่อนเริ่ม คู่มือทั้งหน้าจะเปลี่ยนตามระบบที่เลือก</CardDescription>
@@ -727,17 +729,17 @@ function CredContent() {
                     <div className="grid grid-cols-2 gap-3">
                       <button
                         onClick={() => setOsType('linux')}
-                        className={`p-5 rounded-2xl border-2 transition-all cursor-pointer text-left flex items-center gap-4 ${
+                        className={`p-5 rounded-xl border-2 transition-all cursor-pointer text-left flex items-center gap-4 ${
                           osType === 'linux'
                             ? 'bg-foreground text-background border-foreground shadow-md scale-[1.02]'
                             : 'bg-background border-border hover:border-foreground/40 hover:bg-secondary/40'
                         }`}
                       >
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 text-3xl ${osType === 'linux' ? 'bg-amber-400 text-slate-900' : 'bg-amber-500/10 text-amber-600'}`}>
+                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 text-3xl ${osType === 'linux' ? 'bg-amber-400 text-slate-900' : 'bg-amber-500/10 text-amber-600'}`}>
                           <Icon name="linux" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-bold text-base mb-0.5 flex items-center gap-2">
+                          <p className="font-semibold text-base mb-0.5 flex items-center gap-2">
                             Linux
                             {osType === 'linux' && <Icon name="circle-check" className="text-emerald-400 text-sm" />}
                           </p>
@@ -748,17 +750,17 @@ function CredContent() {
                       </button>
                       <button
                         onClick={() => setOsType('windows')}
-                        className={`p-5 rounded-2xl border-2 transition-all cursor-pointer text-left flex items-center gap-4 ${
+                        className={`p-5 rounded-xl border-2 transition-all cursor-pointer text-left flex items-center gap-4 ${
                           osType === 'windows'
                             ? 'bg-foreground text-background border-foreground shadow-md scale-[1.02]'
                             : 'bg-background border-border hover:border-foreground/40 hover:bg-secondary/40'
                         }`}
                       >
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 text-3xl ${osType === 'windows' ? 'bg-sky-400 text-slate-900' : 'bg-sky-500/10 text-sky-600'}`}>
+                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 text-3xl ${osType === 'windows' ? 'bg-sky-400 text-slate-900' : 'bg-sky-500/10 text-sky-600'}`}>
                           <Icon name="windows" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-bold text-base mb-0.5 flex items-center gap-2">
+                          <p className="font-semibold text-base mb-0.5 flex items-center gap-2">
                             Windows
                             {osType === 'windows' && <Icon name="circle-check" className="text-emerald-400 text-sm" />}
                           </p>
@@ -774,21 +776,21 @@ function CredContent() {
                 {/* ② Compact status row */}
                 <Card className={`shadow-sm ${bridgeStatus?.online ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-border'}`}>
                   <CardContent className="p-4 flex items-center gap-4 flex-wrap">
-                    <div className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 ${bridgeStatus?.online ? 'bg-emerald-500/20 text-emerald-600' : 'bg-secondary text-muted-foreground'}`}>
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${bridgeStatus?.online ? 'bg-emerald-500/20 text-emerald-600' : 'bg-secondary text-muted-foreground'}`}>
                       <Icon name="signal" className="text-lg" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-bold text-foreground">สถานะการเชื่อมต่อ</p>
+                        <p className="text-sm font-medium text-foreground">สถานะการเชื่อมต่อ</p>
                         {bridgeStatus?.online ? (
-                          <Badge variant="success" className="font-bold px-3"><span className="w-1.5 h-1.5 bg-emerald-600 rounded-full animate-pulse mr-2" />ออนไลน์</Badge>
+                          <Badge variant="success" className="font-medium px-3"><span className="w-1.5 h-1.5 bg-emerald-600 rounded-full animate-pulse mr-2" />ออนไลน์</Badge>
                         ) : (
-                          <Badge variant="outline" className="font-bold px-3">รอการเชื่อมต่อ</Badge>
+                          <Badge variant="outline" className="font-medium px-3">รอการเชื่อมต่อ</Badge>
                         )}
                       </div>
                       <p className="text-[13px] text-muted-foreground font-medium mt-1">
-                        Token: <span className="font-mono font-bold text-foreground">{bridgeStatus?.tokenPrefix || 'ยังไม่มี'}</span>
-                        &nbsp;·&nbsp;Version: <span className="font-mono font-bold text-foreground">{bridgeStatus?.pluginVersion || 'ยังไม่มี'}</span>
+                        Token: <span className="font-mono font-medium text-foreground">{bridgeStatus?.tokenPrefix || 'ยังไม่มี'}</span>
+                        &nbsp;·&nbsp;Version: <span className="font-mono font-medium text-foreground">{bridgeStatus?.pluginVersion || 'ยังไม่มี'}</span>
                       </p>
                     </div>
                   </CardContent>
@@ -798,7 +800,7 @@ function CredContent() {
                 <Card className="shadow-md border-primary/40">
                   <CardHeader className="pb-3 bg-primary/5">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center font-extrabold text-lg">2</div>
+                      <div className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-extrabold text-lg">2</div>
                       <div>
                         <CardTitle className="text-base">เซิร์ฟ MC ของคุณตอนนี้เป็นอย่างไร?</CardTitle>
                         <CardDescription className="font-medium mt-0.5">เลือกตามสถานะปัจจุบัน เพื่อแสดงคู่มือที่ตรงกับคุณ</CardDescription>
@@ -809,25 +811,25 @@ function CredContent() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <button
                         onClick={() => setSetupTrack('have')}
-                        className={`p-4 rounded-2xl border-2 transition-all cursor-pointer text-left ${
+                        className={`p-4 rounded-xl border-2 transition-all cursor-pointer text-left ${
                           setupTrack === 'have' ? 'bg-emerald-500/10 border-emerald-500 shadow-sm' : 'bg-background border-border hover:border-emerald-500/40'
                         }`}
                       >
                         <div className="flex items-center gap-2 mb-1.5">
                           <Icon name="circle-check" className={`text-lg ${setupTrack === 'have' ? 'text-emerald-500' : 'text-muted-foreground'}`} />
-                          <span className={`text-sm font-bold ${setupTrack === 'have' ? 'text-emerald-700 dark:text-emerald-400' : 'text-foreground'}`}>มี AuthMe หรือ nLogin พร้อม MySQL อยู่แล้ว</span>
+                          <span className={`text-sm font-medium ${setupTrack === 'have' ? 'text-emerald-700 dark:text-emerald-400' : 'text-foreground'}`}>มี AuthMe หรือ nLogin พร้อม MySQL อยู่แล้ว</span>
                         </div>
                         <p className="text-[13px] text-muted-foreground font-medium leading-relaxed">ผู้เล่นสมัครและล็อกอินในเกมได้ปกติ ไปติดตั้ง Bridge ด้านล่างได้เลย</p>
                       </button>
                       <button
                         onClick={() => setSetupTrack('new')}
-                        className={`p-4 rounded-2xl border-2 transition-all cursor-pointer text-left ${
+                        className={`p-4 rounded-xl border-2 transition-all cursor-pointer text-left ${
                           setupTrack === 'new' ? 'bg-amber-500/10 border-amber-500 shadow-sm' : 'bg-background border-border hover:border-amber-500/40'
                         }`}
                       >
                         <div className="flex items-center gap-2 mb-1.5">
                           <Icon name="wrench" className={`text-lg ${setupTrack === 'new' ? 'text-amber-600' : 'text-muted-foreground'}`} />
-                          <span className={`text-sm font-bold ${setupTrack === 'new' ? 'text-amber-700 dark:text-amber-400' : 'text-foreground'}`}>เริ่มจากศูนย์ ยังไม่เคยตั้งระบบล็อกอิน</span>
+                          <span className={`text-sm font-medium ${setupTrack === 'new' ? 'text-amber-700 dark:text-amber-400' : 'text-foreground'}`}>เริ่มจากศูนย์ ยังไม่เคยตั้งระบบล็อกอิน</span>
                         </div>
                         <p className="text-[13px] text-muted-foreground font-medium leading-relaxed">ยังไม่มี MySQL หรือ AuthMe/nLogin จะมีคู่มือตั้งครบทุกขั้น พร้อมปุ่มก็อปคำสั่ง</p>
                       </button>
@@ -839,11 +841,11 @@ function CredContent() {
                 {setupTrack === 'have' && (
                   <Card className="shadow-sm border-emerald-500/40 bg-emerald-500/5">
                     <CardContent className="p-5 flex gap-4 items-start">
-                      <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-600 flex items-center justify-center flex-shrink-0 text-lg">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-600 flex items-center justify-center flex-shrink-0 text-lg">
                         <Icon name="circle-check" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-foreground mb-1">ดีเลย ไม่ต้องแก้ AuthMe / nLogin / MySQL อะไรเพิ่ม</h4>
+                        <h4 className="font-semibold text-foreground mb-1">ดีเลย ไม่ต้องแก้ AuthMe / nLogin / MySQL อะไรเพิ่ม</h4>
                         <p className="text-sm text-muted-foreground font-medium leading-relaxed">
                           Bridge อ่านข้อมูล MySQL จาก config ของ AuthMe หรือ nLogin ของคุณให้อัตโนมัติ ในไฟล์ Bridge มีอย่างเดียวที่ต้องใส่คือ <strong className="text-primary">Token</strong> (ขั้น 4 ของการติดตั้ง Bridge ด้านล่าง)
                         </p>
@@ -859,7 +861,7 @@ function CredContent() {
                     <Card className="shadow-md border-amber-500/40">
                       <CardHeader className="pb-3 bg-amber-500/5">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-extrabold text-lg">3</div>
+                          <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-extrabold text-lg">3</div>
                           <div>
                             <CardTitle className="text-base">เลือกปลั๊กอินล็อกอินที่จะใช้</CardTitle>
                             <CardDescription className="font-medium mt-0.5">ใช้ตัวไหนก็ได้ ทำงานกับ Bridge ได้ทั้งคู่</CardDescription>
@@ -870,22 +872,22 @@ function CredContent() {
                         <div className="grid grid-cols-2 gap-3">
                           <button
                             onClick={() => setSetupAuthType('authme')}
-                            className={`p-4 rounded-2xl border-2 transition-all cursor-pointer text-left ${
+                            className={`p-4 rounded-xl border-2 transition-all cursor-pointer text-left ${
                               setupAuthType === 'authme' ? 'bg-purple-500/10 border-purple-500 shadow-sm' : 'bg-background border-border hover:border-purple-500/40'
                             }`}
                           >
-                            <p className={`text-sm font-bold mb-0.5 ${setupAuthType === 'authme' ? 'text-purple-600' : 'text-foreground'}`}>
+                            <p className={`text-sm font-medium mb-0.5 ${setupAuthType === 'authme' ? 'text-purple-600' : 'text-foreground'}`}>
                               <Icon name="shield-halved" className="mr-1.5" />AuthMe
                             </p>
                             <p className="text-[12px] text-muted-foreground font-medium">ยอดนิยม ใช้ในเซิร์ฟไทยกว่า 80%</p>
                           </button>
                           <button
                             onClick={() => setSetupAuthType('nlogin')}
-                            className={`p-4 rounded-2xl border-2 transition-all cursor-pointer text-left ${
+                            className={`p-4 rounded-xl border-2 transition-all cursor-pointer text-left ${
                               setupAuthType === 'nlogin' ? 'bg-purple-500/10 border-purple-500 shadow-sm' : 'bg-background border-border hover:border-purple-500/40'
                             }`}
                           >
-                            <p className={`text-sm font-bold mb-0.5 ${setupAuthType === 'nlogin' ? 'text-purple-600' : 'text-foreground'}`}>
+                            <p className={`text-sm font-medium mb-0.5 ${setupAuthType === 'nlogin' ? 'text-purple-600' : 'text-foreground'}`}>
                               <Icon name="lock" className="mr-1.5" />nLogin
                             </p>
                             <p className="text-[12px] text-muted-foreground font-medium">ตัวใหม่กว่า เซิร์ฟใหม่ๆ ใช้บ่อย</p>
@@ -898,7 +900,7 @@ function CredContent() {
                     <Card className="shadow-md border-amber-500/40">
                       <CardHeader className="pb-3 bg-amber-500/5">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-extrabold text-lg">4</div>
+                          <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-extrabold text-lg">4</div>
                           <div>
                             <CardTitle className="text-base">ติดตั้ง MySQL และสร้างฐานข้อมูล</CardTitle>
                             <CardDescription className="font-medium mt-0.5">กดปุ่มคัดลอกคำสั่งของแต่ละกล่อง แล้วเอาไปวางใน Terminal / PowerShell ทีละช่อง</CardDescription>
@@ -995,7 +997,7 @@ EXIT;`}
                     <Card className="shadow-md border-amber-500/40">
                       <CardHeader className="pb-3 bg-amber-500/5">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-extrabold text-lg">5</div>
+                          <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-extrabold text-lg">5</div>
                           <div>
                             <CardTitle className="text-base">ติดตั้ง {setupAuthType === 'authme' ? 'AuthMe' : 'nLogin'} และตั้งให้ใช้ MySQL</CardTitle>
                             <CardDescription className="font-medium mt-0.5">วาง .jar ใน plugins, เปิดเซิร์ฟ 1 ครั้ง, แก้ config ใช้ MySQL ที่สร้างในขั้น 4</CardDescription>
@@ -1015,7 +1017,7 @@ EXIT;`}
                         </div>
 
                         <div className="p-3 rounded-xl bg-background border border-border text-[12px] text-muted-foreground font-medium leading-relaxed">
-                          <p className="font-bold text-foreground mb-1">B. วาง .jar ในโฟลเดอร์ plugins แล้วเปิดเซิร์ฟ 1 ครั้ง</p>
+                          <p className="font-medium text-foreground mb-1">B. วาง .jar ในโฟลเดอร์ plugins แล้วเปิดเซิร์ฟ 1 ครั้ง</p>
                           เอาไฟล์ <code>.jar</code> ที่โหลดมา วางใน <code>{osType === 'linux' ? 'plugins/' : 'plugins\\'}</code> ของเซิร์ฟ MC จากนั้น <strong>start เซิร์ฟ</strong> รอจน console บอก <code>Done!</code> แล้ว <strong>stop</strong>. ปลั๊กอินจะสร้าง <code>{osType === 'linux' ? `plugins/${setupAuthType === 'authme' ? 'AuthMe' : 'nLogin'}/config.yml` : `plugins\\${setupAuthType === 'authme' ? 'AuthMe' : 'nLogin'}\\config.yml`}</code> ให้
                         </div>
 
@@ -1078,7 +1080,7 @@ EXIT;`}
                 <Card className={`shadow-md transition-colors ${osType === 'linux' ? 'border-amber-500/40' : 'border-sky-500/40'}`}>
                   <CardHeader className={`pb-3 ${osType === 'linux' ? 'bg-amber-500/5' : 'bg-sky-500/5'}`}>
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-2xl text-white flex items-center justify-center font-extrabold text-lg ${osType === 'linux' ? 'bg-amber-500' : 'bg-sky-500'}`}>
+                      <div className={`w-10 h-10 rounded-xl text-white flex items-center justify-center font-extrabold text-lg ${osType === 'linux' ? 'bg-amber-500' : 'bg-sky-500'}`}>
                         {setupTrack === 'have' ? 3 : 6}
                       </div>
                       <div>
@@ -1096,7 +1098,7 @@ EXIT;`}
                       <p className="text-xs text-muted-foreground font-medium mb-2">
                         กดปุ่มด้านล่างเพื่อโหลด เก็บไว้ก่อน เดี๋ยวเอาไปวางในขั้น 3
                       </p>
-                      <Button variant="outline" asChild className="mt-1 cursor-pointer rounded-full font-bold h-10 px-6">
+                      <Button variant="outline" asChild className="mt-1 cursor-pointer rounded-full font-medium h-10 px-6">
                         <a href="/downloads/siamsite-bridge-1.1.0.jar" download>
                           <Icon name="download" className="mr-2" /> ดาวน์โหลด siamsite-bridge.jar
                         </a>
@@ -1108,7 +1110,7 @@ EXIT;`}
                         Token คือกุญแจของร้านคุณ ปลั๊กอินใช้เชื่อมเข้าร้านนี้ คัดลอกเก็บก่อน
                       </p>
                       {!bridgeToken ? (
-                        <Button className="font-bold cursor-pointer rounded-full h-10 px-6 mt-1" onClick={issueBridgeToken}>
+                        <Button className="font-medium cursor-pointer rounded-full h-10 px-6 mt-1" onClick={issueBridgeToken}>
                           <Icon name="plus" className="mr-2" /> สร้าง Token
                         </Button>
                       ) : (
@@ -1162,7 +1164,7 @@ EXIT;`}
                         <li>บันทึก (Ctrl+S) ปิดไฟล์</li>
                       </ol>
                       <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
-                        <p className="text-[11px] text-foreground font-bold mb-0.5"><Icon name="circle-check" className="text-emerald-500 mr-1" />ส่วนอื่นในไฟล์ไม่ต้องแก้</p>
+                        <p className="text-[11px] text-foreground font-medium mb-0.5"><Icon name="circle-check" className="text-emerald-500 mr-1" />ส่วนอื่นในไฟล์ไม่ต้องแก้</p>
                         <p className="text-[13px] text-muted-foreground font-medium">Bridge อ่านข้อมูล MySQL จาก AuthMe / nLogin ของคุณเอง</p>
                       </div>
 

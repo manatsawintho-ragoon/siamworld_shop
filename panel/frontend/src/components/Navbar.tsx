@@ -110,8 +110,8 @@ function NavbarContent() {
       <Link
         href={href}
         onClick={() => setMobileOpen(false)}
-        className={`text-sm font-semibold transition-colors cursor-pointer ${
-          active ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+        className={`text-sm transition-colors cursor-pointer ${
+          active ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'
         }`}
       >
         {label}
@@ -121,7 +121,7 @@ function NavbarContent() {
 
   return (
     <>
-      <nav className={`sticky top-0 z-[100] transition-all duration-300 ${scrolled ? 'bg-background/80 backdrop-blur-md shadow-sm border-b border-border py-3' : 'bg-background py-4 border-b border-transparent'}`}>
+      <nav className={`sticky top-0 z-[100] transition-all duration-300 ${scrolled ? 'bg-background/85 backdrop-blur-md border-b border-border py-2.5' : 'bg-background py-3 border-b border-transparent'}`}>
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-3 group cursor-pointer">
@@ -131,11 +131,11 @@ function NavbarContent() {
                 width={84}
                 height={56}
                 priority
-                className="h-14 w-auto object-contain group-hover:scale-105 transition-transform"
+                className="h-9 w-auto object-contain"
               />
               <div className="flex flex-col">
-                <span className="font-bold text-foreground text-xl leading-none tracking-tight">SIAMSITE</span>
-                <span className="text-[12px] font-semibold text-primary mt-1">Manager</span>
+                <span className="font-semibold text-foreground text-[17px] leading-none tracking-tight">SIAMSITE</span>
+                <span className="text-[12px] text-muted-foreground mt-1">Manager</span>
               </div>
             </Link>
 
@@ -156,7 +156,7 @@ function NavbarContent() {
                 <Button variant="outline" size="sm" asChild className="gap-2 rounded-full h-8 cursor-pointer">
                   <Link href="/dashboard/topup">
                     <Icon name="wallet" className="text-primary text-xs" />
-                    <span className="font-semibold text-xs">฿{Number(user.walletBalance).toLocaleString()}</span>
+                    <span className="font-medium text-[13px] tabular-nums">฿{Number(user.walletBalance).toLocaleString()}</span>
                   </Link>
                 </Button>
 
@@ -168,7 +168,7 @@ function NavbarContent() {
                     <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-medium text-xs">
                       {user.displayName?.charAt(0).toUpperCase()}
                     </div>
-                    <span className="text-xs font-semibold text-foreground max-w-[90px] truncate hidden sm:block">
+                    <span className="text-[13px] font-medium text-foreground max-w-[110px] truncate hidden sm:block">
                       {user.displayName}
                     </span>
                     <Icon name="chevron-down" className={`text-[10px] text-muted-foreground transition-transform duration-200 ${profileOpen ? 'rotate-180' : ''}`} />
@@ -177,8 +177,8 @@ function NavbarContent() {
                   {profileOpen && (
                     <div className="absolute right-0 mt-2 w-56 bg-card text-card-foreground border border-border rounded-xl shadow-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                       <div className="px-4 py-3 border-b border-border">
-                        <p className="text-sm font-semibold truncate">{user.displayName}</p>
-                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                        <p className="text-[14px] font-medium truncate">{user.displayName}</p>
+                        <p className="text-[13px] text-muted-foreground truncate">{user.email}</p>
                       </div>
                       <div className="py-1">
                         <Link href="/dashboard" onClick={() => setProfileOpen(false)} className="flex items-center gap-2.5 px-4 py-2 text-sm font-medium hover:bg-secondary transition-colors cursor-pointer">
