@@ -1,11 +1,16 @@
-/* Kanit is self-hosted via next/font/google in app/layout.tsx, which exposes it
-   as --font-kanit. It used to be pulled twice (an @import here plus a <link> in
-   the head): the @import blocked CSS parsing and the pair cost two round trips
-   to fonts.googleapis.com before first paint. Do not re-add a webfont URL here. */
+/* Kanit is vendored as woff2 under src/fonts and wired up in lib/fonts.ts. It
+   used to be pulled twice (an @import here plus a <link> in the head): the
+   @import blocked CSS parsing and the pair cost two round trips to
+   fonts.googleapis.com before first paint. Do not re-add a webfont URL here -
+   a build-time fetch is a fatal error in next/font, not a warning.
+
+   Latin is listed before Thai on purpose: CSS resolves font fallback per
+   glyph, and each instance carries the matching unicode-range, so a page that
+   renders no Thai never downloads the Thai files. */
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-kanit), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-kanit-latin), var(--font-kanit-thai), ui-sans-serif, system-ui, sans-serif;
   
   --color-background: oklch(100% 0 0); /* White */
   --color-foreground: oklch(21% 0.006 285.88); /* Slate 900 / Charcoal */

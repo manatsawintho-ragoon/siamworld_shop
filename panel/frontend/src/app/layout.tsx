@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Kanit } from 'next/font/google';
+import { fontVariables } from '@/lib/fonts';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { ToastProvider } from '@/components/Toast';
@@ -24,22 +24,6 @@ import {
  * the render-blocking round trip to fonts.googleapis.com that the old
  * <link> + CSS @import pair cost us on every page.
  */
-/**
- * Weights are deliberately limited to the five actually used in the app.
- * next/font emits a <link rel="preload"> for every weight x subset pair, so
- * each declared weight costs two high-priority font downloads (thai + latin)
- * on every page. 300 had zero usages and 900 had exactly one, in an admin-only
- * heading, so carrying them cost four preloads site-wide for nothing.
- * Before adding a weight back, check it is actually used.
- */
-const kanit = Kanit({
-  subsets: ['thai', 'latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  display: 'swap',
-  variable: '--font-kanit',
-  preload: true,
-});
-
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   // Keyword-led, brand last: Google already renders the site name above the
@@ -188,7 +172,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   // so every other page's JSON-LD can reference the same entity by @id instead of
   // restating a slightly different copy of the publisher on each URL.
   return (
-    <html lang="th" className={kanit.variable}>
+    <html lang="th" className={fontVariables}>
       <head>
         {/* Icons are inline SVG via components/ui/icon.tsx (lucide-react) - no icon webfont.
             Kanit is self-hosted by next/font, so there are no font CDN preconnects either. */}
