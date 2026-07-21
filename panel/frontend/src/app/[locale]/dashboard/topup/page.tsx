@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/context/AuthContext';
@@ -15,10 +16,13 @@ import { Icon, type IconName } from '@/components/ui/icon';
 // Used until live package prices load from the backend.
 const FALLBACK_PRESETS = [100, 249, 500, 599, 1000, 1099];
 type PkgPrice = { months: number; price: number; label: string };
-const STEPS = ['เลือกยอด', 'สแกน QR', 'แนบสลิป', 'สำเร็จ'];
+// Keys, not translated strings: this is module scope, where hooks cannot run.
+const STEP_KEYS = ['chooseAmount', 'scanQr', 'attachSlip', 'success'] as const;
 const STEP_MAP: Record<string, number> = { amount: 0, qr: 1, slip: 2, done: 3 };
 
 export default function TopupPage() {
+  const t = useTranslations('topup');
+  const STEPS = STEP_KEYS.map((k) => t(k));
   const { user, loading, refreshUser } = useAuth();
   const router = useRouter();
   const toast = useToast();
@@ -52,11 +56,11 @@ export default function TopupPage() {
       const { data } = await api.post('/api/vouchers/redeem', { code: voucherCode.trim() });
       await refreshUser();
       const rewarded = Number(data.amount) || 0;
-      toast.success('แลกรับสำเร็จ', `ได้รับเงิน ฿${rewarded.toLocaleString()} เข้ากระเป๋า`);
+      toast.success(t('redeemSuccess'), t('receivedAmount', { amount: rewarded.toLocaleString() }));
       setVoucherCode('');
     } catch (e: any) {
-      const msg = e.response?.data?.error || 'โค้ดไม่ถูกต้องหรือถูกใช้ไปแล้ว';
-      toast.error('ไม่สามารถแลกได้', msg);
+      const msg = e.response?.data?.error || t('redeemInvalid');
+      toast.error(t('redeemFailed'), msg);
     } finally {
       setRedeeming(false);
     }
@@ -64,7 +68,7 @@ export default function TopupPage() {
 
   const generateQR = async () => {
     const amt = parseFloat(amount);
-    if (isNaN(amt) || amt < 10) { setError('ยอดขั้นต่ำ 10 บาท'); return; }
+    if (isNaN(amt) || amt < 10) { setError(t('minAmount')); return; }
     setError('');
     setSubmitting(true);
     try {
@@ -74,9 +78,9 @@ export default function TopupPage() {
       setQrImage(img);
       setStep('qr');
     } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error || 'ไม่สามารถสร้าง QR Code ได้';
+      const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error || t('qrUnavailable');
       setError(msg);
-      toast.error('สร้าง QR ไม่สำเร็จ', msg);
+      toast.error(t('qrFailed'), msg);
     } finally { setSubmitting(false); }
   };
 
@@ -105,7 +109,7 @@ export default function TopupPage() {
   };
 
   const submitSlip = async () => {
-    if (!slip) { setError('กรุณาแนบสลิปการโอนเงิน'); return; }
+    if (!slip) { setError(t('slipRequired')); return; }
     setError('');
     setSubmitting(true);
     try {
@@ -113,11 +117,11 @@ export default function TopupPage() {
       setNewBalance(data.balanceAfter);
       await refreshUser();
       setStep('done');
-      toast.success('เติมเงินสำเร็จ', `เพิ่ม ฿${parseFloat(amount).toLocaleString()} เข้ากระเป๋าแล้ว`);
+      toast.success(t('topupSuccess'), t('addAmount', { amount: parseFloat(amount).toLocaleString() }));
     } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error || 'ตรวจสอบสลิปไม่สำเร็จ';
+      const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error || t('verifyFailed');
       setError(msg);
-      toast.error('ตรวจสอบสลิปไม่สำเร็จ', msg);
+      toast.error(t('verifyFailed'), msg);
     } finally { setSubmitting(false); }
   };
 
@@ -144,9 +148,8 @@ export default function TopupPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">เติมเงินเข้ากระเป๋า</h1>
-            <p className="text-sm text-muted-foreground mt-0.5 font-medium">
-              ยอดคงเหลือ: <span className="font-bold text-emerald-600 dark:text-emerald-400">฿{(user?.walletBalance || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">{t('title')}</h1>
+            <p className="text-sm text-muted-foreground mt-0.5 font-medium">{t('balanceLabel')}<span className="font-bold text-emerald-600 dark:text-emerald-400">฿{(user?.walletBalance || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
             </p>
           </div>
         </div>
@@ -186,19 +189,17 @@ export default function TopupPage() {
               <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-3xl mb-6">
                 <Icon name="check" />
               </div>
-              <h2 className="text-2xl font-bold text-foreground mb-2">เติมเงินสำเร็จ!</h2>
-              <p className="text-sm text-muted-foreground mb-2">ยอดเงินคงเหลือใหม่</p>
+              <h2 className="text-2xl font-bold text-foreground mb-2">{t('topupSuccessBang')}</h2>
+              <p className="text-sm text-muted-foreground mb-2">{t('newBalance')}</p>
               <p className="text-4xl font-extrabold text-primary mb-8">
                 ฿{newBalance.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
               </p>
               <div className="flex w-full gap-3">
                 <Button className="flex-1 rounded-full cursor-pointer" variant="outline" onClick={() => { setStep('amount'); setAmount(''); setSlip(''); setSlipPreview(''); }}>
-                  <Icon name="plus" className="mr-2" /> เติมอีกครั้ง
-                </Button>
+                  <Icon name="plus" className="mr-2" />{t('topupAgain')}</Button>
                 <Button className="flex-1 rounded-full cursor-pointer" asChild>
                   <Link href="/dashboard">
-                    <Icon name="gauge-high" className="mr-2" /> แดชบอร์ด
-                  </Link>
+                    <Icon name="gauge-high" className="mr-2" />{t('dashboard')}</Link>
                 </Button>
               </div>
             </CardContent>
@@ -210,7 +211,7 @@ export default function TopupPage() {
           <div className="grid md:grid-cols-2 gap-6">
             <Card className="shadow-sm border-border flex flex-col items-center text-center">
               <CardHeader>
-                <CardDescription>สแกนเพื่อชำระเงิน</CardDescription>
+                <CardDescription>{t('scanToPay')}</CardDescription>
                 <CardTitle className="text-4xl font-extrabold text-primary mt-2">฿{parseFloat(amount).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col items-center pb-6">
@@ -229,13 +230,11 @@ export default function TopupPage() {
                 <CardTitle className="text-base flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                     <Icon name="circle-info" />
-                  </div>
-                  ขั้นตอนการชำระเงิน
-                </CardTitle>
+                  </div>{t('paymentSteps')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <ol className="space-y-4">
-                  {['เปิดแอปพลิเคชันธนาคาร', 'สแกน QR Code ด้านซ้าย', 'ตรวจสอบยอดเงินและยืนยันการโอน', 'บันทึกสลิป แล้วกดปุ่มด้านล่าง'].map((t, i) => (
+                  {[t('stepOpenBank'), t('stepScanQr'), t('stepCheckAmount'), t('stepSaveSlip')].map((t, i) => (
                     <li key={i} className="flex items-start gap-3 text-sm text-muted-foreground font-medium">
                       <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-medium flex items-center justify-center flex-shrink-0">{i + 1}</span>
                       <span className="mt-0.5">{t}</span>
@@ -245,11 +244,9 @@ export default function TopupPage() {
               </CardContent>
               <CardFooter className="flex-col gap-3">
                 <Button className="w-full rounded-full cursor-pointer h-12 text-base" onClick={() => setStep('slip')}>
-                  <Icon name="image" className="mr-2" /> แนบสลิปการโอน
-                </Button>
+                  <Icon name="image" className="mr-2" />{t('attachSlipTransfer')}</Button>
                 <Button className="w-full rounded-full cursor-pointer h-12 text-base" variant="outline" onClick={() => setStep('amount')}>
-                  <Icon name="arrow-left" className="mr-2" /> กลับ
-                </Button>
+                  <Icon name="arrow-left" className="mr-2" />{t('back')}</Button>
               </CardFooter>
             </Card>
           </div>
@@ -263,9 +260,7 @@ export default function TopupPage() {
                 <CardTitle className="text-base flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                     <Icon name="image" />
-                  </div>
-                  อัปโหลดสลิปการโอน
-                </CardTitle>
+                  </div>{t('uploadSlip')}</CardTitle>
               </CardHeader>
               <CardContent className="pb-6">
                 <div
@@ -276,8 +271,8 @@ export default function TopupPage() {
                   ) : (
                     <div className="py-8">
                       <Icon name="cloud-arrow-up" className="text-4xl text-primary/40 mb-4 block" />
-                      <p className="text-sm font-bold text-foreground">คลิกเพื่ออัปโหลดสลิป</p>
-                      <p className="text-xs text-muted-foreground mt-2">รองรับ JPG, PNG</p>
+                      <p className="text-sm font-bold text-foreground">{t('clickToUpload')}</p>
+                      <p className="text-xs text-muted-foreground mt-2">{t('supportedFormats')}</p>
                     </div>
                   )}
                   <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
@@ -345,9 +340,7 @@ export default function TopupPage() {
                   <CardTitle className="text-base flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                       <Icon name="bolt" />
-                    </div>
-                    เลือกยอดด่วน
-                  </CardTitle>
+                    </div>{t('quickAmounts')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-3 gap-3">
@@ -362,11 +355,10 @@ export default function TopupPage() {
                   </div>
                   <div className="mt-6 p-4 bg-primary/5 border border-primary/20 rounded-xl flex items-start gap-3">
                     <Icon name="info-circle" className="text-primary mt-0.5" />
-                    <p className="text-xs text-primary/90 font-semibold leading-relaxed">
-                      ยอดที่ตรงกับแพ็กเกจ: <br/>
+                    <p className="text-xs text-primary/90 font-semibold leading-relaxed">{t('packageAmounts')}<br/>
                       {packages.length
                         ? packages.map(p => `฿${p.price.toLocaleString()} (${p.label})`).join(' · ')
-                        : '฿249 (1 เดือน), ฿599 (3 เดือน), ฿1,099 (6 เดือน)'}
+                        : t('packageAmountsList')}
                     </p>
                   </div>
                 </CardContent>
@@ -376,7 +368,7 @@ export default function TopupPage() {
               <Card className="shadow-sm border-border flex flex-col justify-between">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">ระบุจำนวนเงิน</CardTitle>
+                    <CardTitle className="text-base">{t('customAmount')}</CardTitle>
                     <Badge variant="secondary" className="font-semibold px-2 py-1">
                       <Icon name="wallet" className="text-primary mr-1.5" /> ฿{(user?.walletBalance || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                     </Badge>
@@ -393,8 +385,7 @@ export default function TopupPage() {
                       min={10} />
                   </div>
                   <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mt-3 flex items-center gap-1.5">
-                    <Icon name="circle-info" /> ยอดขั้นต่ำ 10 บาท ต่อครั้ง
-                  </p>
+                    <Icon name="circle-info" />{t('minAmountPerTime')}</p>
                   {error && (
                     <p className="text-xs text-destructive mt-3 flex items-center gap-1.5 font-medium">
                       <Icon name="circle-exclamation" />{error}
@@ -402,7 +393,7 @@ export default function TopupPage() {
                   )}
                   {amount && !isNaN(parseFloat(amount)) && parseFloat(amount) >= 10 && (
                     <div className="flex justify-between items-center text-sm mt-6 p-4 bg-secondary/50 rounded-xl border border-border">
-                      <span className="text-muted-foreground font-semibold">ยอดรวมหลังเติม</span>
+                      <span className="text-muted-foreground font-semibold">{t('totalAfter')}</span>
                       <span className="text-emerald-600 dark:text-emerald-400 font-bold text-lg">
                         ฿{((user?.walletBalance || 0) + parseFloat(amount || '0')).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                       </span>
@@ -415,8 +406,8 @@ export default function TopupPage() {
                     onClick={generateQR}
                     disabled={submitting || !amount || parseFloat(amount) < 10}>
                     {submitting
-                      ? <><Icon name="spinner" className="mr-2 animate-spin" /> กำลังสร้าง QR...</>
-                      : <><Icon name="qrcode" className="mr-2" /> สร้าง QR Code</>}
+                      ? <><Icon name="spinner" className="mr-2 animate-spin" />{t('creatingQr')}</>
+                      : <><Icon name="qrcode" className="mr-2" />{t('createQr')}</>}
                   </Button>
                 </CardFooter>
               </Card>
@@ -428,15 +419,13 @@ export default function TopupPage() {
                 <h3 className="text-sm font-bold text-foreground mb-4 flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
                     <Icon name="ticket" />
-                  </div>
-                  แลกโค้ดโปรโมชั่น / Voucher
-                </h3>
+                  </div>{t('redeemTitle')}</h3>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="relative flex-1">
                     <Icon name="gift" className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <input type="text"
                       className="w-full bg-background border border-border rounded-xl pl-10 pr-4 py-3 text-sm font-bold outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all text-foreground placeholder:text-muted-foreground"
-                      placeholder="กรอกโค้ดที่นี่"
+                      placeholder={t('redeemPlaceholder')}
                       value={voucherCode}
                       onChange={e => setVoucherCode(e.target.value)} />
                   </div>
@@ -445,7 +434,7 @@ export default function TopupPage() {
                     className="sm:w-32 h-[50px] rounded-xl cursor-pointer font-bold border-emerald-500/50 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-colors"
                     onClick={redeemVoucher}
                     disabled={redeeming || !voucherCode}>
-                    {redeeming ? <Icon name="spinner" className="animate-spin" /> : 'แลกรับ'}
+                    {redeeming ? <Icon name="spinner" className="animate-spin" /> : t('redeem')}
                   </Button>
                 </div>
               </CardContent>
