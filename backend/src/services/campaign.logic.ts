@@ -132,3 +132,19 @@ export function computeGrant(args: {
 export function computeExpiry(campaign: CampaignRule): Date {
   return new Date(campaign.ends_at.getTime() + campaign.points_expire_days * 86_400_000);
 }
+
+/**
+ * Reversing a top-up must reverse its points, otherwise
+ * "top up, take points, redeem, dispute the payment" is free money.
+ *
+ * Unspent points are simply removed. Points already spent cannot be un-spent
+ * (the reward is already in the player's inventory), so the shortfall is
+ * recorded as debt: a negative lot that future earnings must repay first.
+ */
+export function planClawback(lot: { points_granted: number; points_remaining: number }):
+  { reduceRemainingBy: number; debtToRecord: number } {
+  const granted = Math.max(0, lot.points_granted);
+  const remaining = Math.max(0, lot.points_remaining);
+  const reduceRemainingBy = Math.min(granted, remaining);
+  return { reduceRemainingBy, debtToRecord: granted - reduceRemainingBy };
+}

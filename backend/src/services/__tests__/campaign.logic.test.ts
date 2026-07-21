@@ -1,4 +1,5 @@
 import { bangkokParts, isCampaignActiveAt, CampaignWindow, selectCampaignAt, computeGrant, computeExpiry, CampaignRule } from '../campaign.logic';
+import { planClawback } from '../campaign.logic';
 
 // Base: a campaign running all of August 2026 UTC, no masks.
 const base: CampaignWindow = {
@@ -209,5 +210,24 @@ describe('computeExpiry', () => {
     expect(computeExpiry(rule({
       ends_at: new Date('2026-08-31T00:00:00Z'), points_expire_days: 0,
     }))).toEqual(new Date('2026-08-31T00:00:00Z'));
+  });
+});
+
+describe('planClawback', () => {
+  it('takes it all back when nothing was spent', () => {
+    expect(planClawback({ points_granted: 100, points_remaining: 100 }))
+      .toEqual({ reduceRemainingBy: 100, debtToRecord: 0 });
+  });
+  it('records debt for the spent portion', () => {
+    expect(planClawback({ points_granted: 100, points_remaining: 40 }))
+      .toEqual({ reduceRemainingBy: 40, debtToRecord: 60 });
+  });
+  it('records the full amount as debt when fully spent', () => {
+    expect(planClawback({ points_granted: 100, points_remaining: 0 }))
+      .toEqual({ reduceRemainingBy: 0, debtToRecord: 100 });
+  });
+  it('is a no-op for an already-revoked lot', () => {
+    expect(planClawback({ points_granted: 0, points_remaining: 0 }))
+      .toEqual({ reduceRemainingBy: 0, debtToRecord: 0 });
   });
 });

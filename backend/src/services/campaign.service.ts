@@ -11,7 +11,7 @@ import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { pool } from '../database/connection';
 import { logger } from '../utils/logger';
 import {
-  CampaignRule, selectCampaignAt, computeGrant, computeExpiry,
+  CampaignRule, selectCampaignAt, computeGrant, computeExpiry, planClawback,
 } from './campaign.logic';
 
 export interface PointLotRow extends RowDataPacket {
@@ -130,6 +130,59 @@ class CampaignService {
       logger.info('Campaign grant was capped', { userId, campaignId: campaign.id, capped, points });
     }
     return { granted: points, campaignId: campaign.id };
+  }
+
+  /**
+   * Reverse the points granted for a top-up that was refunded or reversed.
+   * Safe to call for transactions that never earned points.
+   */
+  async revokeForTransaction(transactionId: number): Promise<{ revoked: number; debt: number }> {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      const [lots] = await conn.execute<RowDataPacket[]>(
+        `SELECT id, user_id, campaign_id, points_granted, points_remaining
+         FROM point_lots WHERE source_transaction_id = ? FOR UPDATE`,
+        [transactionId]
+      );
+      if (lots.length === 0) { await conn.commit(); return { revoked: 0, debt: 0 }; }
+
+      let revoked = 0;
+      let debt = 0;
+
+      for (const lot of lots) {
+        const plan = planClawback(lot as any);
+        if (plan.reduceRemainingBy > 0) {
+          await conn.execute(
+            'UPDATE point_lots SET points_remaining = points_remaining - ? WHERE id = ?',
+            [plan.reduceRemainingBy, lot.id]
+          );
+          revoked += plan.reduceRemainingBy;
+        }
+        if (plan.debtToRecord > 0) {
+          // Debt never expires, so it cannot be waited out.
+          await conn.execute(
+            `INSERT INTO point_lots
+               (user_id, campaign_id, points_granted, points_remaining,
+                qualified_at, expires_at, reason)
+             VALUES (?,?,?,?, NOW(), '2099-12-31 23:59:59', ?)`,
+            [lot.user_id, lot.campaign_id, -plan.debtToRecord, -plan.debtToRecord,
+             `clawback: transaction ${transactionId} reversed`]
+          );
+          debt += plan.debtToRecord;
+        }
+      }
+
+      await conn.commit();
+      logger.info('Campaign points revoked', { transactionId, revoked, debt });
+      return { revoked, debt };
+    } catch (e) {
+      await conn.rollback();
+      throw e;
+    } finally {
+      conn.release();
+    }
   }
 
   /** Spendable balance: unexpired lots only, including negative clawback debt. */
