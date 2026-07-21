@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { setRequestLocale } from 'next-intl/server';
-import ThaiHome from '@/components/marketing/ThaiHome';
-import EnglishHome from '@/components/marketing/EnglishHome';
+import Home_ from '@/components/marketing/ThaiHome';
 import { FAQ } from '@/lib/faq';
 import {
   SITE_URL,
@@ -12,13 +11,8 @@ import {
 } from '@/lib/seo/site';
 
 /**
- * The Thai and English homepages are different documents, not translations:
- * the Thai page is the long-form sales page, the English one is purpose-built
- * for the English keyword set. So this route dispatches on locale rather than
- * rendering one body with swapped strings.
- *
- * These two ARE a genuine translation pair for hreflang purposes (unlike the
- * landing pages), which is why both sides declare the reciprocal alternates.
+ * One homepage, rendered in either language. The two URLs are a genuine
+ * translation pair, which is why both sides declare reciprocal hreflang.
  */
 export function generateMetadata({
   params: { locale },
@@ -81,11 +75,14 @@ export function generateMetadata({
 export default function Home({ params: { locale } }: { params: { locale: string } }) {
   setRequestLocale(locale);
 
-  if (locale === 'en') {
-    // EnglishHome emits its own English SoftwareApplication + FAQPage graph.
-    return <EnglishHome />;
-  }
-
+  // ONE homepage for both languages.
+  //
+  // This previously rendered a separate, purpose-built English marketing page
+  // for /en, which meant switching language replaced the whole site with a
+  // different design instead of translating the page you were on. That is not
+  // a language switcher, it is two websites. The owner asked for the original
+  // page back, translated - so both locales render the same component and the
+  // strings come from the message files.
   // These used to sit in the layout and therefore appeared on every page,
   // including /order and the English tree: a Thai FAQPage describing questions
   // the page never rendered. Google requires FAQ markup to match visible
@@ -99,7 +96,7 @@ export default function Home({ params: { locale } }: { params: { locale: string 
     description:
       'ระบบเช่าเว็บร้านค้า Minecraft สำเร็จรูป รองรับ PromptPay + EasySlip + RCON พร้อมทดลองฟรี 7 วัน',
     url: SITE_URL,
-    inLanguage: 'th',
+    inLanguage: locale,
     publisher: { '@id': ORGANIZATION_ID },
     isPartOf: { '@id': WEBSITE_ID },
     // No aggregateRating: Google's review snippet policy disallows self-serving
@@ -118,7 +115,7 @@ export default function Home({ params: { locale } }: { params: { locale: string 
   const faqSchema = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    inLanguage: 'th',
+    inLanguage: locale,
     mainEntity: FAQ.map((item) => ({
       '@type': 'Question',
       name: item.q,
@@ -130,7 +127,7 @@ export default function Home({ params: { locale } }: { params: { locale: string 
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(softwareSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqSchema) }} />
-      <ThaiHome />
+      <Home_ />
     </>
   );
 }

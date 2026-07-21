@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter, usePathname } from '@/i18n/navigation';
+import { Link, usePathname } from '@/i18n/navigation';
 import { Icon } from '@/components/ui/icon';
 import { FlagTH, FlagEN } from '@/components/ui/flags';
 import { switchPath, switchHasCounterpart, type Locale } from '@/lib/seo/locale-path';
@@ -15,13 +15,16 @@ const LOCALES: { code: Locale; label: string; Flag: typeof FlagTH }[] = [
 /**
  * Language switcher for the navbar.
  *
- * Navigates with the router rather than rendering <a> tags, because the
- * destination is computed per path and we do not want crawlers treating these
- * as translation links (only the two homepages are a real hreflang pair).
+ * The options are real links, not router calls. An earlier version used
+ * router.replace, which meant the control did nothing at all until React had
+ * hydrated, and gave no way to open the other language in a new tab. Links
+ * work as soon as the markup exists.
+ *
+ * next-intl's Link applies the locale prefix, so switchPath returns an
+ * unprefixed path and must never add '/en' itself.
  */
 export default function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   const pathname = usePathname() || '/';
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -44,19 +47,6 @@ export default function LanguageSwitcher({ compact = false }: { compact?: boolea
     };
   }, [open]);
 
-  const choose = (code: Locale) => {
-    setOpen(false);
-    if (code === active) return;
-    // next-intl's usePathname returns the path WITHOUT a locale prefix, and its
-    // router applies the target locale's prefix. switchPath therefore returns
-    // an unprefixed path and never adds '/en' itself: the locale option is what
-    // turns /terms into /en/terms.
-    //
-    // replace, not push: a language switch is a correction of the current view,
-    // not a step in history. Otherwise Back lands you on the same page in the
-    // language you just rejected.
-    router.replace(switchPath(pathname, code), { locale: code });
-  };
 
   return (
     <div className="relative" ref={ref}>
@@ -94,10 +84,13 @@ export default function LanguageSwitcher({ compact = false }: { compact?: boolea
             // the page exists.
             const direct = isActive || switchHasCounterpart(pathname, code);
             return (
-              <button
+              <Link
                 key={code}
                 role="menuitem"
-                onClick={() => choose(code)}
+                href={switchPath(pathname, code)}
+                locale={code}
+                hrefLang={code}
+                onClick={() => setOpen(false)}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors text-left cursor-pointer ${
                   isActive ? 'bg-primary/10 text-primary' : 'hover:bg-secondary'
                 }`}
@@ -113,7 +106,7 @@ export default function LanguageSwitcher({ compact = false }: { compact?: boolea
                     </span>
                   )
                 )}
-              </button>
+              </Link>
             );
           })}
         </div>
