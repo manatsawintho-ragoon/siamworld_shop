@@ -1,18 +1,196 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Coins, Timer, Sparkles, ArrowRight, Megaphone } from 'lucide-react';
+import type { ActiveCampaign } from './CampaignBanner';
+import { formatCountdown, campaignRate } from './CampaignBanner';
 
-interface Slide {
+export interface ImageSlideData {
   id: number;
   title: string;
   image_url: string;
   link_url?: string;
 }
 
-export default function HeroCarousel({ slides }: { slides: Slide[] }) {
+export interface NewsSlideData {
+  id: number;
+  title: string;
+  excerpt?: string | null;
+  badge?: string | null;
+  accent?: string | null;
+  image_url?: string | null;
+  link_url?: string | null;
+}
+
+/**
+ * The carousel mixes three sources: artwork the shop owner uploaded, and two
+ * *rendered* kinds (campaign, news) that need no artwork at all. `key` is a
+ * string because ids are only unique within a kind.
+ */
+export type CarouselSlide =
+  | { kind: 'image'; key: string; image: ImageSlideData }
+  | { kind: 'campaign'; key: string; campaign: ActiveCampaign }
+  | { kind: 'news'; key: string; news: NewsSlideData };
+
+// Named accents only - the API constrains `accent` to these keys, so a slide
+// can never inject an arbitrary class or style string.
+const ACCENTS: Record<string, { grad: string; pill: string; glow: string }> = {
+  primary: { grad: 'from-primary/90 via-primary/70 to-primary/40', pill: 'bg-white/20 text-white', glow: 'rgba(255,255,255,0.35)' },
+  violet:  { grad: 'from-violet-600 via-violet-500 to-fuchsia-500', pill: 'bg-white/20 text-white', glow: 'rgba(167,139,250,0.55)' },
+  amber:   { grad: 'from-amber-500 via-orange-500 to-rose-500',     pill: 'bg-black/25 text-white', glow: 'rgba(251,191,36,0.55)' },
+  emerald: { grad: 'from-emerald-600 via-emerald-500 to-teal-500',  pill: 'bg-black/25 text-white', glow: 'rgba(52,211,153,0.55)' },
+  rose:    { grad: 'from-rose-600 via-pink-500 to-fuchsia-500',     pill: 'bg-white/20 text-white', glow: 'rgba(244,114,182,0.55)' },
+  sky:     { grad: 'from-sky-600 via-blue-500 to-indigo-500',       pill: 'bg-white/20 text-white', glow: 'rgba(56,189,248,0.55)' },
+};
+const accentOf = (name?: string | null) => ACCENTS[name ?? 'primary'] ?? ACCENTS.primary;
+
+/** Soft radial wash + fine grid, so a text-only slide never reads as a flat block. */
+function SlideTexture({ glow }: { glow: string }) {
+  return (
+    <>
+      <div className="absolute inset-0 opacity-70" style={{ backgroundImage: `radial-gradient(circle at 78% 25%, ${glow} 0%, transparent 55%)` }} />
+      <div
+        className="absolute inset-0 opacity-[0.07]"
+        style={{
+          backgroundImage: 'linear-gradient(rgba(255,255,255,.9) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.9) 1px, transparent 1px)',
+          backgroundSize: '34px 34px',
+        }}
+      />
+    </>
+  );
+}
+
+/** Wraps a rendered slide in a link only when there is somewhere to go. */
+function SlideShell({ href, children }: { href?: string | null; children: React.ReactNode }) {
+  if (!href) return <div className="block w-full h-full">{children}</div>;
+  const external = /^https?:\/\//i.test(href);
+  return external
+    ? <a href={href} target="_blank" rel="noopener noreferrer" className="block w-full h-full">{children}</a>
+    : <Link href={href} className="block w-full h-full">{children}</Link>;
+}
+
+function CampaignSlide({ campaign }: { campaign: ActiveCampaign }) {
+  const [remainingMs, setRemainingMs] = useState(() => new Date(campaign.endsAt).getTime() - Date.now());
+
+  useEffect(() => {
+    const endsAtMs = new Date(campaign.endsAt).getTime();
+    setRemainingMs(endsAtMs - Date.now());
+    const timer = setInterval(() => setRemainingMs(endsAtMs - Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [campaign.endsAt]);
+
+  const a = accentOf('amber');
+  const { bahtPerPoint, pointsAtThatAmount } = campaignRate(campaign.pointsPerBaht);
+
+  return (
+    <SlideShell href="/topup">
+      <div className={`relative w-full h-full bg-gradient-to-br ${a.grad} overflow-hidden`}>
+        <SlideTexture glow={a.glow} />
+        <div className="relative z-10 h-full flex flex-col justify-center px-5 sm:px-8 lg:px-10 text-white">
+          <div className="flex items-center gap-2 mb-2">
+            <span className={`inline-flex items-center gap-1.5 ${a.pill} text-[10px] sm:text-[11px] font-black px-2.5 py-1 rounded-full tracking-wide`}>
+              <Sparkles className="w-3 h-3" strokeWidth={2.75} /> แคมเปญเติมเงิน
+            </span>
+          </div>
+
+          <h2 className="text-xl sm:text-3xl lg:text-4xl font-black leading-[1.1] drop-shadow-sm max-w-[85%]">
+            เติมเงินช่วงนี้ รับ point พิเศษ
+          </h2>
+
+          <div className="flex items-center gap-x-3 gap-y-1.5 flex-wrap mt-2.5 text-[11px] sm:text-sm font-bold text-white/90">
+            {bahtPerPoint > 0 && (
+              <span className="inline-flex items-center gap-1.5">
+                <Coins className="w-3.5 h-3.5" strokeWidth={2.5} />
+                เติมทุก ฿{bahtPerPoint.toLocaleString()} รับ {pointsAtThatAmount} point
+              </span>
+            )}
+            {campaign.minTopupAmount > 0 && (
+              <span className="hidden sm:inline">ขั้นต่ำ ฿{campaign.minTopupAmount.toLocaleString()} ต่อครั้ง</span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2.5 mt-4 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white text-gray-900 text-[11px] sm:text-xs font-black shadow-lg">
+              เติมเงินเลย <ArrowRight className="w-3.5 h-3.5" strokeWidth={2.75} />
+            </span>
+            {remainingMs > 0 && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-black/25 border border-white/25 text-[11px] sm:text-xs font-black tabular-nums">
+                <Timer className="w-3.5 h-3.5 text-white/85" strokeWidth={2.5} />
+                เหลือเวลา {formatCountdown(remainingMs)}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </SlideShell>
+  );
+}
+
+function NewsSlide({ news }: { news: NewsSlideData }) {
+  const a = accentOf(news.accent);
+
+  return (
+    <SlideShell href={news.link_url}>
+      <div className={`relative w-full h-full overflow-hidden ${news.image_url ? 'bg-gray-900' : `bg-gradient-to-br ${a.grad}`}`}>
+        {news.image_url ? (
+          <>
+            <img src={news.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" draggable={false} />
+            {/* Left-weighted scrim keeps the headline legible over any artwork. */}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/10" />
+          </>
+        ) : (
+          <SlideTexture glow={a.glow} />
+        )}
+
+        <div className="relative z-10 h-full flex flex-col justify-center px-5 sm:px-8 lg:px-10 text-white">
+          {news.badge && (
+            <span className={`self-start inline-flex items-center gap-1.5 ${news.image_url ? 'bg-white/20 text-white' : a.pill} text-[10px] sm:text-[11px] font-black px-2.5 py-1 rounded-full tracking-wide mb-2`}>
+              <Megaphone className="w-3 h-3" strokeWidth={2.75} /> {news.badge}
+            </span>
+          )}
+
+          <h2 className="text-lg sm:text-2xl lg:text-3xl font-black leading-[1.15] drop-shadow-sm max-w-[80%] line-clamp-2">
+            {news.title}
+          </h2>
+
+          {news.excerpt && (
+            <p className="mt-2 text-[11px] sm:text-sm font-semibold text-white/85 max-w-[75%] line-clamp-2">
+              {news.excerpt}
+            </p>
+          )}
+
+          {news.link_url && (
+            <span className="self-start inline-flex items-center gap-1.5 mt-4 px-3.5 py-2 rounded-xl bg-white text-gray-900 text-[11px] sm:text-xs font-black shadow-lg">
+              อ่านต่อ <ArrowRight className="w-3.5 h-3.5" strokeWidth={2.75} />
+            </span>
+          )}
+        </div>
+      </div>
+    </SlideShell>
+  );
+}
+
+function ImageSlide({ image }: { image: ImageSlideData }) {
+  return (
+    <SlideShell href={image.link_url}>
+      <img src={image.image_url} alt={image.title || ''} className="w-full h-full object-cover" draggable={false} />
+      {image.title && (
+        <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/70 via-black/20 to-transparent px-5 pb-4 pt-8 pointer-events-none">
+          <p className="text-white font-bold text-sm drop-shadow-md">{image.title}</p>
+        </div>
+      )}
+    </SlideShell>
+  );
+}
+
+export default function HeroCarousel({ slides }: { slides: CarouselSlide[] }) {
   const [current, setCurrent] = useState(0);
   const [direction, setDirection] = useState(1);
+
+  // Slides arrive asynchronously (campaign and news resolve after the images),
+  // so the list can shrink under a stale index - clamp instead of blanking.
+  const safeIndex = slides.length > 0 ? Math.min(current, slides.length - 1) : 0;
 
   const goTo = useCallback((idx: number, dir: number) => {
     setDirection(dir);
@@ -20,12 +198,12 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
   }, []);
 
   const goPrev = useCallback(() => {
-    goTo((current - 1 + slides.length) % slides.length, -1);
-  }, [current, slides.length, goTo]);
+    goTo((safeIndex - 1 + slides.length) % slides.length, -1);
+  }, [safeIndex, slides.length, goTo]);
 
   const goNext = useCallback(() => {
-    goTo((current + 1) % slides.length, 1);
-  }, [current, slides.length, goTo]);
+    goTo((safeIndex + 1) % slides.length, 1);
+  }, [safeIndex, slides.length, goTo]);
 
   useEffect(() => {
     if (slides.length <= 1) return;
@@ -41,13 +219,13 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
     exit: (dir: number) => ({ x: dir > 0 ? '-100%' : '100%', opacity: 0 }),
   };
 
-  const slide = slides[current];
+  const slide = slides[safeIndex];
 
   return (
     <section className="group/carousel relative overflow-hidden w-full h-full">
       <AnimatePresence initial={false} custom={direction} mode="popLayout">
         <motion.div
-          key={slide.id}
+          key={slide.key}
           custom={direction}
           variants={slideVariants}
           initial="enter"
@@ -56,22 +234,11 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
           transition={{ duration: 0.5, ease: 'easeInOut' }}
           className="absolute inset-0"
         >
-          {slide.link_url ? (
-            <a href={slide.link_url} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
-              <img src={slide.image_url} alt={slide.title || ''} className="w-full h-full object-cover" draggable={false} />
-            </a>
-          ) : (
-            <img src={slide.image_url} alt={slide.title || ''} className="w-full h-full object-cover" draggable={false} />
-          )}
+          {slide.kind === 'campaign' ? <CampaignSlide campaign={slide.campaign} />
+            : slide.kind === 'news'   ? <NewsSlide news={slide.news} />
+            :                           <ImageSlide image={slide.image} />}
         </motion.div>
       </AnimatePresence>
-
-      {/* Bottom gradient + title */}
-      {slide.title && (
-        <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/70 via-black/20 to-transparent px-5 pb-4 pt-8 pointer-events-none">
-          <p className="text-white font-bold text-sm drop-shadow-md">{slide.title}</p>
-        </div>
-      )}
 
       {/* Hover Arrows */}
       {slides.length > 1 && (
@@ -96,11 +263,11 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
       {/* Dot indicators */}
       {slides.length > 1 && (
         <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-20">
-          {slides.map((_, i) => (
+          {slides.map((s, i) => (
             <button
-              key={i}
-              onClick={() => goTo(i, i > current ? 1 : -1)}
-              className={`h-1 rounded-sm transition-all duration-300 ${i === current ? 'w-7 bg-white' : 'w-2 bg-white/40 hover:bg-white/70'}`}
+              key={s.key}
+              onClick={() => goTo(i, i > safeIndex ? 1 : -1)}
+              className={`h-1 rounded-sm transition-all duration-300 ${i === safeIndex ? 'w-7 bg-white' : 'w-2 bg-white/40 hover:bg-white/70'}`}
               aria-label={`Slide ${i + 1}`}
             />
           ))}

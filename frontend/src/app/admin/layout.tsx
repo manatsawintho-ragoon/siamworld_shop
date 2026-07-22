@@ -37,6 +37,7 @@ const MENU_CATEGORIES = [
     category: 'PAGE MANAGER',
     items: [
       { href: '/admin/settings', icon: 'fa-paint-roller', label: 'ตั้งค่าหน้าเว็บไซต์' },
+      { href: '/admin/news', icon: 'fa-newspaper', label: 'ข่าวสาร / สไลด์หน้าแรก' },
       { href: '/admin/appearance', icon: 'fa-palette', label: 'Appearance / Theme' },
     ]
   },

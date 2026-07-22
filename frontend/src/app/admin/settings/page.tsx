@@ -534,13 +534,15 @@ export default function AdminSettings() {
 
           {/* ── Visibility toggles ──────────────────────────────────────── */}
           <SectionCard icon="fa-eye" title="ปุ่ม / Widget ที่แสดงบนเว็บไซต์" description="เปิด/ปิดปุ่มและกล่องต่าง ๆ ที่ไม่อยากให้แสดงในเว็บ"
-            actions={<ActionButtons saving={!!sectionSaving.visibility} saved={!!sectionSaved.visibility} onSave={() => handleSaveKeys('visibility', ['show_lootbox_nav', 'show_download_nav', 'show_topup_rank_widget', 'show_topup_daily_widget', 'show_live_shop_widget', 'show_popular_widget', 'show_welcome_marquee', 'show_server_status_widget', 'show_gacha_live_widget', 'show_exclusive_gacha', 'show_popular_gacha', 'show_new_arrivals'])} />}
+            actions={<ActionButtons saving={!!sectionSaving.visibility} saved={!!sectionSaved.visibility} onSave={() => handleSaveKeys('visibility', ['show_lootbox_nav', 'show_download_nav', 'show_topup_rank_widget', 'show_topup_daily_widget', 'show_live_shop_widget', 'show_popular_widget', 'show_welcome_marquee', 'show_server_status_widget', 'show_gacha_live_widget', 'show_exclusive_gacha', 'show_popular_gacha', 'show_new_arrivals', 'show_campaign_slide', 'show_news_slides'])} />}
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {([
                 ['show_lootbox_nav',           'เมนู Loot Box (Navbar)'],
                 ['show_download_nav',          'เมนู Download (Navbar)'],
                 ['show_welcome_marquee',       'แถบประกาศวิ่ง LIVE (หน้าแรก)'],
+                ['show_campaign_slide',        'สไลด์แคมเปญเติมเงิน (สไลด์หน้าแรก)'],
+                ['show_news_slides',           'สไลด์ข่าวสาร (สไลด์หน้าแรก)'],
                 ['show_server_status_widget',  'สถานะเซิร์ฟเวอร์ (Widget หน้าแรก)'],
                 ['show_exclusive_gacha',       'GACHA Exclusive Box (หน้าแรก)'],
                 ['show_popular_gacha',         'GACHA ยอดนิยม (หน้าแรก)'],

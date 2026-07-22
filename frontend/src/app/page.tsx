@@ -1,8 +1,9 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import MainLayout from '@/components/MainLayout';
-import HeroCarousel from '@/components/HeroCarousel';
+import HeroCarousel, { type CarouselSlide, type ImageSlideData, type NewsSlideData } from '@/components/HeroCarousel';
+import { useActiveCampaign } from '@/components/CampaignBanner';
 import ProductCard from '@/components/ProductCard';
 import AutoScrollCarousel from '@/components/AutoScrollCarousel';
 import { useSettings } from '@/context/SettingsContext';
@@ -325,7 +326,8 @@ function HomeGachaCarousel({ boxes, noDrag }: { boxes: LootBox[]; noDrag?: boole
 }
 
 export default function HomePage() {
-  const [slides,      setSlides]      = useState([]);
+  const [slides,      setSlides]      = useState<ImageSlideData[]>([]);
+  const [news,        setNews]        = useState<NewsSlideData[]>([]);
   const [servers,     setServers]     = useState<Server[]>([]);
   const [lootboxes,   setLootboxes]   = useState<LootBox[]>([]);
   const [recentBuy,   setRecentBuy]   = useState<RecentPurchase[]>([]);
@@ -335,10 +337,12 @@ export default function HomePage() {
   const [homeLoading,    setHomeLoading]    = useState(true);
   const [ipCopied,       setIpCopied]       = useState(false);
   const { settings } = useSettings();
+  const campaign = useActiveCampaign();
 
   useEffect(() => {
     Promise.all([
-      api('/public/slides').then(d => setSlides((d.slides as never[]) || [])).catch(() => {}),
+      api('/public/slides').then(d => setSlides((d.slides as ImageSlideData[]) || [])).catch(() => {}),
+      api('/public/news').then(d => setNews((d.news as NewsSlideData[]) || [])).catch(() => {}),
       api('/public/servers').then(d => setServers((d.servers as Server[]) || [])).catch(() => {}),
       api('/shop/lootboxes').then(d => setLootboxes((d.boxes as LootBox[]) || [])).catch(() => {}),
       api('/public/recent-purchases').then(d => setRecentBuy((d.purchases as RecentPurchase[]) || [])).catch(() => {}),
@@ -347,6 +351,24 @@ export default function HomePage() {
       api('/public/products/new-arrivals').then(d => setNewArrivals((d.products as Product[]) || [])).catch(() => {}),
     ]).finally(() => setHomeLoading(false));
   }, []);
+
+  /**
+   * Hero carousel = campaign first (time-boxed, so it earns the opening slot),
+   * then news, then whatever artwork the shop owner uploaded. Each source is
+   * independently toggleable from Appearance settings, and both rendered kinds
+   * default on so a shop gets them without touching settings.
+   */
+  const heroSlides = useMemo<CarouselSlide[]>(() => {
+    const out: CarouselSlide[] = [];
+    if (campaign && (settings.show_campaign_slide ?? '1') === '1') {
+      out.push({ kind: 'campaign', key: `campaign-${campaign.id}`, campaign });
+    }
+    if ((settings.show_news_slides ?? '1') === '1') {
+      for (const n of news) out.push({ kind: 'news', key: `news-${n.id}`, news: n });
+    }
+    for (const s of slides) out.push({ kind: 'image', key: `image-${s.id}`, image: s });
+    return out;
+  }, [campaign, news, slides, settings.show_campaign_slide, settings.show_news_slides]);
 
   const MS_30D = 30 * 24 * 60 * 60 * 1000;
   const exclusiveUrgency = (b: LootBox): number => {
@@ -399,7 +421,7 @@ export default function HomePage() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, ease: "easeOut" }} className="flex-1 min-w-0 flex flex-col gap-3">
           <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6 }} className="rounded-2xl overflow-hidden shadow-theme-lg">
             <div className="w-full h-[200px] md:h-[260px] lg:h-[300px] bg-gray-800">
-              {slides.length > 0 ? <HeroCarousel slides={slides} /> : <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-900 via-green-800 to-green-900 relative overflow-hidden"><div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, #22c55e 0%, transparent 60%)' }} /><div className="relative z-10 text-center logo-float"><div className="text-4xl md:text-5xl font-black tracking-tighter text-white drop-shadow-[0_0_20px_rgba(34,197,94,0.6)] mb-2">{settings.shop_name || 'Siamsite'}</div><p className="text-green-400 font-bold text-sm tracking-widest uppercase">{settings.shop_subtitle || 'ระบบร้านค้ามายคราฟ'}</p></div></div>}
+              {heroSlides.length > 0 ? <HeroCarousel slides={heroSlides} /> : <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-900 via-green-800 to-green-900 relative overflow-hidden"><div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, #22c55e 0%, transparent 60%)' }} /><div className="relative z-10 text-center logo-float"><div className="text-4xl md:text-5xl font-black tracking-tighter text-white drop-shadow-[0_0_20px_rgba(34,197,94,0.6)] mb-2">{settings.shop_name || 'Siamsite'}</div><p className="text-green-400 font-bold text-sm tracking-widest uppercase">{settings.shop_subtitle || 'ระบบร้านค้ามายคราฟ'}</p></div></div>}
             </div>
           </motion.div>
           {(settings.show_exclusive_gacha ?? '1') === '1' && exclusiveBoxes.length > 0 && (

@@ -15,6 +15,7 @@ import { easySlipService } from '../services/easyslip.service';
 import { notificationService } from '../services/notification.service';
 import { announcementService } from '../services/announcement.service';
 import { campaignService } from '../services/campaign.service';
+import { newsService } from '../services/news.service';
 import {
   createProductSchema, updateProductSchema,
   createServerSchema, updateServerSchema,
@@ -26,6 +27,7 @@ import {
   createLootBoxCategorySchema, updateLootBoxCategorySchema,
   releaseSchema,
   campaignSchema, grantPointsSchema,
+  createNewsSchema, updateNewsSchema, reorderNewsSchema,
 } from '../validators/schemas';
 
 const router = Router();
@@ -941,6 +943,46 @@ router.delete('/slides/:id', async (req: Request, res: Response, next: NextFunct
     const id = parseInt(req.params.id);
     await settingsService.deleteSlide(id);
     res.json({ success: true, message: 'Slide deleted' });
+  } catch (err) { next(err); }
+});
+
+// ─── News (rendered hero-carousel slides) ─────────────────────
+router.get('/news', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const news = await newsService.getAll();
+    res.json({ success: true, news });
+  } catch (err) { next(err); }
+});
+
+router.post('/news', validate(createNewsSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const item = await newsService.create(req.body);
+    res.json({ success: true, news: item });
+  } catch (err) { next(err); }
+});
+
+// Must precede /news/:id or 'reorder' parses as an id.
+router.put('/news/reorder', validate(reorderNewsSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await newsService.reorder(req.body.order);
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+router.put('/news/:id', validate(updateNewsSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const item = await newsService.update(id, req.body);
+    if (!item) { res.status(404).json({ success: false, message: 'ไม่พบข่าวนี้' }); return; }
+    res.json({ success: true, news: item });
+  } catch (err) { next(err); }
+});
+
+router.delete('/news/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    await newsService.remove(id);
+    res.json({ success: true, message: 'ลบข่าวแล้ว' });
   } catch (err) { next(err); }
 });
 

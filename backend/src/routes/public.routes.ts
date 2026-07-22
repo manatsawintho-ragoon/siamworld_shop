@@ -3,6 +3,7 @@ import { pool } from '../database/connection';
 import { settingsService } from '../services/settings.service';
 import { shopService } from '../services/shop.service';
 import { serverService } from '../services/server.service';
+import { newsService } from '../services/news.service';
 import { z } from 'zod';
 
 const positiveIntParam = z.string().regex(/^\d+$/).transform(Number).optional();
@@ -31,6 +32,8 @@ router.get('/settings', async (_req: Request, res: Response, next: NextFunction)
       // New appearance toggles (1 = visible, 0 = hidden).
       'show_lootbox_nav', 'show_download_nav', 'show_topup_rank_widget', 'show_topup_daily_widget', 'show_live_shop_widget', 'show_popular_widget',
       'show_welcome_marquee', 'show_server_status_widget', 'show_gacha_live_widget', 'show_exclusive_gacha', 'show_popular_gacha', 'show_new_arrivals',
+      // Hero carousel: rendered (image-free) slide types.
+      'show_campaign_slide', 'show_news_slides',
       // Product image dimension hint (used by the upload UI placeholder).
       'product_image_width', 'product_image_height',
       // SEO / Google: verification code + optional metadata overrides (server-rendered).
@@ -52,6 +55,30 @@ router.get('/slides', async (_req: Request, res: Response, next: NextFunction) =
     const activeSlides = slides.filter((s: any) => s.active);
     cache(res, CATALOG_CACHE);
     res.json({ success: true, slides: activeSlides });
+  } catch (err) { next(err); }
+});
+
+/**
+ * Published news items for the hero carousel. Only the fields the slide draws
+ * are exposed - the publishing window itself stays operator-internal, the same
+ * way /campaign/active hides budget and caps.
+ */
+router.get('/news', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const items = await newsService.getPublished();
+    cache(res, CATALOG_CACHE);
+    res.json({
+      success: true,
+      news: items.map(n => ({
+        id: n.id,
+        title: n.title,
+        excerpt: n.excerpt,
+        badge: n.badge,
+        accent: n.accent,
+        image_url: n.image_url,
+        link_url: n.link_url,
+      })),
+    });
   } catch (err) { next(err); }
 });
 
