@@ -28,7 +28,7 @@ export function useActiveCampaign(): ActiveCampaign | null {
 }
 
 /** "2 วัน 04:12:33" or, once under a day is left, just "04:12:33". */
-function formatCountdown(ms: number): string {
+export function formatCountdown(ms: number): string {
   const totalSec = Math.max(0, Math.floor(ms / 1000));
   const days = Math.floor(totalSec / 86400);
   const hours = Math.floor((totalSec % 86400) / 3600);
@@ -36,6 +36,21 @@ function formatCountdown(ms: number): string {
   const secs = totalSec % 60;
   const hhmmss = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   return days > 0 ? `${days} วัน ${hhmmss}` : hhmmss;
+}
+
+/**
+ * Smallest whole-baht amount that yields at least 1 point, so the rate reads
+ * naturally regardless of how the operator configured pointsPerBaht
+ * (0.1 -> "every ฿10 = 1 point", 2 -> "every ฿1 = 2 point").
+ *
+ * Shared with the hero carousel's campaign slide so the two surfaces can never
+ * quote different rates. MySQL hands DECIMAL back as a string, hence Number().
+ */
+export function campaignRate(pointsPerBaht: number): { bahtPerPoint: number; pointsAtThatAmount: number } {
+  const rate = Number(pointsPerBaht);
+  if (!Number.isFinite(rate) || rate <= 0) return { bahtPerPoint: 0, pointsAtThatAmount: 0 };
+  const bahtPerPoint = Math.ceil(1 / rate);
+  return { bahtPerPoint, pointsAtThatAmount: Math.max(1, Math.floor(bahtPerPoint * rate)) };
 }
 
 export default function CampaignBanner() {
@@ -67,11 +82,7 @@ export default function CampaignBanner() {
 
   if (!campaign || ended || remainingMs === null || remainingMs <= 0) return null;
 
-  // Smallest whole-baht amount that yields at least 1 point, so the rate reads
-  // naturally regardless of how the operator configured pointsPerBaht (e.g.
-  // 0.1 -> "every ฿10 = 1 point", 2 -> "every ฿1 = 2 point").
-  const bahtPerPoint = campaign.pointsPerBaht > 0 ? Math.ceil(1 / campaign.pointsPerBaht) : 0;
-  const pointsAtThatAmount = bahtPerPoint > 0 ? Math.max(1, Math.floor(bahtPerPoint * campaign.pointsPerBaht)) : 0;
+  const { bahtPerPoint, pointsAtThatAmount } = campaignRate(campaign.pointsPerBaht);
 
   return (
     <div className="theme-navbar-banner rounded-xl p-4 shadow-theme-sm border border-white/10 text-white">

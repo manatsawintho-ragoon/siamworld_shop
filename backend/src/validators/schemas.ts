@@ -240,6 +240,46 @@ export const createSlideSchema = z.object({
   active:     boolFlag.optional(),
 });
 
+// ─── News (rendered hero-carousel slides) ────────────────────
+
+// The carousel maps this to a fixed set of token classes, so it can never
+// become an arbitrary style string on the client.
+export const newsAccentEnum = z.enum(['primary', 'violet', 'amber', 'emerald', 'rose', 'sky']);
+
+// An empty string from a cleared <input type="datetime-local"> means "no
+// bound", not "epoch". Normalise it to null before z.coerce.date() turns it
+// into an Invalid Date.
+const optionalDate = z.preprocess(
+  (v) => (v === '' || v === null || v === undefined ? null : v),
+  z.coerce.date().nullable()
+).optional();
+
+const newsBaseFields = {
+  title:      z.string().min(1, 'ต้องระบุหัวข้อข่าว').max(255),
+  excerpt:    z.string().max(500).optional().nullable(),
+  badge:      z.string().max(40).optional().nullable(),
+  accent:     newsAccentEnum.optional(),
+  image_url:  z.string().max(500).optional().nullable(),
+  link_url:   z.string().max(500).optional().nullable(),
+  sort_order: z.number().int().optional(),
+  active:     boolFlag.optional(),
+  starts_at:  optionalDate,
+  ends_at:    optionalDate,
+};
+
+const newsWindowOrdered = (d: { starts_at?: Date | null; ends_at?: Date | null }) =>
+  !d.starts_at || !d.ends_at || d.ends_at > d.starts_at;
+
+export const createNewsSchema = z.object(newsBaseFields)
+  .refine(newsWindowOrdered, { message: 'เวลาสิ้นสุดต้องมากกว่าเวลาเริ่ม', path: ['ends_at'] });
+
+export const updateNewsSchema = z.object({ ...newsBaseFields, title: newsBaseFields.title.optional() })
+  .refine(newsWindowOrdered, { message: 'เวลาสิ้นสุดต้องมากกว่าเวลาเริ่ม', path: ['ends_at'] });
+
+export const reorderNewsSchema = z.object({
+  order: z.array(z.object({ id: z.number().int().positive(), sort_order: z.number().int() })),
+});
+
 // ─── Downloads ───────────────────────────────────────────────
 
 const downloadBaseFields = {
