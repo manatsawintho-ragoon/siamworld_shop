@@ -6,12 +6,19 @@
 
    Latin is listed before Thai on purpose: CSS resolves font fallback per
    glyph, and each instance carries the matching unicode-range, so a page that
-   renders no Thai never downloads the Thai files. */
+   renders no Thai never downloads the Thai files.
+
+   Every var() below carries a fallback, and that is load-bearing rather than
+   defensive habit. The [locale] layout applies only the Latin variable on /en,
+   so --font-kanit-thai is genuinely undefined there. A var() with no fallback
+   that resolves to nothing makes the whole declaration invalid at
+   computed-value time, which would take --font-sans down with it and drop the
+   page to the browser's default serif - not to the next family in the list. */
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-kanit-latin), var(--font-kanit-thai), ui-sans-serif, system-ui, sans-serif;
-  
+  --font-sans: var(--font-kanit-latin, ui-sans-serif), var(--font-kanit-thai, ui-sans-serif), ui-sans-serif, system-ui, sans-serif;
+
   --color-background: oklch(100% 0 0); /* White */
   --color-foreground: oklch(21% 0.006 285.88); /* Slate 900 / Charcoal */
 
@@ -89,6 +96,20 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-sans);
+  }
+
+  /* English pages set the Latin face to Inter. Kanit is a Thai-first family:
+     its Latin is display-weighted and spaced for Thai line height, which reads
+     heavy across a page of pure English. The class goes on <html>, which is
+     also the element @theme declares --font-sans on, so the override lands in
+     the same scope and wins on cascade order.
+
+     The Thai slot stays in the stack even here, because the baht sign (U+0E3F)
+     falls inside the Thai unicode-range and English pages are full of prices.
+     Where the Thai variable is not applied it resolves to its fallback, so ฿
+     renders from the system font rather than killing the declaration. */
+  :root.locale-en {
+    --font-sans: var(--font-inter-latin, ui-sans-serif), var(--font-kanit-thai, ui-sans-serif), ui-sans-serif, system-ui, sans-serif;
   }
 }
 

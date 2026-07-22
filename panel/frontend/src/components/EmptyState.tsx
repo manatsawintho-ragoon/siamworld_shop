@@ -1,4 +1,10 @@
-import { Link } from '@/i18n/navigation';
+/* Plain next/link, NOT the locale-aware Link from @/i18n/navigation. Every
+   caller of this component lives under the (operator) admin tree, which is a
+   separate root layout outside [locale] with no NextIntlClientProvider, so the
+   locale-aware Link's internal useLocale() throws on render. Unlike the always
+   mounted CommandPalette this only fires once a list is actually empty, which
+   is why it hid behind the populated screens. */
+import Link from 'next/link';
 import { Icon, type IconName } from '@/components/ui/icon';
 
 interface Props {

@@ -64,5 +64,33 @@ export const kanitThai = localFont({
   ],
 });
 
-/** Both variables, for the <html> className. */
+/**
+ * Inter, vendored the same way, for the English locale only.
+ *
+ * Kanit is a Thai-first family: its Latin is display-weighted and set for Thai
+ * line height, which reads heavy in an all-English page. Inter is the Latin
+ * text face, so /en swaps to it while Thai pages keep Kanit throughout.
+ *
+ * One file, not five: Google serves Inter's Latin subset as a single variable
+ * woff2 spanning the whole 400-800 range, so all five weights resolve from it.
+ * Its unicode-range is byte-identical to kanitLatin's above, which is what
+ * lets it slot into the same Latin position in the --font-sans stack.
+ */
+export const interLatin = localFont({
+  src: [
+    { path: '../fonts/Inter-variable-latin.woff2', weight: '400 800', style: 'normal' },
+  ],
+  display: 'swap',
+  variable: '--font-inter-latin',
+  preload: true,
+  declarations: [
+    {
+      prop: 'unicode-range',
+      value:
+        'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD',
+    },
+  ],
+});
+
+/** Both Kanit variables, for the <html> className. */
 export const fontVariables = `${kanitLatin.variable} ${kanitThai.variable}`;

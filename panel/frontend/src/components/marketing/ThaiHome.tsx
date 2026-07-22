@@ -48,10 +48,12 @@ interface Promo {
    configured prices (`price_1month` / `price_3months` / `price_6months`).
    `save` is the regular cost of the same span (months x 1-month price) minus
    what the package actually costs. */
+/* `label` is left empty on purpose: the API sends a Thai label, so the card
+   derives its own from `months` via the `planMonths` message instead. */
 const DEFAULT_PACKAGES: Package[] = [
-  { months: 1, price: 249,  label: '1 เดือน',  save: 0,   kind: 'regular' },
-  { months: 3, price: 599,  label: '3 เดือน',  save: 148, kind: 'regular' },
-  { months: 6, price: 1099, label: '6 เดือน',  save: 395, kind: 'regular' },
+  { months: 1, price: 249,  label: '',  save: 0,   kind: 'regular' },
+  { months: 3, price: 599,  label: '',  save: 148, kind: 'regular' },
+  { months: 6, price: 1099, label: '',  save: 395, kind: 'regular' },
 ];
 
 const DEFAULT_PROMOS: Promo[] = [
@@ -219,10 +221,10 @@ interface ShowcaseSlide {
 
 /* ── Animated headline ───────────────────────────────────────────────── */
 
-/** The two headline lines. The second one carries the accent colour. */
-const HEADLINE_LINES: { text: string; accent?: boolean }[] = [
-  { text: 'heroOpenShop' },
-  { text: 'heroSellToday', accent: true },
+/** The two headline lines, as `home` message keys. The second carries the accent colour. */
+const HEADLINE_LINES: { key: string; accent?: boolean }[] = [
+  { key: 'heroOpenShop' },
+  { key: 'heroSellToday', accent: true },
 ];
 
 /* Thai stacks vowels and tone marks on top of a base consonant, so slicing the
@@ -271,9 +273,14 @@ const Caret = () => (
 function TypewriterHeadline() {
   const t = useTranslations('home');
   const reduceMotion = useReducedMotion();
+  // HEADLINE_LINES carries message keys, not copy: resolve each one before
+  // clustering, or the typewriter animates the key name itself.
   const lines = useMemo(
-    () => HEADLINE_LINES.map(l => ({ ...l, clusters: toClusters(l.text) })),
-    []
+    () => HEADLINE_LINES.map(({ key, accent }) => {
+      const text = t(key as never);
+      return { accent, text, clusters: toClusters(text) };
+    }),
+    [t]
   );
   const total = useMemo(() => lines.reduce((n, l) => n + l.clusters.length, 0), [lines]);
 
@@ -395,7 +402,11 @@ function HeroShopMarquee({ shops, shopCount }: { shops: { name: string; domain: 
           <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
         </span>
         <span>
-          <span className="text-foreground font-semibold tabular-nums">{total}</span>{t('serversWithUs')}</span>
+          {t.rich('serversWithUsCount', {
+            n: total,
+            hl: c => <span className="text-foreground font-semibold tabular-nums">{c}</span>,
+          })}
+        </span>
       </p>
 
       <div className="marquee-viewport relative w-full overflow-hidden">
@@ -674,7 +685,7 @@ function PackageCard({
       ? t('firstMonth')
       : pkg.months === 1
         ? t('month')
-        : pkg.label;
+        : t('planMonths', { n: pkg.months });
 
   return (
     <motion.div
@@ -723,7 +734,7 @@ function PackageCard({
             <Icon name={tier.icon} className="text-[10px]" />
             {tier.label}
           </span>
-          <CardTitle className="text-lg font-semibold">{isTrial ? t('trialFree') : pkg.label}</CardTitle>
+          <CardTitle className="text-lg font-semibold">{isTrial ? t('trialFree') : t('planMonths', { n: pkg.months })}</CardTitle>
           <p className="text-[12px] font-semibold text-muted-foreground mt-1.5 leading-snug">{t(copy.audience)}</p>
           <div className="flex items-baseline flex-wrap gap-x-2 gap-y-1 mt-3">
             <span className="text-5xl font-semibold tracking-tighter text-foreground tabular-nums">
@@ -1089,7 +1100,7 @@ function LandingContent() {
         <div className="max-w-7xl mx-auto px-6">
           <SectionHead
             eyebrow={t('secHowStart')}
-            title={<>{t('shopReadyIn')}<span className="text-primary">{t('threeSteps')}</span></>}
+            title={t.rich('headingReadyIn', { hl: c => <span className="text-primary">{c}</span> })}
             sub={t('heroNoWebSkill')}
           />
 
@@ -1143,7 +1154,7 @@ function LandingContent() {
         <div className="max-w-7xl mx-auto px-6">
           <SectionHead
             eyebrow={t('secFeatures')}
-            title={<>{t('getEverythingFrom')}<span className="text-primary">{t('firstDays')}</span></>}
+            title={t.rich('headingEverything', { hl: c => <span className="text-primary">{c}</span> })}
             sub={t('heroNoExtras')}
           />
 
@@ -1182,7 +1193,7 @@ function LandingContent() {
             <SectionHead
               center={false}
               eyebrow={t('secDemo')}
-              title={<>{t('experience')}<span className="text-primary">{t('premium')}</span></>}
+              title={t.rich('headingExperience', { hl: c => <span className="text-primary">{c}</span> })}
               sub={t('secDemoSub')}
             />
             <div className="flex gap-2 shrink-0 mb-12">
@@ -1309,7 +1320,7 @@ function LandingContent() {
         <div className="max-w-5xl mx-auto px-6">
           <SectionHead
             eyebrow={t('secCompare')}
-            title={<>{t('colCustom')}<span className="text-primary">{t('tensOfThousands')}</span>{t('startWithUs99')}</>}
+            title={t.rich('headingCustomCost', { hl: c => <span className="text-primary">{c}</span> })}
             sub={t('secCompareSub')}
           />
 
@@ -1373,7 +1384,7 @@ function LandingContent() {
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <SectionHead
             eyebrow={t('price')}
-            title={<>{t('startSellingAt')}<span className="text-primary">฿99</span>{t('firstMonth')}</>}
+            title={t.rich('headingStartSelling', { hl: c => <span className="text-primary">{c}</span> })}
             sub={t('planAllSameSub')}
           />
 

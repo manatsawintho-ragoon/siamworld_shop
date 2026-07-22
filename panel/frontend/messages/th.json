@@ -293,6 +293,12 @@
     "startWithUs99": "เริ่มกับเรา ฿99",
     "startSellingAt": "เริ่มขายได้ในราคา",
     "shopReadyIn": "เปิดร้านเสร็จใน",
+    "headingReadyIn": "เปิดร้านเสร็จใน<hl>3 ขั้นตอน</hl>",
+    "headingEverything": "ได้ครบทุกอย่าง ตั้งแต่<hl>วันแรก</hl>",
+    "headingExperience": "สัมผัสประสบการณ์<hl>ระดับพรีเมียม</hl>",
+    "headingCustomCost": "จ้างเขียนเว็บเอง<hl>หลักหมื่น</hl> เริ่มกับเรา ฿99",
+    "headingStartSelling": "เริ่มขายได้ในราคา<hl>฿99</hl> เดือนแรก",
+    "serversWithUsCount": "<hl>{n}</hl> เซิร์ฟเวอร์เปิดร้านกับเราแล้ว",
     "installedWithin": "ติดตั้งเสร็จภายใน",
     "readyIn10": "พร้อมขายใน 10 นาที",
     "serversWithUs": "เซิร์ฟเวอร์เปิดร้านกับเราแล้ว",
@@ -502,7 +508,14 @@
     "itemsInInventory": "ไอเท็มในคลัง",
     "enterAmount": "กรอกจำนวนเงิน",
     "angpaoWord": "อั่งเปา",
-    "timesUnit": "{n} ครั้ง"
+    "piecesUnit": "ชิ้น",
+    "opensUnit": "ครั้ง",
+    "topGacha": "Gacha ยอดนิยม",
+    "soldPieces": "ขายแล้ว <b>{n}</b> ชิ้น",
+    "accumulatedAllAmount": "สะสมทั้งหมด <b>{amount} ฿</b>",
+    "accumulatedItems": "สะสม <b>{amount} ฿</b> · {n} ชิ้น",
+    "accumulatedOpens": "สะสม <b>{amount} ฿</b> · {n} ครั้ง",
+    "lastMonthAmount": "เดือนก่อน <b>{amount}</b>"
   },
   "dashboard": {
     "shopManagement": "การจัดการร้านค้า",

@@ -1,6 +1,12 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from '@/i18n/navigation';
+/* Plain next/navigation, NOT the locale-aware router from @/i18n/navigation.
+   This component is mounted only by the (operator) admin layout, which is a
+   separate root layout outside [locale] and so has no NextIntlClientProvider.
+   The locale-aware useRouter calls useLocale() internally, which throws there
+   and takes the whole admin panel down with a client-side exception. Every
+   route pushed below is /admin/*, which is unlocalised anyway. */
+import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { Icon, type IconName } from '@/components/ui/icon';
 
