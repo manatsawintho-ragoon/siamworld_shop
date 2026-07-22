@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { kanitLatin, kanitThai } from '@/lib/fonts';
+import { kanitLatin, kanitThai, interLatin } from '@/lib/fonts';
 import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
@@ -152,24 +152,28 @@ export default async function LocaleRootLayout({
   setRequestLocale(locale);
   const messages = await getMessages();
 
-  // English pages render no Thai glyphs, so they only apply the Latin variable.
+  // English runs on Inter instead of Kanit's Latin: Kanit is a Thai-first
+  // family whose Latin is display-weighted and spaced for Thai line height,
+  // which reads heavy across a full page of English. `locale-en` is what the
+  // :root.locale-en rule in globals.css keys off to repoint --font-sans.
   //
-  // NOTE: this does NOT reduce preloading, which was the original hope.
-  // next/font emits a <link rel="preload"> for every font instance imported
-  // into a route's module graph, regardless of whether its CSS variable is
-  // applied. Because this layout imports both instances, all 10 files preload
-  // on both locales (measured: 10 on /en and 10 on /). Making preloading
-  // locale-aware would require the two locales to resolve different layout
-  // modules, which the App Router does not offer.
+  // NOTE: applying a variable does not control preloading. next/font emits a
+  // <link rel="preload"> for every instance imported into a route's module
+  // graph regardless of which variables are used, and this layout imports all
+  // three, so both locales preload all 11 files (measured: 11 on /en and 11
+  // on /). Making preloading locale-aware would require the two locales to
+  // resolve different layout modules, which the App Router does not offer.
   //
   // The alternative is preload: false in lib/fonts.ts, letting the
   // unicode-range on each instance pull only the subsets a page actually
-  // renders. That genuinely would cut English pages to the Latin files, at the
+  // renders. That genuinely would cut English pages to the Inter file, at the
   // cost of discovering fonts during CSS parse rather than up front, which
   // hurts the Thai-speaking majority. Left as-is deliberately; it is a real
   // tradeoff, not an oversight.
   const fontClass =
-    locale === 'en' ? kanitLatin.variable : `${kanitLatin.variable} ${kanitThai.variable}`;
+    locale === 'en'
+      ? `${interLatin.variable} locale-en`
+      : `${kanitLatin.variable} ${kanitThai.variable}`;
 
   // Only site-wide entities live here. SoftwareApplication and FAQPage moved to
   // the homepage: they were emitted on EVERY page, so /order and /en/order

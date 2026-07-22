@@ -1,4 +1,5 @@
 'use client';
+import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 
 /**
@@ -11,6 +12,21 @@ function useMockText() {
   const t = useTranslations('mock');
   return (key: string, values?: Record<string, string | number>): string =>
     t.has(key as never) ? t(key as never, values as never) : key;
+}
+
+/**
+ * Sentences that wrap part of themselves in emphasis ("Sold <b>1,842</b> pcs")
+ * have to stay one message: Thai runs the words together while English needs
+ * spaces around the number, so composing them from separate keys drops the
+ * spacing in one language or the other.
+ */
+function useMockRich() {
+  const t = useTranslations('mock');
+  return (
+    key: string,
+    values: Record<string, string | number>,
+    b: (chunks: ReactNode) => ReactNode
+  ) => t.rich(key as never, { ...values, b } as never);
 }
 
 
@@ -121,6 +137,7 @@ function DeltaBadge({ delta, pct, last, suffix = '', dark = false }: {
   delta: string; pct: string; last: string; suffix?: string; dark?: boolean;
 }) {
   const t = useMockText();
+  const tr = useMockRich();
   return (
     <div className="mt-3 space-y-0.5">
       <p className={`text-[10px] font-bold flex items-center gap-1 flex-wrap ${dark ? 'text-white/90' : 'text-emerald-600'}`}>
@@ -129,7 +146,10 @@ function DeltaBadge({ delta, pct, last, suffix = '', dark = false }: {
         <span className="opacity-80">(+{pct}%)</span>
         <span className={`font-medium ${dark ? 'text-white/60' : 'text-gray-400'}`}>{t('vsLastMonth')}</span>
       </p>
-      <p className={`text-[10px] ${dark ? 'text-white/50' : 'text-gray-400'}`}>{t('lastMonth')}<span className={`font-semibold ${dark ? 'text-white/80' : 'text-gray-600'}`}>{last}{suffix}</span>
+      <p className={`text-[10px] ${dark ? 'text-white/50' : 'text-gray-400'}`}>
+        {tr('lastMonthAmount', { amount: `${last}${suffix}` }, c => (
+          <span className={`font-semibold ${dark ? 'text-white/80' : 'text-gray-600'}`}>{c}</span>
+        ))}
       </p>
     </div>
   );
@@ -176,6 +196,7 @@ function RankColumn({ title, icon, tint, rows, unit }: {
 
 export function DashboardMock() {
   const t = useMockText();
+  const tr = useMockRich();
   return (
     <ScaledMock designWidth={1440} designHeight={900}>
       <Frame url="yourshop.siamsite.shop/admin">
@@ -268,7 +289,11 @@ export function DashboardMock() {
                       <h2 className="text-4xl font-bold leading-tight tracking-tight text-white">
                         <span className="mock-count">48,250</span> <span className="text-base font-medium text-white/60">{t('baht')}</span>
                       </h2>
-                      <p className="text-[10px] text-white/60 mt-1">{t('accumulatedAll')}<span className="font-bold text-white/90">612,480 ฿</span></p>
+                      <p className="text-[10px] text-white/60 mt-1">
+                        {tr('accumulatedAllAmount', { amount: '612,480' }, c => (
+                          <span className="font-bold text-white/90">{c}</span>
+                        ))}
+                      </p>
                     </div>
                     <span className="w-11 h-11 bg-black/15 border border-white/20 rounded-xl flex items-center justify-center shrink-0">
                       <Icon name="wallet" className="text-white text-sm" />
@@ -285,7 +310,11 @@ export function DashboardMock() {
                         <h2 className="text-2xl font-bold text-gray-800 leading-tight">
                           21,430 <span className="text-xs font-medium text-gray-400">{t('baht')}</span>
                         </h2>
-                        <p className="text-[10px] text-gray-400 mt-1">{t('accumulated')}<span className="font-bold text-gray-600">288,120 ฿</span> · 1,842 ชิ้น</p>
+                        <p className="text-[10px] text-gray-400 mt-1">
+                          {tr('accumulatedItems', { amount: '288,120', n: '1,842' }, c => (
+                            <span className="font-bold text-gray-600">{c}</span>
+                          ))}
+                        </p>
                       </div>
                       <span className="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center shrink-0">
                         <Icon name="shopping-cart" className="text-sm" />
@@ -301,7 +330,11 @@ export function DashboardMock() {
                         <h2 className="text-2xl font-bold text-gray-800 leading-tight">
                           14,880 <span className="text-xs font-medium text-gray-400">{t('baht')}</span>
                         </h2>
-                        <p className="text-[10px] text-gray-400 mt-1">{t('accumulated')}<span className="font-bold text-gray-600">176,540 ฿</span> · 970 ครั้ง</p>
+                        <p className="text-[10px] text-gray-400 mt-1">
+                          {tr('accumulatedOpens', { amount: '176,540', n: 970 }, c => (
+                            <span className="font-bold text-gray-600">{c}</span>
+                          ))}
+                        </p>
                       </div>
                       <span className="w-10 h-10 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center shrink-0">
                         <Icon name="dice" className="text-sm" />
@@ -359,7 +392,7 @@ export function DashboardMock() {
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">{t('allProducts')}</p>
-                    <h2 className="text-2xl font-bold text-gray-800 leading-tight">19 <span className="text-sm font-medium text-gray-400">{t('pieces')}</span></h2>
+                    <h2 className="text-2xl font-bold text-gray-800 leading-tight">19 <span className="text-sm font-medium text-gray-400">{t('piecesUnit')}</span></h2>
                   </div>
                   <span className="w-10 h-10 bg-orange-50 text-[#f97316] rounded-xl flex items-center justify-center shrink-0">
                     <Icon name="box-open" className="text-sm" />
@@ -371,8 +404,8 @@ export function DashboardMock() {
 
             {/* Row 3: ranking columns */}
             <div className="grid grid-cols-2 gap-4">
-              <RankColumn title={t('bestSellers')} icon="trophy" tint="bg-amber-50 text-amber-500" rows={TOP_ITEMS} unit={t('pieces')} />
-              <RankColumn title="Gacha ยอดนิยม" icon="trophy" tint="bg-purple-50 text-purple-500" rows={TOP_BOXES} unit={t('times')} />
+              <RankColumn title={t('bestSellers')} icon="trophy" tint="bg-amber-50 text-amber-500" rows={TOP_ITEMS} unit={t('piecesUnit')} />
+              <RankColumn title={t('topGacha')} icon="trophy" tint="bg-purple-50 text-purple-500" rows={TOP_BOXES} unit={t('opensUnit')} />
             </div>
           </div>
         </div>
@@ -571,6 +604,7 @@ function ProductCardMock({ name, price, original, sold, category, seq = 0 }: {
   name: string; price: number; original?: number; sold: number; category: string; seq?: number;
 }) {
   const t = useMockText();
+  const tr = useMockRich();
   const discount = original ? Math.round((1 - price / original) * 100) : 0;
   return (
     <article
@@ -606,7 +640,11 @@ function ProductCardMock({ name, price, original, sold, category, seq = 0 }: {
         <p className="s-fg font-bold text-sm leading-tight truncate">{t(name)}</p>
         <span className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-500/10 border border-orange-500/20 w-fit">
           <Icon name="fire" className="text-[10px] text-orange-500" />
-          <span className="text-[11px] font-bold text-orange-600">{t('sold')}<span className="tabular-nums font-bold">{sold.toLocaleString()}</span>{t('pieces')}</span>
+          <span className="text-[11px] font-bold text-orange-600">
+            {tr('soldPieces', { n: sold.toLocaleString() }, c => (
+              <span className="tabular-nums font-bold">{c}</span>
+            ))}
+          </span>
         </span>
         <span className="inline-flex items-center gap-1 mt-1.5 mb-1 text-[10px] font-bold s-primary">
           <Icon name="circle-info" className="text-[9px]" />{t('viewDesc')}</span>

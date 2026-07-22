@@ -293,6 +293,12 @@
     "startWithUs99": "Start with us for ฿99",
     "startSellingAt": "Start selling from",
     "shopReadyIn": "Your shop is ready in",
+    "headingReadyIn": "Your shop is ready in <hl>3 steps</hl>",
+    "headingEverything": "Everything included, from the <hl>first days</hl>",
+    "headingExperience": "A truly <hl>premium</hl> experience",
+    "headingCustomCost": "Custom built costs <hl>tens of thousands</hl>. Start with us for ฿99.",
+    "headingStartSelling": "Start selling from <hl>฿99</hl> for your first month",
+    "serversWithUsCount": "<hl>{n}</hl> servers already run their shop with us",
     "installedWithin": "Set up within",
     "readyIn10": "Selling in 10 minutes",
     "serversWithUs": "servers already run their shop with us",
@@ -502,7 +508,14 @@
     "itemsInInventory": "Items in inventory",
     "enterAmount": "Enter an amount",
     "angpaoWord": "Angpao",
-    "timesUnit": "{n} opens"
+    "piecesUnit": "pcs",
+    "opensUnit": "opens",
+    "topGacha": "Top gacha",
+    "soldPieces": "Sold <b>{n}</b> pcs",
+    "accumulatedAllAmount": "Total <b>{amount} ฿</b>",
+    "accumulatedItems": "Total <b>{amount} ฿</b> · {n} pcs",
+    "accumulatedOpens": "Total <b>{amount} ฿</b> · {n} opens",
+    "lastMonthAmount": "Last month <b>{amount}</b>"
   },
   "dashboard": {
     "shopManagement": "Shop management",
