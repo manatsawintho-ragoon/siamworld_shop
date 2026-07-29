@@ -408,11 +408,19 @@ function SectionHead({ eyebrow, title, sub, center = true }: { eyebrow: string; 
    a site that is down. */
 function HeroShopMarquee({ shops, shopCount }: { shops: { name: string; domain: string }[]; shopCount?: number }) {
   const t = useTranslations('home');
-  if (!shops.length) return null;
   const total = shopCount ?? shops.length;
 
+  // The shop list arrives from a client fetch. Returning null until then let the
+  // block pop into existence and shove the entire hero down: that one shift was
+  // 0.241 of the page's 0.242 CLS, i.e. effectively all of it. Reserving the
+  // final height up front costs nothing and makes the arrival invisible.
+  // min-h is label (~18px) + margin (10px) + pill row (~40px) + track padding.
+  if (!shops.length) {
+    return <div className="hero-pop-3 mt-6 max-w-xl min-h-[76px]" aria-hidden="true" />;
+  }
+
   return (
-    <div className="hero-pop-3 mt-6 max-w-xl">
+    <div className="hero-pop-3 mt-6 max-w-xl min-h-[76px]">
       <p className="flex items-center gap-2 text-[12px] font-medium text-muted-foreground mb-2.5">
         <span className="relative flex h-2 w-2 shrink-0">
           <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 animate-soft-ping" />
@@ -1281,17 +1289,28 @@ function LandingContent() {
                       <Icon name="hand-pointer" className="text-primary" />{t('liveScreenHint')}</p>
                   )}
 
-                  <div className="flex gap-2.5 pt-2">
+                  {/* The dots stay 10px tall visually, but the button around
+                      each one is 24px so it clears the minimum touch target.
+                      Sizing the button itself would have made the indicators
+                      look like buttons; this keeps the design and the hit area
+                      independent. Negative margin absorbs the extra width so
+                      the row's spacing is unchanged. */}
+                  <div className="flex gap-2.5 pt-2 -mx-[7px]">
                     {showcase.map((s, i) => (
                       <button
                         key={i}
                         onClick={() => setCurrentIndex(i)}
                         aria-label={t('slideAria', { n: i + 1, title: s.title })}
                         aria-current={i === currentIndex}
-                        className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
-                          i === currentIndex ? 'w-10 bg-primary' : 'w-2.5 bg-muted hover:bg-muted-foreground/40'
-                        }`}
-                      />
+                        className="flex h-6 min-w-6 items-center justify-center px-[7px] cursor-pointer"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`block h-2.5 rounded-full transition-all duration-300 ${
+                            i === currentIndex ? 'w-10 bg-primary' : 'w-2.5 bg-muted hover:bg-muted-foreground/40'
+                          }`}
+                        />
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -1520,7 +1539,7 @@ function LandingContent() {
             <div className="md:col-span-5 space-y-6">
               <Link href="/" className="flex items-center gap-3 w-fit">
                 <Image
-                  src="/images/logosiamsite-h256.png"
+                  src="/images/logosiamsite-h256.webp"
                   alt={t('logoAlt')}
                   width={84}
                   height={56}

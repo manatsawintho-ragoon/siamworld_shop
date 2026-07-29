@@ -36,6 +36,12 @@ COPY --from=builder --chown=node:node /app/.next/standalone ./
 COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 COPY --from=builder --chown=node:node /app/public ./public
 
+# NOTE: next/image needs sharp at runtime. It is a dependency in package.json,
+# and Next's output tracing pulls it into .next/standalone/node_modules, so the
+# COPY above already carries it. Verify it is still there after a Next upgrade:
+#   docker run --rm <image> ls node_modules/sharp
+# If it ever goes missing, every /_next/image request 500s.
+
 EXPOSE 3000
 
 USER node

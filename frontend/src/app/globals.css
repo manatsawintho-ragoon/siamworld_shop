@@ -1,6 +1,7 @@
-/* Fonts are loaded from app/layout.tsx via <link rel="preconnect"> + <link
-   rel="stylesheet">. A duplicate @import here would re-request the same two
-   families and block CSS parsing until it resolved, so it is deliberately gone. */
+/* Fonts are self-hosted by next/font (src/lib/fonts.ts), which injects its own
+   @font-face rules at build time. No @import and no <link> to a font CDN: both
+   forms are render-blocking, and the Google Fonts stylesheet this used to load
+   cost 875ms of blocked render on mobile. */
 
 @tailwind base;
 @tailwind components;
@@ -108,7 +109,9 @@ html {
 }
 
 body {
-  font-family: 'Inter', 'Prompt', system-ui, -apple-system, sans-serif;
+  /* The two vars come from next/font (lib/fonts.ts). The bare family names stay
+     as a fallback so a page rendered outside the root layout still resolves. */
+  font-family: var(--font-inter), var(--font-prompt), 'Inter', 'Prompt', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: rgb(var(--color-background));
@@ -792,3 +795,32 @@ table.data-table tbody tr:hover {
 }
 .news-body hr { border: 0; border-top: 1px solid rgb(var(--color-border-muted)); margin: 1.75rem 0; }
 .news-body img { border-radius: 0.75rem; max-width: 100%; height: auto; }
+
+/* Page enter fade. Deliberately CSS, not framer-motion: a JS-driven
+   `initial={{opacity:0}}` hid the whole page until hydration and cost ~5s of
+   LCP render delay. See components/PageTransition.tsx. */
+@keyframes page-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.page-fade-in {
+  animation: page-fade-in 0.15s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-fade-in { animation: none; }
+}
+
+/* Hero entrance. CSS rather than framer-motion's `initial={{opacity:0}}`: that
+   put opacity:0 on the LCP element in the server-rendered HTML, so the hero
+   image could not paint until hydration finished (~5.5s of LCP render delay on
+   throttled mobile). See components/HomeClient.tsx. */
+@keyframes hero-rise {
+  from { opacity: 0; transform: scale(0.98); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.hero-rise {
+  animation: hero-rise 0.45s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-rise { animation: none; }
+}

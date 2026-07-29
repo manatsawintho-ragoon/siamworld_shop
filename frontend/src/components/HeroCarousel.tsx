@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Coins, Timer, Sparkles, ArrowRight } from 'lucide-react';
 import type { ActiveCampaign } from './CampaignBanner';
@@ -119,10 +120,28 @@ function CampaignSlide({ campaign }: { campaign: ActiveCampaign }) {
   );
 }
 
-function ImageSlide({ image }: { image: ImageSlideData }) {
+/**
+ * `priority` is set only for the slide that is on screen at first paint. That
+ * one is the page's LCP element on most shops, so it gets a preload link and
+ * fetchpriority=high; every other slide stays lazy. Serving these through
+ * next/image also re-encodes owner-uploaded artwork (usually a full-size PNG
+ * from an external host) to AVIF/WebP at the size actually displayed, which is
+ * where the ~1.5MB of image savings Lighthouse reported comes from.
+ */
+function ImageSlide({ image, priority = false }: { image: ImageSlideData; priority?: boolean }) {
   return (
     <SlideShell href={image.link_url}>
-      <img src={image.image_url} alt={image.title || ''} className="w-full h-full object-cover" draggable={false} />
+      <Image
+        src={image.image_url}
+        alt={image.title || ''}
+        fill
+        // The carousel is full-width on phones and capped by the content column
+        // on desktop, so the browser never needs the full viewport width above lg.
+        sizes="(max-width: 1024px) 100vw, 720px"
+        className="object-cover"
+        priority={priority}
+        draggable={false}
+      />
       {image.title && (
         <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/70 via-black/20 to-transparent px-5 pb-4 pt-8 pointer-events-none">
           <p className="text-white font-bold text-sm drop-shadow-md">{image.title}</p>
@@ -184,7 +203,7 @@ export default function HeroCarousel({ slides }: { slides: CarouselSlide[] }) {
         >
           {slide.kind === 'campaign'
             ? <CampaignSlide campaign={slide.campaign} />
-            : <ImageSlide image={slide.image} />}
+            : <ImageSlide image={slide.image} priority={safeIndex === 0} />}
         </motion.div>
       </AnimatePresence>
 

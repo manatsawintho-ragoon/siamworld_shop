@@ -8,9 +8,15 @@ import { ReactNode } from 'react';
 import DynamicFavicon from '@/components/DynamicFavicon';
 import PageTransition from '@/components/PageTransition';
 
-export default function Providers({ children }: { children: ReactNode }) {
+export default function Providers({
+  children,
+  initialSettings,
+}: {
+  children: ReactNode;
+  initialSettings?: Record<string, string>;
+}) {
   return (
-    <SettingsProvider>
+    <SettingsProvider initialSettings={initialSettings}>
       <ThemeProvider>
         <AuthProvider>
           <AdminAlertProvider>

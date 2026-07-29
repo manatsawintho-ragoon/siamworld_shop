@@ -2,6 +2,13 @@
   "name": "siamsite-frontend",
   "version": "2.0.0",
   "private": true,
+  "//browserslist": "Without this, SWC targets browsers old enough to need polyfills for Array.prototype.at, Object.hasOwn, String.prototype.trimStart and friends - 11KB of dead weight in the shared chunk that every visitor parses. These four lines cover every browser that can run the app at all.",
+  "browserslist": [
+    "chrome >= 96",
+    "edge >= 96",
+    "firefox >= 95",
+    "safari >= 15.4"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -17,6 +24,7 @@
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "sharp": "^0.33.5",
     "socket.io-client": "^4.7.5",
     "tailwind-merge": "^3.5.0"
   },

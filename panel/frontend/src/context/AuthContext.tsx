@@ -40,25 +40,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // ── Fetch user profile ─────────────────────────────────────────────────────
-  // Always calls the server — panel_auth cookie is sent automatically (withCredentials).
-  // SESSION_EXPIRED is treated as a silent re-login: no toast, just clears user state.
+  // Hits /auth/session rather than /auth/me: it answers 200 with `user: null`
+  // for a signed-out visitor, where /auth/me answered 401. The panel_auth cookie
+  // is httpOnly, so this runs on every page load whether or not there is a
+  // session, and a 401 on each signed-out load showed up as a console error.
+  // SESSION_EXPIRED stays a silent re-login - the login modal handles it.
   const refreshUser = useCallback(async () => {
     try {
-      const { data } = await api.get('/api/auth/me');
-      setUser(data);
-    } catch (err: any) {
-      if (err?.response?.status === 401 || err?.sessionCode) {
-        setUser(null);
-        if (err?.sessionCode === 'SESSION_KICKED') {
-          setSessionMessage('เซสชันถูกยกเลิก: มีการเข้าสู่ระบบจากอุปกรณ์อื่น');
-        }
-        // SESSION_EXPIRED / generic 401: silent — the login modal handles re-auth.
+      const { data } = await api.get('/api/auth/session');
+      setUser(data.user ?? null);
+      if (data.sessionCode === 'SESSION_KICKED') {
+        setSessionMessage('เซสชันถูกยกเลิก: มีการเข้าสู่ระบบจากอุปกรณ์อื่น');
       }
-      // Network/5xx errors: leave user as null, no alarming message
+    } catch {
+      // Network/5xx only now. Leave the user signed out, no alarming message.
+      setUser(null);
     }
   }, []);
 
-  // Always run on mount — server returns 401 if no valid panel_auth cookie
   useEffect(() => {
     refreshUser().finally(() => setLoading(false));
   }, [refreshUser]);

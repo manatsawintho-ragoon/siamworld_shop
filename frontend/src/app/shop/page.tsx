@@ -5,6 +5,7 @@ import ProductCard from '@/components/ProductCard';
 import { api } from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Store, Search, X, PackageOpen } from 'lucide-react';
+import { getCategoryIcon } from '@/lib/categoryIcon';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -60,10 +61,12 @@ export default function ShopPage() {
     return list;
   }, [products, catId, search, sort]);
 
+  // `Icon` is resolved here rather than in the JSX so the Font Awesome class
+  // stored on the category never reaches the DOM. See lib/categoryIcon.ts.
   const tabs = useMemo(() => [
-    { id: null, name: 'ทั้งหมด', icon: 'fa-layer-group' as const, count: products.length },
+    { id: null, name: 'ทั้งหมด', Icon: getCategoryIcon('fa-layer-group'), count: products.length },
     ...categories.map(c => ({
-      id: c.id, name: c.name, icon: (c.icon || 'fa-box') as string,
+      id: c.id, name: c.name, Icon: getCategoryIcon(c.icon),
       count: products.filter(p => p.category_id === c.id).length,
     })),
   ], [products, categories]);
@@ -148,7 +151,7 @@ export default function ShopPage() {
                   boxShadow: '0 3px 0 rgb(var(--color-primary-hover))',
                 } : undefined}
               >
-                <i className={`fas ${t.icon} text-[10px]`} />
+                <t.Icon className="w-3 h-3 shrink-0" strokeWidth={2.5} aria-hidden="true" />
                 {t.name}
                 <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
                   catId === t.id ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-surface-hover text-foreground-subtle'

@@ -55,7 +55,15 @@ export default function LanguageSwitcher({ compact = false }: { compact?: boolea
         onClick={() => setOpen(!open)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={active === 'th' ? 'เปลี่ยนภาษา' : 'Change language'}
+        // The non-compact button shows the locale code ("TH"/"EN") as visible
+        // text. WCAG 2.5.3 requires the accessible name to contain that visible
+        // text, so the code leads the label rather than being replaced by it -
+        // otherwise voice control users cannot say what they can see.
+        aria-label={
+          active === 'th'
+            ? `${active.toUpperCase()} - เปลี่ยนภาษา`
+            : `${active.toUpperCase()} - Change language`
+        }
         className={`flex items-center gap-2 rounded-full border border-border hover:bg-secondary transition-colors cursor-pointer ${
           compact ? 'px-2 py-1' : 'pl-2 pr-2.5 py-1'
         }`}

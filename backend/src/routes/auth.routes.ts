@@ -5,6 +5,8 @@ import { loginSchema, registerSchema, forgotPasswordSchema, resetPasswordSchema 
 import { auditService } from '../services/audit.service';
 import { authenticate } from '../middleware/auth';
 import { passwordResetService, ResetError } from '../services/password-reset.service';
+import { userService } from '../services/user.service';
+import { AuthenticationError, SessionKickedError, SessionExpiredError } from '../utils/errors';
 
 const router = Router();
 
@@ -29,6 +31,40 @@ router.post('/register', validate(registerSchema), async (req: Request, res: Res
     const { token, user } = await authService.register(req.body.username, req.body.password, req.body.email);
     res.cookie('auth_token', token, COOKIE_OPTS).json({ success: true, message: 'สมัครสมาชิกสำเร็จ', user });
   } catch (err) { next(err); }
+});
+
+/**
+ * "Who am I, if anyone" — the call every page makes on load.
+ *
+ * Runs exactly the same checks as `authenticate`, but a visitor who is simply
+ * not logged in is a 200 with `user: null` rather than a 401. The session lives
+ * in an httpOnly cookie, so the browser cannot know whether to ask; it always
+ * asked, and every anonymous page load logged a failed request to the console.
+ * Lighthouse counts those under errors-in-console.
+ *
+ * SESSION_KICKED still has to reach the client (it drives the "logged in
+ * elsewhere" notice), so it comes back as a code on the 200 instead of a status.
+ * Anything unexpected is passed to the error handler untouched.
+ */
+router.get('/session', (req: Request, res: Response, next: NextFunction) => {
+  authenticate(req, res, (err?: unknown) => {
+    if (!err) {
+      userService
+        .getProfile(req.user!.userId)
+        .then(profile => res.json({ success: true, user: profile }))
+        .catch(next);
+      return;
+    }
+    if (err instanceof SessionKickedError) {
+      res.json({ success: true, user: null, code: 'SESSION_KICKED' });
+      return;
+    }
+    if (err instanceof AuthenticationError || err instanceof SessionExpiredError) {
+      res.json({ success: true, user: null });
+      return;
+    }
+    next(err);
+  });
 });
 
 // Authenticated logout — invalidates the server-side session so the JWT cannot be reused

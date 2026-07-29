@@ -12,7 +12,7 @@ import { type JwtPayload } from '../middleware/auth';
 import { authService } from '../services/auth.service';
 import { validateSession, createOAuthExchangeCode, consumeOAuthExchangeCode } from '../services/session.service';
 import { turnstileService } from '../services/turnstile.service';
-import { ValidationError, AuthError } from '../utils/errors';
+import { ValidationError, AuthError, SessionKickedError, SessionExpiredError } from '../utils/errors';
 import { config } from '../config';
 
 const router = Router();
@@ -169,6 +169,40 @@ router.get('/me', requireAuth, asyncRoute(async (req, res) => {
   const profile = await authService.getProfile(req.user!.userId);
   res.json(profile);
 }));
+
+/**
+ * "Who am I, if anyone" - the call the panel makes on every page load.
+ *
+ * Identical checks to /me, but a visitor who is simply not signed in gets a 200
+ * with `user: null` instead of a 401. The session is an httpOnly cookie, so the
+ * browser cannot know whether to ask; it always asked, and every signed-out page
+ * load wrote a failed request to the console, which Lighthouse counts under
+ * errors-in-console.
+ *
+ * SESSION_KICKED still has to reach the client (it drives the "signed in
+ * elsewhere" notice), so it rides along as a code on the 200. A genuinely
+ * broken session backend (503) is left to the error handler.
+ */
+router.get('/session', (req, res, next) => {
+  requireAuth(req, res, (err?: unknown) => {
+    if (!err) {
+      authService
+        .getProfile(req.user!.userId)
+        .then(profile => res.json({ user: profile }))
+        .catch(next);
+      return;
+    }
+    if (err instanceof SessionKickedError) {
+      res.json({ user: null, sessionCode: 'SESSION_KICKED' });
+      return;
+    }
+    if (err instanceof AuthError || err instanceof SessionExpiredError) {
+      res.json({ user: null });
+      return;
+    }
+    next(err);
+  });
+});
 
 router.put('/me', requireAuth, asyncRoute(async (req, res) => {
   const { displayName, phone } = req.body;
