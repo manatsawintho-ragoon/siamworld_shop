@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Coins, Timer, Sparkles, ArrowRight, Megaphone } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Coins, Timer, Sparkles, ArrowRight } from 'lucide-react';
 import type { ActiveCampaign } from './CampaignBanner';
 import { formatCountdown, campaignRate } from './CampaignBanner';
 
@@ -13,25 +13,17 @@ export interface ImageSlideData {
   link_url?: string;
 }
 
-export interface NewsSlideData {
-  id: number;
-  title: string;
-  excerpt?: string | null;
-  badge?: string | null;
-  accent?: string | null;
-  image_url?: string | null;
-  link_url?: string | null;
-}
-
 /**
- * The carousel mixes three sources: artwork the shop owner uploaded, and two
- * *rendered* kinds (campaign, news) that need no artwork at all. `key` is a
- * string because ids are only unique within a kind.
+ * The carousel mixes artwork the shop owner uploaded with one *rendered* kind
+ * (campaign) that needs no artwork at all. `key` is a string because ids are
+ * only unique within a kind.
+ *
+ * News deliberately does NOT appear here. It is a reading surface with its own
+ * index and article pages (/news), not a slide.
  */
 export type CarouselSlide =
   | { kind: 'image'; key: string; image: ImageSlideData }
-  | { kind: 'campaign'; key: string; campaign: ActiveCampaign }
-  | { kind: 'news'; key: string; news: NewsSlideData };
+  | { kind: 'campaign'; key: string; campaign: ActiveCampaign };
 
 // Named accents only - the API constrains `accent` to these keys, so a slide
 // can never inject an arbitrary class or style string.
@@ -127,50 +119,6 @@ function CampaignSlide({ campaign }: { campaign: ActiveCampaign }) {
   );
 }
 
-function NewsSlide({ news }: { news: NewsSlideData }) {
-  const a = accentOf(news.accent);
-
-  return (
-    <SlideShell href={news.link_url}>
-      <div className={`relative w-full h-full overflow-hidden ${news.image_url ? 'bg-gray-900' : `bg-gradient-to-br ${a.grad}`}`}>
-        {news.image_url ? (
-          <>
-            <img src={news.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" draggable={false} />
-            {/* Left-weighted scrim keeps the headline legible over any artwork. */}
-            <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/10" />
-          </>
-        ) : (
-          <SlideTexture glow={a.glow} />
-        )}
-
-        <div className="relative z-10 h-full flex flex-col justify-center px-5 sm:px-8 lg:px-10 text-white">
-          {news.badge && (
-            <span className={`self-start inline-flex items-center gap-1.5 ${news.image_url ? 'bg-white/20 text-white' : a.pill} text-[10px] sm:text-[11px] font-black px-2.5 py-1 rounded-full tracking-wide mb-2`}>
-              <Megaphone className="w-3 h-3" strokeWidth={2.75} /> {news.badge}
-            </span>
-          )}
-
-          <h2 className="text-lg sm:text-2xl lg:text-3xl font-black leading-[1.15] drop-shadow-sm max-w-[80%] line-clamp-2">
-            {news.title}
-          </h2>
-
-          {news.excerpt && (
-            <p className="mt-2 text-[11px] sm:text-sm font-semibold text-white/85 max-w-[75%] line-clamp-2">
-              {news.excerpt}
-            </p>
-          )}
-
-          {news.link_url && (
-            <span className="self-start inline-flex items-center gap-1.5 mt-4 px-3.5 py-2 rounded-xl bg-white text-gray-900 text-[11px] sm:text-xs font-black shadow-lg">
-              อ่านต่อ <ArrowRight className="w-3.5 h-3.5" strokeWidth={2.75} />
-            </span>
-          )}
-        </div>
-      </div>
-    </SlideShell>
-  );
-}
-
 function ImageSlide({ image }: { image: ImageSlideData }) {
   return (
     <SlideShell href={image.link_url}>
@@ -188,7 +136,7 @@ export default function HeroCarousel({ slides }: { slides: CarouselSlide[] }) {
   const [current, setCurrent] = useState(0);
   const [direction, setDirection] = useState(1);
 
-  // Slides arrive asynchronously (campaign and news resolve after the images),
+  // Slides arrive asynchronously (the campaign resolves after the images),
   // so the list can shrink under a stale index - clamp instead of blanking.
   const safeIndex = slides.length > 0 ? Math.min(current, slides.length - 1) : 0;
 
@@ -234,9 +182,9 @@ export default function HeroCarousel({ slides }: { slides: CarouselSlide[] }) {
           transition={{ duration: 0.5, ease: 'easeInOut' }}
           className="absolute inset-0"
         >
-          {slide.kind === 'campaign' ? <CampaignSlide campaign={slide.campaign} />
-            : slide.kind === 'news'   ? <NewsSlide news={slide.news} />
-            :                           <ImageSlide image={slide.image} />}
+          {slide.kind === 'campaign'
+            ? <CampaignSlide campaign={slide.campaign} />
+            : <ImageSlide image={slide.image} />}
         </motion.div>
       </AnimatePresence>
 

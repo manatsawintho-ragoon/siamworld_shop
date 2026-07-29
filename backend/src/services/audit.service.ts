@@ -18,7 +18,14 @@ export type AuditActionType =
   // System
   | 'admin_settings' | 'admin_rcon_cmd'
   // Top-up campaigns
-  | 'campaign_create' | 'campaign_update' | 'campaign_delete' | 'campaign_points_grant';
+  | 'campaign_create' | 'campaign_update' | 'campaign_delete' | 'campaign_points_grant'
+  // Reward Shop. `price_raise` is split out from a plain update because raising
+  // a cost devalues points players already hold (design A10).
+  | 'admin_reward_create' | 'admin_reward_update' | 'admin_reward_delete' | 'admin_reward_price_raise'
+  // Reversing a top-up also claws back its campaign points.
+  | 'admin_topup_reverse'
+  // News
+  | 'admin_news_create' | 'admin_news_update' | 'admin_news_delete' | 'admin_news_restore';
 
 interface AuditParams {
   userId: number;

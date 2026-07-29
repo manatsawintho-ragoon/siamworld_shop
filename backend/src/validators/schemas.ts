@@ -240,11 +240,7 @@ export const createSlideSchema = z.object({
   active:     boolFlag.optional(),
 });
 
-// ─── News (rendered hero-carousel slides) ────────────────────
-
-// The carousel maps this to a fixed set of token classes, so it can never
-// become an arbitrary style string on the client.
-export const newsAccentEnum = z.enum(['primary', 'violet', 'amber', 'emerald', 'rose', 'sky']);
+// ─── News (player-facing blog) ───────────────────────────────
 
 // An empty string from a cleared <input type="datetime-local"> means "no
 // bound", not "epoch". Normalise it to null before z.coerce.date() turns it
@@ -254,31 +250,39 @@ const optionalDate = z.preprocess(
   z.coerce.date().nullable()
 ).optional();
 
+export const newsCategoryEnum = z.enum(['update', 'event', 'maintenance', 'patch', 'general']);
+
+// The either/or media rule (up to 3 images OR one video) is enforced in
+// news.logic.validateMedia, which the service calls, so both the API and any
+// future caller get the same answer.
+const newsMediaItem = z.object({
+  type: z.enum(['image', 'youtube']),
+  url: z.string().min(1).max(500),
+  caption: z.string().max(255).optional().nullable(),
+});
+
 const newsBaseFields = {
-  title:      z.string().min(1, 'ต้องระบุหัวข้อข่าว').max(255),
-  excerpt:    z.string().max(500).optional().nullable(),
-  badge:      z.string().max(40).optional().nullable(),
-  accent:     newsAccentEnum.optional(),
-  image_url:  z.string().max(500).optional().nullable(),
-  link_url:   z.string().max(500).optional().nullable(),
-  sort_order: z.number().int().optional(),
-  active:     boolFlag.optional(),
-  starts_at:  optionalDate,
-  ends_at:    optionalDate,
+  title:        z.string().min(1, 'ต้องระบุหัวข้อข่าว').max(255),
+  slug:         z.string().max(200).optional(),
+  excerpt:      z.string().max(500).optional().nullable(),
+  body:         z.string().max(100_000).optional().nullable(),
+  category:     newsCategoryEnum.optional(),
+  cover_image:  z.string().max(500).optional().nullable(),
+  pinned:       boolFlag.optional(),
+  published_at: optionalDate,
+  expires_at:   optionalDate,
+  media:        z.array(newsMediaItem).max(4).optional(),
+  allowSlugChange: z.boolean().optional(),
 };
 
-const newsWindowOrdered = (d: { starts_at?: Date | null; ends_at?: Date | null }) =>
-  !d.starts_at || !d.ends_at || d.ends_at > d.starts_at;
+const newsWindowOrdered = (d: { published_at?: Date | null; expires_at?: Date | null }) =>
+  !d.published_at || !d.expires_at || d.expires_at > d.published_at;
 
 export const createNewsSchema = z.object(newsBaseFields)
-  .refine(newsWindowOrdered, { message: 'เวลาสิ้นสุดต้องมากกว่าเวลาเริ่ม', path: ['ends_at'] });
+  .refine(newsWindowOrdered, { message: 'เวลาหมดอายุต้องมากกว่าเวลาเผยแพร่', path: ['expires_at'] });
 
 export const updateNewsSchema = z.object({ ...newsBaseFields, title: newsBaseFields.title.optional() })
-  .refine(newsWindowOrdered, { message: 'เวลาสิ้นสุดต้องมากกว่าเวลาเริ่ม', path: ['ends_at'] });
-
-export const reorderNewsSchema = z.object({
-  order: z.array(z.object({ id: z.number().int().positive(), sort_order: z.number().int() })),
-});
+  .refine(newsWindowOrdered, { message: 'เวลาหมดอายุต้องมากกว่าเวลาเผยแพร่', path: ['expires_at'] });
 
 // ─── Downloads ───────────────────────────────────────────────
 
@@ -357,6 +361,49 @@ export const campaignSchema = z.object({
   .refine(d => (d.dailyStartTime == null) === (d.dailyEndTime == null), {
     message: 'ต้องระบุเวลาเริ่มและสิ้นสุดรายวันคู่กัน', path: ['dailyEndTime'],
   });
+
+// ─── Reward Shop ─────────────────────────────────────────────
+
+export const redeemRewardSchema = z.object({
+  idempotencyKey: z.string().min(8).max(64).optional().nullable(),
+});
+
+const rewardBaseFields = {
+  name:        z.string().min(1, 'ต้องระบุชื่อของรางวัล').max(255),
+  description: z.string().max(2000).optional().nullable(),
+  image:       z.string().max(500).optional().nullable(),
+  point_cost:  z.number().int().positive('ราคาแต้มต้องมากกว่า 0'),
+  // null = unlimited. 0 is a valid "sold out" state an admin may set on purpose.
+  stock:          z.number().int().min(0).optional().nullable(),
+  per_user_limit: z.number().int().positive().optional().nullable(),
+  command:     z.string().min(1, 'ต้องระบุคำสั่ง RCON').max(5000),
+  requires_campaign_id: z.number().int().positive().optional().nullable(),
+  visible_from:  optionalDate,
+  visible_until: optionalDate,
+  active:      boolFlag.optional(),
+  sort_order:  z.number().int().optional(),
+};
+
+const rewardWindowOrdered = (d: { visible_from?: Date | null; visible_until?: Date | null }) =>
+  !d.visible_from || !d.visible_until || d.visible_until > d.visible_from;
+
+export const createRewardSchema = z.object(rewardBaseFields)
+  .refine(rewardWindowOrdered, { message: 'เวลาสิ้นสุดต้องมากกว่าเวลาเริ่ม', path: ['visible_until'] });
+
+export const updateRewardSchema = z.object({
+  ...rewardBaseFields,
+  name: rewardBaseFields.name.optional(),
+  point_cost: rewardBaseFields.point_cost.optional(),
+  command: rewardBaseFields.command.optional(),
+}).refine(rewardWindowOrdered, { message: 'เวลาสิ้นสุดต้องมากกว่าเวลาเริ่ม', path: ['visible_until'] });
+
+export const reorderRewardsSchema = z.object({
+  order: z.array(z.object({ id: z.number().int().positive(), sort_order: z.number().int() })),
+});
+
+export const reverseTopupSchema = z.object({
+  reason: z.string().min(1, 'ต้องระบุเหตุผลในการยกเลิก').max(500),
+});
 
 export const grantPointsSchema = z.object({
   userId: z.number().int().positive(),

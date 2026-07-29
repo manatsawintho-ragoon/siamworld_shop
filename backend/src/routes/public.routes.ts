@@ -4,6 +4,7 @@ import { settingsService } from '../services/settings.service';
 import { shopService } from '../services/shop.service';
 import { serverService } from '../services/server.service';
 import { newsService } from '../services/news.service';
+import { authenticate } from '../middleware/auth';
 import { z } from 'zod';
 
 const positiveIntParam = z.string().regex(/^\d+$/).transform(Number).optional();
@@ -32,8 +33,10 @@ router.get('/settings', async (_req: Request, res: Response, next: NextFunction)
       // New appearance toggles (1 = visible, 0 = hidden).
       'show_lootbox_nav', 'show_download_nav', 'show_topup_rank_widget', 'show_topup_daily_widget', 'show_live_shop_widget', 'show_popular_widget',
       'show_welcome_marquee', 'show_server_status_widget', 'show_gacha_live_widget', 'show_exclusive_gacha', 'show_popular_gacha', 'show_new_arrivals',
-      // Hero carousel: rendered (image-free) slide types.
-      'show_campaign_slide', 'show_news_slides',
+      // Hero carousel: the rendered campaign slide.
+      'show_campaign_slide',
+      // News blog + Reward Shop navigation.
+      'show_news_nav', 'show_rewards_nav', 'show_news_home',
       // Product image dimension hint (used by the upload UI placeholder).
       'product_image_width', 'product_image_height',
       // SEO / Google: verification code + optional metadata overrides (server-rendered).
@@ -59,25 +62,74 @@ router.get('/slides', async (_req: Request, res: Response, next: NextFunction) =
 });
 
 /**
- * Published news items for the hero carousel. Only the fields the slide draws
- * are exposed - the publishing window itself stays operator-internal, the same
- * way /campaign/active hides budget and caps.
+ * News index (the blog). Paginated, optional category filter.
+ * Drafts, scheduled and expired posts are filtered out in the service, so
+ * nothing unpublished can be reached by guessing a query string.
  */
-router.get('/news', async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/news', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const items = await newsService.getPublished();
+    const schema = z.object({
+      category: z.enum(['update', 'event', 'maintenance', 'patch', 'general']).optional(),
+      page: positiveIntParam,
+      limit: positiveIntParam,
+    });
+    const parsed = schema.safeParse(req.query);
+    if (!parsed.success) return res.status(400).json({ success: false, error: 'Invalid query parameters' });
+
+    const limit = Math.min(parsed.data.limit ?? 12, 50);
+    const page = parsed.data.page ?? 1;
+    const { total, news } = await newsService.getPublished({
+      category: parsed.data.category, limit, offset: (page - 1) * limit,
+    });
+
     cache(res, CATALOG_CACHE);
-    res.json({
-      success: true,
-      news: items.map(n => ({
-        id: n.id,
-        title: n.title,
-        excerpt: n.excerpt,
-        badge: n.badge,
-        accent: n.accent,
-        image_url: n.image_url,
-        link_url: n.link_url,
-      })),
+    res.json({ success: true, news, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
+  } catch (err) { next(err); }
+});
+
+/** Latest few posts for the homepage strip. */
+router.get('/news/latest', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const news = await newsService.getLatest(3);
+    cache(res, CATALOG_CACHE);
+    res.json({ success: true, news });
+  } catch (err) { next(err); }
+});
+
+/**
+ * One article. A soft-deleted post answers 410 Gone rather than 404 so inbound
+ * links and search engines learn it is intentionally retired (design B5).
+ */
+router.get('/news/:slug', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await newsService.getBySlug(req.params.slug);
+    if (result === null) { res.status(404).json({ success: false, message: 'ไม่พบข่าวนี้' }); return; }
+    if (result.gone)     { res.status(410).json({ success: false, message: 'ข่าวนี้ถูกลบแล้ว' }); return; }
+    cache(res, CATALOG_CACHE);
+    res.json({ success: true, article: result.article });
+  } catch (err) { next(err); }
+});
+
+/**
+ * Record a read. Deliberately NOT cached and deliberately a POST: the article
+ * GET sits on the 60s catalog cache tier, so counting there would miss every
+ * cached hit. Auth is optional - signed-out reads bump the view count, signed-in
+ * reads also record who read it.
+ */
+router.post('/news/:slug/view', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await newsService.getBySlug(req.params.slug);
+    if (result === null || result.gone) { res.json({ success: true }); return; }
+
+    const finish = async (userId: number | null) => {
+      await newsService.recordView(result.article.id, userId);
+      res.json({ success: true });
+    };
+
+    if (!req.headers.authorization) return void await finish(null);
+    authenticate(req, res, (err?: any) => {
+      // A bad or expired token must not fail the read - just count it anonymously.
+      finish(err ? null : (req.user?.userId ?? null)).catch(next);
     });
   } catch (err) { next(err); }
 });

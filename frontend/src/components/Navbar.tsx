@@ -7,7 +7,7 @@ import { useSettings } from '@/context/SettingsContext';
 import { useAuthModal } from '@/components/AuthModal';
 import {
   Home, ShoppingCart, PackageOpen, Coins, Download,
-  User, LogIn, type LucideIcon,
+  User, LogIn, Gift, Newspaper, type LucideIcon,
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -25,6 +25,8 @@ export default function Navbar() {
   // Default to shown ('1') so existing installs aren't surprised after the upgrade.
   const showLootbox  = (settings.show_lootbox_nav  ?? '1') === '1';
   const showDownload = (settings.show_download_nav ?? '1') === '1';
+  const showRewards  = (settings.show_rewards_nav  ?? '1') === '1';
+  const showNews     = (settings.show_news_nav     ?? '1') === '1';
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -74,7 +76,9 @@ export default function Navbar() {
             <NavLink href="/"         Icon={Home}          label="Home"      subLabel="หน้าแรก"       pathname={pathname} />
             <NavLink href="/shop"     Icon={ShoppingCart}  label="Itemshop"  subLabel="ร้านค้าไอเท็ม" pathname={pathname} />
             {showLootbox  && <NavLink href="/lootbox"  Icon={PackageOpen} label="Gacha"     subLabel="กล่องสุ่ม"     pathname={pathname} />}
+            {showRewards  && <NavLink href="/rewards"  Icon={Gift}        label="Rewards"   subLabel="แลกของรางวัล"  pathname={pathname} />}
             <NavLink href="/topup"    Icon={Coins}         label="Topup"     subLabel="เติมเงิน"       pathname={pathname} />
+            {showNews     && <NavLink href="/news"     Icon={Newspaper}   label="News"      subLabel="ข่าวสาร"        pathname={pathname} />}
             {showDownload && <NavLink href="/download" Icon={Download}     label="Download"  subLabel="ดาวน์โหลด"     pathname={pathname} />}
           </nav>
         </div>

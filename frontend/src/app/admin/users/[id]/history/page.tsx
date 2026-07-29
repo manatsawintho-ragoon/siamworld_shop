@@ -4,6 +4,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api, getToken } from '@/lib/api';
 import RconModal from '@/components/RconModal';
+import { useAdminAlert } from '@/components/AdminAlert';
 import { fmtDate } from '@/lib/dateFormat';
 
 interface HistoryLog {
@@ -16,6 +17,8 @@ interface HistoryLog {
   reference_id?: string;
   reward_type?: string;
   command?: string;
+  reversed_at?: string | null;
+  reversed_reason?: string | null;
 }
 
 // ─── Page ────────────────────────────────────────────────────────────────────
@@ -32,8 +35,36 @@ export default function UserHistoryPage() {
   const [limit] = useState(25);
   const [totalLogs, setTotalLogs] = useState(0);
   const [viewingRcon, setViewingRcon] = useState<string | null>(null);
+  const [reverseTarget, setReverseTarget] = useState<HistoryLog | null>(null);
+  const [reverseReason, setReverseReason] = useState('');
+  const [reversing, setReversing] = useState(false);
+  const { alert: adminAlert } = useAdminAlert();
 
   const totalPages = Math.ceil(totalLogs / limit);
+
+  const doReverse = async () => {
+    if (!reverseTarget || !reverseReason.trim()) return;
+    setReversing(true);
+    try {
+      const res: any = await api(`/admin/transactions/${reverseTarget.id}/reverse`, {
+        method: 'POST', token: getToken()!, body: { reason: reverseReason.trim() },
+      });
+      setReverseTarget(null);
+      setReverseReason('');
+      await adminAlert({
+        title: 'ยกเลิกรายการเติมเงินแล้ว',
+        message: `หักเงินคืน ฿${Number(res.amount || 0).toLocaleString()}`
+          + (res.pointsRevoked ? ` และดึง point คืน ${res.pointsRevoked}` : '')
+          + (res.pointsDebt ? ` (ตั้งหนี้ point ${res.pointsDebt})` : ''),
+        type: 'success',
+      });
+      loadLogs(page, activeTab);
+    } catch (err: any) {
+      await adminAlert({ title: 'ยกเลิกไม่สำเร็จ', message: err?.message || 'เกิดข้อผิดพลาด', type: 'error' });
+    } finally {
+      setReversing(false);
+    }
+  };
 
   const loadLogs = (p = page, tab = activeTab) => {
     setLogsLoading(true);
@@ -147,21 +178,41 @@ export default function UserHistoryPage() {
                 return (
                   <tr key={log.id} className="hover:bg-slate-50/70 transition-colors">
                     {activeTab === 'topup' ? (
-                      <>
-                        <td className="px-5 py-2.5">
-                          <p className="text-[12px] font-semibold text-gray-800">{log.description || 'ระบบเติมเงิน'}</p>
-                          <p className="text-[10px] text-gray-400 mt-0.5 font-mono bg-gray-100 inline-block px-1.5 py-0.5 rounded">Ref: {log.reference_id || '-'}</p>
-                        </td>
-                        <td className="px-5 py-2.5 text-center">
-                          <span className="inline-flex items-center px-3 py-1 bg-green-50 text-green-600 font-bold rounded-lg text-[11px] border border-green-100">
-                            +{parseFloat(String(log.amount || 0)).toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
-                          </span>
-                        </td>
-                        <td className="px-5 py-2.5 text-center">
-                          <p className="text-[11px] text-gray-700 font-semibold">{date}</p>
-                          <p className="text-[10px] text-gray-400">{time} น.</p>
-                        </td>
-                      </>
+                      (() => {
+                        const amt = parseFloat(String(log.amount || 0));
+                        const isReversal = amt < 0; // compensating negative row
+                        const isReversed = Boolean(log.reversed_at);
+                        return (
+                          <>
+                            <td className="px-5 py-2.5">
+                              <p className="text-[12px] font-semibold text-gray-800">{log.description || 'ระบบเติมเงิน'}</p>
+                              <p className="text-[10px] text-gray-400 mt-0.5 font-mono bg-gray-100 inline-block px-1.5 py-0.5 rounded">Ref: {log.reference_id || '-'}</p>
+                              {isReversed && (
+                                <p className="text-[10px] text-rose-500 mt-1 font-semibold">
+                                  <i className="fas fa-rotate-left mr-1" /> ยกเลิกแล้ว{log.reversed_reason ? `: ${log.reversed_reason}` : ''}
+                                </p>
+                              )}
+                            </td>
+                            <td className="px-5 py-2.5 text-center">
+                              <span className={`inline-flex items-center px-3 py-1 font-bold rounded-lg text-[11px] border ${
+                                isReversal ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-green-50 text-green-600 border-green-100'}`}>
+                                {isReversal ? '' : '+'}{amt.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
+                              </span>
+                            </td>
+                            <td className="px-5 py-2.5 text-center">
+                              <p className="text-[11px] text-gray-700 font-semibold">{date}</p>
+                              <p className="text-[10px] text-gray-400">{time} น.</p>
+                              {!isReversal && !isReversed && (
+                                <button
+                                  onClick={() => { setReverseTarget(log); setReverseReason(''); }}
+                                  className="mt-1.5 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-rose-50 text-rose-600 border border-rose-200 text-[10px] font-bold hover:bg-rose-100 transition-colors">
+                                  <i className="fas fa-rotate-left text-[8px]" /> ยกเลิกรายการ
+                                </button>
+                              )}
+                            </td>
+                          </>
+                        );
+                      })()
                     ) : activeTab === 'purchase' ? (
                       <>
                         <td className="px-5 py-2.5">
@@ -247,6 +298,43 @@ export default function UserHistoryPage() {
       {/* RCON Modal */}
       {viewingRcon !== null && (
         <RconModal command={viewingRcon} onClose={() => setViewingRcon(null)} />
+      )}
+
+      {/* Reverse top-up modal — the production caller of the point clawback */}
+      {reverseTarget && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onMouseDown={e => { if (e.target === e.currentTarget && !reversing) setReverseTarget(null); }}>
+          <div className="bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-full max-w-md overflow-hidden">
+            <div className="px-5 py-3 border-b border-gray-100 bg-rose-50/60 flex items-center gap-2">
+              <i className="fas fa-rotate-left text-rose-500 text-sm" />
+              <h3 className="font-bold text-gray-900 text-sm flex-1">ยกเลิกรายการเติมเงิน</h3>
+            </div>
+            <div className="p-5 space-y-3">
+              <div className="p-3 rounded-xl bg-gray-50 border border-gray-200 text-xs text-gray-600">
+                <p className="font-semibold text-gray-800">{reverseTarget.description || 'ระบบเติมเงิน'}</p>
+                <p className="mt-0.5">จำนวน <span className="font-bold text-gray-800">฿{parseFloat(String(reverseTarget.amount || 0)).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span></p>
+              </div>
+              <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-700">
+                <i className="fas fa-triangle-exclamation mt-0.5" />
+                <span>ระบบจะหักเงินคืนจากกระเป๋า (ติดลบได้) และดึง point จากแคมเปญที่รายการนี้เคยแจกกลับคืน ถ้า point ถูกใช้ไปแล้วจะกลายเป็นหนี้ point</span>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">เหตุผล <span className="text-red-500">*</span></label>
+                <textarea value={reverseReason} onChange={e => setReverseReason(e.target.value)} maxLength={500} rows={2}
+                  placeholder="เช่น ผู้เล่นแจ้ง chargeback / เติมผิดบัญชี"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-gray-400 resize-none" />
+              </div>
+            </div>
+            <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/60 flex items-center justify-end gap-2">
+              <button onClick={() => setReverseTarget(null)} disabled={reversing}
+                className="px-4 py-2 rounded-xl bg-white border border-gray-300 text-gray-700 text-sm font-bold">ยกเลิก</button>
+              <button onClick={doReverse} disabled={reversing || !reverseReason.trim()}
+                className="px-4 py-2 rounded-xl bg-red-600 border border-red-700 text-white text-sm font-bold shadow-[0_3px_0_#991b1b] active:translate-y-[3px] active:shadow-none transition-all disabled:opacity-60 flex items-center gap-2">
+                {reversing ? <><i className="fas fa-spinner fa-spin text-xs" /> กำลังทำรายการ</> : <><i className="fas fa-rotate-left text-xs" /> ยืนยันยกเลิก</>}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
