@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Prompt:wght@300;400;500;600;700;800;900&display=swap');
+/* Fonts are loaded from app/layout.tsx via <link rel="preconnect"> + <link
+   rel="stylesheet">. A duplicate @import here would re-request the same two
+   families and block CSS parsing until it resolved, so it is deliberately gone. */
 
 @tailwind base;
 @tailwind components;
@@ -99,12 +101,119 @@
 }
 
 /* ── Global Styles ──────────────────────────── */
+html {
+  /* Stops mobile Safari/Chrome from inflating text in landscape. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   font-family: 'Inter', 'Prompt', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: rgb(var(--color-background));
   color: rgb(var(--color-foreground));
+}
+/* NOTE: deliberately no `overflow-x: hidden` on html/body. It would turn the
+   body into a scroll container and break the desktop navbar's `position: sticky`.
+   Sideways overflow is fixed at the offending element instead. */
+
+/* ══════════════════════════════════════════════
+   MOBILE / RESPONSIVE FOUNDATION
+   ══════════════════════════════════════════════ */
+
+/* ── Touch responsiveness ──
+   `manipulation` drops the legacy 300ms double-tap-to-zoom delay on every
+   control, which is the single biggest reason a web app "feels" slower than a
+   native one. Scoped to controls so pinch-zoom on content still works. */
+a,
+button,
+select,
+summary,
+label,
+[role="button"],
+[role="tab"] {
+  touch-action: manipulation;
+}
+
+/* ── Safe-area helpers (notch / home indicator) ──
+   Require viewport-fit=cover, set in app/layout.tsx. The max() keeps a sane
+   floor on devices that report a 0 inset. */
+.pb-safe  { padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
+.pt-safe  { padding-top: max(0.5rem, env(safe-area-inset-top)); }
+.px-safe  { padding-left: max(0.25rem, env(safe-area-inset-left)); padding-right: max(0.25rem, env(safe-area-inset-right)); }
+
+/* Clearance for content sitting above the fixed mobile bottom nav (~64px tall).
+   Scoped to the mobile range on purpose: these are plain classes declared after
+   Tailwind's utilities, so an unscoped rule would out-order `md:pb-6` /
+   `md:bottom-6` and keep the phone spacing on desktop too. */
+@media (max-width: 767px) {
+  .pb-bottomnav    { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
+  .bottom-abovenav { bottom: calc(5.25rem + env(safe-area-inset-bottom)); }
+}
+
+/* ── Minimum touch target (WCAG 2.5.5 / platform HIG: 44x44) ── */
+.tap-target { min-width: 44px; min-height: 44px; }
+
+/* ── Horizontal chip / filter strip ──
+   The pattern used for category tabs everywhere: one scrollable row instead of
+   a `flex-wrap` block that grows to four ragged rows on a phone. The negative
+   margin + matching padding lets it bleed to the card edge so the last chip
+   doesn't look clipped mid-scroll. */
+.filter-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.filter-strip::-webkit-scrollbar { display: none; }
+.filter-strip > * { flex-shrink: 0; scroll-snap-align: start; }
+@media (min-width: 768px) {
+  /* Desktop has the room to show every chip at once. */
+  .filter-strip { flex-wrap: wrap; overflow-x: visible; }
+}
+
+/* ── iOS input zoom guard ──
+   Mobile Safari zooms the viewport whenever a focused field's font-size is
+   under 16px, and never zooms back out. Several forms here use text-xs/text-sm
+   for density, so pin the computed size to 16px on phones only; the desktop
+   sizing is untouched. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* ── Reduced motion ──
+   Honour the OS setting: kill the ambient loops (floating logo, marquee,
+   ping dots) outright and collapse everything else to a near-instant
+   transition rather than removing it, so state changes stay legible. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .logo-float,
+  .marquee-track {
+    animation: none !important;
+    transform: none !important;
+  }
+  /* Spinners are exempt: they report "still working", and a frozen one reads
+     as a hung page rather than as calm motion. */
+  .animate-spin {
+    animation: spin 1s linear infinite !important;
+  }
 }
 
 /* Selection */

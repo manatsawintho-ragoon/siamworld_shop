@@ -84,19 +84,21 @@ export default function TrueMoneyTopupPage() {
               className="relative bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl overflow-hidden shadow-[0_4px_0_#c2410c,0_2px_20px_rgba(249,115,22,0.4)]"
             >
               <div className="absolute -right-8 -top-8 w-40 h-40 bg-white/10 rounded-full blur-3xl pointer-events-none" />
-              <div className="relative flex items-center gap-4 px-5 py-4">
-                <div className="w-12 h-12 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center flex-shrink-0 shadow-sm">
+              <div className="relative flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center flex-shrink-0 shadow-sm">
                   <Zap className="w-5 h-5 text-white" strokeWidth={2.25} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-black text-white/70 uppercase tracking-widest mb-0.5">โปรโมชั่น TrueMoney</p>
-                  <h3 className="text-lg font-black text-white leading-tight">
+                  <h3 className="text-base sm:text-lg font-black text-white leading-tight">
                     เติมผ่านซองของขวัญ ได้รับโบนัส
-                    <span className="ml-2 text-2xl text-yellow-200 drop-shadow">x{bonusMult}</span>
+                    <span className="ml-2 text-xl sm:text-2xl text-yellow-200 drop-shadow">x{bonusMult}</span>
                   </h3>
                   <p className="text-[11px] text-white/80 font-bold mt-0.5">ซอง ฿100 → ได้รับ ฿{(100 * bonusMult).toLocaleString()} เข้า Wallet ทันที</p>
                 </div>
-                <div className="flex-shrink-0 text-center bg-white/20 border border-white/30 rounded-xl px-4 py-2">
+                {/* Hidden on phones: the multiplier is already spelled out in the
+                    headline, and this tile was stealing ~90px from it. */}
+                <div className="hidden sm:block flex-shrink-0 text-center bg-white/20 border border-white/30 rounded-xl px-4 py-2">
                   <p className="text-[9px] font-black text-white/70 uppercase tracking-wider">คูณเงิน</p>
                   <p className="text-3xl font-black text-white leading-none">x{bonusMult}</p>
                 </div>
@@ -142,7 +144,7 @@ export default function TrueMoneyTopupPage() {
             {/* STEP 1: Gift link input */}
             {tmnEnabled && step === 'input' && (
               <motion.div key="input" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}
-                className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-6 space-y-4 flex-1">
+                className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-4 sm:p-6 space-y-4 flex-1">
                 <div className="flex items-center gap-3 border-b border-border-muted pb-4">
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[#ed1c24] text-white"><Gift className="w-5 h-5" strokeWidth={2.25} /></div>
                   <div>
@@ -153,17 +155,22 @@ export default function TrueMoneyTopupPage() {
 
                 {/* ── Destination wallet (who the gift goes to) ── */}
                 {tmnPhone && (
-                  <div className="bg-red-500/8 border-2 border-[#ed1c24]/30 rounded-xl p-4 flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl bg-[#ed1c24] flex items-center justify-center flex-shrink-0 shadow-sm">
-                      <Smartphone className="w-5 h-5 text-white" strokeWidth={2.25} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-black text-[#ed1c24] uppercase tracking-widest">ส่งซองของขวัญมาที่เบอร์นี้</p>
-                      <p className="text-xl font-black text-foreground font-mono tracking-wider leading-tight mt-0.5">{tmnPhoneFmt}</p>
-                      <p className="text-[10px] font-bold text-foreground-subtle mt-0.5">กระเป๋า TrueMoney ของร้าน (ระบบแลกซองเข้าให้อัตโนมัติ)</p>
+                  /* Copy button drops to its own full-width row on phones: in
+                     one line the phone number (the thing being copied) was the
+                     part that got squeezed. */
+                  <div className="bg-red-500/8 border-2 border-[#ed1c24]/30 rounded-xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-11 h-11 rounded-xl bg-[#ed1c24] flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <Smartphone className="w-5 h-5 text-white" strokeWidth={2.25} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-black text-[#ed1c24] uppercase tracking-widest">ส่งซองของขวัญมาที่เบอร์นี้</p>
+                        <p className="text-lg sm:text-xl font-black text-foreground font-mono tracking-wider leading-tight mt-0.5">{tmnPhoneFmt}</p>
+                        <p className="text-[10px] font-bold text-foreground-subtle mt-0.5">กระเป๋า TrueMoney ของร้าน (ระบบแลกซองเข้าให้อัตโนมัติ)</p>
+                      </div>
                     </div>
                     <button type="button" onClick={copyPhone}
-                      className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface border-2 border-[#ed1c24]/30 text-[#ed1c24] text-[11px] font-black hover:brightness-95 transition-all">
+                      className="w-full sm:w-auto sm:flex-shrink-0 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-surface border-2 border-[#ed1c24]/30 text-[#ed1c24] text-[11px] font-black hover:brightness-95 transition-all">
                       {copied ? <Check className="w-3 h-3" strokeWidth={3} /> : <Copy className="w-3 h-3" strokeWidth={2.5} />}
                       {copied ? 'คัดลอกแล้ว' : 'คัดลอก'}
                     </button>
@@ -179,7 +186,10 @@ export default function TrueMoneyTopupPage() {
 
                   <div className="bg-red-500/5 border border-dashed border-red-500/25 rounded-xl p-4">
                     <h4 className="text-[12px] font-black text-[#ed1c24] mb-3 flex items-center gap-2"><Info className="w-3.5 h-3.5" strokeWidth={2.25} /> ขั้นตอนการสร้างซอง</h4>
-                    <div className="grid grid-cols-5 gap-2">
+                    {/* Five columns only from md up. On a 360px phone that grid
+                        gave each screenshot ~58px of width with a 9px caption -
+                        unreadable, which is the opposite of what a how-to is for. */}
+                    <div className="grid grid-cols-2 xs:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
                       {[
                         { n: 1, t: 'เข้าแอป TrueMoney Wallet เลือก "ส่งซองของขวัญ"' },
                         { n: 2, t: 'ระบุจำนวนเงินที่ต้องการเติม' },
@@ -189,10 +199,10 @@ export default function TrueMoneyTopupPage() {
                       ].map(s => (
                         <div key={s.n} className="flex flex-col items-center text-center gap-1.5">
                           <div className="relative w-full aspect-[3/5] rounded-lg overflow-hidden border border-border-muted bg-white">
-                            <img src={`/images/truemoney-sendgift-icon-20240521-how-to-create-${s.n}.png`} alt={`ขั้นตอนที่ ${s.n}`} className="w-full h-full object-contain" />
-                            <span className="absolute top-1 left-1 w-4 h-4 rounded-full bg-[#ed1c24] text-white text-[9px] font-black flex items-center justify-center">{s.n}</span>
+                            <img src={`/images/truemoney-sendgift-icon-20240521-how-to-create-${s.n}.png`} alt={`ขั้นตอนที่ ${s.n}`} className="w-full h-full object-contain" loading="lazy" />
+                            <span className="absolute top-1 left-1 w-5 h-5 rounded-full bg-[#ed1c24] text-white text-[10px] font-black flex items-center justify-center">{s.n}</span>
                           </div>
-                          <p className="text-[9px] font-bold text-foreground-subtle leading-tight">{s.t}</p>
+                          <p className="text-[10px] md:text-[9px] font-bold text-foreground-subtle leading-tight">{s.t}</p>
                         </div>
                       ))}
                     </div>
@@ -210,7 +220,7 @@ export default function TrueMoneyTopupPage() {
             {/* STEP 2: Success */}
             {step === 'success' && (
               <motion.div key="success" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-8 space-y-6 text-center flex-1">
+                className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-5 sm:p-8 space-y-6 text-center flex-1">
                 <div className="relative inline-block">
                   <div className="absolute inset-0 bg-success/10 rounded-full blur-2xl animate-pulse" />
                   <div className="relative w-20 h-20 rounded-2xl bg-success flex items-center justify-center text-white shadow-xl mx-auto"><Check className="w-8 h-8" strokeWidth={2.5} /></div>
@@ -220,18 +230,18 @@ export default function TrueMoneyTopupPage() {
                   <p className="text-sm font-bold text-foreground-subtle">ยอดเงินได้รับการเติมเข้า Wallet เรียบร้อยแล้ว</p>
                 </div>
                 {successMultiplier > 1 ? (
-                  <div className="bg-orange-500/10 rounded-xl p-4 border border-orange-500/20 max-w-[260px] mx-auto space-y-2">
+                  <div className="bg-orange-500/10 rounded-xl p-4 border border-orange-500/20 max-w-xs w-full mx-auto space-y-2">
                     <div className="flex items-center justify-between text-[11px]"><span className="font-bold text-foreground-subtle">ยอดในซอง</span><span className="font-black text-foreground-muted">฿{successPaid.toLocaleString()}</span></div>
                     <div className="flex items-center justify-between text-[11px]"><span className="font-bold text-orange-500 flex items-center gap-1"><Zap className="w-2.5 h-2.5" strokeWidth={2.5} />โบนัส x{successMultiplier}</span><span className="font-black text-orange-500">+฿{(successAmount - successPaid).toLocaleString()}</span></div>
                     <div className="border-t border-orange-500/20 pt-2 flex items-center justify-between"><span className="text-[10px] font-black text-foreground-subtle uppercase tracking-wider">ได้รับเข้า Wallet</span><span className="text-2xl font-black text-orange-600">฿{successAmount.toLocaleString()}</span></div>
                   </div>
                 ) : (
-                  <div className="bg-surface-hover rounded-xl p-4 border border-border-muted max-w-[200px] mx-auto">
+                  <div className="bg-surface-hover rounded-xl p-4 border border-border-muted max-w-[220px] w-full mx-auto">
                     <p className="text-[9px] font-black text-foreground-subtle uppercase tracking-widest mb-0.5">จำนวนที่เติมเงิน</p>
                     <p className="text-3xl font-black text-success">฿{successAmount.toLocaleString()}</p>
                   </div>
                 )}
-                <div className="flex flex-col gap-2.5 max-w-[240px] mx-auto">
+                <div className="flex flex-col gap-2.5 max-w-[260px] w-full mx-auto">
                   <button onClick={() => router.push('/shop')} className="btn-primary w-full py-3 text-white font-black text-[13px] shadow-[0_4px_0_rgb(var(--color-primary-muted))] flex items-center justify-center gap-2"><ShoppingCart className="w-3.5 h-3.5" strokeWidth={2.25} /> ไปที่หน้าร้านค้า</button>
                   <button onClick={reset} className="text-[11px] font-black text-foreground-subtle hover:text-primary transition-colors">เติมเงินรายการใหม่</button>
                 </div>

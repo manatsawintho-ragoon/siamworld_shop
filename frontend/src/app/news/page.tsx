@@ -97,15 +97,15 @@ export default function NewsIndexPage() {
       </div>
 
       {/* Category filter */}
-      <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-1">
+      <div className="filter-strip mb-5 pb-1">
         <button onClick={() => { setCategory(null); setPage(1); }}
-          className={`px-3.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all ${
+          className={`px-3.5 py-2 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all ${
             category === null ? 'bg-primary text-primary-foreground' : 'bg-surface-hover text-foreground-muted hover:text-foreground'}`}>
           ทั้งหมด
         </button>
         {NEWS_CATEGORY_ORDER.map(c => (
           <button key={c} onClick={() => { setCategory(c); setPage(1); }}
-            className={`px-3.5 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all ${
+            className={`px-3.5 py-2 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all ${
               category === c ? 'bg-primary text-primary-foreground' : 'bg-surface-hover text-foreground-muted hover:text-foreground'}`}>
             {NEWS_CATEGORIES[c].label}
           </button>

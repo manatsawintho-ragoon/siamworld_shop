@@ -87,7 +87,10 @@ export default function RewardShopPage() {
         </div>
 
         {user && (
-          <div className="ml-auto flex items-center gap-2 px-4 py-2.5 rounded-2xl theme-navbar-banner text-white shadow-theme-sm">
+          /* Wraps to its own full-width row on phones instead of being squeezed
+             next to the title - the balance is what decides whether anything on
+             this page is affordable, so it should stay legible. */
+          <div className="w-full sm:w-auto sm:ml-auto flex items-center gap-2 px-4 py-2.5 rounded-2xl theme-navbar-banner text-white shadow-theme-sm">
             <Coins className="w-4 h-4 text-white/85" strokeWidth={2.5} />
             <div className="leading-tight">
               <p className="text-[10px] font-bold text-white/75 uppercase tracking-wider">point ของคุณ</p>
@@ -126,7 +129,7 @@ export default function RewardShopPage() {
       )}
 
       {loading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {[0, 1, 2, 3].map(i => (
             <div key={i} className="theme-card overflow-hidden animate-pulse">
               <div className="aspect-square bg-border-muted" />
@@ -146,7 +149,7 @@ export default function RewardShopPage() {
           <p className="text-xs text-foreground-subtle mt-1">รอผู้ดูแลเพิ่มของรางวัลเร็ว ๆ นี้</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {rewards.map((r, i) => {
             const blocked = blockReason(r, balance, Boolean(user));
             const remaining = r.perUserLimit !== null ? r.perUserLimit - r.alreadyRedeemed : null;
@@ -202,7 +205,7 @@ export default function RewardShopPage() {
                   <button
                     onClick={() => redeem(r)}
                     disabled={Boolean(blocked) || redeeming === r.id}
-                    className={`mt-3 w-full py-2 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1.5 ${
+                    className={`mt-3 w-full py-2.5 min-h-[40px] rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1.5 ${
                       blocked
                         ? 'bg-surface-hover text-foreground-subtle cursor-not-allowed'
                         : 'bg-primary text-primary-foreground hover:brightness-110 active:scale-95'}`}>

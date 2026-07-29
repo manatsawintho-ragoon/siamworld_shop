@@ -58,7 +58,7 @@ export default function TopupSelectPage() {
           <button
             onClick={() => ppEnabled && router.push('/topup/promptpay')}
             disabled={!ppEnabled}
-            className={`group relative bg-surface rounded-2xl border-2 overflow-hidden flex flex-col shadow-theme-sm transition-all duration-300 text-center h-[300px] ${
+            className={`group relative bg-surface rounded-2xl border-2 overflow-hidden flex flex-col shadow-theme-sm transition-all duration-300 text-center min-h-[240px] sm:h-[300px] ${
               ppEnabled ? 'border-primary/30 hover:border-[#003b80] hover:shadow-lg' : 'border-border grayscale opacity-70 cursor-not-allowed'
             }`}
           >
@@ -70,13 +70,13 @@ export default function TopupSelectPage() {
             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
               <QrCode className="w-16 h-16 text-[#003b80]" strokeWidth={1.5} />
             </div>
-            <div className="flex-1 flex flex-col items-center justify-center p-6 gap-4 relative z-10">
+            <div className="flex-1 flex flex-col items-center justify-center p-5 sm:p-6 gap-3 sm:gap-4 relative z-10">
               <div className="relative">
                 <div className="absolute inset-0 bg-[#003b80]/5 rounded-full blur-2xl group-hover:scale-125 transition-transform duration-500" />
-                <img src="/images/thai_qr_payment.png" alt="PromptPay" className="relative h-20 w-auto object-contain transform group-hover:scale-105 transition-transform duration-300" />
+                <img src="/images/thai_qr_payment.png" alt="PromptPay" className="relative h-16 sm:h-20 w-auto object-contain transform group-hover:scale-105 transition-transform duration-300" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-xl font-black text-[#003b80]">PromptPay</h3>
+                <h3 className="text-lg sm:text-xl font-black text-[#003b80]">PromptPay</h3>
                 <p className="text-xs font-bold text-foreground-subtle leading-tight">
                   สแกนจ่ายผ่าน QR Code<br/>
                   <span className="text-[9px] uppercase tracking-wider opacity-60">
@@ -94,7 +94,7 @@ export default function TopupSelectPage() {
           <button
             onClick={() => tmnEnabled && router.push('/topup/truemoney')}
             disabled={!tmnEnabled}
-            className={`group relative bg-surface rounded-2xl border-2 overflow-hidden flex flex-col shadow-theme-sm transition-all duration-300 text-center h-[300px] ${
+            className={`group relative bg-surface rounded-2xl border-2 overflow-hidden flex flex-col shadow-theme-sm transition-all duration-300 text-center min-h-[240px] sm:h-[300px] ${
               tmnEnabled ? 'border-primary/30 hover:border-[#ed1c24] hover:shadow-lg' : 'border-border grayscale opacity-70 cursor-not-allowed'
             }`}
           >
@@ -106,13 +106,13 @@ export default function TopupSelectPage() {
             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
               <Wallet className="w-16 h-16 text-[#ed1c24]" strokeWidth={1.5} />
             </div>
-            <div className="flex-1 flex flex-col items-center justify-center p-6 gap-4 relative z-10">
+            <div className="flex-1 flex flex-col items-center justify-center p-5 sm:p-6 gap-3 sm:gap-4 relative z-10">
               <div className="relative">
                 <div className="absolute inset-0 bg-[#ed1c24]/5 rounded-full blur-2xl group-hover:scale-125 transition-transform duration-500" />
-                <img src="/images/truemoney_wallet.png" alt="TrueMoney" className="relative h-16 w-auto object-contain transform group-hover:scale-105 transition-transform duration-300" />
+                <img src="/images/truemoney_wallet.png" alt="TrueMoney" className="relative h-14 sm:h-16 w-auto object-contain transform group-hover:scale-105 transition-transform duration-300" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-xl font-black text-[#ed1c24]">TrueMoney Wallet</h3>
+                <h3 className="text-lg sm:text-xl font-black text-[#ed1c24]">TrueMoney Wallet</h3>
                 <p className="text-xs font-bold text-foreground-subtle leading-tight">
                   เติมผ่านซองของขวัญ<br/>
                   <span className="text-[9px] uppercase tracking-wider opacity-60">

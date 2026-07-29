@@ -180,19 +180,21 @@ export default function PromptPayTopupPage() {
               className="relative bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl overflow-hidden shadow-[0_4px_0_#c2410c,0_2px_20px_rgba(249,115,22,0.4)]"
             >
               <div className="absolute -right-8 -top-8 w-40 h-40 bg-white/10 rounded-full blur-3xl pointer-events-none" />
-              <div className="relative flex items-center gap-4 px-5 py-4">
-                <div className="w-12 h-12 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center flex-shrink-0 shadow-sm">
+              <div className="relative flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center flex-shrink-0 shadow-sm">
                   <Zap className="w-5 h-5 text-white" strokeWidth={2.25} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-black text-white/70 uppercase tracking-widest mb-0.5">โปรโมชั่น PromptPay</p>
-                  <h3 className="text-lg font-black text-white leading-tight">
+                  <h3 className="text-base sm:text-lg font-black text-white leading-tight">
                     เติมผ่าน PromptPay วันนี้ ได้รับโบนัส
-                    <span className="ml-2 text-2xl text-yellow-200 drop-shadow">x{bonusMult}</span>
+                    <span className="ml-2 text-xl sm:text-2xl text-yellow-200 drop-shadow">x{bonusMult}</span>
                   </h3>
                   <p className="text-[11px] text-white/80 font-bold mt-0.5">เติม ฿100 → ได้รับ ฿{(100 * bonusMult).toLocaleString()} เข้า Wallet ทันที</p>
                 </div>
-                <div className="flex-shrink-0 text-center bg-white/20 border border-white/30 rounded-xl px-4 py-2">
+                {/* Hidden on phones: the multiplier is already spelled out in the
+                    headline, and this tile was stealing ~90px from it. */}
+                <div className="hidden sm:block flex-shrink-0 text-center bg-white/20 border border-white/30 rounded-xl px-4 py-2">
                   <p className="text-[9px] font-black text-white/70 uppercase tracking-wider">คูณเงิน</p>
                   <p className="text-3xl font-black text-white leading-none">x{bonusMult}</p>
                 </div>
@@ -241,7 +243,7 @@ export default function PromptPayTopupPage() {
             {/* STEP 1: Amount */}
             {ppEnabled && step === 'amount' && (
               <motion.div key="amount" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}
-                className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-6 space-y-4 flex-1">
+                className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-4 sm:p-6 space-y-4 flex-1">
                 <div className="flex items-center gap-3 border-b border-border-muted pb-4">
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[#003b80] text-white"><QrCode className="w-5 h-5" strokeWidth={2.25} /></div>
                   <div>
@@ -250,10 +252,13 @@ export default function PromptPayTopupPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
+                {/* Two columns below 400px so each preset stays a comfortable
+                    tap target instead of three ~90px slivers. */}
+                <div className="grid grid-cols-2 xs:grid-cols-3 gap-2">
                   {AMOUNTS.map(a => (
                     <button key={a} onClick={() => { setAmount(a); setCustom(String(a)); }}
-                      className={`py-3 rounded-lg font-black text-sm border-2 transition-all ${
+                      aria-pressed={custom === String(a) || (!custom && amount === a)}
+                      className={`py-3.5 min-h-[48px] rounded-lg font-black text-sm border-2 transition-all ${
                         custom === String(a) || (!custom && amount === a)
                           ? 'bg-[#003b80] text-white border-[#003b80] shadow-[0_3px_0_#002147]'
                           : 'bg-surface-hover text-foreground-subtle border-border-muted hover:border-primary/40'
@@ -330,7 +335,7 @@ export default function PromptPayTopupPage() {
             {/* STEP 2: QR */}
             {step === 'qr' && (
               <motion.div key="qr" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }}
-                className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-6 space-y-4 flex-1 flex flex-col items-center">
+                className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-4 sm:p-6 space-y-4 flex-1 flex flex-col items-center">
                 <div className="text-center">
                   <h2 className="text-xl font-black text-[#003b80] leading-none">แสกนชำระเงิน</h2>
                   <p className="text-xs font-bold text-foreground-subtle mt-1">สแกน QR Code ด้วยแอปธนาคารของคุณ</p>
@@ -376,7 +381,7 @@ export default function PromptPayTopupPage() {
             {/* STEP 3: Upload */}
             {step === 'upload' && (
               <motion.div key="upload" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}
-                className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-6 space-y-4 flex-1">
+                className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-4 sm:p-6 space-y-4 flex-1">
                 <div className="text-center space-y-1">
                   <h2 className="text-xl font-black text-foreground leading-none">อัปโหลดหลักฐานสลิป</h2>
                   <p className="text-xs font-bold text-foreground-subtle">อัปโหลดสลิปเพื่อให้ระบบตรวจสอบความถูกต้อง</p>
@@ -438,7 +443,7 @@ export default function PromptPayTopupPage() {
             {/* STEP 4: Success */}
             {step === 'success' && (
               <motion.div key="success" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-8 space-y-6 text-center flex-1">
+                className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-5 sm:p-8 space-y-6 text-center flex-1">
                 <div className="relative inline-block">
                   <div className="absolute inset-0 bg-success/10 rounded-full blur-2xl animate-pulse" />
                   <div className="relative w-20 h-20 rounded-2xl bg-success flex items-center justify-center text-white shadow-xl mx-auto"><Check className="w-8 h-8" strokeWidth={2.5} /></div>
@@ -448,18 +453,18 @@ export default function PromptPayTopupPage() {
                   <p className="text-sm font-bold text-foreground-subtle">ยอดเงินได้รับการเติมเข้า Wallet เรียบร้อยแล้ว</p>
                 </div>
                 {successMultiplier > 1 ? (
-                  <div className="bg-orange-500/10 rounded-xl p-4 border border-orange-500/20 max-w-[260px] mx-auto space-y-2">
+                  <div className="bg-orange-500/10 rounded-xl p-4 border border-orange-500/20 max-w-xs w-full mx-auto space-y-2">
                     <div className="flex items-center justify-between text-[11px]"><span className="font-bold text-foreground-subtle">ยอดที่โอน</span><span className="font-black text-foreground-muted">฿{successPaid.toLocaleString()}</span></div>
                     <div className="flex items-center justify-between text-[11px]"><span className="font-bold text-orange-500 flex items-center gap-1"><Zap className="w-2.5 h-2.5" strokeWidth={2.5} />โบนัส x{successMultiplier}</span><span className="font-black text-orange-500">+฿{(successAmount - successPaid).toLocaleString()}</span></div>
                     <div className="border-t border-orange-500/20 pt-2 flex items-center justify-between"><span className="text-[10px] font-black text-foreground-subtle uppercase tracking-wider">ได้รับเข้า Wallet</span><span className="text-2xl font-black text-orange-600">฿{successAmount.toLocaleString()}</span></div>
                   </div>
                 ) : (
-                  <div className="bg-surface-hover rounded-xl p-4 border border-border-muted max-w-[200px] mx-auto">
+                  <div className="bg-surface-hover rounded-xl p-4 border border-border-muted max-w-[220px] w-full mx-auto">
                     <p className="text-[9px] font-black text-foreground-subtle uppercase tracking-widest mb-0.5">จำนวนที่เติมเงิน</p>
                     <p className="text-3xl font-black text-success">฿{successAmount.toLocaleString()}</p>
                   </div>
                 )}
-                <div className="flex flex-col gap-2.5 max-w-[240px] mx-auto">
+                <div className="flex flex-col gap-2.5 max-w-[260px] w-full mx-auto">
                   <button onClick={() => router.push('/shop')} className="btn-primary w-full py-3 text-white font-black text-[13px] shadow-[0_4px_0_rgb(var(--color-primary-muted))] flex items-center justify-center gap-2"><ShoppingCart className="w-3.5 h-3.5" strokeWidth={2.25} /> ไปที่หน้าร้านค้า</button>
                   <button onClick={reset} className="text-[11px] font-black text-foreground-subtle hover:text-primary transition-colors">เติมเงินรายการใหม่</button>
                 </div>

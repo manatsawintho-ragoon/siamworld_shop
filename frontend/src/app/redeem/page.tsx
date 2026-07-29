@@ -170,7 +170,7 @@ export default function RedeemCodePage() {
                 <label className="block text-xs font-bold text-foreground-subtle mb-2">
                   เซิร์ฟเวอร์ที่จะรับไอเท็ม
                 </label>
-                <div className={`grid gap-2 ${servers.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                <div className={`grid gap-2 ${servers.length === 1 ? "grid-cols-1" : "grid-cols-1 xs:grid-cols-2"}`}>
                   {servers.map(s => (
                     <button
                       key={s.id}
@@ -251,7 +251,7 @@ export default function RedeemCodePage() {
       <AnimatePresence>
         {confirmOpen && (
           <motion.div
-            className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-black/50 backdrop-blur-sm"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={() => setConfirmOpen(false)}
           >

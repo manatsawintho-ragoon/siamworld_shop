@@ -51,10 +51,12 @@ function RarityBadge({ rarity }: { rarity: string }) {
 /* ── Server Select ── */
 function ServerSelect({ servers, value, onChange }: { servers: Server[]; value: number; onChange: (id: number) => void }) {
   return (
-    <div className={`grid gap-2 ${servers.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+    // Single column on the narrowest phones: two columns there left ~120px per
+    // button, which truncated most real server names to a couple of characters.
+    <div className={`grid gap-2 ${servers.length === 1 ? 'grid-cols-1' : 'grid-cols-1 xs:grid-cols-2'}`}>
       {servers.map(s => (
         <button key={s.id} type="button" onClick={() => onChange(s.id)}
-          className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border-2 text-xs font-bold transition-all ${
+          className={`flex items-center gap-2 px-3 py-3 rounded-lg border-2 text-xs font-bold transition-all ${
             value === s.id ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface text-foreground-subtle hover:border-primary/40'
           }`}>
           <Server className={`w-3 h-3 ${value === s.id ? 'text-primary' : 'text-foreground-subtle'}`} strokeWidth={2.25} />
@@ -188,8 +190,10 @@ export default function InventoryPage() {
             <p className="text-xs text-foreground-subtle mt-0.5">ไอเท็มที่คุณสุ่มได้ กดรับเพื่อส่งเข้าเกม Minecraft ของคุณ</p>
           </div>
           {pendingCount > 0 && (
+            /* Full-width on phones: this is the page's primary action and it
+               was previously a small chip stranded under the heading. */
             <button onClick={() => { setRedeemAllError(''); setRedeemAllModal(true); }}
-              className="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-[13px] font-bold rounded-lg shadow-[0_4px_0_rgb(var(--color-primary-shadow))] hover:brightness-110 transition-all active:shadow-[0_2px_0_rgb(var(--color-primary-shadow))] active:translate-y-[2px]">
+              className="w-full sm:w-auto sm:flex-shrink-0 flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 bg-primary text-primary-foreground text-[13px] font-bold rounded-lg shadow-[0_4px_0_rgb(var(--color-primary-shadow))] hover:brightness-110 transition-all active:shadow-[0_2px_0_rgb(var(--color-primary-shadow))] active:translate-y-[2px]">
               <Gamepad2 className="w-3.5 h-3.5" strokeWidth={2.25} /> รับทั้งหมด ({pendingCount})
             </button>
           )}
@@ -253,7 +257,7 @@ export default function InventoryPage() {
 
         {/* ── Grid ── */}
         {loading ? (
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5 sm:gap-3">
             {Array.from({ length: 12 }).map((_, i) => (
               <div key={i} className="rounded-xl h-44 bg-surface-hover animate-pulse" />
             ))}
@@ -272,7 +276,7 @@ export default function InventoryPage() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5 sm:gap-3">
               {paginated.map(item => {
                 const rar       = getRarity(item.item_rarity);
                 const shadow    = RARITY_SHADOW[item.item_rarity] ?? RARITY_SHADOW.common;
@@ -357,7 +361,7 @@ export default function InventoryPage() {
                 </p>
                 <div className="flex items-center gap-1.5">
                   <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} aria-label="หน้าก่อนหน้า"
-                    className="w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center text-foreground-subtle shadow-sm hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:shadow-none active:translate-y-[2px]">
+                    className="w-9 h-9 sm:w-8 sm:h-8 rounded-lg bg-surface border border-border flex items-center justify-center text-foreground-subtle shadow-sm hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:shadow-none active:translate-y-[2px]">
                     <ChevronLeft className="w-3 h-3" strokeWidth={2.5} />
                   </button>
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => {
@@ -367,7 +371,7 @@ export default function InventoryPage() {
                     if (!show) return null;
                     return (
                       <button key={p} onClick={() => setPage(p)}
-                        className={`w-8 h-8 rounded-lg text-[12px] font-bold transition-all ${
+                        className={`w-9 h-9 sm:w-8 sm:h-8 rounded-lg text-[12px] font-bold transition-all ${
                           p === page
                             ? 'bg-primary text-primary-foreground shadow-[0_3px_0_rgb(var(--color-primary-shadow))] active:shadow-none active:translate-y-[2px]'
                             : 'bg-surface border border-border text-foreground-subtle shadow-sm hover:brightness-95 active:shadow-none active:translate-y-[2px]'
@@ -376,7 +380,7 @@ export default function InventoryPage() {
                     );
                   })}
                   <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} aria-label="หน้าถัดไป"
-                    className="w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center text-foreground-subtle shadow-sm hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:shadow-none active:translate-y-[2px]">
+                    className="w-9 h-9 sm:w-8 sm:h-8 rounded-lg bg-surface border border-border flex items-center justify-center text-foreground-subtle shadow-sm hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:shadow-none active:translate-y-[2px]">
                     <ChevronRight className="w-3 h-3" strokeWidth={2.5} />
                   </button>
                 </div>
@@ -394,12 +398,12 @@ export default function InventoryPage() {
               const rar = getRarity(redeemModal.item_rarity);
               const shadow = RARITY_SHADOW[redeemModal.item_rarity] ?? RARITY_SHADOW.common;
               return (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-black/50 backdrop-blur-[2px]"
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/50 backdrop-blur-[2px]"
                   onMouseDown={e => { backdropRef.current = e.target === e.currentTarget; }}
                   onMouseUp={e => { if (backdropRef.current && e.target === e.currentTarget) setRedeemModal(null); }}>
                   <motion.div initial={{ opacity: 0, scale: 0.95, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 8 }} transition={{ type: 'spring', stiffness: 400, damping: 26 }}
-                    className="bg-surface rounded-2xl shadow-sm border border-border/80 w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden">
+                    className="bg-surface rounded-2xl shadow-sm border border-border/80 w-full max-w-sm max-h-[88dvh] flex flex-col overflow-hidden">
                     <div className="relative px-6 py-4 border-b border-border bg-surface-hover/60 flex items-center flex-shrink-0">
                       <div className="w-8 h-8 rounded-lg bg-primary/12 flex items-center justify-center flex-shrink-0">
                         <Gamepad2 className="w-3.5 h-3.5 text-primary" strokeWidth={2.25} />
@@ -465,12 +469,12 @@ export default function InventoryPage() {
         <div data-theme-portal="">
           <AnimatePresence>
             {redeemAllModal && (
-              <div className="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-black/50 backdrop-blur-[2px]"
+              <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/50 backdrop-blur-[2px]"
                 onMouseDown={e => { backdropRef.current = e.target === e.currentTarget; }}
                 onMouseUp={e => { if (backdropRef.current && e.target === e.currentTarget && !redeemAllLoading) setRedeemAllModal(false); }}>
                 <motion.div initial={{ opacity: 0, scale: 0.95, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 8 }} transition={{ type: 'spring', stiffness: 400, damping: 26 }}
-                  className="bg-surface rounded-2xl shadow-sm border border-border/80 w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden">
+                  className="bg-surface rounded-2xl shadow-sm border border-border/80 w-full max-w-sm max-h-[88dvh] flex flex-col overflow-hidden">
                   <div className="relative px-6 py-4 border-b border-border bg-surface-hover/60 flex items-center flex-shrink-0">
                     <div className="w-8 h-8 rounded-lg bg-primary/12 flex items-center justify-center flex-shrink-0">
                       <Gamepad2 className="w-3.5 h-3.5 text-primary" strokeWidth={2.25} />
