@@ -80,6 +80,23 @@ const files = sourceFiles(SRC);
 const rel = (file: string) => path.relative(SRC, file);
 const lineOf = (src: string, index: number) => src.slice(0, index).split('\n').length;
 
+/**
+ * Collects every match. Written with exec rather than [...matchAll()] because
+ * the app compiles with target es5 and no downlevelIteration, so spreading an
+ * iterator is a compile error.
+ */
+function matches(pattern: RegExp, src: string): RegExpExecArray[] {
+  const re = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`);
+  const found: RegExpExecArray[] = [];
+  let m = re.exec(src);
+  while (m !== null) {
+    found.push(m);
+    if (m[0] === '') re.lastIndex += 1;
+    m = re.exec(src);
+  }
+  return found;
+}
+
 function flatten(obj: Record<string, unknown>, prefix = ''): string[] {
   return Object.entries(obj).flatMap(([k, v]) => {
     const key = prefix ? `${prefix}.${k}` : k;
@@ -98,9 +115,9 @@ describe('translated strings', () => {
     const offenders = files.flatMap((file) => {
       const src = readFileSync(file, 'utf8');
       const inside = literalRanges(src);
-      return [...src.matchAll(/\{t[A-Za-z]*\(\s*['"]([^'"]+)/g)]
-        .filter((m) => inside[m.index!])
-        .map((m) => `${rel(file)}:${lineOf(src, m.index!)} {t('${m[1]}')}`);
+      return matches(/\{t[A-Za-z]*\(\s*['"]([^'"]+)/g, src)
+        .filter((m) => inside[m.index])
+        .map((m) => `${rel(file)}:${lineOf(src, m.index)} {t('${m[1]}')}`);
     });
     expect(offenders).toEqual([]);
   });
@@ -110,22 +127,23 @@ describe('translated strings', () => {
     const enKeys = new Set(flatten(en));
     const offenders = files.flatMap((file) => {
       const src = readFileSync(file, 'utf8');
-      const namespaces = [
-        ...src.matchAll(/const\s+(\w+)\s*=\s*(?:await\s+)?(?:useTranslations|getTranslations)\(\s*'([^']+)'/g),
-      ];
+      const namespaces = matches(
+        /const\s+(\w+)\s*=\s*(?:await\s+)?(?:useTranslations|getTranslations)\(\s*'([^']+)'/g,
+        src,
+      );
       // A component that calls `t.has(...)` resolves keys deliberately and may
       // pass strings that are not messages, so its calls are not checked here.
-      const guarded = new Set([...src.matchAll(/(\w+)\.has\(/g)].map((m) => m[1]));
+      const guarded = new Set(matches(/(\w+)\.has\(/g, src).map((m) => m[1]));
       return namespaces.flatMap(([, variable, namespace]) => {
         if (guarded.has(variable)) return [];
         const calls = new RegExp(`\\b${variable}(?:\\.rich)?\\(\\s*'([^']+)'`, 'g');
-        return [...src.matchAll(calls)].flatMap((m) => {
+        return matches(calls, src).flatMap((m) => {
           const key = `${namespace}.${m[1]}`;
           const absent = [
             ...(thKeys.has(key) ? [] : ['th']),
             ...(enKeys.has(key) ? [] : ['en']),
           ];
-          return absent.length ? [`${rel(file)}:${lineOf(src, m.index!)} ${key} (missing in ${absent.join()})`] : [];
+          return absent.length ? [`${rel(file)}:${lineOf(src, m.index)} ${key} (missing in ${absent.join()})`] : [];
         });
       });
     });
