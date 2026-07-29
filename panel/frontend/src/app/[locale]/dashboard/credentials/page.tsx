@@ -504,7 +504,7 @@ function CredContent() {
               </CardHeader>
               <CardContent className="space-y-1">
                 <CredRow label={t('shopName')} value={creds.shopName} icon="font" />
-                <CredRow label="URL {t('website')}" value={`https://${creds.domain}`} icon="globe" />
+                <CredRow label={`URL ${t('website')}`} value={`https://${creds.domain}`} icon="globe" />
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Button asChild className="cursor-pointer font-medium rounded-full">
                     <a href={`https://${creds.domain}`} target="_blank" rel="noopener noreferrer">
@@ -677,7 +677,7 @@ function CredContent() {
                         <CodeBlock code={t('announceBody', { domain: creds?.domain || 'shop.siamsite.shop' })} language="text" />
                       </StepCard>
                       <StepCard n={2} title={t('rconOptional')}>
-                        <CodeBlock code={`enable-rcon=true\nrcon.port=25575\nrcon.password={t('setPassword')}`} language="properties" />
+                        <CodeBlock code={`enable-rcon=true\nrcon.port=25575\nrcon.password=${t('setPassword')}`} language="properties" />
                         <p className="text-xs text-muted-foreground font-medium mt-3">{t('edit')} `server.properties` {t('ofMinecraftThen')}{t('startServer')}{t('newThenTake')}{t('password')}{t('pasteInWizard')}</p>
                       </StepCard>
                     </div>
@@ -890,7 +890,7 @@ function CredContent() {
                         {osType === 'linux' ? (
                           <>
                             <CommandCard
-                              label="A. {t('installMariadb')}"
+                              label={`A. ${t('installMariadb')}`}
                               desc={t('runInTerminal')}
                               lang="bash (Linux)"
                               code={`sudo apt update
@@ -898,7 +898,7 @@ sudo apt install -y mariadb-server
 sudo systemctl enable --now mariadb`}
                             />
                             <CommandCard
-                              label="B. {t('setRootPassword')}"
+                              label={`B. ${t('setRootPassword')}`}
                               desc={t('answerY')}
                               lang="bash (Linux)"
                               code="sudo mysql_secure_installation"
@@ -907,7 +907,7 @@ sudo systemctl enable --now mariadb`}
                         ) : (
                           <>
                             <CommandCard
-                              label="A. {t('downloadMysqlWin')}"
+                              label={`A. ${t('downloadMysqlWin')}`}
                               desc={t('mysqlInstallerLink')}
                               lang="link"
                               code="https://dev.mysql.com/downloads/installer/"
@@ -932,8 +932,8 @@ sudo systemctl enable --now mariadb`}
                         </div>
 
                         <CommandCard
-                          label="C. {t('openMysqlShell')}"
-                          desc="{t('enterRootPassword')}>"
+                          label={`C. ${t('openMysqlShell')}`}
+                          desc={`${t('enterRootPassword')}>`}
                           lang={osType === 'linux' ? 'bash (Linux)' : 'cmd (Windows)'}
                           code={osType === 'linux' ? 'sudo mysql -u root -p' : 'mysql -u root -p'}
                         />
@@ -941,7 +941,7 @@ sudo systemctl enable --now mariadb`}
                         <CommandCard
                           tone="sql"
                           label={t('dbUserFor', { plugin: setupAuthType === 'authme' ? 'AuthMe' : 'nLogin' })}
-                          desc="{t('pasteInMysql')}> {t('changeBeforePaste')}"
+                          desc={`${t('pasteInMysql')}> ${t('changeBeforePaste')}`}
                           lang="SQL"
                           code={setupAuthType === 'authme'
                             ? `CREATE DATABASE authme CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -1007,7 +1007,7 @@ EXIT;`}
 
                         <CommandCard
                           tone="yaml"
-                          label={`C. {t('replaceSection')} ${setupAuthType === 'authme' ? 'plugins/AuthMe/config.yml' : 'plugins/nLogin/config.yml'}`}
+                          label={`C. ${t('replaceSection')} ${setupAuthType === 'authme' ? 'plugins/AuthMe/config.yml' : 'plugins/nLogin/config.yml'}`}
                           desc={setupAuthType === 'authme'
                             ? t('findDataSource')
                             : t('findDatabase')}
@@ -1076,7 +1076,7 @@ EXIT;`}
                       </Button>
                     </StepCard>
 
-                    <StepCard n={2} title="{t('press')}{t('createToken')} ({t('createTokenStep')}">
+                    <StepCard n={2} title={`${t('press')} ${t('createToken')} (${t('createTokenStep')}`}>
                       <p className="text-xs text-muted-foreground font-medium mb-2">
                         Token {t('tokenIsKey')}
                       </p>
@@ -1097,7 +1097,7 @@ EXIT;`}
                       )}
                     </StepCard>
 
-                    <StepCard n={3} title="{t('dropJarThen')}{t('openServerOnce')}">
+                    <StepCard n={3} title={`${t('dropJarThen')} ${t('openServerOnce')}`}>
                       {osType === 'linux' ? (
                         <ol className="text-xs text-muted-foreground font-medium space-y-1.5 list-decimal pl-5">
                           <li>SSH {t('sftpToServer')}</li>
@@ -1153,7 +1153,7 @@ EXIT;`}
   port: 3306
   database: authme
   user: authme
-  password: '{t('password')}-MySQL'
+  password: '${t('password')}-MySQL'
   table: authme
 
 nlogin:
@@ -1162,17 +1162,17 @@ nlogin:
   port: 3306
   database: nlogin
   user: nlogin
-  password: '{t('password')}-MySQL'
+  password: '${t('password')}-MySQL'
   table: nlogin
 
 bridge:
-  backend: authme    # {t('or')} nlogin`}
+  backend: authme    # ${t('or')} nlogin`}
                           />
                         </div>
                       </details>
                     </StepCard>
 
-                    <StepCard n={5} title="{t('restartDone')}">
+                    <StepCard n={5} title={t('restartDone')}>
                       <p className="text-xs text-muted-foreground font-medium mb-2">
                         {t('startMcWait')} <strong>~10 {t('seconds')}</strong>{t('checkStatusBar')}</p>
                       <div className="grid grid-cols-2 gap-3 mt-2">
