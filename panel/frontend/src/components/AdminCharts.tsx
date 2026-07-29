@@ -48,7 +48,7 @@ export default function AdminChart({ data, type }: Props) {
             <Tooltip 
               contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: 800 }}
               formatter={(value: any) => [`฿${Number(value).toLocaleString()}`, 'รายได้']}
-              labelFormatter={(label) => new Date(label).toLocaleDateString('th-TH', { dateStyle: 'long' })}
+              labelFormatter={(label) => new Date(label as string).toLocaleDateString('th-TH', { dateStyle: 'long' })}
             />
             <Area type="monotone" dataKey="total" stroke={color} strokeWidth={3} fillOpacity={1} fill="url(#colorTotal)" />
           </AreaChart>
@@ -71,7 +71,7 @@ export default function AdminChart({ data, type }: Props) {
               cursor={{ fill: 'rgba(59, 130, 246, 0.05)' }}
               contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: 800 }}
               formatter={(value: any) => [value, 'ผู้ใช้ใหม่']}
-              labelFormatter={(label) => new Date(label).toLocaleDateString('th-TH', { dateStyle: 'long' })}
+              labelFormatter={(label) => new Date(label as string).toLocaleDateString('th-TH', { dateStyle: 'long' })}
             />
             <Bar dataKey="count" fill={color} radius={[4, 4, 0, 0]} barSize={20} />
           </BarChart>

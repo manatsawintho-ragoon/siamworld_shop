@@ -1,5 +1,5 @@
 'use client';
-import type { ReactNode } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 
 /**
@@ -965,7 +965,9 @@ export interface MockSlide {
   key: string;
   title: string;
   desc: string;
-  Mock: () => React.ReactElement;
+  /** A component. Every mock calls hooks, so render it as `<Mock />`; calling
+   *  it as `Mock()` runs those hooks in the caller's hook list instead. */
+  Mock: ComponentType;
 }
 
 export const MOCK_SLIDES: MockSlide[] = [
