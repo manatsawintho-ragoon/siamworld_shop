@@ -1,7 +1,17 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import Providers from './providers';
 import { fetchShopSeo } from '@/lib/serverSeo';
+
+// `viewportFit: 'cover'` is what makes env(safe-area-inset-*) resolve to a real
+// value. Without it the mobile bottom nav's safe-area padding evaluates to 0 and
+// the bar sits underneath the iPhone home indicator. `maximumScale` is left
+// unset on purpose: pinch-zoom must stay available (accessibility).
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+};
 
 // Per-tenant metadata: each shop gets its own name/description/canonical resolved
 // from the request host at runtime (works for subdomains and custom domains alike).

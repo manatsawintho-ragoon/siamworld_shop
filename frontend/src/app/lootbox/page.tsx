@@ -309,13 +309,38 @@ export default function LootBoxListPage() {
         {/* ── Main card ── */}
         <div className="bg-surface rounded-2xl shadow-[0_4px_0_rgb(var(--color-border)),0_2px_20px_rgba(0,0,0,0.06)] border border-border overflow-hidden">
 
-          {/* ── Row 1: Type filters ── */}
-          <div className="px-4 py-2.5 border-b border-border flex items-center gap-2 flex-wrap">
+          {/* ── Row 1: search ──
+              Own full-width row on phones. Previously it shared a wrapping row
+              with four type chips and was pinned to ~128px wide. */}
+          <div className="px-3 sm:px-4 py-2.5 border-b border-border flex items-center gap-2">
+            <div className="relative flex-1 min-w-0">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-foreground-subtle pointer-events-none" strokeWidth={2.5} />
+              <input
+                type="text" value={search} onChange={e => setSearch(e.target.value)}
+                placeholder="ค้นหากล่อง..."
+                aria-label="ค้นหากล่องสุ่ม"
+                className="w-full pl-9 pr-9 py-2 rounded-lg border border-border bg-surface text-xs text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-foreground-subtle"
+              />
+              {search && (
+                <button onClick={() => setSearch('')} aria-label="ล้างการค้นหา"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center text-foreground-subtle hover:text-foreground-muted transition-colors">
+                  <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+                </button>
+              )}
+            </div>
+            <span className="text-xs text-foreground-subtle font-bold flex-shrink-0 whitespace-nowrap">
+              {loading ? '…' : `${filtered.length} กล่อง`}
+            </span>
+          </div>
+
+          {/* ── Row 2: Type filters ── */}
+          <div className="px-3 sm:px-4 py-2.5 border-b border-border filter-strip">
             {TYPE_FILTERS.map(f => (
               <button
                 key={f.key}
                 onClick={() => { setTypeFilter(f.key); setCategoryFilter(null); }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all active:translate-y-[1px] ${
+                aria-pressed={typeFilter === f.key}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-bold whitespace-nowrap transition-all active:translate-y-[1px] ${
                   typeFilter === f.key
                     ? `${f.themed ? 'text-primary-foreground' : `${f.activeBg} ${f.activeShadow} ${f.activeText}`}`
                     : `bg-surface border border-border ${f.color} hover:border-primary/40`
@@ -334,34 +359,17 @@ export default function LootBoxListPage() {
                 </span>
               </button>
             ))}
-
-            <div className="ml-auto flex items-center gap-2 flex-shrink-0">
-              <div className="relative">
-                <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground-subtle" strokeWidth={2.5} />
-                <input
-                  type="text" value={search} onChange={e => setSearch(e.target.value)}
-                  placeholder="ค้นหากล่อง..."
-                  className="pl-7 pr-7 py-1.5 rounded-lg border border-border bg-surface text-xs text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-foreground-subtle w-32 sm:w-40"
-                />
-                {search && (
-                  <button onClick={() => setSearch('')} aria-label="ล้างการค้นหา" className="absolute right-2 top-1/2 -translate-y-1/2 text-foreground-subtle hover:text-foreground-muted transition-colors">
-                    <X className="w-3 h-3" strokeWidth={2.5} />
-                  </button>
-                )}
-              </div>
-              <span className="text-xs text-foreground-subtle font-bold">{loading ? '…' : `${filtered.length} กล่อง`}</span>
-            </div>
           </div>
 
-          {/* ── Row 2: Category filters (แสดงเมื่อมี category) ── */}
+          {/* ── Row 3: Category filters (แสดงเมื่อมี category) ── */}
           {allCategories.length > 0 && (
-            <div className="px-4 py-2 border-b border-border-muted bg-surface-hover/40 flex items-center gap-1.5 flex-wrap">
+            <div className="px-3 sm:px-4 py-2 border-b border-border-muted bg-surface-hover/40 filter-strip">
               <span className="text-[10px] font-black text-foreground-subtle uppercase tracking-widest flex-shrink-0 mr-1">หมวด</span>
 
               {/* ทุกหมวด */}
               <button
                 onClick={() => setCategoryFilter(null)}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all active:translate-y-[1px] ${
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition-all active:translate-y-[1px] ${
                   categoryFilter === null
                     ? 'bg-foreground text-background'
                     : 'bg-surface border border-border text-foreground-muted hover:border-primary/40'
@@ -377,7 +385,7 @@ export default function LootBoxListPage() {
                   <button
                     key={cat.name}
                     onClick={() => setCategoryFilter(active ? null : cat.name)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all active:translate-y-[1px] ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition-all active:translate-y-[1px] ${
                       active
                         ? 'bg-foreground text-background'
                         : 'bg-surface border border-border text-foreground-muted hover:border-primary/40'

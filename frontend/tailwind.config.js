@@ -5,6 +5,17 @@ module.exports = {
   ],
   darkMode: 'class',
   theme: {
+    // Declared in full (not via `extend`) so `xs` is emitted BEFORE `sm`.
+    // Putting it in `extend` would append it after `2xl`, and `xs:` utilities
+    // would then override `sm:`/`md:` ones instead of being overridden by them.
+    screens: {
+      xs: '400px',   // large phones - lets tiny phones (320-399px) drop a column
+      sm: '640px',
+      md: '768px',
+      lg: '1024px',
+      xl: '1280px',
+      '2xl': '1536px',
+    },
     extend: {
       fontFamily: {
         sans: ['Inter', 'Prompt', 'system-ui', '-apple-system', 'sans-serif'],

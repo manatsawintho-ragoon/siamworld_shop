@@ -212,7 +212,7 @@ export default function ProductCard({ product, servers }: { product: Product; se
           {/* Always render so every card keeps the same height, with or without a description. */}
           <button
             onClick={() => setShowDesc(true)}
-            className="inline-flex items-center gap-1 mt-1.5 mb-1 text-[10px] font-bold transition-colors hover:brightness-110"
+            className="inline-flex items-center gap-1 mt-1.5 mb-1 py-1 -my-0.5 text-[10px] font-bold transition-colors hover:brightness-110 self-start"
             style={{ color: 'rgb(var(--color-primary))' }}
           >
             <Info className="w-2.5 h-2.5" strokeWidth={2.25} /> ดูคำอธิบายสินค้า
@@ -238,7 +238,7 @@ export default function ProductCard({ product, servers }: { product: Product; se
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+              className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm"
               onClick={() => setShowDesc(false)}
             >
               <motion.div
@@ -246,7 +246,7 @@ export default function ProductCard({ product, servers }: { product: Product; se
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 8 }}
                 transition={{ duration: 0.15 }}
-                className="theme-card w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden shadow-2xl"
+                className="theme-card w-full max-w-sm max-h-[88dvh] flex flex-col overflow-hidden shadow-2xl"
                 onClick={e => e.stopPropagation()}
               >
                 {/* Header */}
@@ -276,7 +276,7 @@ export default function ProductCard({ product, servers }: { product: Product; se
                 </div>
 
                 {/* Body */}
-                <div className="p-5 overflow-y-auto flex-1 min-h-0">
+                <div className="p-4 sm:p-5 overflow-y-auto flex-1 min-h-0">
                   <div className="flex items-center gap-1.5 mb-3">
                     <AlignLeft className="w-3 h-3" strokeWidth={2.25} style={{ color: 'rgb(var(--color-primary))' }} />
                     <span className="text-xs font-bold text-foreground-muted uppercase tracking-wide">คำอธิบายสินค้า</span>
@@ -317,7 +317,7 @@ export default function ProductCard({ product, servers }: { product: Product; se
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[99998] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+              className="fixed inset-0 z-[99998] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm"
               onClick={() => { if (!buying) resetModal(); }}
             >
               <motion.div
@@ -325,7 +325,7 @@ export default function ProductCard({ product, servers }: { product: Product; se
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -6, scale: 0.97 }}
                 transition={{ duration: 0.15 }}
-                className="theme-card w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden shadow-2xl"
+                className="theme-card w-full max-w-sm max-h-[88dvh] flex flex-col overflow-hidden shadow-2xl"
                 onClick={e => e.stopPropagation()}
               >
                 {/* Header */}
@@ -347,7 +347,7 @@ export default function ProductCard({ product, servers }: { product: Product; se
                 </div>
 
                 {/* Body */}
-                <div className="p-5 space-y-3 overflow-y-auto flex-1 min-h-0">
+                <div className="p-4 sm:p-5 space-y-3 overflow-y-auto flex-1 min-h-0">
 
                   {/* Product block */}
                   <div className="flex items-start gap-3 bg-surface-hover/60 rounded-xl p-3 border border-border-muted">
@@ -556,11 +556,11 @@ export default function ProductCard({ product, servers }: { product: Product; se
                 </div>
 
                 {/* Footer */}
-                <div className="px-5 py-3.5 border-t border-border-muted bg-surface-hover/40 flex items-center gap-2 flex-shrink-0">
+                <div className="px-4 sm:px-5 py-3.5 border-t border-border-muted bg-surface-hover/40 flex items-center gap-2 flex-shrink-0">
                   <button
                     onClick={() => { if (!buying) resetModal(); }}
                     disabled={buying}
-                    className="flex-1 btn-ghost py-2.5 text-[13px] flex items-center justify-center gap-1.5"
+                    className="flex-1 btn-ghost py-3 min-h-[44px] text-[13px] flex items-center justify-center gap-1.5"
                   >
                     <X className="w-3 h-3" strokeWidth={2.5} /> ยกเลิก
                   </button>
@@ -568,7 +568,7 @@ export default function ProductCard({ product, servers }: { product: Product; se
                     <button
                       onClick={result?.success ? () => setResult(null) : handleBuy}
                       disabled={buying || (user.wallet_balance ?? 0) < totalPrice}
-                      className={`flex-[2] py-2.5 text-[13px] rounded-lg font-bold transition-all flex items-center justify-center gap-1.5 ${
+                      className={`flex-[2] py-3 min-h-[44px] text-[13px] rounded-lg font-bold transition-all flex items-center justify-center gap-1.5 ${
                         result?.success ? 'btn-primary' : isGift ? 'btn px-4 bg-pink-500 text-white shadow-[0_4px_0_#be185d] hover:brightness-110 active:translate-y-[2px] active:shadow-[0_2px_0_#be185d]' : 'btn-buy'
                       }`}
                     >

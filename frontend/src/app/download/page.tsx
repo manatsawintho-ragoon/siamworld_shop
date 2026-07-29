@@ -60,40 +60,46 @@ export default function DownloadPage() {
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.03 }}
-                className="flex items-center gap-4 bg-surface border-[1.5px] border-border p-3 rounded-xl hover:border-primary/30 transition-colors shadow-sm"
+                /* Stacks on phones: as a single row the filename, size and GET
+                   button fought over ~320px and the description was reduced to
+                   an ellipsis. */
+                className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 bg-surface border-[1.5px] border-border p-3 rounded-xl hover:border-primary/30 transition-colors shadow-sm"
               >
-                {/* Minimal Icon Slot */}
-                <div className="w-10 h-10 shrink-0 bg-background rounded-lg border border-border flex items-center justify-center text-primary/60">
-                  <FileText className="w-5 h-5" strokeWidth={2} />
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold text-foreground truncate uppercase tracking-tight">{dl.filename}</h3>
-                    {dl.category && (
-                      <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-border-muted text-foreground-muted border border-border/50 uppercase">
-                        {dl.category}
-                      </span>
-                    )}
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                  {/* Minimal Icon Slot */}
+                  <div className="w-10 h-10 shrink-0 bg-background rounded-lg border border-border flex items-center justify-center text-primary/60">
+                    <FileText className="w-5 h-5" strokeWidth={2} />
                   </div>
-                  <p className="text-[10px] text-foreground-muted truncate">
-                    {dl.description || 'ดาวน์โหลดไฟล์ทรัพยากรเพื่อเริ่มเล่น'}
-                  </p>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-sm font-bold text-foreground uppercase tracking-tight break-all">{dl.filename}</h3>
+                      {dl.category && (
+                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-border-muted text-foreground-muted border border-border/50 uppercase flex-shrink-0">
+                          {dl.category}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-foreground-muted line-clamp-2 sm:truncate">
+                      {dl.description || 'ดาวน์โหลดไฟล์ทรัพยากรเพื่อเริ่มเล่น'}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Meta & Action */}
-                <div className="flex items-center gap-4 shrink-0 px-2">
-                  <div className="text-right hidden sm:block">
+                <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0 sm:px-2">
+                  <div className="text-left sm:text-right">
                     <span className="block text-[9px] font-bold text-foreground-subtle uppercase tracking-widest">Size</span>
                     <span className="block text-[10px] font-black text-foreground">{dl.file_size || 'N/A'}</span>
                   </div>
-                  
-                  <a 
-                    href={dl.download_url} 
-                    target="_blank" 
+
+                  <a
+                    href={dl.download_url}
+                    target="_blank"
                     rel="noopener noreferrer"
-                    className="btn-primary !px-4 !py-1.5 !text-[10px] uppercase tracking-widest inline-flex items-center gap-1"
+                    aria-label={`ดาวน์โหลด ${dl.filename}`}
+                    className="btn-primary !px-5 !py-2.5 !text-[10px] uppercase tracking-widest inline-flex items-center gap-1"
                   >
                     <Download className="w-3 h-3" strokeWidth={2.5} />
                     GET

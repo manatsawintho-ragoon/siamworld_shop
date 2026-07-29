@@ -69,10 +69,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const DIV  = 'border-b border-border-muted';
 
   return (
-    <div className="flex flex-col min-h-screen frontend-page" style={{ backgroundColor: 'rgb(var(--color-background))' }}>
+    <div className="flex flex-col min-h-screen md:min-h-[100dvh] frontend-page" style={{ backgroundColor: 'rgb(var(--color-background))' }}>
       <Navbar />
 
-      <div className="flex-1 max-w-[1536px] mx-auto w-full px-3 sm:px-6 pt-6 pb-24 md:pb-6 grid grid-cols-1 gap-5 lg:gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:items-start">
+      {/* pb-bottomnav clears the fixed mobile bar *and* the home-indicator inset;
+          a flat pb-24 left the last card partly under the bar on notch phones. */}
+      <div className="flex-1 max-w-[1536px] mx-auto w-full px-3 sm:px-6 pt-4 sm:pt-6 pb-bottomnav md:pb-6 grid grid-cols-1 gap-4 sm:gap-5 lg:gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:items-start">
 
         {/* ── Account / Login — order 1 on mobile (top), top-left on desktop.
             On mobile, only render when logged in (the account card is useful);
@@ -316,19 +318,22 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
       {/* ── Floating Social Icons ───────────────────────────────── */}
       {(discordUrl || facebookUrl) && (
-        <div className="fixed bottom-24 md:bottom-6 right-3 md:right-5 z-40 flex flex-col gap-2 md:gap-3">
+        /* On phones these sit just above the bottom nav (safe-area aware) and
+           shrink, so they stop covering the buy button on a product card.
+           The same links also live in the bottom-nav "More" sheet. */
+        <div className="fixed bottom-abovenav md:bottom-6 right-2.5 md:right-5 z-40 flex flex-col gap-2 md:gap-3">
           {discordUrl && (
             <a href={discordUrl} target="_blank" rel="noopener noreferrer"
-              className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-[#5865F2] flex items-center justify-center shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all"
-              title="Discord">
-              <DiscordIcon className="w-6 h-6 md:w-7 md:h-7 text-white" />
+              className="w-11 h-11 md:w-14 md:h-14 rounded-full bg-[#5865F2] flex items-center justify-center shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all"
+              aria-label="Discord" title="Discord">
+              <DiscordIcon className="w-5 h-5 md:w-7 md:h-7 text-white" />
             </a>
           )}
           {facebookUrl && (
             <a href={facebookUrl} target="_blank" rel="noopener noreferrer"
-              className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-[#1877F2] flex items-center justify-center shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all"
-              title="Facebook">
-              <FacebookIcon className="w-6 h-6 md:w-7 md:h-7 text-white" />
+              className="w-11 h-11 md:w-14 md:h-14 rounded-full bg-[#1877F2] flex items-center justify-center shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all"
+              aria-label="Facebook" title="Facebook">
+              <FacebookIcon className="w-5 h-5 md:w-7 md:h-7 text-white" />
             </a>
           )}
         </div>
