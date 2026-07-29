@@ -16,6 +16,8 @@ import { notificationService } from '../services/notification.service';
 import { announcementService } from '../services/announcement.service';
 import { campaignService } from '../services/campaign.service';
 import { newsService } from '../services/news.service';
+import { rewardService } from '../services/reward.service';
+import { topupReversalService } from '../services/topup-reversal.service';
 import {
   createProductSchema, updateProductSchema,
   createServerSchema, updateServerSchema,
@@ -27,7 +29,8 @@ import {
   createLootBoxCategorySchema, updateLootBoxCategorySchema,
   releaseSchema,
   campaignSchema, grantPointsSchema,
-  createNewsSchema, updateNewsSchema, reorderNewsSchema,
+  createNewsSchema, updateNewsSchema,
+  createRewardSchema, updateRewardSchema, reorderRewardsSchema, reverseTopupSchema,
 } from '../validators/schemas';
 
 const router = Router();
@@ -946,7 +949,101 @@ router.delete('/slides/:id', async (req: Request, res: Response, next: NextFunct
   } catch (err) { next(err); }
 });
 
-// ─── News (rendered hero-carousel slides) ─────────────────────
+// ─── Reward Shop ──────────────────────────────────────────────
+router.get('/rewards', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const [rewards, stats] = await Promise.all([rewardService.getAll(), rewardService.getStats()]);
+    res.json({ success: true, rewards, stats });
+  } catch (err) { next(err); }
+});
+
+router.get('/rewards/redemptions', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const redemptions = await rewardService.getAllRedemptions();
+    res.json({ success: true, redemptions });
+  } catch (err) { next(err); }
+});
+
+router.post('/rewards', validate(createRewardSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const reward = await rewardService.create(req.body);
+    auditService.log({
+      userId: req.user!.userId, username: req.user!.username,
+      actionType: 'admin_reward_create',
+      description: `สร้างของรางวัล: ${req.body.name} (${req.body.point_cost} point)`,
+      refId: String(reward?.id ?? ''), meta: { name: req.body.name, point_cost: req.body.point_cost },
+    });
+    res.json({ success: true, reward });
+  } catch (err) { next(err); }
+});
+
+// Must precede /rewards/:id or 'reorder' parses as an id.
+router.put('/rewards/reorder', validate(reorderRewardsSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await rewardService.reorder(req.body.order);
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+router.put('/rewards/:id', validate(updateRewardSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const before = await rewardService.getById(id);
+    if (!before) { res.status(404).json({ success: false, message: 'ไม่พบของรางวัลนี้' }); return; }
+    const reward = await rewardService.update(id, req.body);
+
+    // Design A10: raising a price devalues points players already hold, so it
+    // is worth an explicit audit line rather than a generic "edited".
+    if (req.body.point_cost !== undefined && Number(req.body.point_cost) > Number(before.point_cost)) {
+      auditService.log({
+        userId: req.user!.userId, username: req.user!.username,
+        actionType: 'admin_reward_price_raise',
+        description: `ขึ้นราคาของรางวัล ${before.name}: ${before.point_cost} → ${req.body.point_cost} point`,
+        refId: String(id), meta: { from: before.point_cost, to: req.body.point_cost },
+      });
+    }
+    res.json({ success: true, reward });
+  } catch (err) { next(err); }
+});
+
+router.delete('/rewards/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    await rewardService.remove(id);
+    auditService.log({
+      userId: req.user!.userId, username: req.user!.username,
+      actionType: 'admin_reward_delete', description: `ลบของรางวัล #${id}`, refId: String(id),
+    });
+    res.json({ success: true, message: 'ลบของรางวัลแล้ว' });
+  } catch (err) { next(err); }
+});
+
+// ─── Top-up reversal (the clawback trigger) ───────────────────
+/**
+ * Reverses a top-up AND claws back any campaign points it granted. This is the
+ * production caller the design's A5 gate required before points became
+ * spendable - see topup-reversal.service.ts. Do not add a second reversal path
+ * that skips it.
+ */
+router.post('/transactions/:id/reverse', validate(reverseTopupSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    const result = await topupReversalService.reverse(id, req.body.reason);
+    auditService.log({
+      userId: req.user!.userId, username: req.user!.username,
+      actionType: 'admin_topup_reverse',
+      description: `ยกเลิกรายการเติมเงิน #${id} (฿${result.amount}) เหตุผล: ${req.body.reason}`
+        + (result.pointsRevoked || result.pointsDebt
+            ? ` | ดึง point คืน ${result.pointsRevoked}${result.pointsDebt ? ` และตั้งหนี้ ${result.pointsDebt}` : ''}`
+            : ''),
+      refId: String(id),
+      meta: { amount: result.amount, pointsRevoked: result.pointsRevoked, pointsDebt: result.pointsDebt },
+    });
+    res.json({ success: true, ...result });
+  } catch (err) { next(err); }
+});
+
+// ─── News (player-facing blog) ────────────────────────────────
 router.get('/news', async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const news = await newsService.getAll();
@@ -954,17 +1051,59 @@ router.get('/news', async (_req: Request, res: Response, next: NextFunction) => 
   } catch (err) { next(err); }
 });
 
-router.post('/news', validate(createNewsSchema), async (req: Request, res: Response, next: NextFunction) => {
+/** Soft-deleted posts, for restore. Must precede /news/:id. */
+router.get('/news/deleted', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const item = await newsService.create(req.body);
+    const news = await newsService.getDeleted();
+    res.json({ success: true, news });
+  } catch (err) { next(err); }
+});
+
+/** Single post for the editor - loads any state (incl. drafts) with its media. */
+router.get('/news/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const item = await newsService.getForEdit(parseInt(req.params.id));
+    if (!item) { res.status(404).json({ success: false, message: 'ไม่พบข่าวนี้' }); return; }
     res.json({ success: true, news: item });
   } catch (err) { next(err); }
 });
 
-// Must precede /news/:id or 'reorder' parses as an id.
-router.put('/news/reorder', validate(reorderNewsSchema), async (req: Request, res: Response, next: NextFunction) => {
+/** Who actually read a post - the honest metric, unlike view_count. */
+router.get('/news/:id/readers', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await newsService.reorder(req.body.order);
+    const readers = await newsService.getReaders(parseInt(req.params.id));
+    res.json({ success: true, readers });
+  } catch (err) { next(err); }
+});
+
+router.post('/news', validate(createNewsSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const item = await newsService.create(req.body, req.user!.userId);
+    auditService.log({
+      userId: req.user!.userId, username: req.user!.username,
+      actionType: 'admin_news_create',
+      description: `สร้างข่าว: ${req.body.title}`,
+      refId: String(item?.id ?? ''), meta: { slug: item?.slug, category: item?.category },
+    });
+    res.json({ success: true, news: item });
+  } catch (err) { next(err); }
+});
+
+router.post('/news/:id/duplicate', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const item = await newsService.duplicate(parseInt(req.params.id), req.user!.userId);
+    res.json({ success: true, news: item });
+  } catch (err) { next(err); }
+});
+
+router.post('/news/:id/restore', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id);
+    await newsService.restore(id);
+    auditService.log({
+      userId: req.user!.userId, username: req.user!.username,
+      actionType: 'admin_news_restore', description: `กู้คืนข่าว #${id}`, refId: String(id),
+    });
     res.json({ success: true });
   } catch (err) { next(err); }
 });
@@ -974,6 +1113,10 @@ router.put('/news/:id', validate(updateNewsSchema), async (req: Request, res: Re
     const id = parseInt(req.params.id);
     const item = await newsService.update(id, req.body);
     if (!item) { res.status(404).json({ success: false, message: 'ไม่พบข่าวนี้' }); return; }
+    auditService.log({
+      userId: req.user!.userId, username: req.user!.username,
+      actionType: 'admin_news_update', description: `แก้ไขข่าว: ${item.title}`, refId: String(id),
+    });
     res.json({ success: true, news: item });
   } catch (err) { next(err); }
 });
@@ -982,6 +1125,10 @@ router.delete('/news/:id', async (req: Request, res: Response, next: NextFunctio
   try {
     const id = parseInt(req.params.id);
     await newsService.remove(id);
+    auditService.log({
+      userId: req.user!.userId, username: req.user!.username,
+      actionType: 'admin_news_delete', description: `ลบข่าว #${id}`, refId: String(id),
+    });
     res.json({ success: true, message: 'ลบข่าวแล้ว' });
   } catch (err) { next(err); }
 });

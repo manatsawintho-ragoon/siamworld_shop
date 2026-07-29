@@ -22,6 +22,7 @@ const MENU_CATEGORIES = [
       { href: '/admin/users', icon: 'fa-users', label: 'ระบบจัดการสมาชิก' },
       { href: '/admin/codes', icon: 'fa-ticket-alt', label: 'จัดการโค้ดไอเท็ม' },
       { href: '/admin/campaigns', icon: 'fa-bullhorn', label: 'แคมเปญเติมเงิน' },
+      { href: '/admin/rewards', icon: 'fa-gift', label: 'แลกของรางวัล' },
       {
         id: 'shop',
         icon: 'fa-store',
@@ -37,7 +38,7 @@ const MENU_CATEGORIES = [
     category: 'PAGE MANAGER',
     items: [
       { href: '/admin/settings', icon: 'fa-paint-roller', label: 'ตั้งค่าหน้าเว็บไซต์' },
-      { href: '/admin/news', icon: 'fa-newspaper', label: 'ข่าวสาร / สไลด์หน้าแรก' },
+      { href: '/admin/news', icon: 'fa-newspaper', label: 'ข่าวสาร (บล็อก)' },
       { href: '/admin/appearance', icon: 'fa-palette', label: 'Appearance / Theme' },
     ]
   },

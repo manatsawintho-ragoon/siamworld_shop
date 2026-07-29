@@ -342,7 +342,7 @@ class UserService {
 
     if (type === 'topup') {
       const [rows] = await pool.execute<RowDataPacket[]>(
-        "SELECT id, amount, created_at, description, reference as reference_id FROM transactions WHERE user_id = ? AND type = 'topup' AND status = 'success' ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        "SELECT id, amount, created_at, description, reference as reference_id, reversed_at, reversed_reason FROM transactions WHERE user_id = ? AND type = 'topup' AND status = 'success' ORDER BY created_at DESC LIMIT ? OFFSET ?",
         [userId, String(limit), String(offset)]
       );
       const [countResult] = await pool.execute<RowDataPacket[]>("SELECT COUNT(*) as total FROM transactions WHERE user_id = ? AND type = 'topup' AND status = 'success'", [userId]);
