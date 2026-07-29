@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useMemo, useRef, Suspense } from 'react';
+import { useEffect, useState, useMemo, useRef, Suspense, type ComponentType } from 'react';
 import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
 import Navbar from '@/components/Navbar';
@@ -216,7 +216,24 @@ interface ShowcaseSlide {
   desc: string;
   /** Present only for uploaded slides, which are the ones that can open in the lightbox. */
   src?: string;
-  Mock?: () => React.ReactElement;
+  Mock?: ComponentType;
+}
+
+/**
+ * Renders the current slide's mockup.
+ *
+ * The mockups call hooks (`useTranslations`), so they have to be rendered as an
+ * element and never invoked as `Mock()`. Calling one runs its hooks inside
+ * *this* component's hook list, and the slides do not all use the same number:
+ * the admin mockup reads two namespaces where the other four read one, and an
+ * uploaded screenshot has no mockup at all. Advancing the carousel therefore
+ * changed the hook count between renders and React aborted with "Rendered more
+ * hooks than during the previous render" - surfacing as an empty `Error`,
+ * because next-intl rewrites anything thrown inside `useTranslations` and
+ * strips the message in production builds.
+ */
+function ShowcaseMock({ Mock }: { Mock?: ComponentType }) {
+  return Mock ? <Mock /> : null;
 }
 
 /* ── Animated headline ───────────────────────────────────────────────── */
@@ -1240,7 +1257,7 @@ function LandingContent() {
                   </button>
                 ) : (
                   <div className="lg:col-span-7">
-                    {showcase[currentIndex].Mock?.()}
+                    <ShowcaseMock Mock={showcase[currentIndex].Mock} />
                   </div>
                 )}
 
