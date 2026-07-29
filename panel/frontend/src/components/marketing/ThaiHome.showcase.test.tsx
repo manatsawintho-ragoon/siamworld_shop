@@ -19,6 +19,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import messages from '../../../messages/th.json';
 // vi.mock calls below are hoisted above this import, so ThaiHome picks them up.
 import ThaiHome from '@/components/marketing/ThaiHome';
+import { MOCK_SLIDES } from '@/components/landing/UiMocks';
 
 // The page's own chrome and network are not what this test is about.
 vi.mock('@/components/Navbar', () => ({ default: () => null }));
@@ -113,5 +114,25 @@ describe('ThaiHome feature showcase', () => {
     // The admin mockup is the fifth slide; four advances land on it.
     for (let i = 0; i < 4; i++) clickNextSlide();
     expect(host.textContent).toContain('yourshop.siamsite.shop/admin');
+  });
+
+  it('shows translated captions, never the raw message keys', () => {
+    render();
+    // Every slide's heading and caption, plus the dot and zoom aria-labels,
+    // come from these keys. Printing one verbatim is the bug this guards.
+    const keys = MOCK_SLIDES.flatMap((s) => [s.title, s.desc]);
+    for (let i = 0; i < MOCK_SLIDES.length; i++) {
+      const rendered = `${host.textContent} ${host.innerHTML}`;
+      const leaked = keys.filter((key) => rendered.includes(key));
+      expect(leaked, `slide ${i} leaked message keys`).toEqual([]);
+      clickNextSlide();
+    }
+  });
+
+  it('states the setup time in the page language, not the backend default', () => {
+    render();
+    // The API hands back a Thai-only phrase for this stat; the page must use
+    // its own copy so /en does not print Thai.
+    expect(host.textContent).toContain(messages.home.deliverySpeed);
   });
 });

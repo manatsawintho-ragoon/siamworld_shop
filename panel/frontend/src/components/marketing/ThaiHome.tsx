@@ -954,11 +954,15 @@ function LandingContent() {
     }).catch(() => {});
   }, []);
 
+  /* Uploaded slides carry the operator's own wording and are shown as typed.
+     The built-in slides carry message keys instead, so they are resolved here:
+     everything downstream (heading, caption, aria-labels) then renders plain
+     text and cannot leak a key like "topupAuto" into the page. */
   const showcase: ShowcaseSlide[] = useMemo(
     () => (uploadedSlides.length
       ? uploadedSlides
-      : MOCK_SLIDES.map(m => ({ key: m.key, title: m.title, desc: m.desc, Mock: m.Mock }))),
-    [uploadedSlides]
+      : MOCK_SLIDES.map(m => ({ key: m.key, title: t(m.title), desc: t(m.desc), Mock: m.Mock }))),
+    [uploadedSlides, t]
   );
 
   // An upload arriving after the auto-advance has moved on must not leave the
@@ -989,7 +993,10 @@ function LandingContent() {
        hero marquee shows this same number with the same wording. */
     { label: t('serversWithUs'), num: statsData ? (statsData.total_shops || 0) : undefined, icon: 'store' },
     { label: t('membersInSystem'),        num: statsData ? (statsData.total_users || 0) : undefined, icon: 'users' },
-    { label: t('installedWithin'),    text: statsData?.delivery_speed || undefined, icon: 'bolt' },
+    /* Not read from the API: `delivery_speed` is a fixed marketing phrase the
+       backend hardcodes in Thai, so on /en it printed Thai. It is a constant,
+       not live data, so it belongs in the message files like any other copy. */
+    { label: t('installedWithin'),    text: t('deliverySpeed'), icon: 'bolt' },
     { label: t('autoReceive'),      text: t('hours24'), icon: 'qrcode' },
   ], [statsData]);
 

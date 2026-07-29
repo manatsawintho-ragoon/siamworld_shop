@@ -963,6 +963,8 @@ export function TopupMock() {
 
 export interface MockSlide {
   key: string;
+  /** Message keys in the `home` namespace, not display text. Whoever renders a
+   *  slide resolves them; printing them straight puts "topupAuto" on the page. */
   title: string;
   desc: string;
   /** A component. Every mock calls hooks, so render it as `<Mock />`; calling
