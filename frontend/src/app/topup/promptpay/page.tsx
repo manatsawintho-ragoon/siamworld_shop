@@ -76,8 +76,8 @@ export default function PromptPayTopupPage() {
   const bonusMultRaw = parseFloat(settings['topup_bonus_promptpay_multiplier'] ?? settings['topup_bonus_multiplier'] ?? '1') || 1;
   const bonusMult    = bonusEnabled && bonusMultRaw > 1 ? bonusMultRaw : 1;
   /* The shop's own logo sits in the middle of the QR. Owner-hosted images (the
-     usual case is postimg) do go down, so a failed load falls back to the Thai
-     QR mark rather than leaving a hole in the code. */
+     usual case is postimg) do go down, so an unset or failed logo simply leaves
+     the QR plain. */
   const shopLogo     = (settings['website_logo_url'] || '').trim();
 
   const [step, setStep] = useState<Step>('amount');
@@ -362,14 +362,14 @@ export default function PromptPayTopupPage() {
                 {qrUrl
                   ? <img src={qrUrl} alt="PromptPay QR Code" className="w-48 h-48 mx-auto" />
                   : <div className="w-48 h-48 flex items-center justify-center"><Loader2 className="w-7 h-7 animate-spin" style={{ color: accent }} strokeWidth={2.5} /></div>}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-11 h-11 bg-white rounded-xl shadow-md border border-gray-200 flex items-center justify-center overflow-hidden p-1">
-                  {shopLogo && !logoFailed ? (
+                {/* No shop logo, or the owner's image host is down: leave the QR
+                    plain rather than covering its middle with a placeholder. */}
+                {shopLogo && !logoFailed && (
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-11 h-11 bg-white rounded-xl shadow-md border border-gray-200 flex items-center justify-center overflow-hidden p-1">
                     <img src={shopLogo} alt="" className="w-full h-full object-contain"
                       onError={() => setLogoFailed(true)} />
-                  ) : (
-                    <img src="/images/thai_qr_payment.png" alt="" className="w-6 h-auto" />
-                  )}
-                </div>
+                  </div>
+                )}
                 {qrExpired && (
                   <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-white/80">
                     <div className="text-center">
