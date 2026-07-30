@@ -86,6 +86,20 @@ export const kanitThai = localFont({
  * woff2 spanning the whole 400-800 range, so all five weights resolve from it.
  * Its unicode-range is byte-identical to kanitLatin's above, which is what
  * lets it slot into the same Latin position in the --font-sans stack.
+ *
+ * Not preloaded, and the reason is a next/font limitation. Preload links are
+ * emitted for every font instance in the rendered route's module graph, not
+ * for the ones the page's CSS actually matches. [locale]/layout.tsx has to
+ * import all three families to pick between them at render time, so every
+ * panel page was shipping all nine woff2 files as High priority preloads -
+ * 101KB - regardless of locale. On a Thai page this file is 38.6KB of that
+ * and no glyph on screen can ever resolve to it.
+ *
+ * Thai is the product: the dashboard and every logged-in surface are Thai
+ * only, and Thai is the unprefixed default locale. /en is 13 static marketing
+ * pages. So the Kanit subsets keep their preload and Inter gives its up; on
+ * /en it now loads at normal priority once the CSS matches, with `swap`
+ * painting the fallback first.
  */
 export const interLatin = localFont({
   src: [
@@ -93,7 +107,7 @@ export const interLatin = localFont({
   ],
   display: 'swap',
   variable: '--font-inter-latin',
-  preload: true,
+  preload: false,
   declarations: [
     {
       prop: 'unicode-range',
