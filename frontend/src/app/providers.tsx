@@ -7,7 +7,6 @@ import type { PublicRankings } from '@/lib/serverSeo';
 import { AdminAlertProvider } from '@/components/AdminAlert';
 import { AuthModalProvider } from '@/components/AuthModal';
 import { ReactNode } from 'react';
-import DynamicFavicon from '@/components/DynamicFavicon';
 import PageTransition from '@/components/PageTransition';
 
 export default function Providers({
@@ -35,7 +34,6 @@ export default function Providers({
           <AuthProvider initialUser={initialUser as never} seeded={sessionSeeded}>
             <AdminAlertProvider>
               <AuthModalProvider>
-                <DynamicFavicon />
                 {children}
               </AuthModalProvider>
             </AdminAlertProvider>

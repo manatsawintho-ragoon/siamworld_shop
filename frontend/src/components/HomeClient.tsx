@@ -430,7 +430,10 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
                 <ProductSectionBody products={newArrivals} servers={servers} />
               </div>
             )}
-            {(settings.show_news_home ?? '1') === '1' && <NewsStrip />}
+            {/* Also gated on show_news_nav: the strip links into /news, and that
+                route now redirects home while News is switched off, so showing
+                it here would hand the visitor a dead link. */}
+            {(settings.show_news_home ?? '1') === '1' && (settings.show_news_nav ?? '1') === '1' && <NewsStrip />}
         </div>
         <div className="flex flex-col gap-3 lg:w-[230px] flex-shrink-0 lg:self-start">
             {(settings.show_server_status_widget ?? '1') === '1' && (
