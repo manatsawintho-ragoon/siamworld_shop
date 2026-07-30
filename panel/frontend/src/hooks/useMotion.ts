@@ -89,21 +89,38 @@ export function useReveal<T extends HTMLElement = HTMLDivElement>(
 export function useScrollProgress(target: string = '--scroll-progress') {
   useEffect(() => {
     let raf = 0;
+    // `max` is cached rather than read every frame, because reading scrollHeight
+    // forces a synchronous layout flush. It is refreshed on resize, and lazily
+    // whenever the scroll position reaches the height we last measured - which is
+    // how a document that grew (the `content-visibility: auto` sections resolve
+    // their real heights as they scroll into view) corrects itself without an
+    // observer. An earlier attempt used a ResizeObserver on the root element for
+    // this; it fired while those sections were resolving and turned one reflow
+    // per frame into several, which is the opposite of the point.
+    let max = 0;
+    const measure = () => {
+      max = document.documentElement.scrollHeight - window.innerHeight;
+    };
     const write = () => {
       raf = 0;
-      const max = document.documentElement.scrollHeight - window.innerHeight;
+      if (window.scrollY >= max) measure();
       const p = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
       document.documentElement.style.setProperty(target, String(p));
     };
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(write);
     };
+    const onResize = () => {
+      measure();
+      onScroll();
+    };
+    measure();
     write();
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll, { passive: true });
+    window.addEventListener('resize', onResize, { passive: true });
     return () => {
       window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
+      window.removeEventListener('resize', onResize);
       if (raf) cancelAnimationFrame(raf);
     };
   }, [target]);
