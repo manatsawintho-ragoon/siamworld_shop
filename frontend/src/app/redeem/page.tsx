@@ -4,7 +4,6 @@ import MainLayout from '@/components/MainLayout';
 import { api, getToken } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   Ticket, CheckCircle2, XCircle, X, Info, Server, Check, Loader2,
   Gift, Gamepad2, Coins, Headphones, type LucideIcon,
@@ -95,19 +94,14 @@ export default function RedeemCodePage() {
           <form onSubmit={handleRedeemClick} className="p-5 space-y-5">
 
             {/* Result Banner */}
-            <AnimatePresence>
-              {result && (
-                <motion.div
+            {result && (
+                <div
                   key="result"
-                  initial={{ opacity: 0, y: -6, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -6, scale: 0.98 }}
-                  transition={{ duration: 0.18 }}
                   className={`flex items-start gap-3 px-4 py-3.5 rounded-xl border text-sm font-medium ${
                     result.success
                       ? 'bg-success/10 border-success/25 text-success'
                       : 'bg-error/10 border-error/25 text-error'
-                  }`}
+                  } dialog-in`}
                 >
                   <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
                     result.success ? 'bg-success/15' : 'bg-error/15'
@@ -126,9 +120,8 @@ export default function RedeemCodePage() {
                     className="w-6 h-6 rounded flex items-center justify-center text-current opacity-40 hover:opacity-70 transition-opacity flex-shrink-0 mt-0.5">
                     <X className="w-3 h-3" strokeWidth={2.5} />
                   </button>
-                </motion.div>
+                </div>
               )}
-            </AnimatePresence>
 
             {/* Code Input */}
             <div>
@@ -248,16 +241,13 @@ export default function RedeemCodePage() {
       </div>
 
       {/* "Are you logged in-game?" confirmation modal */}
-      <AnimatePresence>
-        {confirmOpen && (
-          <motion.div
-            className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-black/50 backdrop-blur-sm"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      {confirmOpen && (
+          <div
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-black/50 backdrop-blur-sm overlay-in"
             onClick={() => setConfirmOpen(false)}
           >
-            <motion.div
-              className="bg-surface rounded-2xl shadow-xl w-full max-w-sm overflow-hidden border border-border"
-              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+            <div
+              className="bg-surface rounded-2xl shadow-xl w-full max-w-sm overflow-hidden border border-border dialog-in"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="px-6 py-5 border-b border-border-muted flex items-center gap-3">
@@ -287,10 +277,9 @@ export default function RedeemCodePage() {
                   <Check className="w-3.5 h-3.5" strokeWidth={2.5} /> ยืนยัน (ออนไลน์อยู่)
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
     </MainLayout>
   );
 }

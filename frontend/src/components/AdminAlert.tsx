@@ -1,6 +1,5 @@
 'use client';
 import { createContext, useCallback, useContext, useRef, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -130,17 +129,12 @@ export function AdminAlertProvider({ children }: { children: React.ReactNode }) 
 
       {/* ── Toast Container ── */}
       <div className="fixed bottom-5 right-5 z-[9997] flex flex-col gap-2 items-end pointer-events-none">
-        <AnimatePresence>
-          {toasts.map(t => {
+        {toasts.map(t => {
             const tc = TYPE_CONFIG[t.type ?? 'success'];
             return (
-              <motion.div
+              <div
                 key={t.id}
-                initial={{ opacity: 0, x: 60, scale: 0.92 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
-                exit={{ opacity: 0, x: 60, scale: 0.92 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 26 }}
-                className={`pointer-events-auto flex items-start gap-3 bg-white rounded-xl border border-gray-200 shadow-[0_4px_0_#c5cad3,0_8px_24px_rgba(0,0,0,0.14)] px-4 py-3 max-w-[300px] overflow-hidden ${tc.glow}`}
+                className={`pointer-events-auto flex items-start gap-3 bg-white rounded-xl border border-gray-200 shadow-[0_4px_0_#c5cad3,0_8px_24px_rgba(0,0,0,0.14)] px-4 py-3 max-w-[300px] overflow-hidden ${tc.glow} dialog-in`}
               >
                 <div className={`h-full absolute left-0 top-0 bottom-0 w-1 ${tc.accent} rounded-l-xl`} />
                 <div className={`w-7 h-7 rounded-lg ${tc.iconWrap.replace('ring-4 ring-green-200','').replace('ring-4 ring-red-200','').replace('ring-4 ring-amber-200','').replace('ring-4 ring-slate-200','')} flex items-center justify-center flex-shrink-0 mt-0.5`}>
@@ -150,36 +144,26 @@ export function AdminAlertProvider({ children }: { children: React.ReactNode }) 
                   <p className="font-black text-gray-900 text-[13px] leading-tight">{t.title}</p>
                   {t.message && <p className="text-gray-500 text-[11px] mt-0.5 leading-snug">{t.message}</p>}
                 </div>
-              </motion.div>
+              </div>
             );
           })}
-        </AnimatePresence>
       </div>
 
-      <AnimatePresence>
-        {state && cfg && (
+      {state && cfg && (
           <>
             {/* Backdrop */}
-            <motion.div
+            <div
               key="backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.18 }}
-              className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-[2px]"
+              className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-[2px] overlay-in"
               onMouseDown={e => { backdropDown.current = e.target === e.currentTarget; }}
               onMouseUp={e => { if (backdropDown.current && e.target === e.currentTarget) close(false); }}
             />
 
             {/* Modal */}
             <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none">
-              <motion.div
+              <div
                 key="modal"
-                initial={{ opacity: 0, scale: 0.45, y: 32 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.82, y: 16, transition: { duration: 0.16, ease: 'easeIn' } }}
-                transition={{ type: 'spring', stiffness: 420, damping: 24, mass: 0.75 }}
-                className={`pointer-events-auto relative bg-white rounded-2xl w-full max-w-[360px] overflow-hidden border border-gray-200/80 ${cfg.glow} shadow-[0_4px_0_#c5cad3,0_8px_40px_rgba(0,0,0,0.18)]`}
+                className={`pointer-events-auto relative bg-white rounded-2xl w-full max-w-[360px] overflow-hidden border border-gray-200/80 ${cfg.glow} shadow-[0_4px_0_#c5cad3,0_8px_40px_rgba(0,0,0,0.18)] dialog-in`}
               >
                 {/* Colored top strip */}
                 <div className={`h-1.5 w-full ${cfg.accent}`} />
@@ -188,35 +172,26 @@ export function AdminAlertProvider({ children }: { children: React.ReactNode }) 
                 <div className="px-6 pt-7 pb-6 flex flex-col items-center text-center">
 
                   {/* Icon circle */}
-                  <motion.div
-                    initial={{ scale: 0, rotate: -20 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    transition={{ type: 'spring', stiffness: 380, damping: 18, delay: 0.08 }}
-                    className={`w-16 h-16 rounded-full ${cfg.iconWrap} flex items-center justify-center mb-4 flex-shrink-0`}
+                  <div
+                    className={`w-16 h-16 rounded-full ${cfg.iconWrap} flex items-center justify-center mb-4 flex-shrink-0 dialog-in`}
                   >
                     <i className={`fas ${cfg.icon} ${cfg.iconColor} text-2xl`} />
-                  </motion.div>
+                  </div>
 
                   {/* Title */}
-                  <motion.h3
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1, duration: 0.2 }}
-                    className="text-[17px] font-black text-gray-900 leading-tight mb-1.5"
+                  <h3
+                    className="text-[17px] font-black text-gray-900 leading-tight mb-1.5 dialog-in"
                   >
                     {state.title}
-                  </motion.h3>
+                  </h3>
 
                   {/* Message */}
                   {state.message && (
-                    <motion.p
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.14, duration: 0.2 }}
-                      className="text-[13px] text-gray-500 leading-relaxed max-w-[280px]"
+                    <p
+                      className="text-[13px] text-gray-500 leading-relaxed max-w-[280px] dialog-in"
                     >
                       {state.message}
-                    </motion.p>
+                    </p>
                   )}
                 </div>
 
@@ -246,11 +221,10 @@ export function AdminAlertProvider({ children }: { children: React.ReactNode }) 
                     )}
                   </button>
                 </div>
-              </motion.div>
+              </div>
             </div>
           </>
         )}
-      </AnimatePresence>
     </AlertContext.Provider>
   );
 }

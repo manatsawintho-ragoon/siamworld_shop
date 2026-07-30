@@ -915,3 +915,49 @@ table.data-table tbody tr:hover {
 .text-foreground-subtle\/40,
 .text-foreground-subtle\/50,
 .text-foreground-subtle\/60 { color: rgb(var(--color-foreground-subtle)); }
+
+/* ── Modal / drawer / carousel motion, without a library ──────────────
+   framer-motion was ~42KB of transfer on every customer page, loaded for what
+   amounts to four entrance animations. These classes replace them.
+
+   Enter only, deliberately. Exit animations are the one thing a library buys
+   that CSS cannot do alone, because the element has to stay mounted while it
+   plays. Closing instantly is a fair trade for not shipping an animation runtime
+   to every visitor - and a dismiss that responds immediately reads as faster,
+   not cheaper. `prefers-reduced-motion` drops all of it. */
+@keyframes overlay-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dialog-in  { from { opacity: 0; transform: translateY(12px) scale(0.95); }
+                        to   { opacity: 1; transform: none; } }
+@keyframes sheet-in   { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes slide-from-right { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes slide-from-left  { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
+
+.overlay-in { animation: overlay-in 0.18s ease-out both; }
+.dialog-in  { animation: dialog-in 0.24s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.sheet-in   { animation: sheet-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.slide-in-right { animation: slide-from-right 0.42s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.slide-in-left  { animation: slide-from-left 0.42s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay-in, .dialog-in, .sheet-in, .slide-in-right, .slide-in-left { animation: none; }
+}
+
+/* Loot-box moments that were framer-motion `animate` loops. */
+@keyframes box-shake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  20% { transform: translate(-2px, 2px) rotate(-1deg); }
+  40% { transform: translate(2px, -2px) rotate(1deg); }
+  60% { transform: translate(-2px, 2px) rotate(-1deg); }
+  80% { transform: translate(2px, -2px) rotate(1deg); }
+}
+.box-shake { animation: box-shake 0.5s ease-in-out infinite; }
+
+@keyframes reward-halo {
+  0%, 100% { transform: scale(1);   opacity: 0.3; }
+  50%      { transform: scale(1.2); opacity: 0.6; }
+}
+.reward-halo { animation: reward-halo 2s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .box-shake, .reward-halo { animation: none; }
+}

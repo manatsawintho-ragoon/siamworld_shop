@@ -3,7 +3,6 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import MainLayout from '@/components/MainLayout';
 import { api } from '@/lib/api';
-import { motion } from 'framer-motion';
 import { Newspaper, Pin, Eye, ChevronLeft, ChevronRight, PlayCircle, ArrowRight } from 'lucide-react';
 import {
   NEWS_CATEGORIES, NEWS_CATEGORY_ORDER, formatNewsDate,
@@ -135,7 +134,7 @@ export default function NewsIndexPage() {
           <p className="text-xs text-foreground-subtle mt-1">กลับมาดูใหม่อีกครั้งเร็ว ๆ นี้</p>
         </div>
       ) : (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+        <div className="dialog-in">
           {featured && (
             <div className="mb-5">
               <NewsCardItem n={featured} featured />
@@ -160,7 +159,7 @@ export default function NewsIndexPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {rest.map(n => <NewsCardItem key={n.id} n={n} />)}
           </div>
-        </motion.div>
+        </div>
       )}
 
       {pagination && pagination.totalPages > 1 && (

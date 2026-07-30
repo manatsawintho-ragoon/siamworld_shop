@@ -3,24 +3,10 @@ import { useMemo, useState } from 'react';
 import type { ShopPageData } from '@/lib/serverSeo';
 import MainLayout from '@/components/MainLayout';
 import ProductCard from '@/components/ProductCard';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Store, Search, X, PackageOpen } from 'lucide-react';
 import { getCategoryIcon } from '@/lib/categoryIcon';
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.05
-    }
-  }
-};
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 10 },
-  visible: { opacity: 1, y: 0 }
-};
 
 interface Product {
   id: number; name: string; description: string;
@@ -163,49 +149,41 @@ export default function ShopClient({ initial }: { initial: ShopPageData }) {
 
           {/* ── Grid body ── */}
           <div className="p-3 sm:p-6">
-            <AnimatePresence mode="popLayout">
-              {loading ? (
-                <motion.div 
+            {loading ? (
+                <div 
                   key="skeleton"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4"
+                  className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4 overlay-in"
                 >
                   {[...Array(18)].map((_, i) => (
                     <div key={i} className="aspect-[3/4] rounded-xl bg-surface-hover animate-pulse" />
                   ))}
-                </motion.div>
+                </div>
               ) : filtered.length === 0 ? (
-                <motion.div 
+                <div 
                   key="empty"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  className="flex flex-col items-center justify-center py-20 text-center"
+                  className="flex flex-col items-center justify-center py-20 text-center dialog-in"
                 >
                   <div className="w-16 h-16 rounded-3xl bg-surface-hover border border-border-muted flex items-center justify-center mb-4">
                     <PackageOpen className="w-8 h-8 text-foreground-subtle/50" strokeWidth={1.75} />
                   </div>
                   <p className="text-foreground font-black text-lg">ไม่พบสินค้า</p>
                   <p className="text-foreground-subtle text-sm mt-1">ลองค้นหาด้วยคำอื่น หรือเลือกหมวดหมู่อีกครั้ง</p>
-                </motion.div>
+                </div>
               ) : (
-                <motion.div 
+                // The grid used a framer-motion stagger. It is gone with the
+                // library: a catalogue that is already in the server-rendered
+                // HTML should not fade itself in one card at a time, and the
+                // per-item opacity was another way for text to spend frames
+                // partially transparent.
+                <div
                   key={`${catId}-${search}-${sort}`}
-                  variants={containerVariants}
-                  initial="hidden"
-                  animate="visible"
                   className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4"
                 >
                   {filtered.map(p => (
-                    <motion.div key={p.id} variants={itemVariants}>
-                      <ProductCard product={p} servers={servers} />
-                    </motion.div>
+                    <ProductCard key={p.id} product={p} servers={servers} />
                   ))}
-                </motion.div>
+                </div>
               )}
-            </AnimatePresence>
           </div>
 
         </div>

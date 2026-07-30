@@ -2,7 +2,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Coins, Timer, Sparkles, ArrowRight } from 'lucide-react';
 import type { ActiveCampaign } from './CampaignBanner';
 import { formatCountdown, campaignRate } from './CampaignBanner';
@@ -180,32 +179,22 @@ export default function HeroCarousel({ slides }: { slides: CarouselSlide[] }) {
 
   if (slides.length === 0) return null;
 
-  const slideVariants = {
-    enter: (dir: number) => ({ x: dir > 0 ? '100%' : '-100%', opacity: 0 }),
-    center: { x: 0, opacity: 1 },
-    exit: (dir: number) => ({ x: dir > 0 ? '-100%' : '100%', opacity: 0 }),
-  };
-
   const slide = slides[safeIndex];
 
   return (
     <section className="group/carousel relative overflow-hidden w-full h-full">
-      <AnimatePresence initial={false} custom={direction} mode="popLayout">
-        <motion.div
-          key={slide.key}
-          custom={direction}
-          variants={slideVariants}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          transition={{ duration: 0.5, ease: 'easeInOut' }}
-          className="absolute inset-0"
-        >
-          {slide.kind === 'campaign'
-            ? <CampaignSlide campaign={slide.campaign} />
-            : <ImageSlide image={slide.image} priority={safeIndex === 0} />}
-        </motion.div>
-      </AnimatePresence>
+      {/* Keyed on the slide, so React remounts it and the CSS entrance replays.
+          The outgoing slide is unmounted rather than animated out - see the note
+          on these classes in globals.css. `direction` picks which side it enters
+          from, matching what the arrows and swipe imply. */}
+      <div
+        key={slide.key}
+        className={`absolute inset-0 ${direction >= 0 ? 'slide-in-right' : 'slide-in-left'}`}
+      >
+        {slide.kind === 'campaign'
+          ? <CampaignSlide campaign={slide.campaign} />
+          : <ImageSlide image={slide.image} priority={safeIndex === 0} />}
+      </div>
 
       {/* Hover Arrows */}
       {slides.length > 1 && (

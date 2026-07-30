@@ -4,7 +4,6 @@ import Link from 'next/link';
 import MainLayout from '@/components/MainLayout';
 import { api, getToken } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { motion } from 'framer-motion';
 import {
   Gift, Coins, Sparkles, Package, Lock, Loader2, Check, AlertCircle, ArrowRight, Clock,
 } from 'lucide-react';
@@ -155,10 +154,8 @@ export default function RewardShopPage() {
             const blocked = blockReason(r, balance, Boolean(user));
             const remaining = r.perUserLimit !== null ? r.perUserLimit - r.alreadyRedeemed : null;
             return (
-              <motion.div key={r.id}
-                initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, delay: Math.min(i * 0.04, 0.3) }}
-                className="theme-card overflow-hidden flex flex-col">
+              <div key={r.id}
+                className="theme-card overflow-hidden flex flex-col dialog-in">
 
                 <div className="aspect-square bg-surface-hover relative overflow-hidden">
                   {r.image ? (
@@ -217,7 +214,7 @@ export default function RewardShopPage() {
                         : <>แลกเลย <ArrowRight className="w-3.5 h-3.5" strokeWidth={2.5} /></>}
                   </button>
                 </div>
-              </motion.div>
+              </div>
             );
           })}
         </div>

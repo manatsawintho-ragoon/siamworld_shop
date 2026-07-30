@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { api } from '@/lib/api';
-import { motion } from 'framer-motion';
 import { FileText, Download, Info } from 'lucide-react';
 
 interface Download {
@@ -55,15 +54,12 @@ export default function DownloadPage() {
             ))
           ) : (
             downloads.map((dl, idx) => (
-              <motion.div
+              <div
                 key={dl.id}
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.03 }}
                 /* Stacks on phones: as a single row the filename, size and GET
                    button fought over ~320px and the description was reduced to
                    an ellipsis. */
-                className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 bg-surface border-[1.5px] border-border p-3 rounded-xl hover:border-primary/30 transition-colors shadow-sm"
+                className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 bg-surface border-[1.5px] border-border p-3 rounded-xl hover:border-primary/30 transition-colors shadow-sm dialog-in"
               >
                 <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
                   {/* Minimal Icon Slot */}
@@ -105,7 +101,7 @@ export default function DownloadPage() {
                     GET
                   </a>
                 </div>
-              </motion.div>
+              </div>
             ))
           )}
 
