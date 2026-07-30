@@ -139,14 +139,32 @@ export const Icon = forwardRef<SVGSVGElement, IconProps>(function Icon(
   ref,
 ) {
   const Cmp = ICONS[name] as IconComponent;
+  // Everything constant about a lucide glyph lives in the `.ui-icon` CSS rule
+  // instead of being repeated as attributes on every instance. lucide-react
+  // spreads its own defaults first, so passing `undefined` here removes them
+  // from the rendered markup - React omits attributes whose value is undefined.
+  //
+  // It is worth the indirection: the panel's landing page renders 168 icons, and
+  // this boilerplate (xmlns, width, height, fill, stroke, stroke-width, the two
+  // stroke-* joins, focusable, and lucide's own class names) was ~210 bytes on
+  // each of them, around 35KB of the 242KB document. Document size is what that
+  // page's LCP is waiting on.
+  //
+  // `size` still wins when a caller passes one explicitly.
+  const sized = size !== '1em' ? { width: size, height: size } : { width: undefined, height: undefined };
   return (
     <Cmp
       ref={ref as never}
-      width={size}
-      height={size}
-      className={['inline-block shrink-0 align-[-0.125em]', className].filter(Boolean).join(' ')}
+      {...sized}
+      xmlns={undefined}
+      fill={undefined}
+      stroke={undefined}
+      strokeWidth={undefined}
+      strokeLinecap={undefined}
+      strokeLinejoin={undefined}
+      focusable={undefined}
+      className={['ui-icon', className].filter(Boolean).join(' ')}
       aria-hidden={rest['aria-label'] ? undefined : true}
-      focusable={false}
       {...rest}
     />
   );
