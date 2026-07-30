@@ -6,38 +6,45 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useSettings } from '@/context/SettingsContext';
 import { useAdminAlert } from '@/components/AdminAlert';
+import { useActiveCampaign } from '@/components/CampaignBanner';
+import TopupSummary from '@/components/TopupSummary';
 import {
-  ChevronLeft, Gift, Store, Smartphone, Check, Copy, Link2, Info,
-  Loader2, CheckCircle2, Zap, ShoppingCart,
+  ChevronLeft, Gift, Store, Check, Link2, Loader2, CheckCircle2,
+  Zap, ShoppingCart, ChevronDown, AlertCircle,
 } from 'lucide-react';
 
 type Step = 'input' | 'success';
+
+const HOW_TO = [
+  { n: 1, t: 'เข้าแอป TrueMoney Wallet เลือก "ส่งซองของขวัญ"' },
+  { n: 2, t: 'ระบุจำนวนเงินที่ต้องการเติม' },
+  { n: 3, t: 'เลือก "แบ่งจำนวนเงินเท่ากัน"' },
+  { n: 4, t: 'ระบุจำนวนคนรับซอง "1 คน"' },
+  { n: 5, t: 'กดยืนยัน คัดลอกลิงก์มาวางในช่องด้านบน' },
+];
+
+/** Deliberately loose: this only catches obvious typos before the request is
+ *  sent. The backend (extractVoucherHash) stays the authority on what a valid
+ *  voucher is, so a real link must never be rejected here. */
+const GIFT_LINK_RE = /gift\.truemoney\.com|[a-zA-Z0-9]{12,}/;
 
 export default function TrueMoneyTopupPage() {
   const { user, loading: authLoading, refresh } = useAuth();
   const router = useRouter();
   const { alert } = useAdminAlert();
   const { settings } = useSettings();
+  const campaign = useActiveCampaign();
 
-  const tmnEnabled = settings['truemoney_enabled'] === 'true';
-  const tmnPhone   = (settings['truemoney_phone'] || '').replace(/\D/g, '');
-  const tmnPhoneFmt = tmnPhone.length === 10 ? `${tmnPhone.slice(0, 3)}-${tmnPhone.slice(3, 6)}-${tmnPhone.slice(6)}` : tmnPhone;
+  const tmnEnabled   = settings['truemoney_enabled'] === 'true';
   const bonusEnabled = (settings['topup_bonus_truemoney_enabled'] ?? settings['topup_bonus_enabled']) === 'true';
-  const bonusMult    = parseFloat(settings['topup_bonus_truemoney_multiplier'] ?? settings['topup_bonus_multiplier'] ?? '1') || 1;
-  const hasBonus     = bonusEnabled && bonusMult > 1;
+  const bonusMultRaw = parseFloat(settings['topup_bonus_truemoney_multiplier'] ?? settings['topup_bonus_multiplier'] ?? '1') || 1;
+  const bonusMult    = bonusEnabled && bonusMultRaw > 1 ? bonusMultRaw : 1;
 
   const [step, setStep] = useState<Step>('input');
   const [giftLink, setGiftLink] = useState('');
+  const [linkError, setLinkError] = useState('');
+  const [howToOpen, setHowToOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  const copyPhone = () => {
-    if (!tmnPhone) return;
-    navigator.clipboard?.writeText(tmnPhone).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    }).catch(() => {});
-  };
 
   const [successAmount,     setSuccessAmount]     = useState(0);
   const [successPaid,       setSuccessPaid]       = useState(0);
@@ -50,12 +57,20 @@ export default function TrueMoneyTopupPage() {
   }, [authLoading, user, router]);
   if (authLoading || !user) return null;
 
+  const accent = '#ed1c24';
+  const trimmed = giftLink.trim();
+
   const handleRedeem = async () => {
-    if (!giftLink) return;
+    if (!trimmed) return;
+    if (!GIFT_LINK_RE.test(trimmed)) {
+      setLinkError('ลิงก์ซองของขวัญไม่ถูกต้อง กรุณาคัดลอกลิงก์จากแอป TrueMoney Wallet อีกครั้ง');
+      return;
+    }
     setLoading(true);
+    setLinkError('');
     try {
       const d = await api<any>('/payment/truemoney/redeem', {
-        method: 'POST', token: getToken()!, body: { giftLink },
+        method: 'POST', token: getToken()!, body: { giftLink: trimmed },
       }) as any;
       setSuccessAmount(d.amount);
       setSuccessPaid(d.paid_amount ?? d.amount);
@@ -63,58 +78,32 @@ export default function TrueMoneyTopupPage() {
       await refresh();
       setStep('success');
     } catch (err: any) {
-      await alert({ type: 'error', title: 'แลกซองของขวัญไม่สำเร็จ', message: err?.message || 'กรุณาตรวจสอบลิงก์อีกครั้ง' });
+      setLinkError(err?.message || 'แลกซองของขวัญไม่สำเร็จ กรุณาตรวจสอบลิงก์อีกครั้ง');
     } finally { setLoading(false); }
   };
 
-  const reset = () => { setStep('input'); setGiftLink(''); setSuccessMultiplier(1); setSuccessPaid(0); };
+  const reset = () => {
+    setStep('input'); setGiftLink(''); setLinkError('');
+    setSuccessMultiplier(1); setSuccessPaid(0);
+  };
 
   return (
     <MainLayout>
-      <div className="max-w-4xl mx-auto space-y-3 pb-8 font-prompt">
-
-        {/* ── Bonus Promo Banner ── */}
-        {hasBonus && step !== 'success' && (
-            <div
-              key="bonus-banner"
-              className="relative bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl overflow-hidden shadow-[0_4px_0_#c2410c,0_2px_20px_rgba(249,115,22,0.4)] dialog-in"
-            >
-              <div className="absolute -right-8 -top-8 w-40 h-40 bg-white/10 rounded-full blur-3xl pointer-events-none" />
-              <div className="relative flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center flex-shrink-0 shadow-sm">
-                  <Zap className="w-5 h-5 text-white" strokeWidth={2.25} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-black text-white/70 uppercase tracking-widest mb-0.5">โปรโมชั่น TrueMoney</p>
-                  <h3 className="text-base sm:text-lg font-black text-white leading-tight">
-                    เติมผ่านซองของขวัญ ได้รับโบนัส
-                    <span className="ml-2 text-xl sm:text-2xl text-yellow-200 drop-shadow">x{bonusMult}</span>
-                  </h3>
-                  <p className="text-[11px] text-white/80 font-bold mt-0.5">ซอง ฿100 → ได้รับ ฿{(100 * bonusMult).toLocaleString()} เข้า Wallet ทันที</p>
-                </div>
-                {/* Hidden on phones: the multiplier is already spelled out in the
-                    headline, and this tile was stealing ~90px from it. */}
-                <div className="hidden sm:block flex-shrink-0 text-center bg-white/20 border border-white/30 rounded-xl px-4 py-2">
-                  <p className="text-[9px] font-black text-white/70 uppercase tracking-wider">คูณเงิน</p>
-                  <p className="text-3xl font-black text-white leading-none">x{bonusMult}</p>
-                </div>
-              </div>
-            </div>
-          )}
+      <div className="max-w-5xl mx-auto space-y-3 pb-8 font-prompt">
 
         {/* ── Header ── */}
-        <div className="bg-surface border-2 border-primary/30 rounded-xl p-3 flex items-center shadow-theme-sm">
-          <div className="flex items-center gap-3">
-            <button onClick={() => step === 'input' ? router.push('/topup') : reset()} disabled={loading}
-              className="w-9 h-9 rounded-lg hover:bg-surface-hover border border-transparent hover:border-border flex items-center justify-center transition-all disabled:opacity-0">
+        <div className="bg-surface border-2 border-primary/30 rounded-xl p-3 flex items-center justify-between gap-3 shadow-theme-sm">
+          <div className="flex items-center gap-3 min-w-0">
+            <button onClick={() => step === 'input' ? router.push('/topup') : reset()} disabled={loading} aria-label="ย้อนกลับ"
+              className="w-9 h-9 rounded-lg hover:bg-surface-hover border border-transparent hover:border-border flex items-center justify-center transition-all disabled:opacity-0 flex-shrink-0">
               <ChevronLeft className="w-4 h-4 text-foreground-subtle" strokeWidth={2.5} />
             </button>
-            <div>
-              <h1 className="text-lg font-black text-foreground leading-none flex items-center gap-2">
-                <Gift className="w-4 h-4 text-[#ed1c24]" strokeWidth={2.25} /> เติมเงินผ่าน TrueMoney
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-black text-foreground leading-none flex items-center gap-2">
+                <Gift className="w-4 h-4 flex-shrink-0" style={{ color: accent }} strokeWidth={2.25} /> เติมเงินผ่าน TrueMoney
               </h1>
               <div className="flex items-center gap-1.5 mt-2">
-                {[1, 2].map((i) => (
+                {[1, 2].map(i => (
                   <div key={i} className={`h-1.5 rounded-full transition-all duration-500 ${
                     (step === 'input' && i === 1) || (step === 'success' && i === 2) ? 'w-6 bg-primary' : 'w-1.5 bg-primary/20'
                   }`} />
@@ -122,125 +111,126 @@ export default function TrueMoneyTopupPage() {
               </div>
             </div>
           </div>
+
+          {bonusMult > 1 && step === 'input' && (
+            <span className="flex-shrink-0 inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-orange-500 text-white text-[10px] sm:text-[11px] font-black shadow-sm">
+              <Zap className="w-3 h-3" strokeWidth={2.5} /> โบนัส x{bonusMult}
+            </span>
+          )}
         </div>
 
-        <div className="min-h-[380px] flex flex-col">
-          {!tmnEnabled && step === 'input' && (
-              <div key="disabled"
-                className="bg-surface rounded-xl border-2 border-warning/30 shadow-theme-sm w-full p-8 text-center flex-1 flex flex-col items-center justify-center gap-3 overlay-in">
-                <Store className="w-10 h-10 text-warning" strokeWidth={1.75} />
-                <p className="text-sm font-black text-foreground">TrueMoney Wallet ยังไม่เปิดใช้งาน</p>
-                <button onClick={() => router.push('/topup')} className="btn-primary px-5 py-2.5 text-white font-black text-[13px] rounded-lg">กลับไปเลือกช่องทาง</button>
+        {!tmnEnabled && step === 'input' && (
+          <div className="bg-surface rounded-xl border-2 border-warning/30 shadow-theme-sm w-full p-8 text-center flex flex-col items-center justify-center gap-3 overlay-in">
+            <Store className="w-10 h-10 text-warning" strokeWidth={1.75} />
+            <p className="text-sm font-black text-foreground">TrueMoney Wallet ยังไม่เปิดใช้งาน</p>
+            <button onClick={() => router.push('/topup')} className="btn-primary px-5 py-2.5 text-white font-black text-[13px] rounded-lg">กลับไปเลือกช่องทาง</button>
+          </div>
+        )}
+
+        {/* ── STEP 1: Gift link ── */}
+        {tmnEnabled && step === 'input' && (
+          <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-3 items-start dialog-in">
+            <div className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm p-4 sm:p-6 space-y-4">
+              <div className="flex items-center gap-3 border-b border-border-muted pb-4">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white flex-shrink-0" style={{ backgroundColor: accent }}>
+                  <Gift className="w-5 h-5" strokeWidth={2.25} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black text-foreground leading-none">วางลิงก์ซองของขวัญ</h2>
+                  <p className="text-[10px] font-bold text-foreground-subtle uppercase tracking-widest mt-1">ระบบจะแลกซองและเติมเงินให้อัตโนมัติ</p>
+                </div>
               </div>
-            )}
 
-            {/* STEP 1: Gift link input */}
-            {tmnEnabled && step === 'input' && (
-              <div key="input"
-                className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-4 sm:p-6 space-y-4 flex-1 dialog-in">
-                <div className="flex items-center gap-3 border-b border-border-muted pb-4">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[#ed1c24] text-white"><Gift className="w-5 h-5" strokeWidth={2.25} /></div>
-                  <div>
-                    <h2 className="text-lg font-black text-foreground leading-none">ส่งซองของขวัญ</h2>
-                    <p className="text-[10px] font-bold text-foreground-subtle uppercase tracking-widest mt-1">วางลิงก์ซองของขวัญที่นี่</p>
+              <div>
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: accent }}>
+                    <Link2 className="w-5 h-5" strokeWidth={2.25} />
                   </div>
+                  <input type="text" value={giftLink} inputMode="url" autoComplete="off"
+                    onChange={e => { setGiftLink(e.target.value); setLinkError(''); }}
+                    onKeyDown={e => { if (e.key === 'Enter' && !loading) handleRedeem(); }}
+                    placeholder="https://gift.truemoney.com/campaign/?v=..."
+                    className={`w-full pl-12 pr-4 py-3.5 rounded-lg border-2 bg-surface-hover text-sm font-bold text-foreground focus:outline-none transition-all ${
+                      linkError ? 'border-error' : 'border-border-muted focus:border-primary'
+                    }`} />
                 </div>
-
-                {/* ── Destination wallet (who the gift goes to) ── */}
-                {tmnPhone && (
-                  /* Copy button drops to its own full-width row on phones: in
-                     one line the phone number (the thing being copied) was the
-                     part that got squeezed. */
-                  <div className="bg-red-500/8 border-2 border-[#ed1c24]/30 rounded-xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="w-11 h-11 rounded-xl bg-[#ed1c24] flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <Smartphone className="w-5 h-5 text-white" strokeWidth={2.25} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-black text-[#ed1c24] uppercase tracking-widest">ส่งซองของขวัญมาที่เบอร์นี้</p>
-                        <p className="text-lg sm:text-xl font-black text-foreground font-mono tracking-wider leading-tight mt-0.5">{tmnPhoneFmt}</p>
-                        <p className="text-[10px] font-bold text-foreground-subtle mt-0.5">กระเป๋า TrueMoney ของร้าน (ระบบแลกซองเข้าให้อัตโนมัติ)</p>
-                      </div>
-                    </div>
-                    <button type="button" onClick={copyPhone}
-                      className="w-full sm:w-auto sm:flex-shrink-0 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-surface border-2 border-[#ed1c24]/30 text-[#ed1c24] text-[11px] font-black hover:brightness-95 transition-all">
-                      {copied ? <Check className="w-3 h-3" strokeWidth={3} /> : <Copy className="w-3 h-3" strokeWidth={2.5} />}
-                      {copied ? 'คัดลอกแล้ว' : 'คัดลอก'}
-                    </button>
-                  </div>
-                )}
-
-                <div className="space-y-3">
-                  <div className="relative group">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#ed1c24]"><Link2 className="w-5 h-5" strokeWidth={2.25} /></div>
-                    <input type="text" value={giftLink} onChange={e => setGiftLink(e.target.value)}
-                      placeholder="วางลิงก์ซองของขวัญที่นี่..." className="w-full pl-12 pr-4 py-3.5 rounded-lg border-2 border-border-muted bg-surface-hover text-sm font-bold text-foreground focus:outline-none focus:border-[#ed1c24] transition-all" />
-                  </div>
-
-                  <div className="bg-red-500/5 border border-dashed border-red-500/25 rounded-xl p-4">
-                    <h4 className="text-[12px] font-black text-[#ed1c24] mb-3 flex items-center gap-2"><Info className="w-3.5 h-3.5" strokeWidth={2.25} /> ขั้นตอนการสร้างซอง</h4>
-                    {/* Five columns only from md up. On a 360px phone that grid
-                        gave each screenshot ~58px of width with a 9px caption -
-                        unreadable, which is the opposite of what a how-to is for. */}
-                    <div className="grid grid-cols-2 xs:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
-                      {[
-                        { n: 1, t: 'เข้าแอป TrueMoney Wallet เลือก "ส่งซองของขวัญ"' },
-                        { n: 2, t: 'ระบุจำนวนเงินที่ต้องการเติม' },
-                        { n: 3, t: 'เลือก "แบ่งจำนวนเงินเท่ากัน"' },
-                        { n: 4, t: 'ระบุจำนวนคนรับซอง "1 คน"' },
-                        { n: 5, t: 'กดยืนยัน คัดลอกลิงก์มาวางในช่องด้านบน' },
-                      ].map(s => (
-                        <div key={s.n} className="flex flex-col items-center text-center gap-1.5">
-                          <div className="relative w-full aspect-[3/5] rounded-lg overflow-hidden border border-border-muted bg-white">
-                            <img src={`/images/truemoney-sendgift-icon-20240521-how-to-create-${s.n}.png`} alt={`ขั้นตอนที่ ${s.n}`} className="w-full h-full object-contain" loading="lazy" />
-                            <span className="absolute top-1 left-1 w-5 h-5 rounded-full bg-[#ed1c24] text-white text-[10px] font-black flex items-center justify-center">{s.n}</span>
-                          </div>
-                          <p className="text-[10px] md:text-[9px] font-bold text-foreground-subtle leading-tight">{s.t}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <button onClick={handleRedeem} disabled={loading || giftLink.trim().length < 6}
-                  className="btn w-full py-4 rounded-lg bg-[#ed1c24] text-white font-black text-sm shadow-[0_4px_0_#991b1b] hover:shadow-[0_2px_0_#991b1b] hover:translate-y-[2px] active:shadow-none active:translate-y-[4px] transition-all disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none flex items-center justify-center gap-2">
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2.5} /> : <CheckCircle2 className="w-4 h-4" strokeWidth={2.25} />}
-                  ยืนยันการแลกซองของขวัญ
-                </button>
-              </div>
-            )}
-
-            {/* STEP 2: Success */}
-            {step === 'success' && (
-              <div key="success"
-                className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-5 sm:p-8 space-y-6 text-center flex-1 dialog-in">
-                <div className="relative inline-block">
-                  <div className="absolute inset-0 bg-success/10 rounded-full blur-2xl animate-pulse" />
-                  <div className="relative w-20 h-20 rounded-2xl bg-success flex items-center justify-center text-white shadow-xl mx-auto"><Check className="w-8 h-8" strokeWidth={2.5} /></div>
-                </div>
-                <div className="space-y-1">
-                  <h2 className="text-2xl font-black text-foreground tracking-tight">ทำรายการสำเร็จ!</h2>
-                  <p className="text-sm font-bold text-foreground-subtle">ยอดเงินได้รับการเติมเข้า Wallet เรียบร้อยแล้ว</p>
-                </div>
-                {successMultiplier > 1 ? (
-                  <div className="bg-orange-500/10 rounded-xl p-4 border border-orange-500/20 max-w-xs w-full mx-auto space-y-2">
-                    <div className="flex items-center justify-between text-[11px]"><span className="font-bold text-foreground-subtle">ยอดในซอง</span><span className="font-black text-foreground-muted">฿{successPaid.toLocaleString()}</span></div>
-                    <div className="flex items-center justify-between text-[11px]"><span className="font-bold text-orange-700 flex items-center gap-1"><Zap className="w-2.5 h-2.5" strokeWidth={2.5} />โบนัส x{successMultiplier}</span><span className="font-black text-orange-700">+฿{(successAmount - successPaid).toLocaleString()}</span></div>
-                    <div className="border-t border-orange-500/20 pt-2 flex items-center justify-between"><span className="text-[10px] font-black text-foreground-subtle uppercase tracking-wider">ได้รับเข้า Wallet</span><span className="text-2xl font-black text-orange-700">฿{successAmount.toLocaleString()}</span></div>
+                {linkError ? (
+                  <div className="mt-2 bg-error/10 border border-error/25 rounded-lg px-3 py-2 flex items-start gap-2">
+                    <AlertCircle className="w-3.5 h-3.5 text-error flex-shrink-0 mt-0.5" strokeWidth={2.25} />
+                    <p className="text-[11px] font-bold text-error leading-relaxed">{linkError}</p>
                   </div>
                 ) : (
-                  <div className="bg-surface-hover rounded-xl p-4 border border-border-muted max-w-[220px] w-full mx-auto">
-                    <p className="text-[9px] font-black text-foreground-subtle uppercase tracking-widest mb-0.5">จำนวนที่เติมเงิน</p>
-                    <p className="text-3xl font-black text-success">฿{successAmount.toLocaleString()}</p>
+                  <p className="text-[10px] font-bold text-foreground-subtle mt-2">
+                    ซองต้องเป็นแบบ 1 คนรับ และยังไม่ถูกใช้งาน
+                  </p>
+                )}
+              </div>
+
+              <button onClick={handleRedeem} disabled={loading || trimmed.length < 6}
+                className="btn w-full py-4 rounded-lg text-white font-black text-sm shadow-[0_4px_0_#991b1b] hover:shadow-[0_2px_0_#991b1b] hover:translate-y-[2px] active:shadow-none active:translate-y-[4px] transition-all disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none flex items-center justify-center gap-2"
+                style={{ backgroundColor: accent }}>
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2.5} /> : <CheckCircle2 className="w-4 h-4" strokeWidth={2.25} />}
+                ยืนยันการแลกซองของขวัญ
+              </button>
+
+              {/* How-to, collapsed by default so the page opens on the action */}
+              <div className="rounded-xl border border-border-muted overflow-hidden">
+                <button type="button" onClick={() => setHowToOpen(v => !v)} aria-expanded={howToOpen}
+                  className="w-full px-4 py-3 flex items-center justify-between gap-2 bg-surface-hover/60 hover:bg-surface-hover transition-colors">
+                  <span className="text-[12px] font-black text-foreground-muted">วิธีสร้างซองของขวัญ (5 ขั้นตอน)</span>
+                  <ChevronDown className={`w-4 h-4 text-foreground-subtle transition-transform ${howToOpen ? 'rotate-180' : ''}`} strokeWidth={2.5} />
+                </button>
+                {howToOpen && (
+                  <div className="p-4 border-t border-border-muted grid grid-cols-2 xs:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
+                    {HOW_TO.map(s => (
+                      <div key={s.n} className="flex flex-col items-center text-center gap-1.5">
+                        <div className="relative w-full aspect-[3/5] rounded-lg overflow-hidden border border-border-muted bg-white">
+                          <img src={`/images/truemoney-sendgift-icon-20240521-how-to-create-${s.n}.png`}
+                            alt={`ขั้นตอนที่ ${s.n}`} className="w-full h-full object-contain" loading="lazy" />
+                          <span className="absolute top-1 left-1 w-5 h-5 rounded-full text-white text-[10px] font-black flex items-center justify-center" style={{ backgroundColor: accent }}>{s.n}</span>
+                        </div>
+                        <p className="text-[10px] md:text-[9px] font-bold text-foreground-subtle leading-tight">{s.t}</p>
+                      </div>
+                    ))}
                   </div>
                 )}
-                <div className="flex flex-col gap-2.5 max-w-[260px] w-full mx-auto">
-                  <button onClick={() => router.push('/shop')} className="btn-primary w-full py-3 text-white font-black text-[13px] shadow-[0_4px_0_rgb(var(--color-primary-muted))] flex items-center justify-center gap-2"><ShoppingCart className="w-3.5 h-3.5" strokeWidth={2.25} /> ไปที่หน้าร้านค้า</button>
-                  <button onClick={reset} className="text-[11px] font-black text-foreground-subtle hover:text-primary transition-colors">เติมเงินรายการใหม่</button>
-                </div>
+              </div>
+            </div>
+
+            <TopupSummary accent={accent} method="TrueMoney" amount={null}
+              bonusMult={bonusMult} campaign={campaign} walletBalance={user.wallet_balance} />
+          </div>
+        )}
+
+        {/* ── STEP 2: Success ── */}
+        {step === 'success' && (
+          <div className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-5 sm:p-8 space-y-6 text-center dialog-in">
+            <div className="relative inline-block">
+              <div className="absolute inset-0 bg-success/10 rounded-full blur-2xl animate-pulse" />
+              <div className="relative w-20 h-20 rounded-2xl bg-success flex items-center justify-center text-white shadow-xl mx-auto"><Check className="w-8 h-8" strokeWidth={2.5} /></div>
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-2xl font-black text-foreground tracking-tight">ทำรายการสำเร็จ!</h2>
+              <p className="text-sm font-bold text-foreground-subtle">ยอดเงินได้รับการเติมเข้า Wallet เรียบร้อยแล้ว</p>
+            </div>
+            {successMultiplier > 1 ? (
+              <div className="bg-orange-500/10 rounded-xl p-4 border border-orange-500/20 max-w-xs w-full mx-auto space-y-2">
+                <div className="flex items-center justify-between text-[11px]"><span className="font-bold text-foreground-subtle">ยอดในซอง</span><span className="font-black text-foreground-muted">฿{successPaid.toLocaleString()}</span></div>
+                <div className="flex items-center justify-between text-[11px]"><span className="font-bold text-orange-700 flex items-center gap-1"><Zap className="w-2.5 h-2.5" strokeWidth={2.5} />โบนัส x{successMultiplier}</span><span className="font-black text-orange-700">+฿{(successAmount - successPaid).toLocaleString()}</span></div>
+                <div className="border-t border-orange-500/20 pt-2 flex items-center justify-between"><span className="text-[10px] font-black text-foreground-subtle uppercase tracking-wider">ได้รับเข้า Wallet</span><span className="text-2xl font-black text-orange-700">฿{successAmount.toLocaleString()}</span></div>
+              </div>
+            ) : (
+              <div className="bg-surface-hover rounded-xl p-4 border border-border-muted max-w-[220px] w-full mx-auto">
+                <p className="text-[9px] font-black text-foreground-subtle uppercase tracking-widest mb-0.5">จำนวนที่เติมเงิน</p>
+                <p className="text-3xl font-black text-success">฿{successAmount.toLocaleString()}</p>
               </div>
             )}
-        </div>
+            <div className="flex flex-col gap-2.5 max-w-[260px] w-full mx-auto">
+              <button onClick={() => router.push('/shop')} className="btn-primary w-full py-3 text-white font-black text-[13px] shadow-[0_4px_0_rgb(var(--color-primary-muted))] flex items-center justify-center gap-2"><ShoppingCart className="w-3.5 h-3.5" strokeWidth={2.25} /> ไปที่หน้าร้านค้า</button>
+              <button onClick={reset} className="text-[11px] font-black text-foreground-subtle hover:text-primary transition-colors">เติมเงินรายการใหม่</button>
+            </div>
+          </div>
+        )}
       </div>
     </MainLayout>
   );
