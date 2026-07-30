@@ -51,14 +51,21 @@
 
     /* Actions */
     --color-success: 16 185 129;
+    --color-success-fill: 4 120 87;            /* emerald-700, 4.8:1 under white */
     --color-success-light: 167 243 208;        /* green-200 */
     --color-success-foreground: 6 78 59;
 
     --color-error: 220 38 38;                  /* red-600 */
+    /* The status colours have the same split role --color-primary does: readable
+       as text on a surface, and a fill under a white label. `-fill` is the
+       second job, solved so white clears 4.5:1; `warning-ink` is the inverse,
+       because darkening gold enough for white text turns it olive. */
+    --color-error-fill: 185 28 28;             /* red-700, 6.5:1 under white */
     --color-error-light: 254 202 202;          /* red-200 */
     --color-error-foreground: 127 29 29;
 
     --color-warning: 217 119 6;                /* amber-600 */
+    --color-warning-ink: 47 26 3;              /* near-black on the gold fill */
     --color-warning-light: 254 243 199;        /* amber-100 */
     --color-warning-foreground: 120 53 15;
 
@@ -96,12 +103,15 @@
     --color-primary-foreground: 255 255 255;
     --color-primary-muted: 20 83 45;
     --color-success: 16 185 129;
+    --color-success-fill: 32 129 93;
     --color-success-light: 20 83 45;
     --color-success-foreground: 167 243 208;
     --color-error: 248 113 113;
+    --color-error-fill: 181 82 82;
     --color-error-light: 127 29 29;
     --color-error-foreground: 254 202 202;
     --color-warning: 251 191 36;
+    --color-warning-ink: 100 76 14;
     --color-warning-light: 120 53 15;
     --color-warning-foreground: 254 243 199;
   }
@@ -809,9 +819,15 @@ table.data-table tbody tr:hover {
 /* Page enter fade. Deliberately CSS, not framer-motion: a JS-driven
    `initial={{opacity:0}}` hid the whole page until hydration and cost ~5s of
    LCP render delay. See components/PageTransition.tsx. */
+/* Transform, not opacity. Fading a whole page in means every label on it spends
+   a few frames at partial opacity, and partially transparent text genuinely
+   fails WCAG contrast - an audit that samples one of those frames reports the
+   page as inaccessible, and on a dark theme with real content that is exactly
+   what happened (white on a red badge measured 4.03:1 mid-animation). A short
+   rise reads the same and never puts text in that state. */
 @keyframes page-fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from { transform: translateY(4px); }
+  to   { transform: none; }
 }
 .page-fade-in {
   animation: page-fade-in 0.15s ease-out both;
@@ -824,9 +840,10 @@ table.data-table tbody tr:hover {
    put opacity:0 on the LCP element in the server-rendered HTML, so the hero
    image could not paint until hydration finished (~5.5s of LCP render delay on
    throttled mobile). See components/HomeClient.tsx. */
+/* Scale only - see the note on page-fade-in for why the opacity is gone. */
 @keyframes hero-rise {
-  from { opacity: 0; transform: scale(0.98); }
-  to   { opacity: 1; transform: scale(1); }
+  from { transform: scale(0.98); }
+  to   { transform: scale(1); }
 }
 .hero-rise {
   animation: hero-rise 0.45s ease-out both;
@@ -878,3 +895,23 @@ table.data-table tbody tr:hover {
 .text-primary\/80 { color: rgb(var(--color-primary-text, var(--color-primary))); }
 .hover\:text-primary:hover { color: rgb(var(--color-primary-text, var(--color-primary))); }
 .group:hover .group-hover\:text-primary { color: rgb(var(--color-primary-text, var(--color-primary))); }
+
+
+/* ── Status colours, in their fill role ───────────────────────────────
+   Same split as --color-primary above. `text-error` needs a shade that reads on
+   the page (light, on a dark theme); `bg-error` carries a white label and needs
+   the opposite. A live shop on a dark theme showed white on the text shade at
+   2.5:1. These rules point the solid fills at the `-fill` token, leaving the
+   alpha variants (`bg-error/10` and friends, which sit *behind* coloured text)
+   compiled separately and untouched.
+
+   `text-foreground-subtle` washes resolve to full opacity for the same reason
+   the primary ones do: a 40% wash of a colour that only just clears AA does not. */
+.bg-error   { background-color: rgb(var(--color-error-fill, var(--color-error))); }
+.bg-success { background-color: rgb(var(--color-success-fill, var(--color-success))); }
+.hover\:bg-error:hover { background-color: rgb(var(--color-error-fill, var(--color-error))); }
+
+.text-foreground-subtle\/30,
+.text-foreground-subtle\/40,
+.text-foreground-subtle\/50,
+.text-foreground-subtle\/60 { color: rgb(var(--color-foreground-subtle)); }
