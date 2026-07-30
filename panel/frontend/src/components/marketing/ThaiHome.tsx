@@ -1043,8 +1043,8 @@ function LandingContent() {
 
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <section className="relative pt-12 pb-16 md:pt-16 md:pb-20 overflow-hidden">
-        <div className="animate-blob-drift absolute top-0 right-0 -translate-y-1/4 translate-x-1/4 w-[800px] h-[800px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
-        <div className="animate-blob-drift absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/3 w-[520px] h-[520px] bg-emerald-500/5 rounded-full blur-[110px] pointer-events-none" style={{ animationDelay: '-9s' }} />
+        <div className="animate-blob-drift absolute top-[-200px] right-[-200px] w-[800px] h-[800px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="animate-blob-drift absolute bottom-[-173px] left-[-173px] w-[520px] h-[520px] bg-emerald-500/5 rounded-full blur-[110px] pointer-events-none" style={{ animationDelay: '-9s' }} />
 
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center relative z-10">
           <div>
@@ -1389,7 +1389,7 @@ function LandingContent() {
 
       {/* ── Pricing ──────────────────────────────────────────────────── */}
       <section id="pricing" className="lazy-section relative py-20 md:py-24 bg-background overflow-hidden">
-        <div className="animate-blob-drift absolute top-1/4 left-1/2 -translate-x-1/2 w-[700px] h-[700px] bg-primary/5 rounded-full blur-[130px] pointer-events-none" style={{ animationDelay: '-4s' }} />
+        <div className="animate-blob-drift absolute top-1/4 left-[calc(50%-350px)] w-[700px] h-[700px] bg-primary/5 rounded-full blur-[130px] pointer-events-none" style={{ animationDelay: '-4s' }} />
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <SectionHead
             eyebrow={t('price')}
