@@ -30,13 +30,34 @@ const FALLBACK_SVG =
 /** Anything larger than this is not a favicon and we decline to download it. */
 const MAX_SOURCE_BYTES = 8 * 1024 * 1024;
 
-function fallback() {
+/**
+ * Downloaded source bytes and encoded PNGs, held for the life of the process.
+ *
+ * This is not an optimisation, it is what makes the route work. The image hosts
+ * owners use are not reliable under repeated requests: fetching one shop's
+ * postimg favicon from the VPS answered in 2.0s and then timed out twice in a
+ * row at 30s. Re-fetching per request meant most requests fell through to the
+ * placeholder, which is the same blank outcome the AVIF bug produced.
+ *
+ * Keyed by source URL, so the four sizes in the document head plus the two in
+ * the manifest cost one download between them. Bounded by the number of icons a
+ * shop configures, which is one - a second entry only appears when the owner
+ * edits the setting, and the old one is evicted below.
+ */
+const sourceCache = new Map<string, Buffer>();
+const pngCache = new Map<string, Buffer>();
+
+/**
+ * `transient` separates "this shop has set no icon", which is a stable answer
+ * worth caching for a few minutes, from "the image host did not answer", which
+ * is not - those hosts recover, and a long cache on a failed fetch would leave
+ * the placeholder in visitors' tabs long after the icon became fetchable again.
+ */
+function fallback(transient = false) {
   return new NextResponse(FALLBACK_SVG, {
     headers: {
       'Content-Type': 'image/svg+xml',
-      // Short: an owner who has just pasted a working URL should not wait a day
-      // for the placeholder to expire out of their tab.
-      'Cache-Control': 'public, max-age=300',
+      'Cache-Control': transient ? 'public, max-age=30' : 'public, max-age=300',
     },
   });
 }
@@ -48,39 +69,57 @@ export async function GET(request: Request) {
   const source = seo.faviconUrl || seo.logoUrl;
   if (!source || !/^https?:\/\//i.test(source)) return fallback();
 
-  try {
-    const upstream = await fetch(source, {
-      // The icon changes only when the owner edits the setting, and this route
-      // is hit by every visitor's browser, so it is worth a long server cache.
-      next: { revalidate: 86400 },
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!upstream.ok) return fallback();
+  const pngKey = `${source}|${size}`;
 
-    const buffer = Buffer.from(await upstream.arrayBuffer());
-    if (!buffer.length || buffer.length > MAX_SOURCE_BYTES) return fallback();
+  try {
+    const alreadyEncoded = pngCache.get(pngKey);
+    if (alreadyEncoded) return pngResponse(alreadyEncoded);
+
+    let buffer = sourceCache.get(source);
+    if (!buffer) {
+      // 15s rather than a snappy timeout: this runs once per source, behind the
+      // cache above, and what it falls back to sticks in the visitor's tab.
+      // Waiting is cheaper than being wrong.
+      const upstream = await fetch(source, { cache: 'no-store', signal: AbortSignal.timeout(15000) });
+      if (!upstream.ok) return fallback(true);
+
+      buffer = Buffer.from(await upstream.arrayBuffer());
+      if (!buffer.length || buffer.length > MAX_SOURCE_BYTES) return fallback(true);
+
+      // A different source means the owner edited the setting, so nothing held
+      // for the previous one can be asked for again - the ?v= fingerprint in the
+      // document head changed with it.
+      sourceCache.clear();
+      pngCache.clear();
+      sourceCache.set(source, buffer);
+    }
 
     // `fit: 'contain'` on a transparent canvas: shop logos are rarely square and
     // cropping one to fit tends to cut the wordmark in half.
-    const png = await sharp(buffer, { animated: false })
+    const encoded = await sharp(buffer, { animated: false })
       .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
       .png({ compressionLevel: 9 })
       .toBuffer();
+    pngCache.set(pngKey, encoded);
 
-    // Buffer is not in BodyInit, so hand the response its backing bytes.
-    return new NextResponse(new Uint8Array(png), {
-      headers: {
-        'Content-Type': 'image/png',
-        // `immutable` is safe because the URL carries a ?v= fingerprint of the
-        // configured favicon_url (see generateMetadata in app/layout.tsx), so a
-        // changed icon is a different URL rather than a stale cache entry.
-        'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800, immutable',
-        'X-Content-Type-Options': 'nosniff',
-      },
-    });
+    return pngResponse(encoded);
   } catch {
     // Unreachable host, malformed image, sharp refusing the format (.ico is the
     // common one). A tab with the neutral mark beats a tab with a broken icon.
-    return fallback();
+    return fallback(true);
   }
+}
+
+function pngResponse(body: Buffer) {
+  // Buffer is not in BodyInit, so hand the response its backing bytes.
+  return new NextResponse(new Uint8Array(body), {
+    headers: {
+      'Content-Type': 'image/png',
+      // `immutable` is safe because the URL carries a ?v= fingerprint of the
+      // configured favicon_url (see generateMetadata in app/layout.tsx), so a
+      // changed icon is a different URL rather than a stale cache entry.
+      'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800, immutable',
+      'X-Content-Type-Options': 'nosniff',
+    },
+  });
 }
