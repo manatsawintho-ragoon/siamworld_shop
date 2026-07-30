@@ -1,7 +1,7 @@
 ﻿'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { AdminAlertProvider } from '@/components/AdminAlert';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -64,6 +64,7 @@ const MENU_CATEGORIES = [
 function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const { user, isAdmin, loading, logout } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({
     'shop': pathname.includes('/admin/products') || pathname.includes('/admin/lootboxes'),
@@ -88,6 +89,16 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, []);
 
+  // Anyone who is not an admin goes home. Waits for `loading` to settle first,
+  // or a signed-in admin would be bounced out during the session check on a cold
+  // load. /admin/setup is exempt: it is the first-time wizard, and by definition
+  // there is no admin yet when it runs.
+  useEffect(() => {
+    if (loading) return;
+    if (pathname === '/admin/setup') return;
+    if (!user || !isAdmin) router.replace('/');
+  }, [loading, user, isAdmin, pathname, router]);
+
   const toggleSubMenu = (id: string) => {
     setOpenSubMenus(prev => ({ ...prev, [id]: !prev[id] }));
   };
@@ -100,23 +111,19 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Allow the setup wizard to render without admin auth (first-time setup).
+  const isSetup = pathname === '/admin/setup';
+
   if (!user || !isAdmin) {
-    // Allow setup wizard to render without admin auth (handles first-time setup)
-    if (pathname === '/admin/setup') {
-      return <>{children}</>;
-    }
+    if (isSetup) return <>{children}</>;
+    // Send them home rather than announcing that an admin area exists here. The
+    // denial card this replaced told an anonymous visitor exactly what they had
+    // found and left them parked on a URL they cannot use. `replace` keeps the
+    // admin path out of history, so Back does not bounce them straight into it
+    // again. The spinner is what shows for the frame before the route changes.
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f3f4f6]">
-        <div className="text-center bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
-          <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-2xl flex items-center justify-center">
-            <i className="fas fa-shield-halved text-2xl text-red-600"></i>
-          </div>
-          <h2 className="text-xl font-bold mb-2 text-gray-900">ไม่มีสิทธิ์เข้าถึง</h2>
-          <p className="text-gray-500 mb-6">คุณต้องเป็น Admin เพื่อเข้าหน้านี้</p>
-          <Link href="/" className="px-6 py-2.5 bg-[#22c55e] hover:bg-[#16a34a] text-white font-bold rounded-xl transition-colors">
-            <i className="fas fa-home mr-2"></i> กลับหน้าแรก
-          </Link>
-        </div>
+        <i className="fas fa-spinner fa-spin text-3xl text-[#22c55e]" role="status" aria-label="กำลังนำทาง"></i>
       </div>
     );
   }

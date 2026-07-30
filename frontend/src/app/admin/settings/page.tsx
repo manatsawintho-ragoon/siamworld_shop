@@ -12,6 +12,52 @@ interface Download { id: number; filename: string; description: string; file_siz
 const emptySlide = { title: '', image_url: '', link_url: '', sort_order: 0, active: true };
 const EMPTY_DL: Omit<Download, 'id'> = { filename: '', description: '', file_size: '', download_url: '', category: '', active: 1, sort_order: 0 };
 
+/**
+ * Visibility switches, grouped by what turning one off actually does.
+ *
+ * The flat list this replaced gave no way to tell "hides a menu item" apart from
+ * "hides a box on the home page", and the Reward Shop and News entries read as
+ * navbar-only when they now close the section entirely - the pages redirect to
+ * the home page while the switch is off. Keys are unchanged, so nothing an
+ * existing shop has already saved is affected.
+ */
+const VISIBILITY_GROUPS: { title: string; icon: string; items: readonly (readonly [string, string, string?])[] }[] = [
+  {
+    title: 'ฟีเจอร์ของเว็บไซต์',
+    icon: 'fa-toggle-on',
+    items: [
+      ['show_lootbox_nav', 'กล่องสุ่ม (Loot Box)', 'ปิดแล้วจะซ่อนเมนูกล่องสุ่ม'],
+      ['show_rewards_nav', 'แลกของรางวัล (Reward Shop)', 'ปิดแล้วจะซ่อนเมนูและปิดหน้า /rewards'],
+      ['show_news_nav', 'ข่าวสาร (บล็อก)', 'ปิดแล้วจะซ่อนเมนูและปิดหน้า /news ทั้งหมด'],
+      ['show_download_nav', 'ดาวน์โหลด', 'ปิดแล้วจะซ่อนเมนูดาวน์โหลด'],
+    ],
+  },
+  {
+    title: 'ส่วนบนหน้าแรก',
+    icon: 'fa-house',
+    items: [
+      ['show_welcome_marquee', 'แถบประกาศวิ่ง LIVE'],
+      ['show_campaign_slide', 'สไลด์แคมเปญเติมเงิน'],
+      ['show_news_home', 'แถบข่าวล่าสุด'],
+      ['show_exclusive_gacha', 'GACHA Exclusive Box'],
+      ['show_popular_gacha', 'GACHA ยอดนิยม'],
+      ['show_new_arrivals', 'ไอเท็มมาใหม่'],
+    ],
+  },
+  {
+    title: 'Widget ด้านข้าง',
+    icon: 'fa-table-columns',
+    items: [
+      ['show_server_status_widget', 'สถานะเซิร์ฟเวอร์'],
+      ['show_topup_rank_widget', 'อันดับยอดเติม'],
+      ['show_topup_daily_widget', 'เติมรายวัน'],
+      ['show_live_shop_widget', 'Live Shop'],
+      ['show_popular_widget', 'สินค้ายอดนิยม'],
+      ['show_gacha_live_widget', 'Gacha Live'],
+    ],
+  },
+];
+
 /* ── Reusable components ── */
 const SectionCard = ({ icon, title, description, children, actions }: { icon: string; title: string; description: string; children: React.ReactNode; actions?: React.ReactNode }) => (
   <div className="bg-white rounded-2xl shadow-[0_4px_0_#c5cad3,0_2px_24px_rgba(0,0,0,0.10)] border border-gray-200/70 overflow-hidden">
@@ -121,6 +167,21 @@ export default function AdminSettings() {
 
   const set = (key: string, val: string) => setSettings(prev => ({ ...prev, [key]: val }));
 
+  /**
+   * Settings are also cached server-side for 300s and every customer page is
+   * rendered from that copy, so writing to the backend is only half of a save:
+   * without this the shop keeps serving the old values for up to five minutes
+   * and the switch you just flipped looks like it did nothing.
+   *
+   * Best-effort on purpose - the write itself has already succeeded, and the
+   * cache expires on its own regardless.
+   */
+  const revalidateShop = async () => {
+    try {
+      await fetch('/revalidate', { method: 'POST', credentials: 'include' });
+    } catch { /* cache will expire on its own */ }
+  };
+
   /* Per-section save */
   const handleSaveKeys = async (section: string, keys: string[]) => {
     setSectionSaving(prev => ({ ...prev, [section]: true }));
@@ -128,6 +189,7 @@ export default function AdminSettings() {
     try {
       const settingsArray = keys.map(key => ({ key, value: settings[key] ?? '' }));
       await api('/admin/settings', { method: 'PUT', token: getToken()!, body: { settings: settingsArray } });
+      await revalidateShop();
       await refreshSettings();
       setSectionSaved(prev => ({ ...prev, [section]: true }));
       setTimeout(() => setSectionSaved(prev => ({ ...prev, [section]: false })), 3000);
@@ -146,6 +208,7 @@ export default function AdminSettings() {
     try {
       const settingsArray = keys.map(key => ({ key, value: '' }));
       await api('/admin/settings', { method: 'PUT', token: getToken()!, body: { settings: settingsArray } });
+      await revalidateShop();
       await refreshSettings();
     } catch {
       await adminAlert({ title: 'เคลียร์ไม่สำเร็จ', type: 'error' });
@@ -533,35 +596,45 @@ export default function AdminSettings() {
           </SectionCard>
 
           {/* ── Visibility toggles ──────────────────────────────────────── */}
-          <SectionCard icon="fa-eye" title="ปุ่ม / Widget ที่แสดงบนเว็บไซต์" description="เปิด/ปิดปุ่มและกล่องต่าง ๆ ที่ไม่อยากให้แสดงในเว็บ"
-            actions={<ActionButtons saving={!!sectionSaving.visibility} saved={!!sectionSaved.visibility} onSave={() => handleSaveKeys('visibility', ['show_lootbox_nav', 'show_download_nav', 'show_rewards_nav', 'show_news_nav', 'show_topup_rank_widget', 'show_topup_daily_widget', 'show_live_shop_widget', 'show_popular_widget', 'show_welcome_marquee', 'show_server_status_widget', 'show_gacha_live_widget', 'show_exclusive_gacha', 'show_popular_gacha', 'show_new_arrivals', 'show_campaign_slide', 'show_news_home'])} />}
+          <SectionCard icon="fa-eye" title="ส่วนที่แสดงบนเว็บไซต์" description="เปิด/ปิดฟีเจอร์และกล่องต่าง ๆ ที่ไม่อยากให้แสดงในเว็บ (มีผลทันทีหลังกดบันทึก)"
+            actions={<ActionButtons saving={!!sectionSaving.visibility} saved={!!sectionSaved.visibility} onSave={() => handleSaveKeys('visibility', VISIBILITY_GROUPS.flatMap(g => g.items.map(i => i[0])))} />}
           >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {([
-                ['show_lootbox_nav',           'เมนู Loot Box (Navbar)'],
-                ['show_download_nav',          'เมนู Download (Navbar)'],
-                ['show_rewards_nav',           'เมนู แลกของรางวัล (Navbar)'],
-                ['show_news_nav',              'เมนู ข่าวสาร (Navbar)'],
-                ['show_welcome_marquee',       'แถบประกาศวิ่ง LIVE (หน้าแรก)'],
-                ['show_campaign_slide',        'สไลด์แคมเปญเติมเงิน (สไลด์หน้าแรก)'],
-                ['show_news_home',             'แถบข่าวล่าสุด (หน้าแรก)'],
-                ['show_server_status_widget',  'สถานะเซิร์ฟเวอร์ (Widget หน้าแรก)'],
-                ['show_exclusive_gacha',       'GACHA Exclusive Box (หน้าแรก)'],
-                ['show_popular_gacha',         'GACHA ยอดนิยม (หน้าแรก)'],
-                ['show_new_arrivals',          'ไอเท็มมาใหม่ (Widget)'],
-                ['show_gacha_live_widget',     'Gacha Live (Widget)'],
-                ['show_topup_rank_widget',     'อันดับยอดเติม (Widget)'],
-                ['show_topup_daily_widget',    'เติมรายวัน (Widget)'],
-                ['show_live_shop_widget',      'Live Shop (Widget)'],
-                ['show_popular_widget',        'สินค้ายอดนิยม (Widget)'],
-              ] as const).map(([key, label]) => (
-                <label key={key} className="flex items-center gap-3 cursor-pointer p-3 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className={`w-10 h-5 rounded-full transition-colors flex-shrink-0 relative ${(settings[key] ?? '1') === '1' ? 'bg-green-600' : 'bg-gray-300'}`}
-                    onClick={() => set(key, (settings[key] ?? '1') === '1' ? '0' : '1')}>
-                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${(settings[key] ?? '1') === '1' ? 'left-[22px]' : 'left-0.5'}`}></div>
+            <div className="space-y-5">
+              {VISIBILITY_GROUPS.map(group => (
+                <div key={group.title}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <i className={`fas ${group.icon} text-[11px] text-gray-400`}></i>
+                    <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-wider">{group.title}</h4>
                   </div>
-                  <span className="text-sm font-bold text-gray-800">{label}</span>
-                </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {group.items.map(([key, label, hint]) => {
+                      const on = (settings[key] ?? '1') === '1';
+                      return (
+                        // The whole row is the control. It used to be a <label>
+                        // wrapping a <div onClick>, so only the 40px switch
+                        // responded and clicking the text it labelled did
+                        // nothing. A real role="switch" button also gives it
+                        // keyboard focus and announces its state.
+                        <button
+                          key={key}
+                          type="button"
+                          role="switch"
+                          aria-checked={on}
+                          onClick={() => set(key, on ? '0' : '1')}
+                          className="flex items-start gap-3 text-left p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 transition-colors"
+                        >
+                          <span className={`w-10 h-5 rounded-full transition-colors flex-shrink-0 relative mt-0.5 ${on ? 'bg-green-600' : 'bg-gray-300'}`}>
+                            <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${on ? 'left-[22px]' : 'left-0.5'}`}></span>
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block text-sm font-bold text-gray-800">{label}</span>
+                            {hint && <span className="block text-[11px] text-gray-500 mt-0.5">{hint}</span>}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               ))}
             </div>
           </SectionCard>

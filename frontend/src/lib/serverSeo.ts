@@ -45,6 +45,9 @@ export interface ShopSeo {
 
 const DEFAULT_NAME = 'ร้านค้า Minecraft';
 
+/** Cache tag for the shop's public settings. Invalidated by POST /revalidate. */
+export const SETTINGS_TAG = 'shop-settings';
+
 /** Absolute origin for the current request, e.g. https://shop.example.com */
 export function getRequestOrigin(): string {
   const h = headers();
@@ -69,7 +72,12 @@ export async function fetchShopSeo(): Promise<ShopSeo> {
   let s: Record<string, string> = {};
   for (const url of endpoints) {
     try {
-      const res = await fetch(url, { next: { revalidate: 300 } });
+      // Tagged so an admin save can drop this entry on the spot. Without the
+      // tag the 300s window meant a visibility toggle looked broken: the admin
+      // flipped it, reloaded the shop, and saw no change for five minutes,
+      // because every page is server-rendered from this cached copy and
+      // SettingsProvider does not re-fetch once it has been seeded.
+      const res = await fetch(url, { next: { revalidate: 300, tags: [SETTINGS_TAG] } });
       if (!res.ok) continue;
       const data = await res.json();
       s = data?.settings || {};
@@ -97,6 +105,17 @@ export async function fetchShopSeo(): Promise<ShopSeo> {
     baseUrl,
     settings: s,
   };
+}
+
+/**
+ * Whether an admin visibility toggle is on, using the same rule as the client
+ * (`(settings[key] ?? '1') === '1'`): unset means visible, so a shop that has
+ * never opened the settings page keeps every feature it had before the toggle
+ * existed. Note the `??` is deliberate rather than `||` - the admin panel writes
+ * an empty string for some keys, and an empty string means off, not unset.
+ */
+export function isFeatureEnabled(settings: Record<string, string>, key: string): boolean {
+  return (settings[key] ?? '1') === '1';
 }
 
 /**

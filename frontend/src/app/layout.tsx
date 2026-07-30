@@ -15,6 +15,32 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
+/**
+ * Icon links for the document head.
+ *
+ * With no configured icon we point straight at the static SVG, which costs the
+ * shop nothing. With one, every entry goes through /site-icon so the browser
+ * gets a PNG it can render at the size it asked for. `apple-touch-icon` is what
+ * iOS uses for a home-screen bookmark; without it Safari screenshots the page.
+ */
+function iconDescriptor(source: string | undefined) {
+  if (!source) return { icon: '/icon.svg' };
+
+  // Short non-cryptographic fingerprint of the configured URL. Only used for
+  // cache busting, so collision resistance is not a property we need.
+  let h = 0;
+  for (let i = 0; i < source.length; i++) h = (Math.imul(31, h) + source.charCodeAt(i)) | 0;
+  const v = (h >>> 0).toString(36);
+
+  return {
+    icon: [
+      { url: `/site-icon?size=32&v=${v}`, sizes: '32x32', type: 'image/png' },
+      { url: `/site-icon?size=192&v=${v}`, sizes: '192x192', type: 'image/png' },
+    ],
+    apple: [{ url: `/site-icon?size=180&v=${v}`, sizes: '180x180', type: 'image/png' }],
+  };
+}
+
 // Per-tenant metadata: each shop gets its own name/description/canonical resolved
 // from the request host at runtime (works for subdomains and custom domains alike).
 export async function generateMetadata(): Promise<Metadata> {
@@ -55,15 +81,18 @@ export async function generateMetadata(): Promise<Metadata> {
       ...(seo.logoUrl ? { images: [seo.logoUrl] } : {}),
     },
     robots: { index: true, follow: true },
-    // Without an explicit icon the browser falls back to requesting
-    // /favicon.ico, which no shop serves, so every page load logged a 404.
+    // Resolved on the server so the correct icon is in the first response and
+    // survives client-side navigation. It used to be swapped in after hydration
+    // by a DynamicFavicon component, which had two problems: the swap pointed at
+    // /_next/image, and that endpoint answers a favicon request with AVIF (it
+    // negotiates on Accept) - no browser renders an AVIF favicon, so every shop
+    // was stuck on the built-in fallback mark. /site-icon re-encodes the owner's
+    // image to PNG from our own origin, which keeps the third-party host off the
+    // page while producing something a browser will actually draw.
     //
-    // Deliberately our own same-origin file rather than the shop's favicon_url:
-    // owners paste those from image hosts, and putting a third-party URL in the
-    // document head pulls that host's cookies onto the critical path (one shop
-    // has a Canva signed URL in there today). DynamicFavicon still swaps in the
-    // tenant's own icon after hydration, so branding is unchanged.
-    icons: { icon: '/icon.svg' },
+    // The ?v= fingerprint is what lets /site-icon be cached immutably: change the
+    // favicon setting and the URL changes with it.
+    icons: iconDescriptor(seo.faviconUrl || seo.logoUrl),
     ...(seo.googleVerification ? { verification: { google: seo.googleVerification } } : {}),
   };
 }
