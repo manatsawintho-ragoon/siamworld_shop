@@ -157,10 +157,10 @@ export default function ProductCard({ product, servers }: { product: Product; se
             </div>
           ) : images.length === 1 ? (
             <img
-              src={proxyImage(images[0], 256)}
+              src={proxyImage(images[0], 192)}
               alt={product.name}
               className="w-full h-full object-contain p-2 group-hover:scale-110 transition-transform duration-500 ease-out"
-              style={{ imageRendering: 'pixelated' }} onError={onProxyError} />
+              style={{ imageRendering: 'pixelated' }} onError={onProxyError} loading="lazy" fetchPriority="low" />
           ) : (
             <div className="product-carousel">
               {images.map((src, i) => (
@@ -170,10 +170,10 @@ export default function ProductCard({ product, servers }: { product: Product; se
                   aria-hidden={i !== slideIdx}
                 >
                   <img
-                    src={proxyImage(src, 256)}
+                    src={proxyImage(src, 192)}
                     alt={product.name}
                     className="w-full h-full object-contain p-2 group-hover:scale-110 transition-transform duration-500 ease-out"
-                    style={{ imageRendering: 'pixelated' }} onError={onProxyError} />
+                    style={{ imageRendering: 'pixelated' }} onError={onProxyError} loading="lazy" fetchPriority="low" />
                 </div>
               ))}
               <div className="product-carousel-dots" aria-hidden="true">
@@ -252,7 +252,7 @@ export default function ProductCard({ product, servers }: { product: Product; se
                 <div className="px-5 py-4 border-b border-border-muted flex items-center gap-3 flex-shrink-0">
                   {imgSrc ? (
                     <div className="w-10 h-10 rounded-lg bg-surface border border-border-muted flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
-                      <img src={proxyImage(imgSrc, 36)} alt={product.name} className="w-9 h-9 object-contain" style={{ imageRendering: 'pixelated' }} onError={onProxyError} />
+                      <img src={proxyImage(imgSrc, 36)} alt={product.name} className="w-9 h-9 object-contain" style={{ imageRendering: 'pixelated' }} onError={onProxyError} loading="lazy" fetchPriority="low" />
                     </div>
                   ) : (
                     <div className="w-10 h-10 rounded-lg bg-surface-hover border border-border-muted flex items-center justify-center flex-shrink-0">
@@ -352,7 +352,7 @@ export default function ProductCard({ product, servers }: { product: Product; se
                   <div className="flex items-start gap-3 bg-surface-hover/60 rounded-xl p-3 border border-border-muted">
                     {imgSrc ? (
                       <div className="w-14 h-14 rounded-lg bg-surface border border-border-muted flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
-                        <img src={proxyImage(imgSrc, 48)} alt={product.name} className="w-12 h-12 object-contain" style={{ imageRendering: 'pixelated' }} onError={onProxyError} />
+                        <img src={proxyImage(imgSrc, 48)} alt={product.name} className="w-12 h-12 object-contain" style={{ imageRendering: 'pixelated' }} onError={onProxyError} loading="lazy" fetchPriority="low" />
                       </div>
                     ) : (
                       <div className="w-14 h-14 rounded-lg bg-surface-hover border border-border-muted flex items-center justify-center flex-shrink-0">

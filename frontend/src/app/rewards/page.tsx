@@ -162,7 +162,7 @@ export default function RewardShopPage() {
 
                 <div className="aspect-square bg-surface-hover relative overflow-hidden">
                   {r.image ? (
-                    <img src={proxyImage(r.image, 256)} alt="" className="w-full h-full object-cover" onError={onProxyError} />
+                    <img src={proxyImage(r.image, 192)} alt="" className="w-full h-full object-cover" onError={onProxyError} loading="lazy" fetchPriority="low" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <Gift className="w-9 h-9 text-foreground-subtle/40" strokeWidth={1.5} />

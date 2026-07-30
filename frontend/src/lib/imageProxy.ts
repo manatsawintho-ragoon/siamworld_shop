@@ -22,9 +22,18 @@
  */
 
 /** Widths Next accepts by default - `images.imageSizes` plus `images.deviceSizes`. */
-const ALLOWED = [16, 32, 48, 64, 96, 128, 256, 384, 640, 750, 828, 1080, 1200, 1920, 2048, 3840];
+const ALLOWED = [16, 32, 48, 64, 96, 128, 256, 384, 512, 640, 750, 828, 1080, 1200, 1920, 2048, 3840];
 
-/** Smallest allowed width that still covers `w` (2x for crispness on retina). */
+/**
+ * Smallest allowed width that still covers `w` at 2x for retina.
+ *
+ * Pass the width the element occupies on a PHONE, not on a desktop grid. The
+ * product cards are ~180px wide in a two-column mobile layout and ~256px in a
+ * four-column desktop one; requesting the desktop figure and doubling it landed
+ * on 640, which measured 26KB of AVIF where the 384 a phone actually needs is
+ * 12.6KB. Desktop viewers get a slightly softer image on a high-DPI screen; that
+ * is the right trade for halving the bytes on the connection that struggles.
+ */
 function snap(w: number): number {
   const want = w * 2;
   return ALLOWED.find(a => a >= want) ?? ALLOWED[ALLOWED.length - 1];

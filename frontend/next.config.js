@@ -85,6 +85,10 @@ const nextConfig = {
     // 24h is long enough to matter without pinning stale artwork after an
     // owner swaps a slide.
     minimumCacheTTL: 86400,
+    // Default imageSizes stop at 384 and deviceSizes start at 640, so a request
+    // for ~450px was rounded up to 640 - measured at 26KB of AVIF where 384
+    // needed 12.6KB. 512 fills the gap for the card artwork.
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384, 512],
   },
 };
 
