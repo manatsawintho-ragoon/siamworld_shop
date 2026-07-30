@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { ArrowRight, Newspaper, Pin } from 'lucide-react';
 import { NEWS_CATEGORIES, formatNewsDate, type NewsCard } from '@/lib/news';
+import { proxyImage, onProxyError } from '@/lib/imageProxy';
 
 /**
  * "Latest news" strip for the homepage: the three most recent published posts,
@@ -47,7 +48,7 @@ export default function NewsStrip() {
               className="group rounded-xl border border-border-muted overflow-hidden bg-surface hover:border-primary/40 transition-all">
               <div className="aspect-[16/9] bg-surface-hover relative overflow-hidden">
                 {n.coverImage ? (
-                  <img src={n.coverImage} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <img src={proxyImage(n.coverImage, 384)} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={onProxyError} />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <Newspaper className="w-7 h-7 text-foreground-subtle/40" strokeWidth={1.75} />

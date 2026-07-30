@@ -9,6 +9,7 @@ import {
   NEWS_CATEGORIES, NEWS_CATEGORY_ORDER, formatNewsDate,
   type NewsCard, type NewsCategory,
 } from '@/lib/news';
+import { proxyImage, onProxyError } from '@/lib/imageProxy';
 
 interface Pagination { page: number; limit: number; total: number; totalPages: number }
 
@@ -19,7 +20,7 @@ function NewsCardItem({ n, featured = false }: { n: NewsCard; featured?: boolean
       className="group theme-card overflow-hidden hover:border-primary/40 transition-all flex flex-col">
       <div className={`${featured ? 'aspect-[16/8]' : 'aspect-[16/9]'} bg-surface-hover relative overflow-hidden`}>
         {n.coverImage ? (
-          <img src={n.coverImage} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          <img src={proxyImage(n.coverImage, 640)} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={onProxyError} />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <Newspaper className="w-8 h-8 text-foreground-subtle/40" strokeWidth={1.75} />
