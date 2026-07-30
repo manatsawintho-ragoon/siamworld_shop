@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { AdminAlertProvider } from '@/components/AdminAlert';
 import { motion, AnimatePresence } from 'framer-motion';
 import NotificationBell from '@/components/NotificationBell';
@@ -413,9 +413,18 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * No AuthProvider here on purpose. The root layout already seeds one from the
+ * session cookie (app/providers.tsx) and it wraps every route, /admin included.
+ * A second provider around this subtree gave the admin shell its own copy of the
+ * auth state, so logging out cleared that copy while the root provider - the one
+ * the customer-facing pages read - kept the user. The redirect to / is a client
+ * navigation, so the root layout never re-ran and the account still looked
+ * signed in until a manual refresh.
+ */
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AuthProvider>
+    <>
       <AdminAlertProvider>
         {/* Font Awesome is an admin-only dependency: every `fas fa-*` class in
             this codebase lives under app/admin, and the one customer-facing
@@ -443,7 +452,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         />
         <AdminLayoutInner>{children}</AdminLayoutInner>
       </AdminAlertProvider>
-    </AuthProvider>
+    </>
   );
 }
 
