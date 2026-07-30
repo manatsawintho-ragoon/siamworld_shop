@@ -136,18 +136,17 @@
   .section-padding { @apply max-w-7xl mx-auto px-4 md:px-8; }
 }
 
+/* Transform only - see the note on .reveal-up below for why the fade is gone. */
 .reveal-on-scroll {
-  opacity: 0;
   transform: translateY(28px);
-  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: opacity, transform;
+  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
 }
 .reveal-on-scroll.is-visible {
-  opacity: 1;
   transform: translateY(0);
 }
 @media (prefers-reduced-motion: reduce) {
-  .reveal-on-scroll { opacity: 1; transform: none; transition: none; }
+  .reveal-on-scroll { transform: none; transition: none; }
 }
 
 @keyframes promo-shift {
@@ -881,7 +880,11 @@
   0%, 2%    { background: rgb(var(--color-shop-primary)); color: #fff; border-color: transparent; box-shadow: 0 3px 0 rgb(var(--color-shop-primary-hover)); }
   22%, 100% { background: rgb(var(--color-surface)); color: rgb(var(--color-shop-primary)); border-color: rgb(var(--color-border)); box-shadow: none; }
 }
-.mock-tab-cycle { animation: mock-tab-cycle 9.6s ease-in-out infinite; }
+/* step-end, not a smooth ease: both keyframe states clear 4.5:1 on their own,
+   but interpolating between them paints a mid-green label on a mid-green fill,
+   and axe caught exactly that frame at 1.38:1 on production. Stepping also
+   reads better - a tab does not fade between selected and unselected. */
+.mock-tab-cycle { animation: mock-tab-cycle 9.6s step-end infinite; }
 
 @keyframes mock-card-cycle {
   0%, 74%, 100% { transform: translateY(0); box-shadow: none; }
@@ -924,11 +927,13 @@
 
 /* ── Top-up: the whole payment flow, in order. The selection walks the amount
    grid, the QR is scanned, and the slip clears. */
+/* Stepped for the same reason as mock-tab-cycle: the blend between a white
+   label on green and a dark label on white passes through unreadable. */
 @keyframes mock-amount-cycle {
   0%, 6%     { background: rgb(var(--color-shop-primary)); color: #fff; border-color: transparent; }
   14%, 100%  { background: rgb(var(--color-surface)); color: rgb(var(--color-fg)); border-color: rgb(var(--color-border)); }
 }
-.mock-amount-cycle { animation: mock-amount-cycle 8.4s ease-in-out infinite; }
+.mock-amount-cycle { animation: mock-amount-cycle 8.4s step-end infinite; }
 
 @keyframes mock-qr-scan {
   0%        { transform: translateY(-120%); opacity: 0; }
@@ -1053,15 +1058,18 @@
    marketing pages; see the note in that file for why. `--reveal-delay` carries
    the per-item stagger that `transition={{ delay: i * 0.07 }}` used to.
 
-   Only transform and opacity, so every one of these stays on the compositor. */
+   Transform only, no opacity fade. A fade looks better, but it drags every bit
+   of text in the revealed block through partial opacity on its way in, and a
+   partially transparent label genuinely fails WCAG contrast for those frames -
+   axe caught 13px table text at 1.46:1 mid-reveal. Whether an audit happens to
+   sample that moment is a coin flip, and the honest fix is not to have the
+   moment. Sliding alone still reads as an entrance, and stays on the
+   compositor. */
 .reveal-up,
 .reveal-pop,
 .reveal-left {
-  opacity: 0;
-  transition:
-    opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0s),
-    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0s);
-  will-change: opacity, transform;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0s);
+  will-change: transform;
 }
 .reveal-up    { transform: translateY(14px); }
 .reveal-pop   { transform: translateY(20px) scale(0.97); }
@@ -1070,7 +1078,6 @@
 .reveal-up.is-visible,
 .reveal-pop.is-visible,
 .reveal-left.is-visible {
-  opacity: 1;
   transform: none;
 }
 
@@ -1078,7 +1085,6 @@
    is off, or the observer is unavailable, show everything. */
 @media (prefers-reduced-motion: reduce) {
   .reveal-up, .reveal-pop, .reveal-left {
-    opacity: 1;
     transform: none;
     transition: none;
   }

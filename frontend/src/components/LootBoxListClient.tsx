@@ -107,7 +107,7 @@ function BoxCard({ box }: { box: LootBox }) {
         {/* Overlays */}
         {isPaused && (
           <div className="absolute inset-0 z-10 bg-black/45 flex items-center justify-center">
-            <div className="bg-warning text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg flex items-center gap-1">
+            <div className="bg-warning text-warning-ink text-[10px] font-black px-3 py-1 rounded-full shadow-lg flex items-center gap-1">
               <Pause className="w-2 h-2" strokeWidth={2.5} /> หยุดชั่วคราว
             </div>
           </div>
@@ -201,7 +201,7 @@ function BoxCard({ box }: { box: LootBox }) {
         <Link href={`/lootbox/${box.id}`}
           className={`w-full mt-auto pt-2 pb-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 min-h-[34px] ${
             isPaused
-              ? 'bg-warning text-white shadow-[0_3px_0_#b45309] cursor-not-allowed pointer-events-none'
+              ? 'bg-warning text-warning-ink shadow-[0_3px_0_#b45309] cursor-not-allowed pointer-events-none'
               : soldOut || expired
               ? 'bg-foreground-subtle text-white cursor-not-allowed'
               : 'bg-accent text-accent-foreground hover:brightness-105 shadow-[0_3px_0_rgb(var(--color-accent-hover))] hover:shadow-[0_1px_0_rgb(var(--color-accent-hover))] hover:translate-y-[2px] active:shadow-none active:translate-y-[3px]'

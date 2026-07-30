@@ -62,6 +62,8 @@ module.exports = {
         },
         warning: {
           DEFAULT: 'rgb(var(--color-warning) / <alpha-value>)',
+          // Dark label for a gold fill - see the note in globals.css.
+          ink: 'rgb(var(--color-warning-ink) / <alpha-value>)',
           light: 'rgb(var(--color-warning-light) / <alpha-value>)',
           foreground: 'rgb(var(--color-warning-foreground) / <alpha-value>)',
         },
