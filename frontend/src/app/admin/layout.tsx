@@ -415,9 +415,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             usage (shop category tabs) now renders Lucide instead. Loading it
             from the root layout cost every customer page a render-blocking
             cross-origin stylesheet (~998ms of blocked render on mobile) for
-            icons they never saw. Next hoists this <link> into <head>. */}
+            icons they never saw.
+
+            `precedence` is what actually hoists this into <head>. Without it
+            React leaves the tag where it is written, and the served HTML had
+            it sitting in <body> just after the opening tag - so the browser
+            only discovered a third origin's render-blocking stylesheet after
+            it had finished parsing the whole head. With the attribute React
+            treats it as a managed stylesheet, moves it up beside Next's own
+            sheets, and starts the DNS and TLS to cdnjs at parse time instead
+            of one round trip later. `data-precedence` on the tag in the
+            response is the marker that it worked. */}
         <link
           rel="stylesheet"
+          precedence="default"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
           integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
           crossOrigin="anonymous"
