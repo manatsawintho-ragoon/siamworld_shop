@@ -114,7 +114,7 @@ export default function RewardShopPage() {
       {feedback && (
         <div className={`flex items-center gap-2.5 p-3 rounded-xl mb-5 border ${
           feedback.type === 'ok'
-            ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-600'
+            ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-700'
             : 'bg-rose-500/10 border-rose-500/25 text-rose-600'}`}>
           {feedback.type === 'ok'
             ? <Check className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
@@ -178,7 +178,7 @@ export default function RewardShopPage() {
                     )}
                   </div>
                   {r.stock !== null && r.stock <= 5 && r.stock > 0 && (
-                    <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 bg-amber-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full">
+                    <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 bg-amber-500 text-amber-950 text-[10px] font-black px-2 py-0.5 rounded-full">
                       <Clock className="w-2.5 h-2.5" strokeWidth={2.5} /> เหลือ {r.stock}
                     </span>
                   )}

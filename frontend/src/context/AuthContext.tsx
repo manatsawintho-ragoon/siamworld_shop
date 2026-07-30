@@ -31,10 +31,34 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
 });
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+/**
+ * `initialUser` comes from the root layout, which reads the httpOnly session
+ * cookie and resolves the profile before the response is sent. With it, the
+ * member card renders its final contents in the first paint instead of sitting
+ * collapsed until /auth/session answers - that gap was moving everything below
+ * it in the sidebar. `loading` therefore starts false whenever the server has
+ * already answered the question.
+ *
+ * The client still revalidates once on mount, which is what catches a session
+ * kicked from another device between the render and the hydration.
+ */
+export function AuthProvider({
+  children,
+  initialUser = null,
+  seeded = false,
+}: {
+  children: ReactNode;
+  initialUser?: User | null;
+  /** True when the server ran the session lookup, whatever its answer was. */
+  seeded?: boolean;
+}) {
+  const [user, setUser] = useState<User | null>(initialUser);
+  const [loading, setLoading] = useState(!seeded);
   const [sessionMessage, setSessionMessage] = useState<string | null>(null);
+
+  // Keep getToken() truthy from the first render for a seeded session, so
+  // anything gating on it does not briefly believe the visitor is anonymous.
+  if (initialUser && typeof window !== 'undefined') setToken('__cookie__');
 
   // ── Logout (clears client state + server session + cookie) ─────────────────
   const logout = useCallback(async (message?: string) => {
@@ -46,26 +70,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // ── Fetch user profile ────────────────────────────────────────────────────
-  // Always calls the server — the httpOnly cookie is sent automatically.
-  // SESSION_EXPIRED is silent: no toast — login modal handles re-auth on next action.
+  // Calls /auth/session, not /user/profile: it answers 200 with `user: null` for
+  // a visitor who is not logged in, where /user/profile answered 401. The cookie
+  // is httpOnly, so this call has to happen on every page load whether or not
+  // there is a session, and a 401 on each anonymous load showed up as a console
+  // error. SESSION_EXPIRED stays silent - the login modal handles re-auth on the
+  // next action.
   const fetchProfile = useCallback(async () => {
     try {
-      const data = await api('/user/profile');
-      setUser(data.user as User);
-      setToken('__cookie__'); // mark in-memory flag so getToken() returns truthy
-    } catch (err: any) {
+      const data = await api('/auth/session');
+      if (data.user) {
+        setUser(data.user as User);
+        setToken('__cookie__'); // mark in-memory flag so getToken() returns truthy
+      } else {
+        removeToken();
+        setUser(null);
+        if (data.code === 'SESSION_KICKED') {
+          setSessionMessage('เซสชันถูกยกเลิก: มีการเข้าสู่ระบบจากอุปกรณ์อื่น');
+        }
+      }
+    } catch {
+      // Network or 5xx only now. Treat as logged out, silently.
       removeToken();
       setUser(null);
-      if (err?.status === 401 && err?.code === 'SESSION_KICKED') {
-        setSessionMessage('เซสชันถูกยกเลิก: มีการเข้าสู่ระบบจากอุปกรณ์อื่น');
-      }
-      // SESSION_EXPIRED / generic 401 / network / 5xx: silent
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Always run on mount — server returns 401 if not logged in (no cookie)
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
   // ── Login ─────────────────────────────────────────────────────────────────

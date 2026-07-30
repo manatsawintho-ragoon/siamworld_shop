@@ -130,7 +130,7 @@ export default function TopupSelectPage() {
         {!ppEnabled && !tmnEnabled && (
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 flex items-center gap-2.5">
             <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" strokeWidth={2.25} />
-            <p className="text-[12px] font-bold text-amber-600">ขณะนี้ร้านยังไม่เปิดรับการเติมเงิน กรุณาติดต่อผู้ดูแลระบบ</p>
+            <p className="text-[12px] font-bold text-amber-700">ขณะนี้ร้านยังไม่เปิดรับการเติมเงิน กรุณาติดต่อผู้ดูแลระบบ</p>
           </div>
         )}
       </div>

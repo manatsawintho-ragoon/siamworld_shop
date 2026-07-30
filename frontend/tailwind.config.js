@@ -17,10 +17,12 @@ module.exports = {
       '2xl': '1536px',
     },
     extend: {
+      // Both families are self-hosted by next/font, which exposes them as CSS
+      // variables rather than literal family names (see src/lib/fonts.ts).
       fontFamily: {
-        sans: ['Inter', 'Prompt', 'system-ui', '-apple-system', 'sans-serif'],
-        inter: ['Inter', 'sans-serif'],
-        prompt: ['Prompt', 'sans-serif'],
+        sans: ['var(--font-inter)', 'var(--font-prompt)', 'system-ui', '-apple-system', 'sans-serif'],
+        inter: ['var(--font-inter)', 'sans-serif'],
+        prompt: ['var(--font-prompt)', 'sans-serif'],
       },
       colors: {
         background: 'rgb(var(--color-background) / <alpha-value>)',

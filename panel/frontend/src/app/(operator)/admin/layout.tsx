@@ -169,7 +169,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="h-14 flex items-center justify-between px-4 border-b border-border shrink-0">
           <Link href="/" className="flex items-center gap-2 cursor-pointer">
             <Image
-              src="/images/logosiamsite-h256.png"
+              src="/images/logosiamsite-h256.webp"
               alt="SIAMSITE logo"
               width={60}
               height={40}

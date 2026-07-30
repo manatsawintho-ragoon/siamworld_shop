@@ -160,7 +160,7 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: Aut
               same information, roughly 40px less of it. */}
           <div className="flex items-center gap-3 mb-4 pr-8">
             <Image
-              src="/images/logosiamsite-h256.png"
+              src="/images/logosiamsite-h256.webp"
               alt="SIAMSITE"
               width={160}
               height={100}

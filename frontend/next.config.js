@@ -19,9 +19,17 @@ const securityHeaders = [
       "frame-ancestors 'none'",
       "form-action 'self'",
       "img-src 'self' data: https:",
-      "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com",
-      "script-src 'self' 'unsafe-inline'",
+      // fonts.gstatic.com is gone from font-src: Inter and Prompt are now
+      // self-hosted by next/font. cdnjs stays for the Font Awesome webfonts,
+      // which still load inside the admin shell.
+      "font-src 'self' data: https://cdnjs.cloudflare.com",
+      "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
+      // static.cloudflareinsights.com is the Web Analytics beacon Cloudflare
+      // injects into the response. Without it here the browser blocks the
+      // script and logs a CSP violation on every page load, which Lighthouse
+      // counts against both errors-in-console and inspector-issues. The panel
+      // already allows it; this keeps the two apps consistent.
+      "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com",
       "connect-src 'self' https: wss:",
       "upgrade-insecure-requests",
     ].join('; '),
@@ -31,6 +39,19 @@ const securityHeaders = [
 const nextConfig = {
   output: 'standalone',
   poweredByHeader: false,
+  experimental: {
+    // Rewrites `import { X } from 'lucide-react'` to a direct per-icon import so
+    // a page pulls in only the icons it renders. Without it the barrel file puts
+    // the whole set in the module graph and the bundler has to prove each icon
+    // unused, which it does not always manage.
+    optimizePackageImports: ['lucide-react', 'framer-motion'],
+    // Inlines the rules the first paint actually needs and defers the rest of
+    // the stylesheet. The full sheet was the entire critical path: the document
+    // finished at 669ms and First Contentful Paint waited until the 23KB CSS
+    // landed at 2.47s, with Lighthouse measuring 19KB of it unused above the
+    // fold. Needs the `critters` dependency.
+    optimizeCss: true,
+  },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },
@@ -49,10 +70,21 @@ const nextConfig = {
     ];
   },
   images: {
+    // Shop owners paste artwork URLs from wherever they host them, so the
+    // allowlist has to stay open.
     remotePatterns: [
       { protocol: 'https', hostname: '**' },
       { protocol: 'http', hostname: '**' },
     ],
+    // AVIF first, WebP second. Owner-uploaded slide art is routinely a
+    // multi-megabyte PNG; re-encoding it accounted for ~1.1MB of the image
+    // savings Lighthouse reported on the home page.
+    formats: ['image/avif', 'image/webp'],
+    // Serving remote art through our own origin also drops the third-party
+    // cookies those hosts set, which Lighthouse counts under Best Practices.
+    // 24h is long enough to matter without pinning stale artwork after an
+    // owner swaps a slide.
+    minimumCacheTTL: 86400,
   },
 };
 

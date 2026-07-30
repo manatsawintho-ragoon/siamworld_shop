@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
@@ -76,7 +77,21 @@ export default function Navbar() {
       <div className="relative theme-navbar-banner overflow-hidden">
         {bannerUrl && (
           <>
-            <img src={bannerUrl} alt="" className="absolute inset-0 w-full h-full object-cover" aria-hidden="true" />
+            {/* Owner-supplied artwork from whatever host they used, and on most
+                shops it is the page's LCP element. next/image serves it from our
+                own origin (so the source host's cookies never touch the page)
+                at the size actually displayed, and `priority` emits the preload
+                link. Animated GIFs are passed through untouched by the
+                optimizer, so a shop that picked one keeps the animation. */}
+            <Image
+              src={bannerUrl}
+              alt=""
+              fill
+              sizes="100vw"
+              priority
+              className="object-cover"
+              aria-hidden="true"
+            />
             <div className="absolute inset-0 bg-black/70" />
           </>
         )}
@@ -86,7 +101,17 @@ export default function Navbar() {
             <Link href="/" className="group relative flex flex-col items-center max-w-full">
               {logoUrl ? (
                 <div className="logo-float transition-all duration-500 transform group-hover:scale-110">
-                  <img src={logoUrl} alt={shopName} className="h-20 xs:h-24 sm:h-32 md:h-44 lg:h-56 w-auto object-contain drop-shadow-[0_10px_40px_rgba(0,0,0,0.5)]" />
+                  {/* Intrinsic size is unknown (owner upload), so width/height
+                      are the layout box and `object-contain` letterboxes inside
+                      it. h-56 at 2x is the largest it is ever painted. */}
+                  <Image
+                    src={logoUrl}
+                    alt={shopName}
+                    width={448}
+                    height={224}
+                    priority
+                    className="h-20 xs:h-24 sm:h-32 md:h-44 lg:h-56 w-auto object-contain drop-shadow-[0_10px_40px_rgba(0,0,0,0.5)]"
+                  />
                 </div>
               ) : (
                 <div className="logo-float flex flex-col items-center transition-all duration-300">

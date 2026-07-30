@@ -24,8 +24,21 @@ import localFont from 'next/font/local';
  * occurrences, 900 had exactly one, in an admin-only heading). Each declared
  * weight costs a preloaded file per subset, so check real usage before adding.
  *
- * To update: re-fetch the Google Fonts CSS API, replace the woff2 files in
- * src/fonts, and keep the unicode-range strings in sync with that CSS.
+ * The woff2 files are Google's subsets re-compressed with fontTools using
+ * --no-hinting --desubroutinize: 213KB down to 101KB with identical codepoint
+ * coverage. Hinting tables are dead weight, no modern rasterizer consults them
+ * at UI sizes, and it mattered because every one of these preloads at High
+ * priority - on throttled mobile they were taking bandwidth from the
+ * render-blocking stylesheet and holding First Contentful Paint back by well
+ * over a second.
+ *
+ * To update: re-fetch the Google Fonts CSS API, put the new woff2 files in
+ * src/fonts, keep the unicode-range strings below in sync with that CSS, then
+ * re-run the subsetter over each one:
+ *
+ *   pyftsubset <file>.woff2 --unicodes=<the matching range below> --flavor=woff2 \
+ *     --layout-features=kern,liga,calt,ccmp,mark,mkmk,tnum,onum,ss01 \
+ *     --no-hinting --desubroutinize --output-file=<file>.woff2
  */
 
 export const kanitLatin = localFont({
@@ -34,7 +47,6 @@ export const kanitLatin = localFont({
     { path: '../fonts/Kanit-500-latin.woff2', weight: '500', style: 'normal' },
     { path: '../fonts/Kanit-600-latin.woff2', weight: '600', style: 'normal' },
     { path: '../fonts/Kanit-700-latin.woff2', weight: '700', style: 'normal' },
-    { path: '../fonts/Kanit-800-latin.woff2', weight: '800', style: 'normal' },
   ],
   display: 'swap',
   variable: '--font-kanit-latin',
@@ -54,7 +66,6 @@ export const kanitThai = localFont({
     { path: '../fonts/Kanit-500-thai.woff2', weight: '500', style: 'normal' },
     { path: '../fonts/Kanit-600-thai.woff2', weight: '600', style: 'normal' },
     { path: '../fonts/Kanit-700-thai.woff2', weight: '700', style: 'normal' },
-    { path: '../fonts/Kanit-800-thai.woff2', weight: '800', style: 'normal' },
   ],
   display: 'swap',
   variable: '--font-kanit-thai',

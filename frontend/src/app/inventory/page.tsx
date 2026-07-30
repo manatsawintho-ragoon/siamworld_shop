@@ -182,7 +182,7 @@ export default function InventoryPage() {
               <Package className="w-5 h-5 text-orange-500" strokeWidth={2.25} />
               คลังของรางวัล
               {pendingCount > 0 && (
-                <span className="bg-amber-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full tabular-nums">
+                <span className="bg-amber-500 text-amber-950 text-[11px] font-black px-2 py-0.5 rounded-full tabular-nums">
                   {pendingCount} รอรับ
                 </span>
               )}
@@ -303,7 +303,7 @@ export default function InventoryPage() {
                     {/* Status badge — top right */}
                     <div className="absolute top-1.5 right-1.5 z-10">
                       {isPending ? (
-                        <span className="inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-500 text-white leading-none shadow-[0_2px_0_#b45309]">
+                        <span className="inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-500 text-amber-950 leading-none shadow-[0_2px_0_#b45309]">
                           <Clock className="w-2 h-2" strokeWidth={2.5} />
                         </span>
                       ) : (

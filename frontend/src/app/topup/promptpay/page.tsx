@@ -36,7 +36,7 @@ function QrCountdown({ expiresAt, onExpired }: { expiresAt: number; onExpired: (
   return (
     <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-bold ${
       expired ? 'bg-error/10 border-error/25 text-error' :
-      urgent  ? 'bg-orange-500/10 border-orange-500/25 text-orange-600' :
+      urgent  ? 'bg-orange-500/10 border-orange-500/25 text-orange-700' :
                 'bg-blue-500/10 border-blue-500/25 text-blue-600'
     }`}>
       {expired ? <Clock className="w-3 h-3 text-error" strokeWidth={2.5} /> : urgent ? <Hourglass className="w-3 h-3 text-orange-500 animate-pulse" strokeWidth={2.5} /> : <Clock className="w-3 h-3 text-blue-500" strokeWidth={2.5} />}
@@ -304,11 +304,11 @@ export default function PromptPayTopupPage() {
                       </div>
                       <div className="flex flex-col items-center px-3">
                         <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center shadow-sm"><X className="w-3.5 h-3.5 text-white" strokeWidth={2.5} /></div>
-                        <span className="text-[10px] font-black text-orange-600 mt-1">x{bonusMult}</span>
+                        <span className="text-[10px] font-black text-orange-700 mt-1">x{bonusMult}</span>
                       </div>
                       <div className="text-center flex-1">
-                        <p className="text-[9px] font-black text-orange-500 uppercase tracking-widest mb-0.5">ได้รับเข้า Wallet</p>
-                        <p className="text-2xl font-black text-orange-600">฿{(selectedAmount * bonusMult).toLocaleString()}</p>
+                        <p className="text-[10px] font-black text-orange-700 uppercase tracking-widest mb-0.5">ได้รับเข้า Wallet</p>
+                        <p className="text-2xl font-black text-orange-700">฿{(selectedAmount * bonusMult).toLocaleString()}</p>
                       </div>
                     </div>
                   </div>
@@ -356,7 +356,7 @@ export default function PromptPayTopupPage() {
                 {qrExpiresAt && <QrCountdown expiresAt={qrExpiresAt} onExpired={() => setQrExpired(true)} />}
 
                 <div className="text-center space-y-0.5 bg-blue-500/10 py-2.5 px-8 rounded-lg border border-blue-500/20">
-                  <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest flex items-center justify-center gap-1"><Lock className="w-2.5 h-2.5" strokeWidth={2.5} /> ยอดที่ต้องโอน (ถูกล็อค)</p>
+                  <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest flex items-center justify-center gap-1"><Lock className="w-2.5 h-2.5" strokeWidth={2.5} /> ยอดที่ต้องโอน (ถูกล็อค)</p>
                   <p className="text-xl font-black text-[#003b80]">฿{qrAmount.toLocaleString()}</p>
                   <p className="text-[10px] font-bold text-foreground-subtle">{recipientName}</p>
                 </div>
@@ -455,8 +455,8 @@ export default function PromptPayTopupPage() {
                 {successMultiplier > 1 ? (
                   <div className="bg-orange-500/10 rounded-xl p-4 border border-orange-500/20 max-w-xs w-full mx-auto space-y-2">
                     <div className="flex items-center justify-between text-[11px]"><span className="font-bold text-foreground-subtle">ยอดที่โอน</span><span className="font-black text-foreground-muted">฿{successPaid.toLocaleString()}</span></div>
-                    <div className="flex items-center justify-between text-[11px]"><span className="font-bold text-orange-500 flex items-center gap-1"><Zap className="w-2.5 h-2.5" strokeWidth={2.5} />โบนัส x{successMultiplier}</span><span className="font-black text-orange-500">+฿{(successAmount - successPaid).toLocaleString()}</span></div>
-                    <div className="border-t border-orange-500/20 pt-2 flex items-center justify-between"><span className="text-[10px] font-black text-foreground-subtle uppercase tracking-wider">ได้รับเข้า Wallet</span><span className="text-2xl font-black text-orange-600">฿{successAmount.toLocaleString()}</span></div>
+                    <div className="flex items-center justify-between text-[11px]"><span className="font-bold text-orange-700 flex items-center gap-1"><Zap className="w-2.5 h-2.5" strokeWidth={2.5} />โบนัส x{successMultiplier}</span><span className="font-black text-orange-700">+฿{(successAmount - successPaid).toLocaleString()}</span></div>
+                    <div className="border-t border-orange-500/20 pt-2 flex items-center justify-between"><span className="text-[10px] font-black text-foreground-subtle uppercase tracking-wider">ได้รับเข้า Wallet</span><span className="text-2xl font-black text-orange-700">฿{successAmount.toLocaleString()}</span></div>
                   </div>
                 ) : (
                   <div className="bg-surface-hover rounded-xl p-4 border border-border-muted max-w-[220px] w-full mx-auto">

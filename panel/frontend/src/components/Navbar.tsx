@@ -130,7 +130,7 @@ function NavbarContent() {
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-3 group cursor-pointer">
               <Image
-                src="/images/logosiamsite-h256.png"
+                src="/images/logosiamsite-h256.webp"
                 alt="SIAMSITE logo"
                 width={84}
                 height={56}
@@ -155,7 +155,12 @@ function NavbarContent() {
                 control that silently sends you elsewhere is worse than none. */}
             {!pathname.startsWith('/admin') && <LanguageSwitcher />}
 
-            <button onClick={toggleDark} className="text-muted-foreground hover:text-foreground transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-secondary cursor-pointer">
+            {/* Icon-only, so the label is the only accessible name it has. */}
+            <button
+              onClick={toggleDark}
+              aria-label={isDark ? 'สลับเป็นธีมสว่าง' : 'สลับเป็นธีมมืด'}
+              className="text-muted-foreground hover:text-foreground transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-secondary cursor-pointer"
+            >
               <Icon name={isDark ? 'sun' : 'moon'} className={`text-sm`} />
             </button>
             
@@ -231,10 +236,19 @@ function NavbarContent() {
                 the theme toggle and the hamburger */}
             {!pathname.startsWith('/admin') && <LanguageSwitcher compact />}
 
-            <button onClick={toggleDark} className="text-muted-foreground w-8 h-8 flex items-center justify-center cursor-pointer">
+            <button
+              onClick={toggleDark}
+              aria-label={isDark ? 'สลับเป็นธีมสว่าง' : 'สลับเป็นธีมมืด'}
+              className="text-muted-foreground w-8 h-8 flex items-center justify-center cursor-pointer"
+            >
               <Icon name={isDark ? 'sun' : 'moon'} className={`text-sm`} />
             </button>
-            <button className="w-8 h-8 text-foreground cursor-pointer" onClick={() => setMobileOpen(!mobileOpen)}>
+            <button
+              className="w-8 h-8 text-foreground cursor-pointer"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label={mobileOpen ? 'ปิดเมนู' : 'เปิดเมนู'}
+              aria-expanded={mobileOpen}
+            >
               <Icon name={mobileOpen ? 'xmark' : 'bars'} className={`text-lg`} />
             </button>
           </div>
@@ -285,9 +299,30 @@ function NavbarContent() {
   );
 }
 
+/**
+ * NavbarContent reads useSearchParams, which App Router only allows behind a
+ * Suspense boundary. The boundary had no fallback, so the server rendered
+ * nothing where the bar goes and hydration inserted 65px at the top of every
+ * page - the single largest layout shift on the site (0.047 CLS on desktop,
+ * 0.075 measured directly).
+ *
+ * The fallback below is the unscrolled bar's own box: same sticky positioning,
+ * same vertical padding, same 1px transparent bottom border, and a spacer whose
+ * height matches the logo row. It reserves the space to the pixel, so the real
+ * bar replaces it without moving anything.
+ */
 export default function Navbar() {
   return (
-    <Suspense>
+    <Suspense
+      fallback={
+        <div
+          aria-hidden="true"
+          className="sticky top-0 z-[100] bg-background py-3 border-b border-transparent"
+        >
+          <div className="max-w-7xl mx-auto px-6 h-10" />
+        </div>
+      }
+    >
       <NavbarContent />
     </Suspense>
   );

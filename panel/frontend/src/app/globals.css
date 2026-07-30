@@ -22,14 +22,19 @@
   --color-background: oklch(100% 0 0); /* White */
   --color-foreground: oklch(21% 0.006 285.88); /* Slate 900 / Charcoal */
 
-  --color-primary: oklch(65% 0.17 65); /* Amber 500 */
+  /* Amber, one step deeper than Amber 500. The brighter tone measured 3.35:1
+     against white BOTH as text (`text-primary`) and as a button fill under
+     white label text, so it failed AA in both directions; this clears 4.5:1
+     either way. Do not lighten it back without re-checking both. */
+  --color-primary: oklch(54% 0.17 65);
   --color-primary-foreground: oklch(100% 0 0); /* White */
 
   --color-secondary: oklch(96.76% 0.001 286.37); /* Slate 50 */
   --color-secondary-foreground: oklch(36.98% 0.014 285.81); /* Slate 700 */
 
   --color-muted: oklch(96.76% 0.001 286.37);
-  --color-muted-foreground: oklch(55.55% 0.011 285.93); /* Slate 500 */
+  /* Slate 500 measured 4.28:1 on the cream primary/10 section wash. */
+  --color-muted-foreground: oklch(53% 0.011 285.93);
 
   --color-accent: oklch(96.76% 0.001 286.37);
   --color-accent-foreground: oklch(21% 0.006 285.88);
@@ -38,7 +43,7 @@
   --color-destructive-foreground: oklch(100% 0 0);
 
   --color-border: oklch(92.3% 0.003 286.13); /* Slate 200 */
-  --color-ring: oklch(65% 0.17 65); /* Amber 500 */
+  --color-ring: oklch(54% 0.17 65); /* matches --color-primary */
 
   --color-card: oklch(100% 0 0);
   --color-card-foreground: oklch(21% 0.006 285.88);
@@ -211,11 +216,17 @@
   pointer-events: none;
 }
 
-/* Gentle pulse for "live" indicators */
+/* Gentle pulse for "live" indicators.
+   Transform and opacity only. This used to expand a box-shadow ring, which
+   cannot run on the compositor: Lighthouse counted it among 16 non-composited
+   animations on the landing page, and with 1.6s of style-and-layout on throttled
+   mobile every frame of every one of them was being paid for on the main thread.
+   The element this runs on is already the ring itself, so scaling it says the
+   same thing for free. */
 @keyframes soft-ping {
-  0%   { box-shadow: 0 0 0 0 rgb(16 185 129 / 0.5); }
-  70%  { box-shadow: 0 0 0 7px rgb(16 185 129 / 0); }
-  100% { box-shadow: 0 0 0 0 rgb(16 185 129 / 0); }
+  0%   { transform: scale(1);   opacity: 0.5; }
+  70%  { transform: scale(2.4); opacity: 0; }
+  100% { transform: scale(2.4); opacity: 0; }
 }
 .animate-soft-ping { animation: soft-ping 2.4s ease-out infinite; }
 
@@ -271,12 +282,25 @@
   }
 }
 
-/* Slow breathing glow, recommended card only. One element per viewport. */
+/* Slow breathing glow, recommended card only.
+   The glow lives on a pseudo-element and only its opacity animates, because a
+   box-shadow keyframe forces a main-thread paint on every frame. Same look,
+   composited. `inset: -1px` keeps it under the card's own border radius. */
 @keyframes tier-pulse {
-  0%, 100% { box-shadow: 0 12px 30px -14px var(--tier-glow); }
-  50%      { box-shadow: 0 18px 44px -12px var(--tier-glow); }
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
 }
-.landing-tier-featured { animation: tier-pulse 4.5s ease-in-out infinite; }
+.landing-tier-featured { position: relative; }
+.landing-tier-featured::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+  box-shadow: 0 18px 44px -12px var(--tier-glow);
+  animation: tier-pulse 4.5s ease-in-out infinite;
+}
 
 /* ── Quest tracker (how-it-works steps) ──────────────────────────────
    The connecting line grows from 0 to full width once the section is in
@@ -679,8 +703,8 @@
 
 /* The one ambient animation: a live dot, because "อยู่" is the claim it makes. */
 @keyframes mock-live-pulse {
-  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgb(16 185 129 / 0.55); }
-  70%      { opacity: 0.85; box-shadow: 0 0 0 5px rgb(16 185 129 / 0); }
+  0%, 100% { opacity: 1;    transform: scale(1); }
+  70%      { opacity: 0.55; transform: scale(1.4); }
 }
 .mock-live { animation: mock-live-pulse 2.4s ease-out infinite; }
 
@@ -726,8 +750,8 @@
   --color-fg: 17 24 39;
   --color-fg-muted: 75 85 99;
   --color-fg-subtle: 107 114 128;
-  --color-shop-primary: 34 197 94;
-  --color-shop-primary-hover: 22 163 74;
+  --color-shop-primary: 21 128 61;
+  --color-shop-primary-hover: 22 101 52;
   --color-shop-primary-light: 74 222 128;
   --color-shop-primary-shadow: 20 83 45;
   --color-error: 220 38 38;
@@ -934,8 +958,8 @@
 
 /* ── Sidebar top-up board: rows arrive one after another, as the live list does. */
 @keyframes mock-board-row {
-  0%, 8%    { opacity: 0.35; transform: translateX(-6px); }
-  18%, 100% { opacity: 1; transform: translateX(0); }
+  0%, 8%    { transform: translateX(-6px); }
+  18%, 100% { transform: translateX(0); }
 }
 .mock-board-row {
   animation: mock-board-row 12s ease-out infinite;
@@ -964,8 +988,8 @@
 /* The headline figure nudges rather than counting upward. It is sample data,
    and animating it climbing would read as a claim about revenue. */
 @keyframes mock-count {
-  0%, 88%, 100% { opacity: 1; transform: translateY(0); }
-  92%           { opacity: 0.55; transform: translateY(-2px); }
+  0%, 88%, 100% { transform: translateY(0); }
+  92%           { transform: translateY(-2px); }
 }
 .mock-count {
   display: inline-block;
@@ -996,3 +1020,91 @@
     border-color: transparent;
   }
 }
+
+
+/* ── Off-screen section skipping ──────────────────────────────────────
+   The landing page is one long document (~1800 elements, several rendered
+   replicas of the product UI). Laying all of it out up front cost 1.9s of
+   Style & Layout plus 1.4s of Rendering on throttled mobile, which is what
+   held Total Blocking Time at ~470ms and pushed LCP out - the LCP element is a
+   line of text near the top, so it was waiting on layout of content nobody had
+   scrolled to yet.
+
+   `content-visibility: auto` lets the browser skip rendering work for a
+   subtree until it approaches the viewport. Unlike lazy-mounting with
+   next/dynamic, the markup is still in the HTML response, so crawlers and
+   in-page find still see everything - which matters on a marketing page.
+
+   `contain-intrinsic-size` supplies a placeholder height for the skipped
+   subtree. Without it the scrollbar jumps as sections are realised, which
+   trades a rendering win for a layout-shift loss. The `auto` keyword means the
+   browser remembers each section's real size once measured.
+
+   Not applied to the hero: it is on screen at load, so skipping it would just
+   add a step. Do not apply it to anything containing `position: sticky`. */
+.lazy-section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 700px;
+}
+
+/* ── Scroll reveals, CSS side ─────────────────────────────────────────
+   Paired with hooks/useMotion.ts, which adds `is-visible` on first
+   intersection. These replace framer-motion's initial/whileInView pairs on the
+   marketing pages; see the note in that file for why. `--reveal-delay` carries
+   the per-item stagger that `transition={{ delay: i * 0.07 }}` used to.
+
+   Only transform and opacity, so every one of these stays on the compositor. */
+.reveal-up,
+.reveal-pop,
+.reveal-left {
+  opacity: 0;
+  transition:
+    opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0s),
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0s);
+  will-change: opacity, transform;
+}
+.reveal-up    { transform: translateY(14px); }
+.reveal-pop   { transform: translateY(20px) scale(0.97); }
+.reveal-left  { transform: translateX(-12px); }
+
+.reveal-up.is-visible,
+.reveal-pop.is-visible,
+.reveal-left.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* A reveal that never fires must never hide content permanently: if scripting
+   is off, or the observer is unavailable, show everything. */
+@media (prefers-reduced-motion: reduce) {
+  .reveal-up, .reveal-pop, .reveal-left {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ── Showcase slide change ────────────────────────────────────────────
+   Was AnimatePresence mode="wait" with an x-offset crossfade. Keyed on the
+   slide index in React, so remounting restarts the animation. */
+@keyframes slide-in-x {
+  from { opacity: 0; transform: translateX(40px); }
+  to   { opacity: 1; transform: none; }
+}
+.slide-in-x { animation: slide-in-x 0.35s ease-out both; }
+@media (prefers-reduced-motion: reduce) { .slide-in-x { animation: none; } }
+
+/* ── Scroll progress bar ──────────────────────────────────────────────
+   useMotion.ts writes --scroll-progress (0..1) onto :root on scroll, so the
+   bar scales without React re-rendering. */
+.xp-progress {
+  transform: scaleX(var(--scroll-progress, 0));
+  transform-origin: left center;
+}
+@media (prefers-reduced-motion: reduce) { .xp-progress { display: none; } }
+
+/* Modal entrance. These mount only while open, so an entrance is all they need;
+   the exit animation went with framer-motion and is not missed on a dismiss. */
+@keyframes modal-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.modal-fade-in { animation: modal-fade-in 0.2s ease-out both; }
+@media (prefers-reduced-motion: reduce) { .modal-fade-in { animation: none; } }
