@@ -8,6 +8,7 @@ import { useSettings } from '@/context/SettingsContext';
 import { useAdminAlert } from '@/components/AdminAlert';
 import { useActiveCampaign } from '@/components/CampaignBanner';
 import TopupSummary from '@/components/TopupSummary';
+import GiftHowTo from '@/components/GiftHowTo';
 import {
   ChevronLeft, Gift, Store, Check, Link2, Loader2, CheckCircle2,
   Zap, ShoppingCart, ChevronDown, AlertCircle,
@@ -181,17 +182,8 @@ export default function TrueMoneyTopupPage() {
                   <ChevronDown className={`w-4 h-4 text-foreground-subtle transition-transform ${howToOpen ? 'rotate-180' : ''}`} strokeWidth={2.5} />
                 </button>
                 {howToOpen && (
-                  <div className="p-4 border-t border-border-muted grid grid-cols-2 xs:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
-                    {HOW_TO.map(s => (
-                      <div key={s.n} className="flex flex-col items-center text-center gap-1.5">
-                        <div className="relative w-full aspect-[3/5] rounded-lg overflow-hidden border border-border-muted bg-white">
-                          <img src={`/images/truemoney-sendgift-icon-20240521-how-to-create-${s.n}.png`}
-                            alt={`ขั้นตอนที่ ${s.n}`} className="w-full h-full object-contain" loading="lazy" />
-                          <span className="absolute top-1 left-1 w-5 h-5 rounded-full text-white text-[10px] font-black flex items-center justify-center" style={{ backgroundColor: accent }}>{s.n}</span>
-                        </div>
-                        <p className="text-[10px] md:text-[9px] font-bold text-foreground-subtle leading-tight">{s.t}</p>
-                      </div>
-                    ))}
+                  <div className="p-4 border-t border-border-muted">
+                    <GiftHowTo steps={HOW_TO} accent={accent} />
                   </div>
                 )}
               </div>
