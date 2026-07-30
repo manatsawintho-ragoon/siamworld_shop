@@ -1135,49 +1135,6 @@
 @media (prefers-reduced-motion: reduce) { .modal-fade-in { animation: none; } }
 
 
-/* ── Decorative loops wait for load ───────────────────────────────────
-   Every selector below runs an `infinite` animation, and most of them sit in the
-   first screen. Continuous motion is unusually costly to Speed Index: Lighthouse
-   scores each frame against the *last* frame of the trace, so pixels that never
-   stop changing mean the page never registers as visually complete, no matter how
-   fast it actually painted.
-
-   They are paused until the document has finished loading, at which point
-   app/[locale]/page.tsx's client shell sets data-anim="on". Only `infinite`
-   animations are listed: entrance animations must not be paused, because several
-   use `fill-mode: both` and would sit frozen at opacity 0.
-
-   `animation-play-state` rather than `animation: none` so each one resumes from
-   its first frame instead of being cancelled. Add new looping decorations here.
-   Real visitors lose nothing - the loops start a beat later, on a main thread
-   that is no longer busy loading the page. */
-html:not([data-anim="on"]) .promo-strip-anim,
-html:not([data-anim="on"]) .animate-float-y,
-html:not([data-anim="on"]) .marquee-track,
-html:not([data-anim="on"]) .animate-caret,
-html:not([data-anim="on"]) .animate-blob-drift,
-html:not([data-anim="on"]) .cta-sweep::after,
-html:not([data-anim="on"]) .animate-soft-ping,
-html:not([data-anim="on"]) .card-sheen::before,
-html:not([data-anim="on"]) .landing-tier-featured::after,
-html:not([data-anim="on"]) .mock-live,
-html:not([data-anim="on"]) .mock-reel,
-html:not([data-anim="on"]) .mock-win,
-html:not([data-anim="on"]) .mock-tab-cycle,
-html:not([data-anim="on"]) .mock-card-cycle,
-html:not([data-anim="on"]) .mock-item-art,
-html:not([data-anim="on"]) .mock-box-art,
-html:not([data-anim="on"]) .mock-claim-cycle,
-html:not([data-anim="on"]) .mock-claim-btn,
-html:not([data-anim="on"]) .mock-amount-cycle,
-html:not([data-anim="on"]) .mock-qr-scan,
-html:not([data-anim="on"]) .mock-slip,
-html:not([data-anim="on"]) .mock-board-row,
-html:not([data-anim="on"]) .mock-chart-line,
-html:not([data-anim="on"]) .mock-chart-dot,
-html:not([data-anim="on"]) .mock-count {
-  animation-play-state: paused !important;
-}
 
 /* ── Icon defaults ────────────────────────────────────────────────────
    The constant half of every lucide glyph. Declared once here rather than

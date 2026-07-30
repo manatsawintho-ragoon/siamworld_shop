@@ -23,14 +23,6 @@ import { DashboardMock, MOCK_SLIDES } from '@/components/landing/UiMocks';
 function ScrollProgress() {
   useScrollProgress();
 
-  // Release the decorative loops once loading is done - see the note on
-  // data-anim in globals.css.
-  useEffect(() => {
-    const on = () => document.documentElement.setAttribute('data-anim', 'on');
-    if (document.readyState === 'complete') { on(); return; }
-    window.addEventListener('load', on, { once: true });
-    return () => window.removeEventListener('load', on);
-  }, []);
   return (
     <div
       className="xp-fill xp-progress fixed top-0 left-0 right-0 h-[4px] bg-gradient-to-r from-primary via-amber-400 to-primary z-[120] pointer-events-none"
@@ -311,33 +303,19 @@ function TypewriterHeadline() {
   const [deleting, setDeleting] = useState(false);
   const [animating, setAnimating] = useState(false);
 
-  // Start only on the client, never when the user asked for less motion, and
-  // never while the page is still loading.
+  // Starts on mount, not after `load`.
   //
-  // The headline is server-rendered complete and this effect used to erase it
-  // immediately and type it back. That is the single worst thing a hero can do to
-  // Speed Index: Lighthouse scores every frame against the *last* frame of the
-  // trace, so a trace that ends mid-type makes every earlier frame - including
-  // the ones showing the finished headline - count as visually incomplete.
-  // Waiting for `load` plus a beat means the first screen is settled and complete
-  // while it is being measured, and the effect still plays for real visitors a
-  // moment later.
+  // A previous version waited for the load event to keep the headline still
+  // while Lighthouse measured Speed Index - the metric scores each frame against
+  // the last one, so a headline mid-type makes the whole load look incomplete.
+  // It scored better and read worse: the visitor got the finished headline, began
+  // reading it, and then watched it delete itself. Typing from the start is the
+  // effect the design intends, and a synthetic score is not worth the real one.
   useEffect(() => {
     if (reduceMotion) return;
-    let timer: ReturnType<typeof setTimeout>;
-    const start = () => {
-      timer = setTimeout(() => {
-        setAnimating(true);
-        setShown(0);
-        setDeleting(false);
-      }, HOLD_FULL_MS);
-    };
-    if (document.readyState === 'complete') start();
-    else window.addEventListener('load', start, { once: true });
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('load', start);
-    };
+    setAnimating(true);
+    setShown(0);
+    setDeleting(false);
   }, [reduceMotion]);
 
   useEffect(() => {
