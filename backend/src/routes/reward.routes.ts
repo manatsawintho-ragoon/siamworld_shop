@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { authenticate } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { purchaseCooldown } from '../middleware/cooldown';
+import { blockDuringMaintenance } from '../middleware/maintenance';
 import { rewardService } from '../services/reward.service';
 import { redeemRewardSchema } from '../validators/schemas';
 
@@ -55,6 +56,7 @@ router.get('/redemptions', authenticate, async (req: Request, res: Response, nex
 router.post(
   '/:id/redeem',
   authenticate,
+  blockDuringMaintenance,
   purchaseCooldown(3, 'reward'),
   validate(redeemRewardSchema),
   async (req: Request, res: Response, next: NextFunction) => {

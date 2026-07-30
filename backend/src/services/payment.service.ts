@@ -477,6 +477,51 @@ class PaymentService {
       }
 
       const slipDate = raw.date ? new Date(raw.date) : new Date();
+
+      // ── Layer 7b: bind the slip to a QR THIS user generated ──────────────────
+      // Dedup alone only guarantees ONE person is credited for a slip, not the
+      // right one: slips get posted in Discord/Facebook groups constantly, and
+      // whoever uploaded a stolen image first was credited while the real payer
+      // was told the slip was already used.
+      //
+      // The control that actually stops that is ordering. A slip can only be
+      // redeemed against a pending QR that existed BEFORE the bank timestamp on
+      // it, so someone who finds a slip after the fact cannot retroactively
+      // create a QR to match it. Matching on amount as well keeps an attacker
+      // from parking one cheap QR and reusing it against a large stolen slip.
+      //
+      // The matched row is UPDATEd into the completed top-up rather than leaving
+      // it pending and inserting a second row: one ledger row per payment keeps
+      // toprank/accounting honest, and consuming it makes reuse impossible.
+      const SKEW_MS = 5 * 60 * 1000; // bank clock vs ours on an immediate payment
+      const [pendingRows] = await conn.execute<RowDataPacket[]>(
+        `SELECT id FROM transactions
+          WHERE user_id = ? AND type = 'topup' AND method = 'promptpay' AND status = 'pending'
+            AND ABS(amount - ?) <= 0.5
+            AND created_at <= ?
+          ORDER BY created_at DESC LIMIT 1 FOR UPDATE`,
+        [userId, amount, new Date(slipDate.getTime() + SKEW_MS)]
+      );
+      if (pendingRows.length === 0) {
+        logger.warn('Slip has no matching pending QR for this user', { userId, transRef, amount });
+        const [uRowsQ] = await pool.execute<RowDataPacket[]>('SELECT username FROM users WHERE id = ?', [userId]);
+        const usernameQ = uRowsQ[0]?.username ?? `User#${userId}`;
+        notificationService.create('topup_failed',
+          `สลิปไม่ตรงกับ QR: ${usernameQ}`,
+          JSON.stringify({
+            username: usernameQ, userId,
+            status: 'ปฏิเสธ',
+            reason: 'ไม่พบรายการ QR ที่ตรงกับสลิป',
+            detail: 'ผู้ใช้ต้องสร้าง QR ยอดนี้ก่อนโอน สลิปที่โอนก่อนสร้าง QR หรือยอดไม่ตรงจะถูกปฏิเสธ',
+            trans_ref: transRef,
+            amount: `฿${amount}`,
+          })
+        );
+        throw new ValidationError(
+          'ไม่พบรายการเติมเงินที่ตรงกับสลิปนี้ กรุณากดสร้าง QR ตามยอดที่ต้องการก่อนโอนเงิน แล้วอัปโหลดสลิปอีกครั้ง'
+        );
+      }
+      const pendingTxId = Number(pendingRows[0].id);
       await conn.execute(
         `INSERT INTO slip_logs (user_id, trans_ref, amount, bank_from, bank_to, sender_name, receiver_name, slip_date)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -506,16 +551,18 @@ class PaymentService {
          VALUES (?, 'credit', ?, ?, ?, 'slip', ?, ?)`,
         [userId, creditAmount, balanceBefore, balanceAfter, transRef, slipDesc]
       );
+      // Complete the pending QR row in place rather than inserting a second one.
       // Ledger records the REAL money paid (`amount`), NOT the bonus-inflated
       // creditAmount. Toprank + dashboard accounting SUM transactions.amount, so
       // they must reflect actual revenue. The bonus only inflates the wallet
       // balance / wallet_logs above (the player's spendable points).
-      const [txResult] = await conn.execute<ResultSetHeader>(
-        `INSERT INTO transactions (user_id, amount, type, method, status, reference, description)
-         VALUES (?, ?, 'topup', 'slip', 'success', ?, ?)`,
-        [userId, amount, transRef, slipDesc]
+      await conn.execute(
+        `UPDATE transactions
+            SET amount = ?, method = 'slip', status = 'success', reference = ?, description = ?
+          WHERE id = ? AND status = 'pending'`,
+        [amount, transRef, slipDesc, pendingTxId]
       );
-      const transactionId = txResult.insertId;
+      const transactionId = pendingTxId;
 
       // Consume discount code inside the credit tx so a payment rollback also
       // releases the redeem_log slot. Re-validates max_uses inside the lock.

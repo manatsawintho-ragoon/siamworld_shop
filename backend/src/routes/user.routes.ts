@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authenticate } from '../middleware/auth';
+import { blockDuringMaintenance } from '../middleware/maintenance';
 import { validate } from '../middleware/validate';
 import { userService } from '../services/user.service';
 import { lootBoxService } from '../services/loot-box.service';
@@ -66,7 +67,7 @@ router.get('/inventory', authenticate, async (req: Request, res: Response, next:
   } catch (err) { next(err); }
 });
 
-router.post('/inventory/:id/redeem', authenticate, validate(redeemInventorySchema), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/inventory/:id/redeem', authenticate, blockDuringMaintenance, validate(redeemInventorySchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const rconManager = req.app.get('rconManager');
     const playerTracker = req.app.get('playerTracker');
@@ -82,7 +83,7 @@ router.post('/inventory/:id/redeem', authenticate, validate(redeemInventorySchem
   } catch (err) { next(err); }
 });
 
-router.post('/inventory/redeem-all', authenticate, validate(redeemInventorySchema), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/inventory/redeem-all', authenticate, blockDuringMaintenance, validate(redeemInventorySchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const rconManager = req.app.get('rconManager');
     const playerTracker = req.app.get('playerTracker');
@@ -99,7 +100,7 @@ router.post('/inventory/redeem-all', authenticate, validate(redeemInventorySchem
 
 // ─── Redeem Code ─────────────────────────────────────────────
 
-router.post('/redeem-code', authenticate, validate(redeemCodeSchema), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/redeem-code', authenticate, blockDuringMaintenance, validate(redeemCodeSchema), async (req: Request, res: Response, next: NextFunction) => {
   const conn: PoolConnection = await (pool as any).getConnection();
   try {
     const { code, serverId } = req.body;

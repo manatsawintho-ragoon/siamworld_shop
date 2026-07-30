@@ -41,11 +41,19 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
     // Reject tokens that pre-date session enforcement (no jti)
     if (!decoded.jti) return next(new AuthenticationError('Token invalid, please log in again'));
 
-    // Fetch current role from DB to ensure it's up-to-date
+    // Fetch current role + account state from DB so both are up-to-date.
+    // banned_at/deleted_at are read here, not just enforced by destroying the
+    // Redis session at ban time: if Redis is unavailable, session state degrades
+    // to 'valid' for normal users below, and a banned player would keep buying
+    // for the rest of the token's 24h lifetime. This is the same query that was
+    // already running for `role`, so the check is free.
     const [rows] = await pool.execute<RowDataPacket[]>(
-      'SELECT role FROM users WHERE id = ?', [decoded.userId]
+      'SELECT role, banned_at, deleted_at FROM users WHERE id = ?', [decoded.userId]
     );
     if (rows.length === 0) return next(new AuthenticationError('User not found'));
+    if (rows[0].banned_at || rows[0].deleted_at) {
+      return next(new AuthenticationError('บัญชีนี้ถูกระงับการใช้งาน'));
+    }
 
     // Single-session + inactivity check
     const role = rows[0].role;
