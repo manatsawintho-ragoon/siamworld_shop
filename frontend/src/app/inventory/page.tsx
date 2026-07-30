@@ -12,6 +12,7 @@ import {
   ChevronLeft, ChevronRight, Server, Box, AlertTriangle, XCircle, Loader2,
   Layers, type LucideIcon,
 } from 'lucide-react';
+import { proxyImage, onProxyError } from '@/lib/imageProxy';
 
 interface InventoryItem {
   id: number; loot_box_id: number; loot_box_item_id: number;
@@ -317,10 +318,9 @@ export default function InventoryPage() {
                     <div className="flex items-center justify-center pt-3 pb-2 px-2"
                       style={isPending ? { backgroundColor: rar.color + '0d' } : {}}>
                       {item.item_image ? (
-                        <img src={item.item_image} alt={item.item_name}
+                        <img src={proxyImage(item.item_image, 56)} alt={item.item_name}
                           className={`w-14 h-14 object-contain transition-all ${!isPending ? 'opacity-35 grayscale' : ''}`}
-                          style={isPending ? { filter: `drop-shadow(0 0 6px ${rar.color}99)` } : {}}
-                        />
+                          style={isPending ? { filter: `drop-shadow(0 0 6px ${rar.color}99)` } : {}} onError={onProxyError} />
                       ) : (
                         <Box className="w-10 h-10"
                           strokeWidth={1.5}
@@ -423,7 +423,7 @@ export default function InventoryPage() {
                           borderTopColor: rar.color, borderTopWidth: '3px',
                           boxShadow: `0 3px 0 ${shadow.bottom}` }}>
                         {redeemModal.item_image
-                          ? <img src={redeemModal.item_image} alt={redeemModal.item_name} className="w-14 h-14 object-contain flex-shrink-0" style={{ filter: `drop-shadow(0 0 6px ${rar.color}88)` }} />
+                          ? <img src={proxyImage(redeemModal.item_image, 56)} alt={redeemModal.item_name} className="w-14 h-14 object-contain flex-shrink-0" style={{ filter: `drop-shadow(0 0 6px ${rar.color}88)` }} onError={onProxyError} />
                           : <Box className="w-8 h-8 flex-shrink-0" strokeWidth={1.5} style={{ color: rar.color }} />}
                         <div className="min-w-0">
                           <RarityBadge rarity={redeemModal.item_rarity} />

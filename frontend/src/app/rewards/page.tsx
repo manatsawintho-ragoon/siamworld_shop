@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import {
   Gift, Coins, Sparkles, Package, Lock, Loader2, Check, AlertCircle, ArrowRight, Clock,
 } from 'lucide-react';
+import { proxyImage, onProxyError } from '@/lib/imageProxy';
 
 interface Reward {
   id: number;
@@ -161,7 +162,7 @@ export default function RewardShopPage() {
 
                 <div className="aspect-square bg-surface-hover relative overflow-hidden">
                   {r.image ? (
-                    <img src={r.image} alt="" className="w-full h-full object-cover" />
+                    <img src={proxyImage(r.image, 256)} alt="" className="w-full h-full object-cover" onError={onProxyError} />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <Gift className="w-9 h-9 text-foreground-subtle/40" strokeWidth={1.5} />

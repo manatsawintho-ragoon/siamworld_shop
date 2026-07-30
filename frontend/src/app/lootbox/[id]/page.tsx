@@ -12,6 +12,7 @@ import {
   Loader2, ArrowLeft, Trophy, Box, Package, Clock, AlertCircle,
   Pause, Lock, Zap, Layers, Gift, X, RotateCw,
 } from 'lucide-react';
+import { proxyImage, onProxyError } from '@/lib/imageProxy';
 
 /* ── Types ─────────────────────────────────────────────────── */
 interface LootBoxItem {
@@ -225,7 +226,7 @@ function ItemCard({
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: `radial-gradient(ellipse 70% 65% at 50% 60%, ${r.color}1a 0%, transparent 70%)` }} />
         {item.image
-          ? <img src={item.image} alt={item.name}
+          ? <img src={proxyImage(item.image, 96)} alt={item.name}
               className="object-contain relative z-10 transition-transform duration-300"
               style={{
                 width: inReel ? '80px' : '70px',
@@ -234,7 +235,7 @@ function ItemCard({
                   ? `drop-shadow(0 0 12px ${r.color}cc)`
                   : `drop-shadow(0 2px 6px rgba(0,0,0,0.18)) drop-shadow(0 0 4px ${r.color}44)`,
                 transform: highlight ? 'scale(1.12)' : 'scale(1)',
-              }} />
+              }} onError={onProxyError} />
           : <Box className="relative z-10 w-8 h-8" strokeWidth={1.5} style={{ color: r.color }} />}
       </div>
 
@@ -486,7 +487,7 @@ export default function LootBoxOpenPage() {
                     style={{ minWidth: '170px', maxWidth: '170px' }}>
                     <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-surface-hover rounded-lg border border-border overflow-hidden">
                       {drop.item_image
-                        ? <img src={drop.item_image} alt="" className="w-full h-full object-contain p-0.5" />
+                        ? <img src={proxyImage(drop.item_image, 64)} alt="" className="w-full h-full object-contain p-0.5" onError={onProxyError} />
                         : <Box className="w-4 h-4 text-foreground-subtle" strokeWidth={1.75} />}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -545,8 +546,8 @@ export default function LootBoxOpenPage() {
                           />
                         )}
                         {box.image
-                          ? <img src={box.image} alt={box.name}
-                              className="w-full h-full object-contain p-1.5 transition-transform duration-500 group-hover/box:scale-105 relative z-10" />
+                          ? <img src={proxyImage(box.image, 160)} alt={box.name}
+                              className="w-full h-full object-contain p-1.5 transition-transform duration-500 group-hover/box:scale-105 relative z-10" onError={onProxyError} />
                           : <Package className="w-10 h-10 text-primary relative z-10" strokeWidth={1.5} />}
                       </div>
                     </motion.div>
