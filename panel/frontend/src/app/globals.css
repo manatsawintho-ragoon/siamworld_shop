@@ -1178,3 +1178,25 @@ html:not([data-anim="on"]) .mock-chart-dot,
 html:not([data-anim="on"]) .mock-count {
   animation-play-state: paused !important;
 }
+
+/* ── Icon defaults ────────────────────────────────────────────────────
+   The constant half of every lucide glyph. Declared once here rather than
+   repeated as attributes on each <svg>: the landing page renders 168 icons and
+   this was ~210 bytes on every one of them, roughly 35KB of a 242KB document.
+   That document size is exactly what the page's Largest Contentful Paint waits
+   on, so it is worth moving.
+
+   Keep in sync with components/ui/icon.tsx, which strips these attributes by
+   passing `undefined` over lucide's own defaults. */
+.ui-icon {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
