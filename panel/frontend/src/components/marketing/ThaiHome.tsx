@@ -866,7 +866,7 @@ function FaqSection() {
   const reduceMotion = useReducedMotion();
 
   return (
-    <section id="faq" className="py-20 md:py-24 bg-background border-t border-border">
+    <section id="faq" className="lazy-section py-20 md:py-24 bg-background border-t border-border">
       <div className="max-w-3xl mx-auto px-6">
         <SectionHead eyebrow={t('secFaq')} title={t('stillDeciding')} sub={t('secFaqSub')} />
 
