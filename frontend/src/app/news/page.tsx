@@ -20,7 +20,7 @@ function NewsCardItem({ n, featured = false }: { n: NewsCard; featured?: boolean
       className="group theme-card overflow-hidden hover:border-primary/40 transition-all flex flex-col">
       <div className={`${featured ? 'aspect-[16/8]' : 'aspect-[16/9]'} bg-surface-hover relative overflow-hidden`}>
         {n.coverImage ? (
-          <img src={proxyImage(n.coverImage, 640)} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={onProxyError} />
+          <img src={proxyImage(n.coverImage, 384)} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={onProxyError} loading="lazy" fetchPriority="low" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <Newspaper className="w-8 h-8 text-foreground-subtle/40" strokeWidth={1.75} />

@@ -235,7 +235,7 @@ function ItemCard({
                   ? `drop-shadow(0 0 12px ${r.color}cc)`
                   : `drop-shadow(0 2px 6px rgba(0,0,0,0.18)) drop-shadow(0 0 4px ${r.color}44)`,
                 transform: highlight ? 'scale(1.12)' : 'scale(1)',
-              }} onError={onProxyError} />
+              }} onError={onProxyError} loading="lazy" fetchPriority="low" />
           : <Box className="relative z-10 w-8 h-8" strokeWidth={1.5} style={{ color: r.color }} />}
       </div>
 
@@ -487,7 +487,7 @@ export default function LootBoxOpenPage() {
                     style={{ minWidth: '170px', maxWidth: '170px' }}>
                     <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-surface-hover rounded-lg border border-border overflow-hidden">
                       {drop.item_image
-                        ? <img src={proxyImage(drop.item_image, 64)} alt="" className="w-full h-full object-contain p-0.5" onError={onProxyError} />
+                        ? <img src={proxyImage(drop.item_image, 64)} alt="" className="w-full h-full object-contain p-0.5" onError={onProxyError} loading="lazy" fetchPriority="low" />
                         : <Box className="w-4 h-4 text-foreground-subtle" strokeWidth={1.75} />}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -546,8 +546,8 @@ export default function LootBoxOpenPage() {
                           />
                         )}
                         {box.image
-                          ? <img src={proxyImage(box.image, 160)} alt={box.name}
-                              className="w-full h-full object-contain p-1.5 transition-transform duration-500 group-hover/box:scale-105 relative z-10" onError={onProxyError} />
+                          ? <img src={proxyImage(box.image, 128)} alt={box.name}
+                              className="w-full h-full object-contain p-1.5 transition-transform duration-500 group-hover/box:scale-105 relative z-10" onError={onProxyError} loading="lazy" fetchPriority="low" />
                           : <Package className="w-10 h-10 text-primary relative z-10" strokeWidth={1.5} />}
                       </div>
                     </motion.div>

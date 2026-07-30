@@ -130,7 +130,7 @@ function BoxCard({ box }: { box: LootBox }) {
 
         {/* Image */}
         {box.image ? (
-          <img src={proxyImage(box.image, 256)} alt={box.name} className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-300" onError={onProxyError} />
+          <img src={proxyImage(box.image, 192)} alt={box.name} className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-300" onError={onProxyError} loading="lazy" fetchPriority="low" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <Package className="w-12 h-12 text-accent/30 group-hover:text-accent/50 transition-colors" strokeWidth={1.5} />

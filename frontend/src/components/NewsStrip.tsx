@@ -48,7 +48,7 @@ export default function NewsStrip() {
               className="group rounded-xl border border-border-muted overflow-hidden bg-surface hover:border-primary/40 transition-all">
               <div className="aspect-[16/9] bg-surface-hover relative overflow-hidden">
                 {n.coverImage ? (
-                  <img src={proxyImage(n.coverImage, 384)} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={onProxyError} />
+                  <img src={proxyImage(n.coverImage, 256)} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={onProxyError} loading="lazy" fetchPriority="low" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <Newspaper className="w-7 h-7 text-foreground-subtle/40" strokeWidth={1.75} />

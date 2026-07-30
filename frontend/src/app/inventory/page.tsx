@@ -320,7 +320,7 @@ export default function InventoryPage() {
                       {item.item_image ? (
                         <img src={proxyImage(item.item_image, 56)} alt={item.item_name}
                           className={`w-14 h-14 object-contain transition-all ${!isPending ? 'opacity-35 grayscale' : ''}`}
-                          style={isPending ? { filter: `drop-shadow(0 0 6px ${rar.color}99)` } : {}} onError={onProxyError} />
+                          style={isPending ? { filter: `drop-shadow(0 0 6px ${rar.color}99)` } : {}} onError={onProxyError} loading="lazy" fetchPriority="low" />
                       ) : (
                         <Box className="w-10 h-10"
                           strokeWidth={1.5}
@@ -423,7 +423,7 @@ export default function InventoryPage() {
                           borderTopColor: rar.color, borderTopWidth: '3px',
                           boxShadow: `0 3px 0 ${shadow.bottom}` }}>
                         {redeemModal.item_image
-                          ? <img src={proxyImage(redeemModal.item_image, 56)} alt={redeemModal.item_name} className="w-14 h-14 object-contain flex-shrink-0" style={{ filter: `drop-shadow(0 0 6px ${rar.color}88)` }} onError={onProxyError} />
+                          ? <img src={proxyImage(redeemModal.item_image, 56)} alt={redeemModal.item_name} className="w-14 h-14 object-contain flex-shrink-0" style={{ filter: `drop-shadow(0 0 6px ${rar.color}88)` }} onError={onProxyError} loading="lazy" fetchPriority="low" />
                           : <Box className="w-8 h-8 flex-shrink-0" strokeWidth={1.5} style={{ color: rar.color }} />}
                         <div className="min-w-0">
                           <RarityBadge rarity={redeemModal.item_rarity} />
