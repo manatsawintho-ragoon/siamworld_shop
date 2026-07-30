@@ -75,7 +75,18 @@ export const promptThai = localFont({
   ],
   display: 'swap',
   variable: '--font-prompt',
-  preload: true,
+  // Not preloaded, unlike the Latin face. The five Thai weights are 30KB that
+  // preload at High priority, and they were bidding against the hero image for
+  // the same connections - the image is the LCP element on a shop with artwork,
+  // so the fonts were delaying the metric they do not contribute to. Dropping
+  // the preload moved LCP 3.4s -> 2.8s and mobile Performance 91 -> 94 (median
+  // of five runs). `display: swap` means Thai text paints immediately in the
+  // fallback and swaps when Prompt lands; the shift that causes measures 0.003
+  // CLS, which is inside the noise.
+  //
+  // Inter stays preloaded: it renders the prices and numerals in the first
+  // screen, where a swap is more noticeable and the file is one request.
+  preload: false,
   declarations: [
     { prop: 'unicode-range', value: 'U+02D7, U+0303, U+0331, U+0E01-0E5B, U+200C-200D, U+25CC' },
   ],
