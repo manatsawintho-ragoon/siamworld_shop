@@ -3,6 +3,7 @@ import './globals.css';
 import Providers from './providers';
 import { fetchShopSeo, fetchPublicRankings, fetchSessionUser } from '@/lib/serverSeo';
 import { fontVariables } from '@/lib/fonts';
+import { THEMES, DEFAULT_THEME_ID, themeCss } from '@/lib/themeCss';
 
 // `viewportFit: 'cover'` is what makes env(safe-area-inset-*) resolve to a real
 // value. Without it the mobile bottom nav's safe-area padding evaluates to 0 and
@@ -89,9 +90,25 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     },
   };
 
+  // The shop's theme is an admin setting, not a per-visitor choice, so the server
+  // can resolve it. Rendering its CSS here instead of injecting it after
+  // hydration removes a full style recalculation of the document from the
+  // critical path - 761ms of style-and-layout on throttled mobile, in the exact
+  // window the hero image was waiting to paint - and removes the flash of default
+  // green that every visitor used to see first.
+  const theme = THEMES.find(t => t.id === (seo.settings.theme_name || DEFAULT_THEME_ID)) ?? THEMES[0];
+
   return (
-    <html lang="th" suppressHydrationWarning>
+    <html
+      lang="th"
+      data-site-theme={theme.id}
+      {...(theme.isDark ? { 'data-site-dark': 'true' } : {})}
+      suppressHydrationWarning
+    >
       <head>
+        {/* Same id the client writer targets, so injectTheme replaces this node
+            rather than adding a second competing block. */}
+        <style id="site-theme-vars" dangerouslySetInnerHTML={{ __html: themeCss(theme) }} />
         {/* .replace(/</g,...) escapes `<` so an admin-set shop name/description
             containing `</script>` cannot break out of the JSON-LD block. */}
         <script
