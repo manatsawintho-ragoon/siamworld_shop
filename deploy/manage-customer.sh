@@ -119,6 +119,44 @@ export HOST_SOURCE_ROOT="${HOST_SOURCE_ROOT:-$SOURCE_ROOT}"
 export CUSTOMER_ENV_FILE="$CUSTOMER_ENV"
 
 # ── ACTIONS ───────────────────────────────────────────────────
+# ── Warm the optimised-image cache ──────────────────────────────────────────
+#
+# Owner artwork is re-encoded on first request: fetching it from whatever host
+# the owner uses, then running it through sharp. Measured at 2.6s for one file
+# against 3ms once cached. The cache survives rebuilds now (the image_cache
+# volume), but a first deploy, a changed image width or a new slide still lands
+# cold, and Cloudflare does not shield the origin - /_next/image carries no file
+# extension, so it answers cf-cache-status: DYNAMIC and every request reaches us.
+#
+# So the cost is paid here once, rather than by whichever visitors happen to
+# arrive next, all at the same moment. Best-effort: never fails a deploy.
+warm_image_cache() {
+    local name="$1" port host urls u n=0 tries=0
+    port=$(grep -oP '^FRONTEND_PORT=\K[0-9]+' "$CUSTOMER_ENV" 2>/dev/null | head -1)
+    [[ -z "$port" ]] && return 0
+    host="$name.siamsite.shop"
+
+    until curl -fsS -o /dev/null -m 5 -H "Host: $host" "http://127.0.0.1:$port/" 2>/dev/null; do
+        tries=$((tries + 1))
+        [[ $tries -ge 30 ]] && { echo "[warm] $name did not answer; skipping"; return 0; }
+        sleep 2
+    done
+
+    # `next/image` writes a srcset, so one attribute holds several URLs separated
+    # by ", 1x, ". Stopping at whitespace, a comma or a quote keeps each one whole.
+    urls=$(for path in / /shop /lootbox; do
+        curl -fsS -m 20 -H "Host: $host" "http://127.0.0.1:$port$path" 2>/dev/null \
+          | grep -oE '/_next/image\?url=[^"'"'"' ,]+' | sed 's/&amp;/\&/g'
+    done | sort -u)
+
+    for u in $urls; do
+        curl -fsS -o /dev/null -m 60 -H "Host: $host" \
+             -H "Accept: image/avif,image/webp,*/*" \
+             "http://127.0.0.1:$port$u" 2>/dev/null && n=$((n + 1))
+    done
+    echo "[warm] $name: primed $n image(s)"
+}
+
 case "$ACTION" in
 
     start)
@@ -150,6 +188,7 @@ case "$ACTION" in
             "$DEPLOY_DIR/apply-migrations.sh" --name "$NAME" || \
                 echo "[WARN] Migrations failed for $NAME — re-run manually with: $0 --action migrate --name $NAME"
         fi
+        warm_image_cache "$NAME"
         echo "Done. Check logs with: $0 --action logs --name $NAME"
         ;;
 

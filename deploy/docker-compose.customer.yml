@@ -112,10 +112,23 @@ services:
       - backend
     networks:
       - internal
+    volumes:
+      # Next's optimised-image cache, kept outside the container.
+      #
+      # Shop owners host their artwork wherever they like, and re-encoding a cold
+      # image means fetching it from that host and running it through sharp: 2.6s
+      # for one file, measured, against 3ms once cached. The cache used to live in
+      # the container filesystem, so every `manage-customer.sh rebuild` threw it
+      # away and the next visitors re-paid that cost on every image at once.
+      # Cloudflare does not absorb it either - /_next/image carries no file
+      # extension, so it answers cf-cache-status: DYNAMIC and every request
+      # reaches the origin.
+      - image_cache:/app/.next/cache/images
 
 volumes:
   mysql_data:
   redis_data:
+  image_cache:
 
 networks:
   internal:

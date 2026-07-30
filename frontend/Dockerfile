@@ -42,6 +42,17 @@ COPY --from=builder --chown=node:node /app/public ./public
 #   docker run --rm <image> ls node_modules/sharp
 # If it ever goes missing, every /_next/image request 500s.
 
+# Create the cache dirs in the image, owned by `node`, BEFORE any volume is
+# mounted over them. Docker seeds an empty named volume from the image path it
+# covers, ownership included - but only if that path exists. When it does not,
+# Docker creates the mount point as root, and Next (running as `node`) then fails
+# with EACCES on the whole cache tree: no image cache, and no fetch-cache either,
+# which silently turns every server-side `revalidate` fetch back into a live
+# request. Mounting the images cache without this line makes the site slower, not
+# faster - see deploy/docker-compose.customer.yml.
+RUN mkdir -p .next/cache/images .next/cache/fetch-cache \
+    && chown -R node:node .next/cache
+
 EXPOSE 3000
 
 USER node
