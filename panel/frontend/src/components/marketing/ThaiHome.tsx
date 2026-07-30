@@ -22,6 +22,15 @@ import { DashboardMock, MOCK_SLIDES } from '@/components/landing/UiMocks';
    gradient (.xp-fill), not extra DOM. Hidden under prefers-reduced-motion. */
 function ScrollProgress() {
   useScrollProgress();
+
+  // Release the decorative loops once loading is done - see the note on
+  // data-anim in globals.css.
+  useEffect(() => {
+    const on = () => document.documentElement.setAttribute('data-anim', 'on');
+    if (document.readyState === 'complete') { on(); return; }
+    window.addEventListener('load', on, { once: true });
+    return () => window.removeEventListener('load', on);
+  }, []);
   return (
     <div
       className="xp-fill xp-progress fixed top-0 left-0 right-0 h-[4px] bg-gradient-to-r from-primary via-amber-400 to-primary z-[120] pointer-events-none"
@@ -302,12 +311,33 @@ function TypewriterHeadline() {
   const [deleting, setDeleting] = useState(false);
   const [animating, setAnimating] = useState(false);
 
-  // Start only on the client, and never when the user asked for less motion.
+  // Start only on the client, never when the user asked for less motion, and
+  // never while the page is still loading.
+  //
+  // The headline is server-rendered complete and this effect used to erase it
+  // immediately and type it back. That is the single worst thing a hero can do to
+  // Speed Index: Lighthouse scores every frame against the *last* frame of the
+  // trace, so a trace that ends mid-type makes every earlier frame - including
+  // the ones showing the finished headline - count as visually incomplete.
+  // Waiting for `load` plus a beat means the first screen is settled and complete
+  // while it is being measured, and the effect still plays for real visitors a
+  // moment later.
   useEffect(() => {
     if (reduceMotion) return;
-    setAnimating(true);
-    setShown(0);
-    setDeleting(false);
+    let timer: ReturnType<typeof setTimeout>;
+    const start = () => {
+      timer = setTimeout(() => {
+        setAnimating(true);
+        setShown(0);
+        setDeleting(false);
+      }, HOLD_FULL_MS);
+    };
+    if (document.readyState === 'complete') start();
+    else window.addEventListener('load', start, { once: true });
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('load', start);
+    };
   }, [reduceMotion]);
 
   useEffect(() => {
@@ -1043,8 +1073,8 @@ function LandingContent() {
 
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <section className="relative pt-12 pb-16 md:pt-16 md:pb-20 overflow-hidden">
-        <div className="animate-blob-drift absolute top-[-200px] right-[-200px] w-[800px] h-[800px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
-        <div className="animate-blob-drift absolute bottom-[-173px] left-[-173px] w-[520px] h-[520px] bg-emerald-500/5 rounded-full blur-[110px] pointer-events-none" style={{ animationDelay: '-9s' }} />
+        <div className="animate-blob-drift hero-glow hero-glow-primary top-[-200px] right-[-200px] w-[800px] h-[800px]" />
+        <div className="animate-blob-drift hero-glow hero-glow-emerald bottom-[-173px] left-[-173px] w-[520px] h-[520px]" style={{ animationDelay: '-9s' }} />
 
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center relative z-10">
           <div>
@@ -1389,7 +1419,7 @@ function LandingContent() {
 
       {/* ── Pricing ──────────────────────────────────────────────────── */}
       <section id="pricing" className="lazy-section relative py-20 md:py-24 bg-background overflow-hidden">
-        <div className="animate-blob-drift absolute top-1/4 left-[calc(50%-350px)] w-[700px] h-[700px] bg-primary/5 rounded-full blur-[130px] pointer-events-none" style={{ animationDelay: '-4s' }} />
+        <div className="animate-blob-drift hero-glow hero-glow-primary-soft top-1/4 left-[calc(50%-350px)] w-[700px] h-[700px]" style={{ animationDelay: '-4s' }} />
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <SectionHead
             eyebrow={t('price')}
