@@ -299,9 +299,30 @@ function NavbarContent() {
   );
 }
 
+/**
+ * NavbarContent reads useSearchParams, which App Router only allows behind a
+ * Suspense boundary. The boundary had no fallback, so the server rendered
+ * nothing where the bar goes and hydration inserted 65px at the top of every
+ * page - the single largest layout shift on the site (0.047 CLS on desktop,
+ * 0.075 measured directly).
+ *
+ * The fallback below is the unscrolled bar's own box: same sticky positioning,
+ * same vertical padding, same 1px transparent bottom border, and a spacer whose
+ * height matches the logo row. It reserves the space to the pixel, so the real
+ * bar replaces it without moving anything.
+ */
 export default function Navbar() {
   return (
-    <Suspense>
+    <Suspense
+      fallback={
+        <div
+          aria-hidden="true"
+          className="sticky top-0 z-[100] bg-background py-3 border-b border-transparent"
+        >
+          <div className="max-w-7xl mx-auto px-6 h-10" />
+        </div>
+      }
+    >
       <NavbarContent />
     </Suspense>
   );

@@ -204,7 +204,7 @@ export default function ProductCard({ product, servers }: { product: Product; se
 
           <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-500/10 border border-orange-500/20 w-fit">
             <Flame className="w-2.5 h-2.5 text-orange-500" strokeWidth={2.25} />
-            <span className="text-[11px] font-bold text-orange-600">
+            <span className="text-[11px] font-bold text-orange-700">
               ขายแล้ว <span className="tabular-nums font-black">{(product.sold_count ?? 0).toLocaleString()}</span> ชิ้น
             </span>
           </div>
@@ -213,7 +213,7 @@ export default function ProductCard({ product, servers }: { product: Product; se
           <button
             onClick={() => setShowDesc(true)}
             className="inline-flex items-center gap-1 mt-1.5 mb-1 py-1 -my-0.5 text-[10px] font-bold transition-colors hover:brightness-110 self-start"
-            style={{ color: 'rgb(var(--color-primary))' }}
+            style={{ color: 'rgb(var(--color-primary-text))' }}
           >
             <Info className="w-2.5 h-2.5" strokeWidth={2.25} /> ดูคำอธิบายสินค้า
           </button>
@@ -368,7 +368,7 @@ export default function ProductCard({ product, servers }: { product: Product; se
                       <button
                         onClick={() => setShowDesc(true)}
                         className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold transition-colors"
-                        style={{ color: 'rgb(var(--color-primary))' }}
+                        style={{ color: 'rgb(var(--color-primary-text))' }}
                       >
                         <Info className="w-2.5 h-2.5" strokeWidth={2.25} /> ดูคำอธิบายสินค้า
                       </button>
@@ -485,8 +485,8 @@ export default function ProductCard({ product, servers }: { product: Product; se
                           disabled={buying}
                           className={`flex items-center gap-2.5 w-full px-3.5 py-2.5 rounded-lg border text-sm font-bold transition-all shadow-sm ${
                             isGift
-                              ? 'bg-pink-500/10 border-pink-500/40 text-pink-500'
-                              : 'bg-surface border-border text-foreground-muted hover:border-pink-500/40 hover:text-pink-500'
+                              ? 'bg-pink-500/10 border-pink-500/40 text-pink-700'
+                              : 'bg-surface border-border text-foreground-muted hover:border-pink-500/40 hover:text-pink-700'
                           }`}
                         >
                           <Gift className={`w-3.5 h-3.5 ${isGift ? 'text-pink-500' : 'text-foreground-subtle'}`} strokeWidth={2.25} />
@@ -513,7 +513,7 @@ export default function ProductCard({ product, servers }: { product: Product; se
                                 maxLength={64}
                                 className="w-full px-3.5 py-2.5 rounded-lg border border-pink-500/30 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-pink-400/30 focus:border-pink-400 bg-surface shadow-sm transition-all"
                               />
-                              <p className="text-[10px] text-pink-500 mt-1 flex items-center gap-1 font-medium">
+                              <p className="text-[10px] text-pink-700 mt-1 flex items-center gap-1 font-medium">
                                 <Info className="w-2.5 h-2.5" strokeWidth={2.25} />
                                 เพื่อนต้องออนไลน์อยู่ในเซิร์ฟเวอร์เดียวกัน
                               </p>

@@ -583,14 +583,14 @@ export default function LootBoxOpenPage() {
                           <span className="text-foreground font-black text-sm tabular-nums">{box.items.length}</span>
                         </div>
                         <div className="flex flex-col items-center px-3 py-2 rounded-xl bg-primary/8 border border-primary/15 shadow-[0_2px_0_rgb(var(--color-primary-muted))] min-w-[52px]">
-                          <span className="text-primary/60 text-[7px] font-black uppercase tracking-widest">OPENS</span>
+                          <span className="text-primary text-[10px] font-black uppercase tracking-widest">OPENS</span>
                           <span className="text-primary font-black text-sm tabular-nums">{(box.sold_count ?? 0).toLocaleString()}</span>
                         </div>
                       </div>
                       {remaining !== null && box.stock_limit! > 0 && (
                         <div className="w-full min-w-[112px] space-y-1">
                           <div className="flex justify-between text-[7px] font-black uppercase tracking-widest">
-                            <span className={isSoldOut ? 'text-error' : stockPct >= 80 ? 'text-orange-500' : 'text-foreground-subtle'}>STOCK</span>
+                            <span className={isSoldOut ? 'text-error' : stockPct >= 80 ? 'text-orange-700' : 'text-foreground-subtle'}>STOCK</span>
                             <span className="text-foreground-subtle">{stockPct}%</span>
                           </div>
                           <div className="h-1.5 rounded-full overflow-hidden bg-surface-hover">

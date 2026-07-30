@@ -41,7 +41,7 @@ export default function AnnouncementPopup() {
               <i className={`fas ${lv.icon} text-[10px]`} /> {lv.label}
             </span>
             {current.published_at && (
-              <span className="text-[11px] text-gray-400">
+              <span className="text-[11px] text-gray-500">
                 {new Date(current.published_at).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' })}
               </span>
             )}

@@ -10,7 +10,8 @@ import { FAQ, EASYSLIP_FEE_MAX } from '@/lib/faq';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { motion, AnimatePresence, useReducedMotion, useScroll, useSpring } from 'framer-motion';
+import { useReducedMotion, useScrollProgress } from '@/hooks/useMotion';
+import Reveal, { RevealRow } from '@/components/marketing/Reveal';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { getTier, type TierKey } from '@/lib/rarity';
 import { DashboardMock, MOCK_SLIDES } from '@/components/landing/UiMocks';
@@ -20,14 +21,10 @@ import { DashboardMock, MOCK_SLIDES } from '@/components/landing/UiMocks';
    without competing for attention. The notches come from a repeating
    gradient (.xp-fill), not extra DOM. Hidden under prefers-reduced-motion. */
 function ScrollProgress() {
-  const reduceMotion = useReducedMotion();
-  const { scrollYProgress } = useScroll();
-  const scaleX = useSpring(scrollYProgress, { stiffness: 120, damping: 26, restDelta: 0.001 });
-  if (reduceMotion) return null;
+  useScrollProgress();
   return (
-    <motion.div
-      style={{ scaleX }}
-      className="xp-fill fixed top-0 left-0 right-0 h-[4px] bg-gradient-to-r from-primary via-amber-400 to-primary origin-left z-[120] pointer-events-none"
+    <div
+      className="xp-fill xp-progress fixed top-0 left-0 right-0 h-[4px] bg-gradient-to-r from-primary via-amber-400 to-primary z-[120] pointer-events-none"
       aria-hidden="true"
     />
   );
@@ -713,13 +710,12 @@ function PackageCard({
         : t('planMonths', { n: pkg.months });
 
   return (
-    <motion.div
+    <Reveal
       className={`h-full ${featured ? 'z-10' : ''}`}
-      initial={reduceMotion ? false : { opacity: 0, y: 24, scale: 0.96 }}
-      whileInView={{ opacity: 1, y: 0, scale: 1 }}
-      viewport={{ once: true, amount: 0.2 }}
-      onViewportEnter={() => setArmed(true)}
-      transition={{ delay: index * 0.08, duration: 0.45, ease: [0.34, 1.3, 0.64, 1] }}
+      variant="reveal-pop"
+      amount={0.2}
+      delay={index * 0.08}
+      onEnter={() => setArmed(true)}
     >
       <Card
         className={`landing-tier-card flex flex-col relative h-full overflow-hidden border-2 rounded-2xl ${armed ? 'tier-armed' : ''} ${
@@ -774,7 +770,7 @@ function PackageCard({
           {discount && (
             <div className="flex items-center flex-wrap gap-1.5 mt-2.5">
               <span
-                className="text-base font-bold text-destructive/70 line-through tabular-nums"
+                className="text-base font-bold text-destructive line-through tabular-nums"
                 aria-label={t('normalPriceAria', { price: discount.regular })}
               >
                 ฿{discount.regular.toLocaleString()}
@@ -783,7 +779,7 @@ function PackageCard({
                 <Icon name="arrow-down" className="text-[9px]" />
                 {t('discountPercent', { percent: discount.percent })}
               </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[13px] font-semibold text-emerald-600">
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[13px] font-semibold text-emerald-700">
                 <Icon name="tag" className="text-[9px]" />
                 {t('saveAmount', { amount: discount.save.toLocaleString() })}
               </span>
@@ -816,9 +812,9 @@ function PackageCard({
                 key={p.text}
                 className={`flex items-start gap-2.5 ${
                   p.tone === 'good'
-                    ? 'text-[13px] font-medium text-emerald-600'
+                    ? 'text-[13px] font-medium text-emerald-700'
                     : p.tone === 'off'
-                      ? 'text-[13px] font-medium text-muted-foreground/70'
+                      ? 'text-[13px] font-medium text-muted-foreground'
                       : 'text-[13px] font-medium text-muted-foreground'
                 }`}
               >
@@ -857,7 +853,7 @@ function PackageCard({
           )}
         </CardFooter>
       </Card>
-    </motion.div>
+    </Reveal>
   );
 }
 
@@ -880,12 +876,11 @@ function FaqSection() {
             const aKey = `a${i + 1}` as const;
             const isOpen = open === i;
             return (
-              <motion.div
+              <Reveal
                 key={i}
-                initial={reduceMotion ? false : { opacity: 0, y: 14 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ delay: i * 0.05, duration: 0.35, ease: 'easeOut' }}
+                variant="reveal-up"
+                amount={0.3}
+                delay={i * 0.05}
                 className={`rounded-2xl border transition-colors ${isOpen ? 'border-primary/40 bg-card' : 'border-border bg-card/50 hover:border-primary/25'}`}
               >
                 <h3>
@@ -915,7 +910,7 @@ function FaqSection() {
                     </p>
                   </div>
                 </div>
-              </motion.div>
+              </Reveal>
             );
           })}
         </div>
@@ -1044,6 +1039,7 @@ function LandingContent() {
       </div>
 
       <Navbar />
+      <main id="main">
 
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <section className="relative pt-12 pb-16 md:pt-16 md:pb-20 overflow-hidden">
@@ -1100,12 +1096,11 @@ function LandingContent() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-10">
             {stats.map((stat, i) => (
-              <motion.div
+              <Reveal
                 key={i}
-                initial={reduceMotion ? false : { opacity: 0, y: 14 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.4 }}
-                transition={{ delay: i * 0.07, duration: 0.35, ease: 'easeOut' }}
+                variant="reveal-up"
+                amount={0.4}
+                delay={i * 0.07}
                 className="flex items-center gap-3 md:gap-4 justify-center group"
               >
                 <div className="w-11 h-11 rounded-xl bg-background shadow-sm flex items-center justify-center text-primary border border-border shrink-0 group-hover:scale-110 group-hover:border-primary/40 transition-all duration-300">
@@ -1121,14 +1116,14 @@ function LandingContent() {
                   )}
                   <span className="block text-[13px] md:text-xs font-medium text-muted-foreground tracking-wide">{stat.label}</span>
                 </div>
-              </motion.div>
+              </Reveal>
             ))}
           </div>
         </div>
       </section>
 
       {/* ── How it works ─────────────────────────────────────────────── */}
-      <section id="how" className="py-20 md:py-24 bg-background">
+      <section id="how" className="lazy-section py-20 md:py-24 bg-background">
         <div className="max-w-7xl mx-auto px-6">
           <SectionHead
             eyebrow={t('secHowStart')}
@@ -1150,13 +1145,12 @@ function LandingContent() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
               {STEPS.map((s, i) => (
-                <motion.div
+                <Reveal
                   key={i}
-                  initial={reduceMotion ? false : { opacity: 0, y: 20, scale: 0.97 }}
-                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                  viewport={{ once: true, amount: 0.3 }}
-                  onViewportEnter={i === 0 ? () => setQuestFilled(true) : undefined}
-                  transition={{ delay: i * 0.08, duration: 0.4, ease: [0.34, 1.3, 0.64, 1] }}
+                  variant="reveal-pop"
+                  amount={0.3}
+                  delay={i * 0.08}
+                  onEnter={i === 0 ? () => setQuestFilled(true) : undefined}
                 >
                   <Card className="h-full bg-card border-border hover:border-primary/40 hover:-translate-y-1 transition-all duration-300 shadow-sm group/step">
                     <CardHeader>
@@ -1174,7 +1168,7 @@ function LandingContent() {
                       <p className="text-sm text-muted-foreground leading-relaxed">{t(s.desc)}</p>
                     </CardContent>
                   </Card>
-                </motion.div>
+                </Reveal>
               ))}
             </div>
           </div>
@@ -1182,7 +1176,7 @@ function LandingContent() {
       </section>
 
       {/* ── Feature grid ─────────────────────────────────────────────── */}
-      <section id="features" className="py-20 md:py-24 bg-secondary/50 border-y border-border">
+      <section id="features" className="lazy-section py-20 md:py-24 bg-secondary/50 border-y border-border">
         <div className="max-w-7xl mx-auto px-6">
           <SectionHead
             eyebrow={t('secFeatures')}
@@ -1192,13 +1186,7 @@ function LandingContent() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {FEATURES.map((f, i) => (
-              <motion.div
-                key={i}
-                initial={reduceMotion ? false : { opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ delay: i * 0.06, duration: 0.4, ease: 'easeOut' }}
-              >
+              <Reveal key={i} variant="reveal-up" amount={0.3} delay={i * 0.06}>
                 <Card className="group/feat bg-card border-2 hover:border-primary/50 hover:-translate-y-1.5 hover:shadow-xl transition-all duration-300 shadow-sm h-full">
                   <CardHeader>
                     {/* Icon tile flips to solid on hover: one small reward per
@@ -1212,14 +1200,14 @@ function LandingContent() {
                     <p className="text-sm text-muted-foreground leading-relaxed">{t(f.desc)}</p>
                   </CardContent>
                 </Card>
-              </motion.div>
+              </Reveal>
             ))}
           </div>
         </div>
       </section>
 
       {/* ── Showcase slider ──────────────────────────────────────────── */}
-      <section className="py-20 md:py-24 bg-background overflow-hidden border-b border-border">
+      <section className="lazy-section py-20 md:py-24 bg-background overflow-hidden border-b border-border">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
             <SectionHead
@@ -1239,15 +1227,7 @@ function LandingContent() {
           </div>
 
           <div className="relative">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentIndex}
-                initial={reduceMotion ? false : { opacity: 0, x: 40 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={reduceMotion ? undefined : { opacity: 0, x: -40 }}
-                transition={{ duration: 0.35, ease: 'easeOut' }}
-                className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center"
-              >
+            <div key={currentIndex} className="slide-in-x grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
                 {/* An uploaded screenshot is a button (it opens the lightbox);
                     a coded mockup is not, because there is nothing to enlarge
                     and it is already interactive where it stands. */}
@@ -1314,20 +1294,14 @@ function LandingContent() {
                     ))}
                   </div>
                 </div>
-              </motion.div>
-            </AnimatePresence>
+            </div>
           </div>
         </div>
 
         {/* Lightbox */}
-        <AnimatePresence>
-          {selectedImage !== null && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-xl flex items-center justify-center p-4 md:p-10"
+        {selectedImage !== null && (
+            <div
+              className="modal-fade-in fixed inset-0 z-[100] bg-background/95 backdrop-blur-xl flex items-center justify-center p-4 md:p-10"
               onClick={() => setSelectedImage(null)}
               role="dialog"
               aria-modal="true"
@@ -1353,13 +1327,12 @@ function LandingContent() {
                   <p className="text-muted-foreground">{showcase[selectedImage].desc}</p>
                 </div>
               </div>
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
       </section>
 
       {/* ── Comparison ───────────────────────────────────────────────── */}
-      <section className="py-20 md:py-24 bg-secondary/40 border-b border-border">
+      <section className="lazy-section py-20 md:py-24 bg-secondary/40 border-b border-border">
         <div className="max-w-5xl mx-auto px-6">
           <SectionHead
             eyebrow={t('secCompare')}
@@ -1382,14 +1355,7 @@ function LandingContent() {
               </thead>
               <tbody>
                 {COMPARISON.map((row, i) => (
-                  <motion.tr
-                    key={i}
-                    initial={reduceMotion ? false : { opacity: 0, x: -12 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true, amount: 0.5 }}
-                    transition={{ delay: i * 0.05, duration: 0.3, ease: 'easeOut' }}
-                    className="group/row"
-                  >
+                  <RevealRow key={i} delay={i * 0.05} className="group/row">
                     <th scope="row" className="py-4 pr-4 pl-2 text-[13px] font-medium text-foreground border-t border-border align-middle group-hover/row:text-primary transition-colors">
                       {t(row.label)}
                     </th>
@@ -1413,7 +1379,7 @@ function LandingContent() {
                         {t(row.foreign)}
                       </span>
                     </td>
-                  </motion.tr>
+                  </RevealRow>
                 ))}
               </tbody>
             </table>
@@ -1422,7 +1388,7 @@ function LandingContent() {
       </section>
 
       {/* ── Pricing ──────────────────────────────────────────────────── */}
-      <section id="pricing" className="relative py-20 md:py-24 bg-background overflow-hidden">
+      <section id="pricing" className="lazy-section relative py-20 md:py-24 bg-background overflow-hidden">
         <div className="animate-blob-drift absolute top-1/4 left-1/2 -translate-x-1/2 w-[700px] h-[700px] bg-primary/5 rounded-full blur-[130px] pointer-events-none" style={{ animationDelay: '-4s' }} />
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <SectionHead
@@ -1492,21 +1458,16 @@ function LandingContent() {
             </ul>
           </div>
 
-          <p className="text-center text-[12px] text-muted-foreground/80 mt-8 max-w-2xl mx-auto leading-relaxed font-medium">
+          <p className="text-center text-[12px] text-muted-foreground mt-8 max-w-2xl mx-auto leading-relaxed font-medium">
             {t('easyslipFootnoteFull', { fee: easyslipFee })}
           </p>
         </div>
       </section>
 
       {/* EasySlip plan modal */}
-      <AnimatePresence>
-        {showEasySlipPlan && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[110] bg-background/95 backdrop-blur-xl flex items-center justify-center p-4 md:p-10"
+      {showEasySlipPlan && (
+          <div
+            className="modal-fade-in fixed inset-0 z-[110] bg-background/95 backdrop-blur-xl flex items-center justify-center p-4 md:p-10"
             onClick={() => setShowEasySlipPlan(false)}
             role="dialog"
             aria-modal="true"
@@ -1525,14 +1486,14 @@ function LandingContent() {
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
 
       {/* ── FAQ ──────────────────────────────────────────────────────── */}
       <FaqSection />
 
       {/* ── Footer ───────────────────────────────────────────────────── */}
+      </main>
       <footer className="bg-background py-16 border-t border-border">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-12">
@@ -1610,7 +1571,7 @@ function LandingContent() {
             <p className="text-sm text-muted-foreground font-semibold">
               &copy; {new Date().getFullYear()} SIAMSITE STORE. All rights reserved.
             </p>
-            <div className="flex items-center gap-2.5 text-[13px] font-semibold text-muted-foreground/70">
+            <div className="flex items-center gap-2.5 text-[13px] font-semibold text-muted-foreground">
               <Icon name="lock" className="text-emerald-500/80" />
               <span>{t('securePayment')}</span>
               <span className="text-border">|</span>

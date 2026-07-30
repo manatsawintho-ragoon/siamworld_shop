@@ -94,7 +94,7 @@ function Frame({ url, children }: { url: string; children: React.ReactNode }) {
 
    Its palette is fixed and does not follow a theme, so this mock is fixed too:
    a #18191c sidebar with a #22c55e wordmark beside a #f4f5f7 work area, orange
-   #f97316 for chart and counts, and the green #168d41 top-up card. The chunky
+   #f97316 for chart and counts, and the green #147a38 top-up card. The chunky
    `0 4px 0` bottom shadow on every card is that screen's signature, so it is
    reproduced exactly rather than softened into a normal drop shadow.
 
@@ -140,15 +140,15 @@ function DeltaBadge({ delta, pct, last, suffix = '', dark = false }: {
   const tr = useMockRich();
   return (
     <div className="mt-3 space-y-0.5">
-      <p className={`text-[10px] font-bold flex items-center gap-1 flex-wrap ${dark ? 'text-white/90' : 'text-emerald-600'}`}>
+      <p className={`text-[10px] font-bold flex items-center gap-1 flex-wrap ${dark ? 'text-white' : 'text-emerald-700'}`}>
         <Icon name="arrow-up" className="text-[9px]" />
         <span>+{delta}{suffix}</span>
-        <span className="opacity-80">(+{pct}%)</span>
-        <span className={`font-medium ${dark ? 'text-white/60' : 'text-gray-400'}`}>{t('vsLastMonth')}</span>
+        <span>(+{pct}%)</span>
+        <span className={`font-medium ${dark ? 'text-white' : 'text-gray-600'}`}>{t('vsLastMonth')}</span>
       </p>
-      <p className={`text-[10px] ${dark ? 'text-white/50' : 'text-gray-400'}`}>
+      <p className={`text-[10px] ${dark ? 'text-white' : 'text-gray-600'}`}>
         {tr('lastMonthAmount', { amount: `${last}${suffix}` }, c => (
-          <span className={`font-semibold ${dark ? 'text-white/80' : 'text-gray-600'}`}>{c}</span>
+          <span className={`font-semibold ${dark ? 'text-white' : 'text-gray-600'}`}>{c}</span>
         ))}
       </p>
     </div>
@@ -172,20 +172,20 @@ function RankColumn({ title, icon, tint, rows, unit }: {
         {rows.map((r, i) => (
           <div key={i} className="mock-row flex items-center gap-2.5 px-4 py-2.5">
             <span className="w-5 shrink-0 flex items-center justify-center text-sm leading-none">
-              {r.medal.startsWith('#') ? <span className="text-[10px] font-bold text-gray-500">{r.medal}</span> : r.medal}
+              {r.medal.startsWith('#') ? <span className="text-[10px] font-bold text-gray-600">{r.medal}</span> : r.medal}
             </span>
             <span className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${tint}`}>
               <Icon name="cube" className="text-[11px]" />
             </span>
             <span className="flex-1 min-w-0">
               <span className="block text-[12px] font-bold text-gray-800 truncate">{t(r.name)}</span>
-              <span className="block text-[10px] text-gray-500">{t('catItems')}</span>
+              <span className="block text-[10px] text-gray-600">{t('catItems')}</span>
             </span>
             <span className="text-right shrink-0">
               <span className="block text-[11px] font-bold text-gray-800">
-                {r.count} <span className="text-[10px] font-normal text-gray-500">{unit}</span>
+                {r.count} <span className="text-[10px] font-normal text-gray-600">{unit}</span>
               </span>
-              <span className="block text-[10px] text-gray-500">฿{r.revenue.toLocaleString()}</span>
+              <span className="block text-[10px] text-gray-600">฿{r.revenue.toLocaleString()}</span>
             </span>
           </div>
         ))}
@@ -213,11 +213,11 @@ export function DashboardMock() {
               {SHOP_SIDEBAR.map((m, i) => (
                 <div key={i}>
                   {m.cat && (
-                    <h4 className="px-4 text-[10px] font-bold text-gray-500 mb-2 mt-4 tracking-wider">{m.cat}</h4>
+                    <h4 className="px-4 text-[10px] font-bold text-gray-300 mb-2 mt-4 tracking-wider">{m.cat}</h4>
                   )}
                   <span
                     className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium ${
-                      m.active ? 'bg-[#16a34a]/15 text-[#22c55e]' : 'text-gray-400'
+                      m.active ? 'bg-[#12873d]/25 text-[#22c55e]' : 'text-gray-300'
                     }`}
                   >
                     <Icon name={m.icon} className="w-5 text-center text-[13px]" />
@@ -233,13 +233,13 @@ export function DashboardMock() {
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                  <Icon name="chart-area" className="text-[#f97316]" />{t('dashboard')}</h1>
-                <p className="text-xs text-gray-400 mt-0.5">{t('systemOverview')}</p>
+                  <Icon name="chart-area" className="text-[#c2410c]" />{t('dashboard')}</h1>
+                <p className="text-xs text-gray-600 mt-0.5">{t('systemOverview')}</p>
               </div>
               <div className="flex items-center gap-3 shrink-0">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-50 text-[#f97316] text-[10px] font-bold border border-orange-100">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-50 text-[#c2410c] text-[10px] font-bold border border-orange-100">
                   <Icon name="calendar-day" className="text-[9px]" />{t('monthData')}</span>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 text-[10px] font-bold border border-emerald-100">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-100">
                   <span className="mock-live w-1.5 h-1.5 rounded-full bg-emerald-500" />{t('liveUpdate')}</span>
                 <span className="mock-buy flex items-center gap-1.5 px-3.5 py-2 bg-[#1e2735] text-white rounded-lg text-[11px] font-bold shadow-[0_4px_0_#38404d]">
                   <Icon name="arrows-rotate" className="text-[10px]" />{t('refresh')}</span>
@@ -260,7 +260,7 @@ export function DashboardMock() {
                     {[t('daily'), t('weekly'), t('monthly')].map((label, i) => (
                       <span
                         key={label}
-                        className={`px-2.5 py-1 rounded-md text-[10px] font-bold ${i === 0 ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'}`}
+                        className={`px-2.5 py-1 rounded-md text-[10px] font-bold ${i === 0 ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-600'}`}
                       >
                         {label}
                       </span>
@@ -272,26 +272,26 @@ export function DashboardMock() {
                     <MiniChart />
                   </div>
                   <div className="shrink-0 flex justify-center gap-5 pt-2 text-[10px] font-bold">
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#f97316]" /><span className="text-gray-500">{t('membersNew')}</span></span>
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /><span className="text-gray-500">{t('itemSales')}</span></span>
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-purple-500" /><span className="text-gray-500">{t('topupAmount')}</span></span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#f97316]" /><span className="text-gray-600">{t('membersNew')}</span></span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /><span className="text-gray-600">{t('itemSales')}</span></span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-purple-500" /><span className="text-gray-600">{t('topupAmount')}</span></span>
                   </div>
                 </div>
               </div>
 
               <div className="col-span-2 flex flex-col gap-4">
-                <div className="mock-tile flex-1 bg-[#168d41] rounded-2xl p-5 text-white border border-[#1faa4f]/30 shadow-[0_4px_0_#0f6530,0_2px_24px_rgba(22,141,65,0.45)] relative overflow-hidden">
+                <div className="mock-tile flex-1 bg-[#147a38] rounded-2xl p-5 text-white border border-[#1faa4f]/30 shadow-[0_4px_0_#0f6530,0_2px_24px_rgba(22,141,65,0.45)] relative overflow-hidden">
                   <span className="absolute -right-6 -top-6 w-32 h-32 bg-black/10 rounded-full blur-2xl pointer-events-none" />
                   <span className="absolute right-16 bottom-0 w-20 h-20 bg-white/5 rounded-full blur-xl pointer-events-none" />
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-white text-[11px] font-bold mb-1 tracking-wide opacity-70">{t('topupThisMonth')}</p>
                       <h2 className="text-4xl font-bold leading-tight tracking-tight text-white">
-                        <span className="mock-count">48,250</span> <span className="text-base font-medium text-white/60">{t('baht')}</span>
+                        <span className="mock-count">48,250</span> <span className="text-base font-medium text-white">{t('baht')}</span>
                       </h2>
-                      <p className="text-[10px] text-white/60 mt-1">
+                      <p className="text-[10px] text-white mt-1">
                         {tr('accumulatedAllAmount', { amount: '612,480' }, c => (
-                          <span className="font-bold text-white/90">{c}</span>
+                          <span className="font-bold text-white">{c}</span>
                         ))}
                       </p>
                     </div>
@@ -306,11 +306,11 @@ export function DashboardMock() {
                   <div className={`mock-tile ${SHOP_CARD} p-5`}>
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">{t('itemRevenue')}</p>
+                        <p className="text-gray-600 text-[11px] font-bold mb-2 tracking-wide">{t('itemRevenue')}</p>
                         <h2 className="text-2xl font-bold text-gray-800 leading-tight">
-                          21,430 <span className="text-xs font-medium text-gray-400">{t('baht')}</span>
+                          21,430 <span className="text-xs font-medium text-gray-600">{t('baht')}</span>
                         </h2>
-                        <p className="text-[10px] text-gray-400 mt-1">
+                        <p className="text-[10px] text-gray-600 mt-1">
                           {tr('accumulatedItems', { amount: '288,120', n: '1,842' }, c => (
                             <span className="font-bold text-gray-600">{c}</span>
                           ))}
@@ -326,11 +326,11 @@ export function DashboardMock() {
                   <div className={`mock-tile ${SHOP_CARD} p-5`}>
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">{t('gachaRevenue')}</p>
+                        <p className="text-gray-600 text-[11px] font-bold mb-2 tracking-wide">{t('gachaRevenue')}</p>
                         <h2 className="text-2xl font-bold text-gray-800 leading-tight">
-                          14,880 <span className="text-xs font-medium text-gray-400">{t('baht')}</span>
+                          14,880 <span className="text-xs font-medium text-gray-600">{t('baht')}</span>
                         </h2>
-                        <p className="text-[10px] text-gray-400 mt-1">
+                        <p className="text-[10px] text-gray-600 mt-1">
                           {tr('accumulatedOpens', { amount: '176,540', n: 970 }, c => (
                             <span className="font-bold text-gray-600">{c}</span>
                           ))}
@@ -351,22 +351,22 @@ export function DashboardMock() {
               <div className={`mock-tile ${SHOP_CARD} p-5 border-l-4 border-l-blue-500`}>
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">{t('totalWallet')}</p>
-                    <h2 className="text-2xl font-bold text-gray-800 leading-tight">39,615 <span className="text-xs font-medium text-gray-400">{t('baht')}</span></h2>
+                    <p className="text-gray-600 text-[11px] font-bold mb-2 tracking-wide">{t('totalWallet')}</p>
+                    <h2 className="text-2xl font-bold text-gray-800 leading-tight">39,615 <span className="text-xs font-medium text-gray-600">{t('baht')}</span></h2>
                   </div>
                   <span className="w-10 h-10 bg-violet-50 text-violet-500 rounded-xl flex items-center justify-center shrink-0">
                     <Icon name="sack-dollar" className="text-sm" />
                   </span>
                 </div>
-                <p className="text-[10px] text-gray-400 mt-3 flex items-center gap-1">
+                <p className="text-[10px] text-gray-600 mt-3 flex items-center gap-1">
                   <Icon name="users" className="text-gray-300 text-[9px]" />{t('walletTotal')}</p>
               </div>
 
               <div className={`mock-tile ${SHOP_CARD} p-5 border-l-4 border-l-green-500`}>
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">{t('totalSpend')}</p>
-                    <h2 className="text-2xl font-bold text-gray-800 leading-tight">464,660 <span className="text-xs font-medium text-gray-400">{t('baht')}</span></h2>
+                    <p className="text-gray-600 text-[11px] font-bold mb-2 tracking-wide">{t('totalSpend')}</p>
+                    <h2 className="text-2xl font-bold text-gray-800 leading-tight">464,660 <span className="text-xs font-medium text-gray-600">{t('baht')}</span></h2>
                   </div>
                   <span className="w-10 h-10 bg-violet-50 text-violet-500 rounded-xl flex items-center justify-center shrink-0">
                     <Icon name="receipt" className="text-sm" />
@@ -378,10 +378,10 @@ export function DashboardMock() {
               <div className={`mock-tile ${SHOP_CARD} p-5`}>
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">{t('membersAll')}</p>
-                    <h2 className="text-2xl font-bold text-gray-800 leading-tight">1,284 <span className="text-sm font-medium text-gray-400">{t('people')}</span></h2>
+                    <p className="text-gray-600 text-[11px] font-bold mb-2 tracking-wide">{t('membersAll')}</p>
+                    <h2 className="text-2xl font-bold text-gray-800 leading-tight">1,284 <span className="text-sm font-medium text-gray-600">{t('people')}</span></h2>
                   </div>
-                  <span className="w-10 h-10 bg-orange-50 text-[#f97316] rounded-xl flex items-center justify-center shrink-0">
+                  <span className="w-10 h-10 bg-orange-50 text-[#c2410c] rounded-xl flex items-center justify-center shrink-0">
                     <Icon name="users" className="text-sm" />
                   </span>
                 </div>
@@ -391,14 +391,14 @@ export function DashboardMock() {
               <div className={`mock-tile ${SHOP_CARD} p-5`}>
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-gray-500 text-[11px] font-bold mb-2 tracking-wide">{t('allProducts')}</p>
-                    <h2 className="text-2xl font-bold text-gray-800 leading-tight">19 <span className="text-sm font-medium text-gray-400">{t('piecesUnit')}</span></h2>
+                    <p className="text-gray-600 text-[11px] font-bold mb-2 tracking-wide">{t('allProducts')}</p>
+                    <h2 className="text-2xl font-bold text-gray-800 leading-tight">19 <span className="text-sm font-medium text-gray-600">{t('piecesUnit')}</span></h2>
                   </div>
-                  <span className="w-10 h-10 bg-orange-50 text-[#f97316] rounded-xl flex items-center justify-center shrink-0">
+                  <span className="w-10 h-10 bg-orange-50 text-[#c2410c] rounded-xl flex items-center justify-center shrink-0">
                     <Icon name="box-open" className="text-sm" />
                   </span>
                 </div>
-                <p className="text-[10px] text-gray-400 mt-3">{t('productList')}</p>
+                <p className="text-[10px] text-gray-600 mt-3">{t('productList')}</p>
               </div>
             </div>
 
@@ -501,7 +501,7 @@ function ShopNav({ active }: { active: string }) {
                   <Icon name={l.icon} className={`text-[18px] ${isActive ? '' : 's-fg-muted'}`} />
                   <span className={`font-bold text-[15px] ${isActive ? '' : 's-fg'}`}>{t(l.label)}</span>
                 </span>
-                <span className={`text-[10px] font-bold opacity-80 ${isActive ? '' : 's-fg-muted'}`}>{t(l.sub)}</span>
+                <span className={`text-[10px] font-bold ${isActive ? '' : 's-fg-muted'}`}>{t(l.sub)}</span>
               </span>
             );
           })}
@@ -629,7 +629,7 @@ function ProductCardMock({ name, price, original, sold, category, seq = 0 }: {
         </span>
         <span className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent px-3 py-6 flex items-end justify-between gap-2">
           {discount > 0 && original
-            ? <span className="text-white/80 text-xs font-medium line-through tabular-nums leading-none drop-shadow-md">{original.toLocaleString()} ฿</span>
+            ? <span className="text-white text-xs font-medium line-through tabular-nums leading-none drop-shadow-md">{original.toLocaleString()} ฿</span>
             : <span />}
           <span className="s-price-badge text-sm font-bold px-3 py-2 rounded-lg tabular-nums leading-none shrink-0">
             {price.toLocaleString()} ฿
@@ -640,7 +640,7 @@ function ProductCardMock({ name, price, original, sold, category, seq = 0 }: {
         <p className="s-fg font-bold text-sm leading-tight truncate">{t(name)}</p>
         <span className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-500/10 border border-orange-500/20 w-fit">
           <Icon name="fire" className="text-[10px] text-orange-500" />
-          <span className="text-[11px] font-bold text-orange-600">
+          <span className="text-[11px] font-bold text-orange-700">
             {tr('soldPieces', { n: sold.toLocaleString() }, c => (
               <span className="tabular-nums font-bold">{c}</span>
             ))}

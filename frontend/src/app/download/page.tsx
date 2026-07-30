@@ -117,7 +117,7 @@ export default function DownloadPage() {
         </div>
 
         {/* ── Disclaimer ── */}
-        <div className="mt-8 flex items-center gap-2 justify-center text-[10px] font-bold text-foreground-subtle uppercase tracking-widest opacity-60">
+        <div className="mt-8 flex items-center gap-2 justify-center text-xs font-bold text-foreground-subtle uppercase tracking-widest">
           <Info className="w-3 h-3 text-primary" strokeWidth={2.25} />
           <span>Files are scanned for safety before upload</span>
         </div>

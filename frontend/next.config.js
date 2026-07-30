@@ -45,6 +45,12 @@ const nextConfig = {
     // the whole set in the module graph and the bundler has to prove each icon
     // unused, which it does not always manage.
     optimizePackageImports: ['lucide-react', 'framer-motion'],
+    // Inlines the rules the first paint actually needs and defers the rest of
+    // the stylesheet. The full sheet was the entire critical path: the document
+    // finished at 669ms and First Contentful Paint waited until the 23KB CSS
+    // landed at 2.47s, with Lighthouse measuring 19KB of it unused above the
+    // fold. Needs the `critters` dependency.
+    optimizeCss: true,
   },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];

@@ -49,7 +49,7 @@ const TYPE_CONFIG = {
     iconColor:   'text-[#16a34a]',
     icon:        'fa-circle-check',
     glow:        'shadow-[0_0_32px_rgba(22,163,74,0.25)]',
-    confirmBg:   'bg-[#16a34a] shadow-[0_4px_0_#0d6b2e] hover:brightness-110',
+    confirmBg:   'bg-[#15803d] shadow-[0_4px_0_#0d6b2e] hover:brightness-110',
     confirmText: 'text-white',
   },
   error: {
@@ -58,7 +58,7 @@ const TYPE_CONFIG = {
     iconColor:   'text-red-500',
     icon:        'fa-circle-xmark',
     glow:        'shadow-[0_0_32px_rgba(239,68,68,0.22)]',
-    confirmBg:   'bg-red-500 shadow-[0_4px_0_#b91c1c] hover:brightness-110',
+    confirmBg:   'bg-red-600 shadow-[0_4px_0_#991b1b] hover:brightness-110',
     confirmText: 'text-white',
   },
   danger: {
@@ -77,7 +77,7 @@ const TYPE_CONFIG = {
     icon:        'fa-triangle-exclamation',
     glow:        'shadow-[0_0_32px_rgba(251,191,36,0.25)]',
     confirmBg:   'bg-amber-500 shadow-[0_4px_0_#b45309] hover:brightness-110',
-    confirmText: 'text-white',
+    confirmText: 'text-amber-950',
   },
   info: {
     accent:      'bg-[#1e2735]',

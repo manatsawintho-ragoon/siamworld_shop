@@ -142,7 +142,7 @@ function NotificationModal({ n, onClose }: { n: Notification; onClose: () => voi
                 {style.label}
               </p>
               <h3 className="text-[15px] font-black text-gray-900 leading-tight">{n.title}</h3>
-              <p className="text-[11px] text-gray-400 mt-1">{formatDate(n.created_at)}</p>
+              <p className="text-[11px] text-gray-500 mt-1">{formatDate(n.created_at)}</p>
             </div>
           </div>
 
@@ -151,12 +151,12 @@ function NotificationModal({ n, onClose }: { n: Notification; onClose: () => voi
             <div className="rounded-xl bg-gray-50 border border-gray-100 divide-y divide-gray-100 overflow-hidden">
               {bodyParts.map((p, i) => (
                 <div key={i} className="flex items-start gap-3 px-4 py-2.5">
-                  <span className="text-[11px] font-bold text-gray-400 w-28 flex-shrink-0 pt-0.5 leading-relaxed">
+                  <span className="text-[11px] font-bold text-gray-500 w-28 flex-shrink-0 pt-0.5 leading-relaxed">
                     {p.label || p.key}
                   </span>
                   <span className={`text-[12px] font-bold break-all leading-relaxed ${
                     p.key === 'status' && p.value === 'สำเร็จ' ? 'text-[#16a34a]' :
-                    p.key === 'status' && p.value === 'ปฏิเสธ' ? 'text-red-500' :
+                    p.key === 'status' && p.value === 'ปฏิเสธ' ? 'text-red-600' :
                     p.key === 'reason' || p.key === 'detail' ? 'text-gray-600' :
                     p.key === 'trans_ref' ? 'font-mono text-gray-700 text-[11px]' :
                     'text-gray-800'
@@ -323,11 +323,11 @@ export default function NotificationBell() {
                             </div>
                           </div>
                           {n.body && (
-                            <p className="text-[11px] text-gray-400 mt-0.5 truncate max-w-[260px]">
+                            <p className="text-[11px] text-gray-500 mt-0.5 truncate max-w-[260px]">
                               {n.body}
                             </p>
                           )}
-                          <p className="text-[10px] text-gray-300 mt-1">{timeAgo(n.created_at)}</p>
+                          <p className="text-[10px] text-gray-500 mt-1">{timeAgo(n.created_at)}</p>
                         </div>
                       </button>
                     );

@@ -17,7 +17,7 @@ export default function RconModal({ command, onClose }: { command: string; onClo
           </div>
           <div className="flex-1">
             <p className="font-bold text-gray-800 text-sm">RCON Command</p>
-            <p className="text-[10px] text-gray-400">คำสั่งที่จะถูกส่งไปยังเซิร์ฟเวอร์</p>
+            <p className="text-[10px] text-gray-500">คำสั่งที่จะถูกส่งไปยังเซิร์ฟเวอร์</p>
           </div>
           <button
             onClick={onClose}

@@ -27,8 +27,21 @@ import localFont from 'next/font/local';
  * resolves an 800 to the 900 file. Each declared weight is one more preloaded
  * file, so check usage before adding one back.
  *
- * To update: re-fetch the Google Fonts CSS API, replace the woff2 files in
- * src/fonts, and keep the unicode-range strings in sync with that CSS.
+ * The woff2 files are Google's subsets re-compressed with fontTools using
+ * --no-hinting --desubroutinize, which took the six of them from 114KB to 68KB
+ * with identical codepoint coverage. Hinting tables are dead weight: no modern
+ * rasterizer consults them at UI sizes. It mattered because all six preload at
+ * High priority, and on throttled mobile they were starving the render-blocking
+ * stylesheet of bandwidth - First Contentful Paint sat at 2.6s waiting for a
+ * 23KB CSS file that the document had already finished requesting at 0.64s.
+ *
+ * To update: re-fetch the Google Fonts CSS API, put the new woff2 files in
+ * src/fonts, keep the unicode-range strings below in sync with that CSS, then
+ * re-run the subsetter over them:
+ *
+ *   pyftsubset <file>.woff2 --unicodes=<the range below> --flavor=woff2 \
+ *     --layout-features=kern,liga,calt,ccmp,mark,mkmk,tnum,onum,ss01 \
+ *     --no-hinting --desubroutinize --output-file=<file>.woff2
  */
 
 export const interLatin = localFont({
@@ -39,8 +52,15 @@ export const interLatin = localFont({
   declarations: [
     {
       prop: 'unicode-range',
+      // Narrower than Google's `latin` subset on purpose: this face is a
+      // variable font, so its outline data dominates the file and every glyph
+      // kept costs real bytes on the critical path. Minecraft usernames are
+      // [A-Za-z0-9_] by protocol and every other string on the site is Thai, so
+      // the Latin-1 accented letters and most of General Punctuation were
+      // paying for glyphs no shop can render. Keep this in sync with the
+      // subsetter's --unicodes argument (see the header comment).
       value:
-        'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD',
+        'U+0020-007E, U+00A0, U+00A9, U+00AE, U+00B0, U+00B1, U+00B7, U+00D7, U+00F7, U+2013-2014, U+2018-201A, U+201C-201E, U+2020-2022, U+2026, U+2030, U+2039-203A, U+20AC, U+2122, U+2190-2193, U+2212, U+2215, U+FEFF, U+FFFD',
     },
   ],
 });

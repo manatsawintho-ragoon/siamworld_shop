@@ -33,6 +33,11 @@
 
     /* Primary — Minecraft Green */
     --color-primary: 34 197 94;                /* Green-500 #22c55e */
+    /* Primary in its TEXT role. Green 500 is 2.09:1 on white - nowhere near
+       AA - but it has to stay bright as a button fill, so the two roles get
+       separate tokens. Every theme in context/ThemeContext.tsx defines this;
+       the value here is the fallback for unthemed surfaces (the admin shell). */
+    --color-primary-text: 20 116 55;           /* 5.9:1 on white, 5.0:1 on its own 10% tint */
     --color-primary-hover: 22 163 74;          /* Green-600 #16a34a */
     --color-primary-light: 74 222 128;         /* Green-400 #4ade80 */
     --color-primary-foreground: 255 255 255;
@@ -85,6 +90,7 @@
     --color-foreground-muted: 148 163 184;
     --color-foreground-subtle: 100 116 139;
     --color-primary: 34 197 94;
+    --color-primary-text: 74 222 128;   /* bright on a dark surface */
     --color-primary-hover: 22 163 74;
     --color-primary-light: 74 222 128;
     --color-primary-foreground: 255 255 255;
@@ -287,13 +293,17 @@ select {
   @apply relative px-5 py-4 text-sm font-bold tracking-wide uppercase transition-all duration-200;
   color: rgb(var(--color-foreground) / 0.88); /* readable baseline that adapts to theme (dark or light) */
 }
+/* --color-primary-text, not --color-primary: the active link sits on a 10% tint
+   of the primary itself, where the fill shade only reaches 3.95:1 against a
+   15px bold label. The underline below stays on --color-primary - it is a bar,
+   not text, so it is free to keep the brighter brand colour. */
 .mc-nav-link:hover {
-  color: rgb(var(--color-primary));
+  color: rgb(var(--color-primary-text, var(--color-primary)));
   text-shadow: 0 0 14px rgb(var(--color-primary-light) / 0.65);
   transform: translateY(-1px);
 }
 .mc-nav-link.active {
-  color: rgb(var(--color-primary));
+  color: rgb(var(--color-primary-text, var(--color-primary)));
 }
 .mc-nav-link::after {
   content: '';
@@ -824,3 +834,47 @@ table.data-table tbody tr:hover {
 @media (prefers-reduced-motion: reduce) {
   .hero-rise { animation: none; }
 }
+
+/* ── Section reveal, scroll-driven ────────────────────────────────────
+   The home page's content sections used framer-motion's `whileInView`, which
+   server-renders them at `opacity: 0` and only reveals them once the bundle has
+   hydrated and an observer has fired. With the page's data now server-rendered
+   that was the last thing keeping content off the first paint, and it cost Speed
+   Index directly: the markup was there, the pixels were not.
+
+   `animation-timeline: view()` does the same reveal on the compositor with no
+   JavaScript at all. It is behind @supports because Safari and Firefox have not
+   shipped it - there the sections are simply visible from the start, which is
+   the correct fallback for a decorative entrance. `animation-fill-mode` is
+   deliberately not `both`: outside the timeline range the element must stay at
+   its final state, not its `from` state. */
+@supports (animation-timeline: view()) {
+  @media not (prefers-reduced-motion: reduce) {
+    .section-reveal {
+      animation: hero-rise 1s linear;
+      animation-timeline: view();
+      animation-range: entry 0% cover 22%;
+    }
+  }
+}
+
+
+/* ── Primary, in its text role ────────────────────────────────────────
+   `text-primary` and `bg-primary` both resolve to --color-primary in Tailwind,
+   but the two uses pull in opposite directions: as a fill it needs to stay
+   bright enough to look like the brand, and as small text on a light surface it
+   has to reach 4.5:1. Every theme therefore ships --color-primary-text
+   alongside --color-primary, and these rules point the text utilities at it so
+   no call site had to change.
+
+   Declared after @tailwind utilities so they win on specificity ties, and
+   scoped to nothing - they apply wherever the utility does. The opacity
+   variants are spelled out because Tailwind compiles each one separately, and
+   they land on the full colour rather than a wash of it: a 20% wash drops
+   --color-primary-text to 3.9:1, which puts the text back under AA. The
+   softening those call sites wanted is not worth an unreadable label. */
+.text-primary,
+.text-primary\/90,
+.text-primary\/80 { color: rgb(var(--color-primary-text, var(--color-primary))); }
+.hover\:text-primary:hover { color: rgb(var(--color-primary-text, var(--color-primary))); }
+.group:hover .group-hover\:text-primary { color: rgb(var(--color-primary-text, var(--color-primary))); }

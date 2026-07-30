@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import Providers from './providers';
-import { fetchShopSeo } from '@/lib/serverSeo';
+import { fetchShopSeo, fetchPublicRankings, fetchSessionUser } from '@/lib/serverSeo';
 import { fontVariables } from '@/lib/fonts';
 
 // `viewportFit: 'cover'` is what makes env(safe-area-inset-*) resolve to a real
@@ -29,7 +29,15 @@ export async function generateMetadata(): Promise<Metadata> {
     description: seo.description,
     keywords,
     applicationName: seo.shopName,
-    alternates: { canonical: '/' },
+    // No `alternates.canonical` here on purpose. Metadata set in the root layout
+    // applies to every route that does not override it, so a literal '/' told
+    // search engines that /shop, /lootbox, /topup and every other page were
+    // duplicates of the home page - Lighthouse flagged it on each of them and it
+    // is the kind of tag that quietly keeps real pages out of the index. With no
+    // canonical tag at all, each URL self-canonicalises, which is the correct
+    // answer for all of them. Nothing is lost for the custom-domain case either:
+    // metadataBase already resolves from the request host, so an explicit
+    // canonical would only ever have echoed the host the visitor arrived on.
     openGraph: {
       title: defaultTitle,
       description: seo.description,
@@ -60,7 +68,13 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const seo = await fetchShopSeo();
+  // Both are cached server-side (300s / 60s), so this is one round trip on a cold
+  // cache and none on a warm one, in exchange for a sidebar that never shifts.
+  const [seo, rankings, sessionUser] = await Promise.all([
+    fetchShopSeo(),
+    fetchPublicRankings(),
+    fetchSessionUser(),
+  ]);
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Store',
@@ -95,7 +109,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <link rel="preconnect" href="https://mc-heads.net" crossOrigin="anonymous" />
       </head>
       <body className={`${fontVariables} font-sans bg-background text-foreground min-h-screen antialiased`}>
-        <Providers initialSettings={seo.settings}>{children}</Providers>
+        <Providers
+          initialSettings={seo.settings}
+          initialRankings={rankings}
+          initialUser={sessionUser}
+          sessionSeeded
+        >
+          {children}
+        </Providers>
       </body>
     </html>
   );

@@ -1,21 +1,18 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useSettings } from '@/context/SettingsContext';
+import { useRankings } from '@/context/RankingsContext';
 import { useAdminAlert } from '@/components/AdminAlert';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import PageTransition from '@/components/PageTransition';
-import { api } from '@/lib/api';
 import AuthForm from '@/components/AuthForm';
 import {
   Loader2, Shield, User, UserCircle, Wallet, Ticket,
   PackageOpen, LogOut, Trophy, Crown, Medal, Coins, CalendarDays,
 } from 'lucide-react';
-
-interface RankEntry  { username: string; total_topup: number; }
-interface DailyEntry { username: string; total_topup: number; last_topup: string; }
 
 function DiscordIcon({ className }: { className?: string }) {
   return (
@@ -51,19 +48,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     logout();
     showAlert({ type: 'success', title: 'ออกจากระบบแล้ว', message: 'คุณได้ออกจากระบบเรียบร้อยแล้ว' });
   };
-  const [ranking,    setRanking]    = useState<RankEntry[]>([]);
-  const [dailyTopup, setDailyTopup] = useState<DailyEntry[]>([]);
+  // Seeded by the root layout (see RankingsContext) so the cards paint at their
+  // final height instead of appearing after hydration.
+  const { ranking, daily: dailyTopup } = useRankings();
   const discordUrl  = settings.discord_invite || '';
   const facebookUrl = settings.facebook_url   || '';
   // Visibility toggles (default visible). Skip the network calls entirely when
   // the widget is hidden so we don't waste requests on data we won't render.
   const showTopupRank  = (settings.show_topup_rank_widget  ?? '1') === '1';
   const showTopupDaily = (settings.show_topup_daily_widget ?? '1') === '1';
-
-  useEffect(() => {
-    if (showTopupRank)  api('/public/topup-ranking').then(d => setRanking((d.ranking  as RankEntry[])  || [])).catch(() => {});
-    if (showTopupDaily) api('/public/daily-topup').then(d  => setDailyTopup((d.daily  as DailyEntry[]) || [])).catch(() => {});
-  }, [showTopupRank, showTopupDaily]);
 
   const CARD = 'theme-sidebar-card';
   const DIV  = 'border-b border-border-muted';
@@ -157,7 +150,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   {/* Redeem Code CTA */}
                   <div className="px-5 py-3 border-b border-border-muted">
                     <Link href="/redeem"
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-amber-500 text-white text-sm font-bold shadow-[0_4px_0_rgb(217,119,6)] hover:brightness-110 transition-all active:shadow-none active:translate-y-[4px]">
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-amber-500 text-amber-950 text-sm font-bold shadow-[0_4px_0_rgb(217,119,6)] hover:brightness-110 transition-all active:shadow-none active:translate-y-[4px]">
                       <Ticket className="w-3.5 h-3.5" strokeWidth={2.25} /> แลกโค้ดรางวัล
                     </Link>
                   </div>
@@ -242,11 +235,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                         onError={(e) => { (e.target as HTMLImageElement).src = 'https://mc-heads.net/avatar/steve/28'; }}
                       />
                       {/* Name */}
-                      <span className={`text-xs font-bold truncate flex-1 ${i === 0 ? 'text-amber-600' : 'text-foreground'}`}>{r.username}</span>
+                      <span className={`text-xs font-bold truncate flex-1 ${i === 0 ? 'text-amber-700' : 'text-foreground'}`}>{r.username}</span>
                       {/* Amount */}
                       <div className="flex items-center gap-1 flex-shrink-0 rounded-lg px-2 py-0.5" style={{ backgroundColor: 'rgb(var(--color-primary) / 0.1)', border: '1px solid rgb(var(--color-border))' }}>
                         <Coins className="w-2.5 h-2.5 text-amber-500" strokeWidth={2.25} />
-                        <span className="text-[11px] font-black tabular-nums" style={{ color: 'rgb(var(--color-primary))' }}>{r.total_topup.toLocaleString()}</span>
+                        <span className="text-[11px] font-black tabular-nums" style={{ color: 'rgb(var(--color-primary-text))' }}>{r.total_topup.toLocaleString()}</span>
                       </div>
                     </div>
                   ))}
@@ -280,7 +273,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   <div key={i} className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface-hover transition-colors">
                     {/* Rank number */}
                     <div className="w-5 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-black" style={{ color: 'rgb(var(--color-primary-light))' }}>{i + 1}</span>
+                      <span className="text-xs font-black" style={{ color: 'rgb(var(--color-primary-text))' }}>{i + 1}</span>
                     </div>
                     {/* Avatar */}
                     <img
@@ -295,7 +288,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                     {/* Amount */}
                     <div className="flex items-center gap-1 flex-shrink-0 rounded-lg px-2 py-0.5" style={{ backgroundColor: 'rgb(var(--color-primary) / 0.1)', border: '1px solid rgb(var(--color-border))' }}>
                       <Coins className="w-2.5 h-2.5" strokeWidth={2.25} style={{ color: 'rgb(var(--color-primary))' }} />
-                      <span className="text-[11px] font-black tabular-nums" style={{ color: 'rgb(var(--color-primary-hover))' }}>{Number(r.total_topup).toLocaleString()}</span>
+                      <span className="text-[11px] font-black tabular-nums" style={{ color: 'rgb(var(--color-primary-text))' }}>{Number(r.total_topup).toLocaleString()}</span>
                     </div>
                   </div>
                 ))}

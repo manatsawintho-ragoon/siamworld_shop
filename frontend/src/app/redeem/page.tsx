@@ -283,7 +283,7 @@ export default function RedeemCodePage() {
                   ยังไม่ได้เข้าเกม
                 </button>
                 <button onClick={doRedeem}
-                  className="px-5 py-2.5 text-[13px] font-bold rounded-lg bg-amber-500 text-white shadow-[0_3px_0_#b45309] flex items-center gap-1.5">
+                  className="px-5 py-2.5 text-[13px] font-bold rounded-lg bg-amber-500 text-amber-950 shadow-[0_3px_0_#b45309] flex items-center gap-1.5">
                   <Check className="w-3.5 h-3.5" strokeWidth={2.5} /> ยืนยัน (ออนไลน์อยู่)
                 </button>
               </div>

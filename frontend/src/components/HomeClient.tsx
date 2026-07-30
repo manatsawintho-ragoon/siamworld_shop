@@ -10,8 +10,8 @@ import AutoScrollCarousel from '@/components/AutoScrollCarousel';
 import { useSettings } from '@/context/SettingsContext';
 import { api } from '@/lib/api';
 import { getRarity } from '@/lib/rarity';
+import type { HomeData } from '@/lib/serverSeo';
 import { useOnlinePlayers } from '@/hooks/useOnlinePlayers';
-import { motion } from 'framer-motion';
 import {
   ArrowRight, Server, Network, Check, Copy, Users, Loader2, XCircle,
   ChevronLeft, ChevronRight, Gem, Tag, Pause, Package, Clock,
@@ -170,7 +170,7 @@ function ServerStatusWidget({ serverIp, dbServers }: { serverIp?: string; dbServ
             <p className="text-[9px] text-primary font-black uppercase tracking-wider leading-none">กำลังออนไลน์</p>
             <p className="text-primary font-black text-2xl tabular-nums leading-tight mt-0.5">
               {totalOnline}
-              <span className="text-sm font-bold text-primary/70 ml-1">คน</span>
+              <span className="text-sm font-bold text-primary ml-1">คน</span>
             </p>
           </div>
           <Users className="w-7 h-7 text-primary/25 flex-shrink-0" strokeWidth={2} />
@@ -327,38 +327,30 @@ function HomeGachaCarousel({ boxes, noDrag }: { boxes: LootBox[]; noDrag?: boole
 }
 
 /**
- * `initialSlides` is fetched by the server component in app/page.tsx so the hero
- * artwork is present in the first HTML response. Seeding state with it means the
- * carousel (and its preload link) render before hydration, instead of appearing
- * one client round-trip later.
+ * `initial` is fetched by the server component in app/page.tsx, so everything the
+ * page renders is present in the first HTML response. Seeding state from it means
+ * the hero (and its image preload link) and the six lists below it render before
+ * hydration, rather than each appearing a client round-trip later and resizing
+ * the page under the reader.
+ *
+ * The client still refetches the two activity feeds, which are the only lists
+ * meant to look live; the rest would only be replaced by identical data.
  */
-export default function HomeClient({ initialSlides = [] }: { initialSlides?: ImageSlideData[] }) {
-  const [slides,      setSlides]      = useState<ImageSlideData[]>(initialSlides);
-  const [servers,     setServers]     = useState<Server[]>([]);
-  const [lootboxes,   setLootboxes]   = useState<LootBox[]>([]);
-  const [recentBuy,   setRecentBuy]   = useState<RecentPurchase[]>([]);
-  const [recentBox,   setRecentBox]   = useState<RecentLootbox[]>([]);
-  const [popularItems,   setPopularItems]   = useState<Product[]>([]);
-  const [newArrivals,    setNewArrivals]    = useState<Product[]>([]);
-  const [homeLoading,    setHomeLoading]    = useState(true);
+export default function HomeClient({ initial }: { initial: HomeData }) {
+  const [slides,      setSlides]      = useState<ImageSlideData[]>(initial.slides as ImageSlideData[]);
+  const [servers,     setServers]     = useState<Server[]>(initial.servers as Server[]);
+  const [lootboxes,   setLootboxes]   = useState<LootBox[]>(initial.lootboxes as LootBox[]);
+  const [recentBuy,   setRecentBuy]   = useState<RecentPurchase[]>(initial.recentBuy as RecentPurchase[]);
+  const [recentBox,   setRecentBox]   = useState<RecentLootbox[]>(initial.recentBox as RecentLootbox[]);
+  const [popularItems,   setPopularItems]   = useState<Product[]>(initial.popularItems as Product[]);
+  const [newArrivals,    setNewArrivals]    = useState<Product[]>(initial.newArrivals as Product[]);
   const [ipCopied,       setIpCopied]       = useState(false);
   const { settings } = useSettings();
   const campaign = useActiveCampaign();
 
   useEffect(() => {
-    Promise.all([
-      // Skipped when the server already supplied them: re-fetching would only
-      // replace identical data, and it would do so on the critical path.
-      initialSlides.length
-        ? Promise.resolve()
-        : api('/public/slides').then(d => setSlides((d.slides as ImageSlideData[]) || [])).catch(() => {}),
-      api('/public/servers').then(d => setServers((d.servers as Server[]) || [])).catch(() => {}),
-      api('/shop/lootboxes').then(d => setLootboxes((d.boxes as LootBox[]) || [])).catch(() => {}),
-      api('/public/recent-purchases').then(d => setRecentBuy((d.purchases as RecentPurchase[]) || [])).catch(() => {}),
-      api('/public/recent-lootbox').then(d => setRecentBox((d.openings as RecentLootbox[]) || [])).catch(() => {}),
-      api('/public/products/popular').then(d => setPopularItems((d.products as Product[]) || [])).catch(() => {}),
-      api('/public/products/new-arrivals').then(d => setNewArrivals((d.products as Product[]) || [])).catch(() => {}),
-    ]).finally(() => setHomeLoading(false));
+    api('/public/recent-purchases').then(d => setRecentBuy((d.purchases as RecentPurchase[]) || [])).catch(() => {});
+    api('/public/recent-lootbox').then(d => setRecentBox((d.openings as RecentLootbox[]) || [])).catch(() => {});
   }, []);
 
   /**
@@ -410,55 +402,33 @@ export default function HomeClient({ initialSlides = [] }: { initialSlides?: Ima
               {heroSlides.length > 0 ? <HeroCarousel slides={heroSlides} /> : <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-900 via-green-800 to-green-900 relative overflow-hidden"><div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, #22c55e 0%, transparent 60%)' }} /><div className="relative z-10 text-center logo-float"><div className="text-4xl md:text-5xl font-black tracking-tighter text-white drop-shadow-[0_0_20px_rgba(34,197,94,0.6)] mb-2">{settings.shop_name || 'Siamsite'}</div><p className="text-green-400 font-bold text-sm tracking-widest uppercase">{settings.shop_subtitle || 'ระบบร้านค้ามายคราฟ'}</p></div></div>}
             </div>
           </div>
-          {homeLoading ? (
-            <div className="flex flex-col gap-3 animate-pulse">
-              <div className="theme-card overflow-hidden">
-                <div className="px-4 py-3 border-b border-border-muted flex items-center gap-2.5"><div className="w-8 h-8 rounded-xl bg-border" /><div className="h-3 w-32 bg-border rounded-full" /><div className="h-4 w-14 bg-border rounded-full ml-auto" /></div>
-                <div className="p-3 flex gap-2.5 overflow-hidden">{[0,1,2,3].map(i => (<div key={i} className="flex-shrink-0 w-[calc(50%-5px)] sm:w-[calc(25%-7.5px)] rounded-xl bg-surface-hover overflow-hidden border border-border-muted"><div className="aspect-[3/4] bg-border" /><div className="p-2.5 space-y-1.5"><div className="h-2.5 bg-border rounded-full w-3/4" /><div className="h-2 bg-border-muted rounded-full w-1/2" /></div></div>))}</div>
-              </div>
-              <div className="theme-card overflow-hidden">
-                <div className="px-4 py-3 border-b border-border-muted flex items-center gap-2.5"><div className="w-8 h-8 rounded-xl bg-border" /><div className="h-3 w-28 bg-border rounded-full" /><div className="h-4 w-14 bg-border rounded-full ml-auto" /></div>
-                <div className="p-3 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">{[0,1,2,3].map(i => (<div key={i} className="rounded-xl border border-border-muted overflow-hidden"><div className="aspect-square bg-border" /><div className="p-2.5 space-y-1.5"><div className="h-2.5 bg-border rounded-full w-3/4" /><div className="h-5 bg-border rounded-lg w-1/2 mt-2" /></div></div>))}</div>
-              </div>
-            </div>
-          ) : (
-            <>
             {(settings.show_exclusive_gacha ?? '1') === '1' && exclusiveBoxes.length > 0 && (
-              <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5 }} className={CARD_CLS}>
-                <div className="px-3 sm:px-4 py-3 border-b border-border-muted flex items-center gap-2 sm:gap-2.5"><div className="w-8 h-8 rounded-xl bg-violet-500/12 flex items-center justify-center flex-shrink-0"><Gem className="w-4 h-4 text-violet-500" strokeWidth={2.25} /></div><h2 className="font-black text-foreground text-sm leading-tight truncate min-w-0">GACHA Exclusive Box</h2><span className="bg-violet-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full tracking-wide flex-shrink-0">LIMITED</span><span className="hidden md:inline text-foreground-subtle text-xs flex-shrink-0">{exclusiveBoxes.length} กล่อง</span><Link href="/lootbox" className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 text-primary text-[11px] font-bold hover:bg-primary/15 active:scale-95 transition-all flex-shrink-0"><span className="hidden sm:inline">ดูกล่องสุ่มทั้งหมด</span><span className="sm:hidden">ทั้งหมด</span> <ArrowRight className="w-3 h-3" strokeWidth={2.5} /></Link></div>
+              <div className={`${CARD_CLS} section-reveal`}>
+                <div className="px-3 sm:px-4 py-3 border-b border-border-muted flex items-center gap-2 sm:gap-2.5"><div className="w-8 h-8 rounded-xl bg-violet-500/12 flex items-center justify-center flex-shrink-0"><Gem className="w-4 h-4 text-violet-500" strokeWidth={2.25} /></div><h2 className="font-black text-foreground text-sm leading-tight truncate min-w-0">GACHA Exclusive Box</h2><span className="bg-violet-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full tracking-wide flex-shrink-0">LIMITED</span><span className="hidden md:inline text-foreground-subtle text-xs flex-shrink-0">{exclusiveBoxes.length} กล่อง</span><Link href="/lootbox" className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 text-primary text-[11px] font-bold hover:bg-primary/15 active:scale-95 transition-all flex-shrink-0"><span className="hidden sm:inline">ดูกล่องสุ่มทั้งหมด</span><span className="sm:hidden">ทั้งหมด</span> <ArrowRight className="w-3 h-3" strokeWidth={2.5} /></Link></div>
                 <div className="p-3"><HomeGachaCarousel boxes={exclusiveBoxes} noDrag /></div>
-              </motion.div>
+              </div>
             )}
             {(settings.show_popular_gacha ?? '1') === '1' && popularBoxes.length > 0 && (
-              <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5, delay: 0.1 }} className={CARD_CLS}>
+              <div className={`${CARD_CLS} section-reveal`}>
                 <div className="px-3 sm:px-4 py-3 border-b border-border-muted flex items-center gap-2 sm:gap-2.5"><div className="w-8 h-8 rounded-xl bg-warning/12 flex items-center justify-center flex-shrink-0"><PackageOpen className="w-4 h-4 text-warning" strokeWidth={2.25} /></div><h2 className="font-black text-foreground text-sm leading-tight truncate min-w-0">GACHA กล่องสุ่ม ยอดนิยม</h2><span className="bg-warning text-white text-[9px] font-black px-2 py-0.5 rounded-full tracking-wide flex-shrink-0">HOT</span><span className="hidden md:inline text-foreground-subtle text-xs flex-shrink-0">{popularBoxes.length} กล่อง</span><Link href="/lootbox" className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 text-primary text-[11px] font-bold hover:bg-primary/15 active:scale-95 transition-all flex-shrink-0"><span className="hidden sm:inline">ดูกล่องสุ่มทั้งหมด</span><span className="sm:hidden">ทั้งหมด</span> <ArrowRight className="w-3 h-3" strokeWidth={2.5} /></Link></div>
                 <div className="p-3"><HomeGachaCarousel boxes={popularBoxes} /></div>
-              </motion.div>
+              </div>
             )}
             {(settings.show_popular_widget ?? '1') === '1' && popularItems.length > 0 && (
-              <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5, delay: 0.2 }} className="theme-card">
+              <div className="theme-card section-reveal">
                 <div className="px-4 py-3 border-b border-border-muted"><SectionHeader Icon={Flame} tint="239 68 68" title="ITEMS สินค้ายอดนิยม" count={popularItems.length} href="/shop" btnLabel="ดูทั้งหมด" /></div>
                 <ProductSectionBody products={popularItems} servers={servers} />
-              </motion.div>
+              </div>
             )}
             {(settings.show_new_arrivals ?? '1') === '1' && newArrivals.length > 0 && (
-              <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5, delay: 0.3 }} className="theme-card">
+              <div className="theme-card section-reveal">
                 <div className="px-4 py-3 border-b border-border-muted"><SectionHeader Icon={Star} tint="59 130 246" title="ไอเท็มมาใหม่" count={newArrivals.length} href="/shop" btnLabel="ดูทั้งหมด" /></div>
                 <ProductSectionBody products={newArrivals} servers={servers} />
-              </motion.div>
+              </div>
             )}
             {(settings.show_news_home ?? '1') === '1' && <NewsStrip />}
-            </>
-          )}
         </div>
         <div className="flex flex-col gap-3 lg:w-[230px] flex-shrink-0 lg:self-start">
-          {homeLoading ? (
-            <div className="flex flex-col gap-3 animate-pulse">
-              <div className="theme-card overflow-hidden"><div className="px-4 py-3 bg-border h-[52px]" /><div className="p-3 space-y-2"><div className="h-10 bg-surface-hover rounded-xl" /><div className="h-16 bg-surface-hover rounded-xl" /><div className="space-y-1.5">{[0,1].map(i => <div key={i} className="h-10 bg-surface-hover rounded-lg" />)}</div></div></div>
-              {[0,1].map(col => (<div key={col} className="theme-card overflow-hidden"><div className="px-4 py-3 border-b border-border-muted flex items-center gap-2.5"><div className="w-8 h-8 rounded-xl bg-border" /><div className="h-3 w-20 bg-border rounded-full" /></div><div className="px-2 py-2 space-y-1">{[0,1,2,3].map(i => (<div key={i} className="flex items-center gap-2.5 px-2 py-1.5"><div className="w-10 h-10 rounded-xl bg-border flex-shrink-0" /><div className="flex-1 space-y-1.5"><div className="h-2.5 bg-border rounded-full w-3/4" /><div className="h-2 bg-border-muted rounded-full w-1/3" /></div></div>))}</div></div>))}
-            </div>
-          ) : (
-            <>
             {(settings.show_server_status_widget ?? '1') === '1' && (
               <ServerStatusWidget serverIp={settings.server_ip} dbServers={servers} />
             )}
@@ -473,8 +443,6 @@ export default function HomeClient({ initialSlides = [] }: { initialSlides?: Ima
               <div className="px-4 py-3 border-b border-border-muted flex items-center gap-2.5"><div className="w-8 h-8 rounded-xl bg-primary/12 flex items-center justify-center flex-shrink-0"><ShoppingBag className="w-4 h-4 text-primary" strokeWidth={2.25} /></div><div className="flex-1 min-w-0"><p className="text-foreground font-black text-xs leading-none">SHOP LIVE</p><p className="text-foreground-subtle text-[9px] mt-0.5">ซื้อไอเท็มล่าสุด</p></div><span className="relative flex h-2 w-2 flex-shrink-0"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-primary" /></span></div>
               <div className="px-2 py-2 space-y-0.5">{recentBuy.length === 0 ? <p className="text-foreground-subtle text-xs text-center py-6">ยังไม่มีข้อมูล</p> : recentBuy.slice(0, 5).map((r, i) => (<div key={i} className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-surface-hover transition-colors"><div className="w-10 h-10 rounded-xl flex-shrink-0 border border-border bg-surface-hover flex items-center justify-center">{r.image ? <img src={r.image} alt={r.product_name} className="w-9 h-9 object-contain" style={{ imageRendering: 'pixelated' }} /> : <Package className="w-4 h-4 text-foreground-subtle" strokeWidth={2} />}</div><div className="min-w-0 flex-1"><p className="text-foreground text-[11px] font-bold truncate leading-snug">{r.product_name}</p><p className="text-foreground-subtle text-[9px] truncate">{r.username}</p></div><div className="flex flex-col items-end gap-0.5 flex-shrink-0"><div className="inline-flex items-center gap-1 text-[8px] font-black px-1.5 py-0.5 rounded-md text-white leading-none" style={{ backgroundColor: 'rgb(var(--color-primary-hover))', boxShadow: '0 1px 0 rgb(var(--color-primary-hover) / 0.53)' }}><Coins className="w-2 h-2" strokeWidth={2.5} />{parseFloat(String(r.price)).toLocaleString()}</div><span className="text-foreground-subtle text-[8px] tabular-nums">{timeAgo(r.created_at)}</span></div></div>))}</div>
             </div>)}
-            </>
-          )}
         </div>
       </div>
     </MainLayout>

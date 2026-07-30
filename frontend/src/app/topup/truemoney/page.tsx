@@ -232,8 +232,8 @@ export default function TrueMoneyTopupPage() {
                 {successMultiplier > 1 ? (
                   <div className="bg-orange-500/10 rounded-xl p-4 border border-orange-500/20 max-w-xs w-full mx-auto space-y-2">
                     <div className="flex items-center justify-between text-[11px]"><span className="font-bold text-foreground-subtle">ยอดในซอง</span><span className="font-black text-foreground-muted">฿{successPaid.toLocaleString()}</span></div>
-                    <div className="flex items-center justify-between text-[11px]"><span className="font-bold text-orange-500 flex items-center gap-1"><Zap className="w-2.5 h-2.5" strokeWidth={2.5} />โบนัส x{successMultiplier}</span><span className="font-black text-orange-500">+฿{(successAmount - successPaid).toLocaleString()}</span></div>
-                    <div className="border-t border-orange-500/20 pt-2 flex items-center justify-between"><span className="text-[10px] font-black text-foreground-subtle uppercase tracking-wider">ได้รับเข้า Wallet</span><span className="text-2xl font-black text-orange-600">฿{successAmount.toLocaleString()}</span></div>
+                    <div className="flex items-center justify-between text-[11px]"><span className="font-bold text-orange-700 flex items-center gap-1"><Zap className="w-2.5 h-2.5" strokeWidth={2.5} />โบนัส x{successMultiplier}</span><span className="font-black text-orange-700">+฿{(successAmount - successPaid).toLocaleString()}</span></div>
+                    <div className="border-t border-orange-500/20 pt-2 flex items-center justify-between"><span className="text-[10px] font-black text-foreground-subtle uppercase tracking-wider">ได้รับเข้า Wallet</span><span className="text-2xl font-black text-orange-700">฿{successAmount.toLocaleString()}</span></div>
                   </div>
                 ) : (
                   <div className="bg-surface-hover rounded-xl p-4 border border-border-muted max-w-[220px] w-full mx-auto">
