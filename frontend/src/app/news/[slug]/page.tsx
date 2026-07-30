@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import MainLayout from '@/components/MainLayout';
 import { api, getToken } from '@/lib/api';
-import { motion } from 'framer-motion';
 import {
   Newspaper, Eye, Users, ArrowLeft, ChevronLeft, ChevronRight, Pin, Calendar,
 } from 'lucide-react';
@@ -155,8 +154,8 @@ export default function NewsArticlePage() {
         <ArrowLeft className="w-3.5 h-3.5" strokeWidth={2.5} /> ข่าวสารทั้งหมด
       </Link>
 
-      <motion.article initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
-        className="theme-card p-5 sm:p-7">
+      <article
+        className="theme-card p-5 sm:p-7 dialog-in">
 
         <div className="flex items-center gap-2 flex-wrap mb-3">
           <span className={`text-[11px] font-black px-2.5 py-1 rounded-full ${cat.className}`}>{cat.label}</span>
@@ -194,7 +193,7 @@ export default function NewsArticlePage() {
         {/* Sanitized server-side: the body is escaped before any tag is
             introduced, so no admin-supplied markup can execute here. */}
         <div className="news-body" dangerouslySetInnerHTML={{ __html: article.bodyHtml }} />
-      </motion.article>
+      </article>
     </MainLayout>
   );
 }

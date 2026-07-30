@@ -1,6 +1,5 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { api, getToken } from '@/lib/api';
 
 interface Notification {
@@ -102,25 +101,17 @@ function NotificationModal({ n, onClose }: { n: Notification; onClose: () => voi
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
       {/* Backdrop */}
-      <motion.div
+      <div
         key="backdrop"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.18 }}
-        className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-black/60 backdrop-blur-[2px] overlay-in"
         onMouseDown={e => { backdropRef.current = e.target === e.currentTarget; }}
         onMouseUp={e => { if (backdropRef.current && e.target === e.currentTarget) onClose(); }}
       />
 
       {/* Modal */}
-      <motion.div
+      <div
         key="modal"
-        initial={{ opacity: 0, scale: 0.45, y: 32 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.82, y: 16, transition: { duration: 0.16, ease: 'easeIn' } }}
-        transition={{ type: 'spring', stiffness: 420, damping: 24, mass: 0.75 }}
-        className={`relative bg-white rounded-2xl w-full max-w-[420px] overflow-hidden border border-gray-200/80 ${style.glow} shadow-[0_4px_0_#c5cad3,0_8px_40px_rgba(0,0,0,0.18)]`}
+        className={`relative bg-white rounded-2xl w-full max-w-[420px] overflow-hidden border border-gray-200/80 ${style.glow} shadow-[0_4px_0_#c5cad3,0_8px_40px_rgba(0,0,0,0.18)] dialog-in`}
       >
         {/* Colored top strip */}
         <div className={`h-1.5 w-full ${style.accent}`} />
@@ -129,14 +120,11 @@ function NotificationModal({ n, onClose }: { n: Notification; onClose: () => voi
         <div className="px-6 pt-6 pb-5">
           {/* Icon + title */}
           <div className="flex items-start gap-4 mb-5">
-            <motion.div
-              initial={{ scale: 0, rotate: -20 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: 'spring', stiffness: 380, damping: 18, delay: 0.08 }}
-              className={`w-12 h-12 rounded-xl ${style.bg} flex items-center justify-center flex-shrink-0`}
+            <div
+              className={`w-12 h-12 rounded-xl ${style.bg} flex items-center justify-center flex-shrink-0 dialog-in`}
             >
               <i className={`fas ${style.icon} ${style.color} text-xl`} />
-            </motion.div>
+            </div>
             <div className="flex-1 min-w-0">
               <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${style.color}`}>
                 {style.label}
@@ -181,7 +169,7 @@ function NotificationModal({ n, onClose }: { n: Notification; onClose: () => voi
             <i className="fas fa-check text-[11px]" /> ปิด
           </button>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }
@@ -262,14 +250,9 @@ export default function NotificationBell() {
         </button>
 
         {/* Dropdown */}
-        <AnimatePresence>
-          {open && (
-            <motion.div
-              initial={{ opacity: 0, y: -6, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -6, scale: 0.97 }}
-              transition={{ duration: 0.15 }}
-              className="absolute right-0 top-full mt-2 w-[360px] max-w-[calc(100vw-24px)] bg-white rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.12)] border border-gray-100 overflow-hidden z-50"
+        {open && (
+            <div
+              className="absolute right-0 top-full mt-2 w-[360px] max-w-[calc(100vw-24px)] bg-white rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.12)] border border-gray-100 overflow-hidden z-50 dialog-in"
             >
               {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
@@ -334,17 +317,14 @@ export default function NotificationBell() {
                   })
                 )}
               </div>
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
       </div>
 
       {/* Detail Modal */}
-      <AnimatePresence>
-        {selected && (
+      {selected && (
           <NotificationModal n={selected} onClose={() => setSelected(null)} />
         )}
-      </AnimatePresence>
     </>
   );
 }

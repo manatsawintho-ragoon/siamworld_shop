@@ -6,7 +6,6 @@ import Link from 'next/link';
 import MainLayout from '@/components/MainLayout';
 import { api, getToken } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
 import { getRarity as rc } from '@/lib/rarity';
 import {
   Loader2, ArrowLeft, Trophy, Box, Package, Clock, AlertCircle,
@@ -503,12 +502,9 @@ export default function LootBoxOpenPage() {
         )}
 
         {/* ── STATE TOGGLE ── */}
-        <AnimatePresence>
-          {!showReel ? (
+        {!showReel ? (
             /* ── STATE 1: BOX INFO ── */
-            <motion.div key="box-info"
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98 }}
-              transition={{ duration: 0.15 }}>
+            <div className="dialog-in" key="box-info">
               <div className={CARD}>
 
                 {/* Hero — white/green/amber */}
@@ -518,18 +514,8 @@ export default function LootBoxOpenPage() {
 
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5 px-4 sm:px-6 py-4 sm:py-5">
                     {/* Box image */}
-                    <motion.div
-                      className="relative flex-shrink-0 group/box self-start"
-                      animate={preparing ? {
-                        x: [0, -2, 2, -2, 2, 0],
-                        y: [0, 2, -2, 2, -2, 0],
-                        rotate: [0, -1, 1, -1, 1, 0]
-                      } : {}}
-                      transition={{ 
-                        repeat: preparing ? Infinity : 0, 
-                        duration: 0.15,
-                        ease: "linear"
-                      }}
+                    <div
+                      className={`relative flex-shrink-0 group/box self-start${preparing ? ' box-shake' : ''}`}
                     >
                       {discount > 0 && (
                         <span className="absolute -top-2 -right-2 z-10 bg-error text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-[0_2px_0_rgb(0_0_0/0.2)]">
@@ -538,11 +524,8 @@ export default function LootBoxOpenPage() {
                       )}
                       <div className="w-24 h-24 rounded-2xl bg-primary/8 border border-primary/15 flex items-center justify-center overflow-hidden shadow-[0_2px_0_rgb(var(--color-primary-muted))] relative">
                         {preparing && (
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: [0.2, 0.5, 0.2], scale: [1, 1.2, 1] }}
-                            transition={{ repeat: Infinity, duration: 1 }}
-                            className="absolute inset-0 bg-primary blur-xl rounded-full"
+                          <div
+                            className="absolute inset-0 bg-primary blur-xl rounded-full dialog-in"
                           />
                         )}
                         {box.image
@@ -550,7 +533,7 @@ export default function LootBoxOpenPage() {
                               className="w-full h-full object-contain p-1.5 transition-transform duration-500 group-hover/box:scale-105 relative z-10" onError={onProxyError} loading="lazy" fetchPriority="low" />
                           : <Package className="w-10 h-10 text-primary relative z-10" strokeWidth={1.5} />}
                       </div>
-                    </motion.div>
+                    </div>
 
                     {/* Name + price */}
                     <div className="flex-1 min-w-0">
@@ -610,15 +593,13 @@ export default function LootBoxOpenPage() {
                   </div>
 
                   {/* Preparing overlay — light */}
-                  <AnimatePresence>
-                    {preparing && (
-                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-surface/90 backdrop-blur-sm">
+                  {preparing && (
+                      <div
+                        className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-surface/90 backdrop-blur-sm overlay-in">
                         <div className="w-10 h-10 rounded-full border-[3px] border-border border-t-primary animate-spin mb-3" />
                         <p className="text-foreground-muted font-black text-xs uppercase tracking-[0.25em]">กำลังเตรียม...</p>
-                      </motion.div>
+                      </div>
                     )}
-                  </AnimatePresence>
                 </div>
 
                 {/* Open button */}
@@ -649,13 +630,11 @@ export default function LootBoxOpenPage() {
                   )}
                 </div>
               </div>
-            </motion.div>
+            </div>
 
           ) : (
             /* ── STATE 2: REEL ── */
-            <motion.div key="reel"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}>
+            <div className="overlay-in" key="reel">
               <div className={CARD}>
 
                 {/* Reel area */}
@@ -726,9 +705,8 @@ export default function LootBoxOpenPage() {
                   </button>
                 </div>
               </div>
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
 
         {/* ── Items in box ── */}
         <div className={CARD}>
@@ -767,17 +745,14 @@ export default function LootBoxOpenPage() {
       </div>
 
       {/* ── Result Modal ── */}
-      <AnimatePresence>
-        {showResult && wonItem && (() => {
+      {showResult && wonItem && (() => {
           const r = rc(wonItem.rarity);
           return (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/50">
-              <motion.div className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              <div className="absolute inset-0 overlay-in"
                 onClick={() => setShowResult(false)} />
-              <motion.div
-                initial={{ opacity: 0, y: -6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -6, scale: 0.97 }} transition={{ duration: 0.15 }}
-                className="relative z-10 w-full max-w-sm bg-surface rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] overflow-hidden"
+              <div
+                className="relative z-10 w-full max-w-sm bg-surface rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] overflow-hidden dialog-in"
                 style={{ borderTop: `4px solid ${r.color}` }}>
                 {/* Header */}
                 <div className="relative px-5 py-3.5 border-b border-border bg-surface-hover/60 flex items-center">
@@ -797,11 +772,8 @@ export default function LootBoxOpenPage() {
                 <div className="p-8 flex flex-col items-center text-center relative overflow-hidden">
                   {/* Rays background for rare items */}
                   {['legendary', 'mythic'].includes(wonItem.rarity.toLowerCase()) && (
-                    <motion.div 
-                      initial={{ opacity: 0, rotate: 0 }}
-                      animate={{ opacity: 0.4, rotate: 360 }}
-                      transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                      className="absolute inset-0 pointer-events-none"
+                    <div
+                      className="absolute inset-0 pointer-events-none dialog-in"
                       style={{
                         background: `conic-gradient(from 0deg, transparent, ${r.color}44, transparent 10%, transparent, ${r.color}44, transparent 20%)`,
                         backgroundSize: '100% 100%'
@@ -809,62 +781,42 @@ export default function LootBoxOpenPage() {
                     />
                   )}
                   
-                  <motion.div
-                    initial={{ scale: 0, rotate: -180 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    transition={{ type: 'spring', damping: 15, stiffness: 200, delay: 0.1 }}
+                  <div className="dialog-in"
                   >
                     <RarityBadge rarity={wonItem.rarity} />
-                  </motion.div>
+                  </div>
 
                   <div className="relative my-8 flex items-center justify-center">
                     {/* Animated Glow */}
-                    <motion.div 
-                      animate={{ 
-                        scale: [1, 1.2, 1],
-                        opacity: [0.3, 0.6, 0.3]
-                      }}
-                      transition={{ repeat: Infinity, duration: 2 }}
-                      className="absolute w-40 h-40 rounded-full"
-                      style={{ background: r.color, filter: 'blur(32px)' }} 
+                    <div
+                      className="reward-halo absolute w-40 h-40 rounded-full"
+                      style={{ background: r.color, filter: 'blur(32px)' }}
                     />
                     
                     {wonItem.image
-                      ? <motion.img 
-                          initial={{ y: 20, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: 0.3, duration: 0.5 }}
+                      ? <img
                           src={wonItem.image} alt={wonItem.name}
-                          className="relative w-40 h-40 object-contain z-10"
+                          className="relative w-40 h-40 object-contain z-10 dialog-in"
                           style={{ filter: `drop-shadow(0 0 24px ${r.color}aa)` }} />
-                      : <motion.div 
-                          initial={{ y: 20, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: 0.3, duration: 0.5 }}
-                          className="relative w-40 h-40 rounded-2xl flex items-center justify-center border-2 z-10"
+                      : <div
+                          className="relative w-40 h-40 rounded-2xl flex items-center justify-center border-2 z-10 dialog-in"
                           style={{ borderColor: r.color + '44', backgroundColor: r.color + '0d' }}>
                           <Box className="w-16 h-16" strokeWidth={1.5} style={{ color: r.color + '88' }} />
-                        </motion.div>}
+                        </div>}
                   </div>
 
-                  <motion.h3 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 }}
-                    className="text-foreground font-black text-2xl uppercase tracking-tight leading-tight drop-shadow-sm"
+                  <h3
+                    className="text-foreground font-black text-2xl uppercase tracking-tight leading-tight drop-shadow-sm dialog-in"
                   >
                     {wonItem.name}
-                  </motion.h3>
+                  </h3>
                   
                   {wonItem.description && (
-                    <motion.p 
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.6 }}
-                      className="text-foreground-muted text-xs mt-2 line-clamp-2 max-w-[240px]"
+                    <p
+                      className="text-foreground-muted text-xs mt-2 line-clamp-2 max-w-[240px] overlay-in"
                     >
                       {wonItem.description}
-                    </motion.p>
+                    </p>
                   )}
                 </div>
                 {/* Footer */}
@@ -878,11 +830,10 @@ export default function LootBoxOpenPage() {
                     <RotateCw className="w-3 h-3" strokeWidth={2.5} /> สุ่มอีกครั้ง
                   </button>
                 </div>
-              </motion.div>
+              </div>
             </div>
           );
         })()}
-      </AnimatePresence>
     </MainLayout>
   );
 }

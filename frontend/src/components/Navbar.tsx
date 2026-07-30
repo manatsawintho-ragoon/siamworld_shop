@@ -4,7 +4,6 @@ import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { useSettings } from '@/context/SettingsContext';
 import { useAuthModal } from '@/components/AuthModal';
@@ -241,22 +240,18 @@ function MoreSheet({ open, onClose, pathname, showLootbox, showRewards, showNews
 
   return createPortal(
     <div data-theme-portal="">
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            className="md:hidden fixed inset-0 z-[110] flex flex-col justify-end"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      {open && (
+          <div
+            className="md:hidden fixed inset-0 z-[110] flex flex-col justify-end overlay-in"
             onClick={onClose}
           >
             <div className="absolute inset-0 bg-black/55 backdrop-blur-sm" />
 
-            <motion.div
+            <div
               role="dialog"
               aria-modal="true"
               aria-label="เมนูเพิ่มเติม"
-              className="relative frontend-page bg-surface rounded-t-3xl border-t border-border shadow-[0_-8px_40px_rgba(0,0,0,0.25)] max-h-[85dvh] flex flex-col"
-              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 32, stiffness: 340 }}
+              className="relative frontend-page bg-surface rounded-t-3xl border-t border-border shadow-[0_-8px_40px_rgba(0,0,0,0.25)] max-h-[85dvh] flex flex-col sheet-in"
               onClick={e => e.stopPropagation()}
             >
               {/* Grab handle */}
@@ -350,10 +345,9 @@ function MoreSheet({ open, onClose, pathname, showLootbox, showRewards, showNews
                   </button>
                 )}
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
     </div>,
     document.body,
   );

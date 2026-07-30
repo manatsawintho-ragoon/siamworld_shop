@@ -4,7 +4,6 @@ import MainLayout from '@/components/MainLayout';
 import { api, getToken } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
 import QRCode from 'qrcode';
 import { useSettings } from '@/context/SettingsContext';
 import { useAdminAlert } from '@/components/AdminAlert';
@@ -171,13 +170,10 @@ export default function PromptPayTopupPage() {
       <div className="max-w-4xl mx-auto space-y-3 pb-8 font-prompt">
 
         {/* ── Bonus Promo Banner ── */}
-        <AnimatePresence>
-          {hasBonus && step !== 'success' && (
-            <motion.div
+        {hasBonus && step !== 'success' && (
+            <div
               key="bonus-banner"
-              initial={{ opacity: 0, y: -8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, scale: 0.98 }}
-              transition={{ duration: 0.25 }}
-              className="relative bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl overflow-hidden shadow-[0_4px_0_#c2410c,0_2px_20px_rgba(249,115,22,0.4)]"
+              className="relative bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl overflow-hidden shadow-[0_4px_0_#c2410c,0_2px_20px_rgba(249,115,22,0.4)] dialog-in"
             >
               <div className="absolute -right-8 -top-8 w-40 h-40 bg-white/10 rounded-full blur-3xl pointer-events-none" />
               <div className="relative flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4">
@@ -199,9 +195,8 @@ export default function PromptPayTopupPage() {
                   <p className="text-3xl font-black text-white leading-none">x{bonusMult}</p>
                 </div>
               </div>
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
 
         {/* ── Header ── */}
         <div className="bg-surface border-2 border-primary/30 rounded-xl p-3 flex items-center shadow-theme-sm">
@@ -229,21 +224,19 @@ export default function PromptPayTopupPage() {
         </div>
 
         <div className="min-h-[380px] flex flex-col">
-          <AnimatePresence mode="wait">
-
-            {!ppEnabled && step === 'amount' && (
-              <motion.div key="disabled" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                className="bg-surface rounded-xl border-2 border-warning/30 shadow-theme-sm w-full p-8 text-center flex-1 flex flex-col items-center justify-center gap-3">
+          {!ppEnabled && step === 'amount' && (
+              <div key="disabled"
+                className="bg-surface rounded-xl border-2 border-warning/30 shadow-theme-sm w-full p-8 text-center flex-1 flex flex-col items-center justify-center gap-3 overlay-in">
                 <Store className="w-10 h-10 text-warning" strokeWidth={1.75} />
                 <p className="text-sm font-black text-foreground">PromptPay ปิดรับชำระเงินชั่วคราว</p>
                 <button onClick={() => router.push('/topup')} className="btn-primary px-5 py-2.5 text-white font-black text-[13px] rounded-lg">กลับไปเลือกช่องทาง</button>
-              </motion.div>
+              </div>
             )}
 
             {/* STEP 1: Amount */}
             {ppEnabled && step === 'amount' && (
-              <motion.div key="amount" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}
-                className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-4 sm:p-6 space-y-4 flex-1">
+              <div key="amount"
+                className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-4 sm:p-6 space-y-4 flex-1 dialog-in">
                 <div className="flex items-center gap-3 border-b border-border-muted pb-4">
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[#003b80] text-white"><QrCode className="w-5 h-5" strokeWidth={2.25} /></div>
                   <div>
@@ -329,13 +322,13 @@ export default function PromptPayTopupPage() {
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2.5} /> : <CheckCircle2 className="w-4 h-4" strokeWidth={2.25} />}
                   ถัดไป: สร้างรายการชำระเงิน
                 </button>
-              </motion.div>
+              </div>
             )}
 
             {/* STEP 2: QR */}
             {step === 'qr' && (
-              <motion.div key="qr" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }}
-                className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-4 sm:p-6 space-y-4 flex-1 flex flex-col items-center">
+              <div key="qr"
+                className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-4 sm:p-6 space-y-4 flex-1 flex flex-col items-center dialog-in">
                 <div className="text-center">
                   <h2 className="text-xl font-black text-[#003b80] leading-none">แสกนชำระเงิน</h2>
                   <p className="text-xs font-bold text-foreground-subtle mt-1">สแกน QR Code ด้วยแอปธนาคารของคุณ</p>
@@ -375,13 +368,13 @@ export default function PromptPayTopupPage() {
                     <ReceiptText className="w-3.5 h-3.5" strokeWidth={2.25} /> โอนเงินแล้ว (แจ้งสลิป)
                   </button>
                 )}
-              </motion.div>
+              </div>
             )}
 
             {/* STEP 3: Upload */}
             {step === 'upload' && (
-              <motion.div key="upload" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}
-                className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-4 sm:p-6 space-y-4 flex-1">
+              <div key="upload"
+                className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-4 sm:p-6 space-y-4 flex-1 dialog-in">
                 <div className="text-center space-y-1">
                   <h2 className="text-xl font-black text-foreground leading-none">อัปโหลดหลักฐานสลิป</h2>
                   <p className="text-xs font-bold text-foreground-subtle">อัปโหลดสลิปเพื่อให้ระบบตรวจสอบความถูกต้อง</p>
@@ -437,13 +430,13 @@ export default function PromptPayTopupPage() {
                     {verifying ? <><Loader2 className="w-4 h-4 animate-spin" strokeWidth={2.5} /> กำลังตรวจสอบสลิป...</> : <><CheckCheck className="w-4 h-4" strokeWidth={2.25} /> ยืนยันและตรวจสอบสลิป</>}
                   </button>
                 </div>
-              </motion.div>
+              </div>
             )}
 
             {/* STEP 4: Success */}
             {step === 'success' && (
-              <motion.div key="success" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-5 sm:p-8 space-y-6 text-center flex-1">
+              <div key="success"
+                className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-5 sm:p-8 space-y-6 text-center flex-1 dialog-in">
                 <div className="relative inline-block">
                   <div className="absolute inset-0 bg-success/10 rounded-full blur-2xl animate-pulse" />
                   <div className="relative w-20 h-20 rounded-2xl bg-success flex items-center justify-center text-white shadow-xl mx-auto"><Check className="w-8 h-8" strokeWidth={2.5} /></div>
@@ -468,10 +461,8 @@ export default function PromptPayTopupPage() {
                   <button onClick={() => router.push('/shop')} className="btn-primary w-full py-3 text-white font-black text-[13px] shadow-[0_4px_0_rgb(var(--color-primary-muted))] flex items-center justify-center gap-2"><ShoppingCart className="w-3.5 h-3.5" strokeWidth={2.25} /> ไปที่หน้าร้านค้า</button>
                   <button onClick={reset} className="text-[11px] font-black text-foreground-subtle hover:text-primary transition-colors">เติมเงินรายการใหม่</button>
                 </div>
-              </motion.div>
+              </div>
             )}
-
-          </AnimatePresence>
         </div>
       </div>
     </MainLayout>

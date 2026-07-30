@@ -4,7 +4,6 @@ import { createPortal } from 'react-dom';
 import { useAuth } from '@/context/AuthContext';
 import { api, getToken } from '@/lib/api';
 import { useAdminAlert } from '@/components/AdminAlert';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   Tag, Box, Flame, Info, ShoppingCart, AlignLeft, X, Check, Lock,
   Wallet, Server, Layers, Minus, Plus, Gift, AlertTriangle,
@@ -125,10 +124,12 @@ export default function ProductCard({ product, servers }: { product: Product; se
   return (
     <>
       {/* Card */}
-      <motion.article
-        whileHover={{ y: -4, scale: 1.01 }}
-        whileTap={{ scale: 0.99 }}
-        className="group relative flex flex-col bg-surface border border-border rounded-xl overflow-hidden hover:border-primary/40 transition-all duration-200 hover:shadow-theme-lg"
+      {/* The lift and press were framer-motion's whileHover/whileTap. As CSS they
+          are the same two transforms on the compositor, and `hover:` is scoped to
+          devices that actually hover so a phone does not stick in the lifted
+          state after a tap. */}
+      <article
+        className="group relative flex flex-col bg-surface border border-border rounded-xl overflow-hidden hover:border-primary/40 transition-all duration-200 hover:shadow-theme-lg motion-safe:hover:-translate-y-1 motion-safe:hover:scale-[1.01] active:scale-[0.99]"
       >
 
         {/* Image area */}
@@ -217,35 +218,25 @@ export default function ProductCard({ product, servers }: { product: Product; se
             <Info className="w-2.5 h-2.5" strokeWidth={2.25} /> ดูคำอธิบายสินค้า
           </button>
 
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.95 }}
+          <button
             onClick={() => setShowBuy(true)}
-            className="btn-buy w-full mt-auto pt-3 pb-2.5 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 min-h-[40px] shadow-lg hover:shadow-xl transition-all"
+            className="btn-buy w-full mt-auto pt-3 pb-2.5 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 min-h-[40px] shadow-lg hover:shadow-xl transition-all motion-safe:hover:scale-[1.02] active:scale-95"
           >
             <ShoppingCart className="w-3 h-3" strokeWidth={2.5} /> ซื้อเลย!
-          </motion.button>
+          </button>
         </div>
-      </motion.article>
+      </article>
 
       {/* Description Popup */}
       {mounted && typeof document !== 'undefined' && createPortal(
         <div data-theme-portal="">
-        <AnimatePresence>
-          {showDesc && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm"
+        {showDesc && (
+            <div
+              className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overlay-in"
               onClick={() => setShowDesc(false)}
             >
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 8 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 8 }}
-                transition={{ duration: 0.15 }}
-                className="theme-card w-full max-w-sm max-h-[88dvh] flex flex-col overflow-hidden shadow-2xl"
+              <div
+                className="theme-card w-full max-w-sm max-h-[88dvh] flex flex-col overflow-hidden shadow-2xl dialog-in"
                 onClick={e => e.stopPropagation()}
               >
                 {/* Header */}
@@ -299,10 +290,9 @@ export default function ProductCard({ product, servers }: { product: Product; se
                     <Check className="w-3 h-3" strokeWidth={2.5} /> ปิด
                   </button>
                 </div>
-              </motion.div>
-            </motion.div>
+              </div>
+            </div>
           )}
-        </AnimatePresence>
         </div>,
         document.body
       )}
@@ -310,21 +300,13 @@ export default function ProductCard({ product, servers }: { product: Product; se
       {/* Buy Modal */}
       {mounted && typeof document !== 'undefined' && createPortal(
         <div data-theme-portal="">
-        <AnimatePresence>
-          {showBuy && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[99998] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm"
+        {showBuy && (
+            <div
+              className="fixed inset-0 z-[99998] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overlay-in"
               onClick={() => { if (!buying) resetModal(); }}
             >
-              <motion.div
-                initial={{ opacity: 0, y: -6, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -6, scale: 0.97 }}
-                transition={{ duration: 0.15 }}
-                className="theme-card w-full max-w-sm max-h-[88dvh] flex flex-col overflow-hidden shadow-2xl"
+              <div
+                className="theme-card w-full max-w-sm max-h-[88dvh] flex flex-col overflow-hidden shadow-2xl dialog-in"
                 onClick={e => e.stopPropagation()}
               >
                 {/* Header */}
@@ -495,13 +477,9 @@ export default function ProductCard({ product, servers }: { product: Product; se
                           </div>
                         </button>
 
-                        <AnimatePresence>
-                          {isGift && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: 'auto' }}
-                              exit={{ opacity: 0, height: 0 }}
-                              className="mt-2 overflow-hidden"
+                        {isGift && (
+                            <div
+                              className="mt-2 overflow-hidden dialog-in"
                             >
                               <input
                                 type="text"
@@ -516,9 +494,8 @@ export default function ProductCard({ product, servers }: { product: Product; se
                                 <Info className="w-2.5 h-2.5" strokeWidth={2.25} />
                                 เพื่อนต้องออนไลน์อยู่ในเซิร์ฟเวอร์เดียวกัน
                               </p>
-                            </motion.div>
+                            </div>
                           )}
-                        </AnimatePresence>
                       </div>
 
                       <div className="flex items-start gap-2 bg-warning/10 border border-warning/20 rounded-xl px-3 py-2.5">
@@ -533,25 +510,20 @@ export default function ProductCard({ product, servers }: { product: Product; se
                   )}
 
                   {/* Result message */}
-                  <AnimatePresence>
-                    {result && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 5 }}
+                  {result && (
+                      <div
                         className={`flex items-start gap-2 rounded-xl px-3 py-2.5 border text-xs font-bold ${
                           result.success
                             ? 'bg-success/10 border-success/25 text-success'
                             : 'bg-error/10 border-error/25 text-error'
-                        }`}
+                        } dialog-in`}
                       >
                         {result.success
                           ? <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" strokeWidth={2.25} />
                           : <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" strokeWidth={2.25} />}
                         <span className="leading-relaxed">{result.message}</span>
-                      </motion.div>
+                      </div>
                     )}
-                  </AnimatePresence>
                 </div>
 
                 {/* Footer */}
@@ -581,10 +553,9 @@ export default function ProductCard({ product, servers }: { product: Product; se
                     </button>
                   )}
                 </div>
-              </motion.div>
-            </motion.div>
+              </div>
+            </div>
           )}
-        </AnimatePresence>
         </div>,
         document.body
       )}

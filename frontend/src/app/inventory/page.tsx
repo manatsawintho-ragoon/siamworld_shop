@@ -5,7 +5,6 @@ import MainLayout from '@/components/MainLayout';
 import { api, getToken } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
 import { getRarity, RARITY } from '@/lib/rarity';
 import {
   Package, Gamepad2, CheckCircle2, X, Search, PackageOpen, Clock, Check,
@@ -201,18 +200,16 @@ export default function InventoryPage() {
         </div>
 
         {/* Toast */}
-        <AnimatePresence>
-          {toast && (
-            <motion.div key="toast" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-              className="flex items-center gap-3 px-4 py-3 bg-success/10 border border-success/25 rounded-xl text-success text-sm font-medium">
+        {toast && (
+            <div key="toast"
+              className="flex items-center gap-3 px-4 py-3 bg-success/10 border border-success/25 rounded-xl text-success text-sm font-medium dialog-in">
               <CheckCircle2 className="w-4 h-4 flex-shrink-0" strokeWidth={2.25} />
               <span className="flex-1">{toast}</span>
               <button onClick={() => setToast('')} aria-label="ปิด" className="opacity-60 hover:opacity-100 transition-opacity">
                 <X className="w-3 h-3" strokeWidth={2.5} />
               </button>
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
 
         {/* ── Filter + Search Bar ── */}
         <div className="flex flex-col sm:flex-row gap-2">
@@ -393,17 +390,15 @@ export default function InventoryPage() {
       {/* ── Single Redeem Modal (portal → always centered on viewport) ── */}
       {mounted && typeof document !== 'undefined' && createPortal(
         <div data-theme-portal="">
-          <AnimatePresence>
-            {redeemModal && (() => {
+          {redeemModal && (() => {
               const rar = getRarity(redeemModal.item_rarity);
               const shadow = RARITY_SHADOW[redeemModal.item_rarity] ?? RARITY_SHADOW.common;
               return (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/50 backdrop-blur-[2px]"
                   onMouseDown={e => { backdropRef.current = e.target === e.currentTarget; }}
                   onMouseUp={e => { if (backdropRef.current && e.target === e.currentTarget) setRedeemModal(null); }}>
-                  <motion.div initial={{ opacity: 0, scale: 0.95, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 8 }} transition={{ type: 'spring', stiffness: 400, damping: 26 }}
-                    className="bg-surface rounded-2xl shadow-sm border border-border/80 w-full max-w-sm max-h-[88dvh] flex flex-col overflow-hidden">
+                  <div
+                    className="bg-surface rounded-2xl shadow-sm border border-border/80 w-full max-w-sm max-h-[88dvh] flex flex-col overflow-hidden dialog-in">
                     <div className="relative px-6 py-4 border-b border-border bg-surface-hover/60 flex items-center flex-shrink-0">
                       <div className="w-8 h-8 rounded-lg bg-primary/12 flex items-center justify-center flex-shrink-0">
                         <Gamepad2 className="w-3.5 h-3.5 text-primary" strokeWidth={2.25} />
@@ -455,11 +450,10 @@ export default function InventoryPage() {
                         {redeemLoading ? <><Loader2 className="w-3 h-3 animate-spin" strokeWidth={2.5} /> กำลังส่ง...</> : <><Gamepad2 className="w-3 h-3" strokeWidth={2.25} /> ส่งเข้าเกม</>}
                       </button>
                     </div>
-                  </motion.div>
+                  </div>
                 </div>
               );
             })()}
-          </AnimatePresence>
         </div>,
         document.body
       )}
@@ -467,14 +461,12 @@ export default function InventoryPage() {
       {/* ── Redeem All Modal (portal → always centered on viewport) ── */}
       {mounted && typeof document !== 'undefined' && createPortal(
         <div data-theme-portal="">
-          <AnimatePresence>
-            {redeemAllModal && (
+          {redeemAllModal && (
               <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/50 backdrop-blur-[2px]"
                 onMouseDown={e => { backdropRef.current = e.target === e.currentTarget; }}
                 onMouseUp={e => { if (backdropRef.current && e.target === e.currentTarget && !redeemAllLoading) setRedeemAllModal(false); }}>
-                <motion.div initial={{ opacity: 0, scale: 0.95, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 8 }} transition={{ type: 'spring', stiffness: 400, damping: 26 }}
-                  className="bg-surface rounded-2xl shadow-sm border border-border/80 w-full max-w-sm max-h-[88dvh] flex flex-col overflow-hidden">
+                <div
+                  className="bg-surface rounded-2xl shadow-sm border border-border/80 w-full max-w-sm max-h-[88dvh] flex flex-col overflow-hidden dialog-in">
                   <div className="relative px-6 py-4 border-b border-border bg-surface-hover/60 flex items-center flex-shrink-0">
                     <div className="w-8 h-8 rounded-lg bg-primary/12 flex items-center justify-center flex-shrink-0">
                       <Gamepad2 className="w-3.5 h-3.5 text-primary" strokeWidth={2.25} />
@@ -513,10 +505,9 @@ export default function InventoryPage() {
                       {redeemAllLoading ? <><Loader2 className="w-3 h-3 animate-spin" strokeWidth={2.5} /> กำลังส่ง...</> : <><Gamepad2 className="w-3 h-3" strokeWidth={2.25} /> ส่งทั้งหมด</>}
                     </button>
                   </div>
-                </motion.div>
+                </div>
               </div>
             )}
-          </AnimatePresence>
         </div>,
         document.body
       )}

@@ -1,7 +1,6 @@
 'use client';
 import { createContext, useCallback, useContext, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AnimatePresence, motion } from 'framer-motion';
 import { X, LogIn } from 'lucide-react';
 import AuthForm from '@/components/AuthForm';
 
@@ -25,11 +24,9 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
     <AuthModalContext.Provider value={{ open, close }}>
       {children}
       {typeof document !== 'undefined' && createPortal(
-        <AnimatePresence>
-          {isOpen && (
-            <motion.div
-              className="fixed inset-0 z-[9990] flex items-center justify-center p-4"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        isOpen && (
+            <div
+              className="fixed inset-0 z-[9990] flex items-center justify-center p-4 overlay-in"
               onClick={close}
               data-theme-portal=""
             >
@@ -37,10 +34,8 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
               <div className="absolute inset-0 bg-black/55 backdrop-blur-sm" />
 
               {/* Centered dialog */}
-              <motion.div
-                className="relative w-full max-w-sm bg-surface rounded-2xl shadow-2xl border border-border overflow-hidden max-h-[92vh] flex flex-col frontend-page"
-                initial={{ opacity: 0, scale: 0.95, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 12 }}
-                transition={{ type: 'spring', damping: 30, stiffness: 360 }}
+              <div
+                className="relative w-full max-w-sm bg-surface rounded-2xl shadow-2xl border border-border overflow-hidden max-h-[92vh] flex flex-col frontend-page dialog-in"
                 onClick={e => e.stopPropagation()}
               >
                 {/* Header */}
@@ -62,10 +57,9 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
                 <div className="px-5 py-4 overflow-y-auto">
                   <AuthForm onSuccess={close} />
                 </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>,
+              </div>
+            </div>
+          ),
         document.body,
       )}
     </AuthModalContext.Provider>
