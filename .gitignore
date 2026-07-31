@@ -62,3 +62,6 @@ deploy/certs/
 # nlogin plugin runtime data — live DB credentials, user DB (password hashes),
 # player logs. Never commit.
 plugins_nlogin/
+
+# Shop data dumps written before teardown (see archive.service.ts). Customer data.
+deploy/archives/

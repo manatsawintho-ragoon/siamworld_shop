@@ -5,6 +5,7 @@ import { subscriptionService } from '../services/subscription.service';
 import { deployService } from '../services/deploy.service';
 import { customDomainService } from '../services/custom-domain.service';
 import { shopAdminCredentialService } from '../services/shop-admin-credential.service';
+import { archiveService } from '../services/archive.service';
 import { ValidationError } from '../utils/errors';
 import { pool } from '../database/connection';
 
@@ -216,6 +217,35 @@ router.delete('/:id/custom-domain', requireAuth, asyncRoute(async (req, res) => 
   const sub = await subscriptionService.getById(parseInt(req.params.id), req.user!.userId);
   await customDomainService.removeCustomDomain(sub.id);
   res.json({ success: true });
+}));
+
+/**
+ * Data archives for shops this account used to own.
+ *
+ * Deliberately not scoped under /:id: the subscription row is gone by the time
+ * an archive exists, so ownership comes from shop_archives.user_id instead.
+ */
+router.get('/archives', requireAuth, asyncRoute(async (req, res) => {
+  const rows = await archiveService.listForUser(req.user!.userId);
+  res.json({
+    success: true,
+    data: rows.map(r => ({
+      shopName: r.shop_name,
+      domain: r.domain,
+      fileName: r.file_name,
+      sizeBytes: r.size_bytes,
+      createdAt: r.created_at,
+      expiresAt: r.expires_at,
+    })),
+  });
+}));
+
+router.get('/archives/:file/download', requireAuth, asyncRoute(async (req, res) => {
+  // Scoped to the caller's own user id, so one customer cannot fetch another's
+  // dump by guessing a file name.
+  const found = await archiveService.resolveForDownload(req.params.file, req.user!.userId);
+  if (!found) throw new ValidationError('ไม่พบไฟล์สำรองข้อมูล หรือหมดอายุแล้ว');
+  res.download(found.path, found.row.file_name);
 }));
 
 export default router;

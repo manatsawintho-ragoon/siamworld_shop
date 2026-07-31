@@ -446,7 +446,10 @@ class SubscriptionService {
 
   async adminRemove(subscriptionId: number) {
     const sub = await this.getById(subscriptionId);
-    await deployService.removeShop(sub.shop_name, sub.domain, sub.mc_ip || undefined, sub.mysql_exposed_port || undefined);
+    await deployService.removeShop(
+      sub.shop_name, sub.domain, sub.mc_ip || undefined, sub.mysql_exposed_port || undefined,
+      sub.user_id, 'admin_delete'
+    );
     // Stop the Cloudflare custom hostname from lingering (and consuming for-SaaS quota).
     await customDomainService.onTeardown(sub.custom_hostname_id);
     await pool.execute('DELETE FROM subscriptions WHERE id=?', [subscriptionId]);

@@ -69,7 +69,35 @@ export function startCronJobs(): void {
     }).catch(err => logger.error('[Cron] prune_activity failed:', err));
   });
 
-  logger.info('[Cron] Jobs scheduled (notify: 09:00 daily, suspend: hourly, delete: 03:00 daily, prune-activity: 04:00 daily)');
+  // Run daily at 04:30 — drop expired shop archives, and any dump file left on
+  // disk without a row. A retention feature that never collects is just a
+  // slower version of the leak it replaced.
+  cron.schedule('30 4 * * *', () => {
+    withRedisLock('panel_cron_lock:prune_archives', 30 * 60, async () => {
+      const { archiveService } = await import('./archive.service');
+      const { rows, orphanFiles } = await archiveService.pruneExpired();
+      if (rows || orphanFiles) {
+        logger.info(`[Cron] Pruned ${rows} expired archive(s) and ${orphanFiles} orphan file(s).`);
+      }
+    }).catch(err => logger.error('[Cron] prune_archives failed:', err));
+  });
+
+  // Run daily at 05:30 — report disk pressure while it is still cheap to fix.
+  // The VPS reached 88% with nobody watching; this is the tripwire.
+  cron.schedule('30 5 * * *', () => {
+    withRedisLock('panel_cron_lock:disk_check', 10 * 60, async () => {
+      const { storageService } = await import('./storage.service');
+      const r = await storageService.getReport(true);
+      const orphanBytes = r.orphanImages.reduce((n, i) => n + i.sizeBytes, 0);
+      const msg = `[Cron] Disk ${r.disk.usedPercent}% used, ${r.orphanImages.length} orphan image(s) ` +
+                  `(${(orphanBytes / 1e9).toFixed(2)}GB), ${(r.docker.reclaimableBytes / 1e9).toFixed(2)}GB reclaimable.`;
+      if (r.level === 'critical') logger.error(msg);
+      else if (r.level === 'warn') logger.warn(msg);
+      else logger.info(msg);
+    }).catch(err => logger.error('[Cron] disk_check failed:', err));
+  });
+
+  logger.info('[Cron] Jobs scheduled (notify: 09:00, suspend: hourly, delete: 03:00, prune-activity: 04:00, prune-archives: 04:30, disk-check: 05:30)');
 }
 
 /** Exposed so other services (deploy port allocation, etc.) can reuse the same primitive. */

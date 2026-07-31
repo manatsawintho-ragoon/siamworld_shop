@@ -360,10 +360,32 @@ class DeployService {
     );
   }
 
-  async removeShop(shopName: string, domain: string, mcIp?: string, mysqlExposedPort?: number): Promise<void> {
+  async removeShop(
+    shopName: string,
+    domain: string,
+    mcIp?: string,
+    mysqlExposedPort?: number,
+    archiveOwnerId?: number,
+    archiveReason?: 'expired' | 'admin_delete' | 'manual'
+  ): Promise<void> {
     const deployDir = config.deployDir;
     const envFile = path.join(deployDir, 'customers', shopName, '.env');
     const composeFile = path.join(deployDir, 'docker-compose.customer.yml');
+
+    // Archive BEFORE `down -v`, which drops the MySQL volume and takes the
+    // customer's players, wallets and purchase history with it. Every teardown
+    // path funnels through removeShop, so doing it here means no caller can
+    // forget. createArchive never throws: a shop whose MySQL is already broken
+    // must still be removable, or it sits on disk forever.
+    if (archiveOwnerId && fs.existsSync(envFile)) {
+      const { archiveService } = await import('./archive.service');
+      await archiveService.createArchive(shopName, {
+        userId: archiveOwnerId,
+        domain,
+        reason: archiveReason ?? 'expired',
+      });
+    }
+
     // Only run docker compose down if env file exists (shop was actually deployed)
     if (fs.existsSync(envFile)) {
       await execAsync(
