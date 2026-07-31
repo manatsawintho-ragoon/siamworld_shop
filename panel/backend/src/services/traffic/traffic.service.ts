@@ -311,29 +311,32 @@ class TrafficService {
    * an operator nothing the 4xx counter does not already say.
    */
   async pruneDimensions(): Promise<number> {
-    const [groups] = await pool.query<RowDataPacket[]>(
-      `SELECT shop_name, bucket_day, kind FROM traffic_dim_daily
-        GROUP BY shop_name, bucket_day, kind HAVING COUNT(*) > ?`,
+    // Ranked with an explicit tiebreak so the cap is a hard TOP_N_PER_DAY.
+    //
+    // The obvious version — find the request count in Nth place and delete
+    // everything below it — does not bound anything: a shop being probed by
+    // scanners has a long tail of paths tied at one request each, so the cutoff
+    // is 1, `requests < 1` matches nothing, and hundreds of rows per day
+    // survive. Ordering by (requests DESC, value ASC) breaks those ties
+    // deterministically and ROW_NUMBER gives a real cutoff.
+    const [res] = await pool.query<ResultSetHeader>(
+      `DELETE d FROM traffic_dim_daily d
+         JOIN (
+           SELECT shop_name, bucket_day, kind, value,
+                  ROW_NUMBER() OVER (
+                    PARTITION BY shop_name, bucket_day, kind
+                    ORDER BY requests DESC, value ASC
+                  ) AS rn
+             FROM traffic_dim_daily
+         ) r
+           ON  r.shop_name  = d.shop_name
+           AND r.bucket_day = d.bucket_day
+           AND r.kind       = d.kind
+           AND r.value      = d.value
+        WHERE r.rn > ?`,
       [TOP_N_PER_DAY],
     );
-
-    let removed = 0;
-    for (const g of groups) {
-      const [cut] = await pool.query<RowDataPacket[]>(
-        `SELECT requests FROM traffic_dim_daily
-          WHERE shop_name = ? AND bucket_day = ? AND kind = ?
-          ORDER BY requests DESC LIMIT 1 OFFSET ?`,
-        [g.shop_name, g.bucket_day, g.kind, TOP_N_PER_DAY - 1],
-      );
-      if (!cut.length) continue;
-      const [res] = await pool.query<ResultSetHeader>(
-        `DELETE FROM traffic_dim_daily
-          WHERE shop_name = ? AND bucket_day = ? AND kind = ? AND requests < ?`,
-        [g.shop_name, g.bucket_day, g.kind, cut[0].requests],
-      );
-      removed += res.affectedRows;
-    }
-    return removed;
+    return res.affectedRows;
   }
 
   async pruneOld(): Promise<{ hourly: number; dims: number }> {
