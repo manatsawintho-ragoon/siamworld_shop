@@ -97,7 +97,11 @@ export default function TrafficDetailPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get(`/admin/traffic/${shopName}?days=${days}`);
+      const res = await api.get(`/api/admin/traffic/${shopName}?days=${days}`);
+      // See the overview page: a missing /api prefix resolves to this very page
+      // as HTML, so an unexpected shape must surface as an error rather than as
+      // an empty chart.
+      if (!res.data?.data?.series) throw new Error('รูปแบบข้อมูลจาก API ไม่ถูกต้อง');
       setData(res.data.data);
     } catch (err: any) {
       setError(err?.response?.data?.message || 'โหลดข้อมูลไม่สำเร็จ');

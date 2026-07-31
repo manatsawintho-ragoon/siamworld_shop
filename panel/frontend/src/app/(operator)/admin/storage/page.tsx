@@ -79,8 +79,8 @@ export default function AdminStoragePage() {
     if (refresh) setRefreshing(true);
     try {
       const [r, a] = await Promise.all([
-        api.get(`/admin/storage${refresh ? '?refresh=1' : ''}`),
-        api.get('/admin/archives'),
+        api.get(`/api/admin/storage${refresh ? '?refresh=1' : ''}`),
+        api.get('/api/admin/archives'),
       ]);
       setReport(r.data.data);
       setArchives(a.data.data ?? []);
@@ -96,7 +96,7 @@ export default function AdminStoragePage() {
     setPruning(true);
     setNotice('');
     try {
-      const res = await api.post('/admin/archives/prune');
+      const res = await api.post('/api/admin/archives/prune');
       const { rows, orphanFiles } = res.data.data ?? {};
       setNotice(`ลบไฟล์สำรองที่หมดอายุ ${rows ?? 0} รายการ และไฟล์ตกค้าง ${orphanFiles ?? 0} ไฟล์`);
       await load(true);
@@ -264,7 +264,11 @@ export default function AdminStoragePage() {
                   <div className="flex items-center gap-2.5 shrink-0">
                     <span className="admin-num text-muted-foreground">{fmtBytes(a.size_bytes)}</span>
                     <a
-                      href={`${process.env.NEXT_PUBLIC_API_URL}/admin/archives/${a.file_name}/download`}
+                      // Relative, like every other call: it goes through the
+                      // Next.js proxy rather than the public API host, which is
+                      // both consistent and one less origin that has to be
+                      // reachable and hold a valid certificate.
+                      href={`/api/admin/archives/${a.file_name}/download`}
                       className="admin-btn inline-flex items-center gap-1 text-[13px]"
                     >
                       <Download className="w-3.5 h-3.5" aria-hidden="true" />
