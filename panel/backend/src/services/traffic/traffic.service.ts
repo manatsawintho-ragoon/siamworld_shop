@@ -265,7 +265,10 @@ class TrafficService {
              s4xx         = s4xx         + VALUES(s4xx),
              s5xx         = s5xx         + VALUES(s5xx),
              bot_requests = bot_requests + VALUES(bot_requests)`,
-          [[hourRows.slice(i, i + UPSERT_CHUNK)]],
+          // One array level, not two: mysql2 expands a nested array into
+          // `(a,b),(c,d)`. Wrapping it again yields `((a,b),(c,d))`, which MySQL
+          // reads as a single row and rejects on column count.
+          [hourRows.slice(i, i + UPSERT_CHUNK)],
         );
       }
 
@@ -282,7 +285,7 @@ class TrafficService {
              bytes_sent = bytes_sent + VALUES(bytes_sent),
              s4xx       = s4xx       + VALUES(s4xx),
              s5xx       = s5xx       + VALUES(s5xx)`,
-          [[dimRows.slice(i, i + UPSERT_CHUNK)]],
+          [dimRows.slice(i, i + UPSERT_CHUNK)],
         );
       }
 
