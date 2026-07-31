@@ -9,6 +9,7 @@
 #    ./manage-customer.sh --action start              --name <name>
 #    ./manage-customer.sh --action stop               --name <name>
 #    ./manage-customer.sh --action restart            --name <name>
+#    ./manage-customer.sh --action recreate           --name <name>   # apply compose config, no image rebuild
 #    ./manage-customer.sh --action rebuild            --name <name>
 #    ./manage-customer.sh --action logs               --name <name>
 #    ./manage-customer.sh --action remove             --name <name>   # WARNING: deletes all data
@@ -35,7 +36,7 @@ while [[ $# -gt 0 ]]; do
         --file)   FILE="$2";   shift 2 ;;
         -h|--help)
             echo "Usage: $0 --action <action> [--name <name>]"
-            echo "Basic:   list, status, start, stop, restart, rebuild, migrate, logs, remove"
+            echo "Basic:   list, status, start, stop, restart, recreate, rebuild, migrate, logs, remove"
             echo "Migrate: import-sqlite --name <name> --file <authme.db>"
             echo "HA:      migrate-to-replica, setup-replica, connect-replica --host <ip>, check-replica"
             exit 0
@@ -174,6 +175,17 @@ case "$ACTION" in
     restart)
         echo "Restarting $NAME..."
         docker compose --project-name "sw-$NAME" --env-file "$CUSTOMER_ENV" -f "$COMPOSE_FILE" restart
+        echo "Done."
+        ;;
+
+    recreate)
+        # Re-create the containers from the current compose file WITHOUT rebuilding
+        # the images. `restart` reuses the existing container and so ignores changed
+        # compose settings (logging caps, mysql flags); a full `rebuild` recompiles
+        # both images and takes minutes. This applies config-only changes in seconds.
+        echo "Recreating $NAME containers (no image rebuild)..."
+        docker compose --project-name "sw-$NAME" --env-file "$CUSTOMER_ENV" -f "$COMPOSE_FILE" \
+            up -d --no-deps --no-build backend frontend
         echo "Done."
         ;;
 
@@ -709,7 +721,7 @@ SQL
 
     *)
         echo "[ERROR] Unknown action: $ACTION"
-        echo "Basic:   list, status, start, stop, restart, rebuild, migrate, logs, remove"
+        echo "Basic:   list, status, start, stop, restart, recreate, rebuild, migrate, logs, remove"
         echo "Migrate: import-sqlite --file <authme.db>"
         echo "HA:      migrate-to-replica, setup-replica, connect-replica --host <ip>, check-replica"
         exit 1
