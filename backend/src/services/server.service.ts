@@ -3,6 +3,7 @@ import { NotFoundError, ValidationError } from '../utils/errors';
 import { RowDataPacket } from 'mysql2';
 import { encrypt, decrypt, isEncrypted } from '../utils/crypto';
 import { Rcon } from 'rcon-client';
+import { assertPublicRconHost } from '../utils/safeHost';
 
 const HEALTH_TIMEOUT_MS = 5000;
 
@@ -69,6 +70,10 @@ class ServerService {
     rcon_password: string; minecraft_version?: string; max_players?: number;
     is_enabled?: boolean;
   }) {
+    // Validate the raw host, before resolveHost() can translate localhost into
+    // host.docker.internal. A stored internal host would let every later RCON
+    // call reach inside our network without passing through here again.
+    await assertPublicRconHost(data.host);
     const encryptedPassword = encrypt(data.rcon_password);
     const [result] = await pool.execute(
       'INSERT INTO servers (name, host, port, rcon_port, rcon_password, minecraft_version, max_players) VALUES (?,?,?,?,?,?,?)',
@@ -83,8 +88,11 @@ class ServerService {
     for (const key of ['name', 'port', 'rcon_port', 'minecraft_version', 'max_players']) {
       if (data[key] !== undefined) { fields.push(`${key} = ?`); values.push(data[key]); }
     }
-    // Resolve host for Docker networking
-    if (data.host !== undefined) { fields.push('host = ?'); values.push(resolveHost(data.host)); }
+    // Resolve host for Docker networking (validated first — see create()).
+    if (data.host !== undefined) {
+      await assertPublicRconHost(data.host);
+      fields.push('host = ?'); values.push(resolveHost(data.host));
+    }
     // Encrypt password on update — but ONLY when a real new password was supplied.
     // The real password never leaves the server (getAll/getById mask it as PASSWORD_MASK),
     // so an edit that doesn't touch the field must leave the stored password untouched.

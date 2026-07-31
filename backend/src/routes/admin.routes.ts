@@ -30,6 +30,7 @@ import {
   releaseSchema,
   campaignSchema, grantPointsSchema,
   createNewsSchema, updateNewsSchema,
+  adminUpdateUserSchema, adminTopupUserSchema,
   createRewardSchema, updateRewardSchema, reorderRewardsSchema, reverseTopupSchema,
 } from '../validators/schemas';
 
@@ -402,7 +403,7 @@ router.get('/users/:id/history', async (req: Request, res: Response, next: NextF
   } catch (err) { next(err); }
 });
 
-router.put('/users/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.put('/users/:id', validate(adminUpdateUserSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = parseInt(req.params.id);
     const { email, password, balance, role } = req.body;
@@ -453,7 +454,7 @@ router.put('/users/:id/role', async (req: Request, res: Response, next: NextFunc
   } catch (err) { next(err); }
 });
 
-router.post('/users/:id/topup', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/users/:id/topup', validate(adminTopupUserSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = parseInt(req.params.id);
     const { amount, description } = req.body;

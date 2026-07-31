@@ -7,6 +7,7 @@ import { encrypt, decrypt, isEncrypted } from '../utils/crypto';
 import { logger } from '../utils/logger';
 import { RowDataPacket } from 'mysql2';
 import { ValidationError } from '../utils/errors';
+import { assertPublicRconHost } from '../utils/safeHost';
 import { createSession } from './session.service';
 import { adminCredentialService } from './admin-credential.service';
 
@@ -39,6 +40,10 @@ class SetupService {
    * Test an RCON connection to a Minecraft server.
    */
   async testRconConnection(config: RconConfig): Promise<{ success: boolean; message: string; players?: string[] }> {
+    // The owner picks this host and port, and the reply distinguishes refused
+    // from timed out from auth-failed — an internal port scanner if left open.
+    await assertPublicRconHost(config.host);
+
     let rcon: Rcon | null = null;
     try {
       rcon = new Rcon({
@@ -94,6 +99,8 @@ class SetupService {
     if (!data.name || !data.host || !data.rcon_port || !data.rcon_password) {
       throw new ValidationError('Missing required server configuration fields');
     }
+    // Validated before resolveHost() translates it — see server.service.create().
+    await assertPublicRconHost(data.host);
 
     // Encrypt the RCON password
     const encryptedPassword = encrypt(data.rcon_password);

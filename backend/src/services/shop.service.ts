@@ -361,15 +361,38 @@ class ShopService {
 
     const [rows] = await pool.execute<RowDataPacket[]>(query, params);
 
-    // Attach server info to each product
-    for (const product of rows) {
-      const [servers] = await pool.execute<RowDataPacket[]>(
-        'SELECT s.id, s.name FROM servers s JOIN product_servers ps ON s.id = ps.server_id WHERE ps.product_id = ?',
-        [product.id]
-      );
-      product.servers = servers;
-    }
+    // One query for every product's servers, not one query PER product. This
+    // endpoint is unauthenticated AND exempt from rate limiting (see server.ts
+    // isSkipped), so the old loop turned a single anonymous GET into 1+N queries
+    // against a 20-connection pool — a catalog of 80 products meant 81 queries
+    // per request, which is a cheap way to exhaust the pool from outside.
+    await this.attachServers(rows);
     return rows;
+  }
+
+  /** Bulk-load product -> servers in a single query and attach to each row. */
+  private async attachServers(rows: RowDataPacket[]): Promise<void> {
+    if (rows.length === 0) return;
+    // Ids come from the DB as numbers, so inlining them is injection-safe and
+    // avoids building a variadic placeholder list.
+    const ids = rows.map(r => Number(r.id)).filter(Number.isFinite);
+    if (ids.length === 0) return;
+
+    const [links] = await pool.query<RowDataPacket[]>(
+      `SELECT ps.product_id, s.id, s.name
+         FROM servers s JOIN product_servers ps ON s.id = ps.server_id
+        WHERE ps.product_id IN (${ids.join(',')})`
+    );
+
+    const byProduct = new Map<number, { id: number; name: string }[]>();
+    for (const l of links) {
+      const list = byProduct.get(l.product_id) ?? [];
+      list.push({ id: l.id, name: l.name });
+      byProduct.set(l.product_id, list);
+    }
+    for (const product of rows) {
+      product.servers = byProduct.get(Number(product.id)) ?? [];
+    }
   }
 
   async getProduct(productId: number) {
@@ -412,12 +435,7 @@ class ShopService {
          (SELECT COALESCE(SUM(pu.quantity),0) FROM purchases pu WHERE pu.product_id = p.id AND pu.status = 'delivered') AS sold_count
        FROM products p LEFT JOIN categories c ON p.category_id = c.id ORDER BY p.sort_order ASC, p.id DESC`
     );
-    for (const p of rows) {
-      const [servers] = await pool.execute<RowDataPacket[]>(
-        'SELECT s.id, s.name FROM servers s JOIN product_servers ps ON s.id = ps.server_id WHERE ps.product_id = ?', [p.id]
-      );
-      p.servers = servers;
-    }
+    await this.attachServers(rows);
     return rows;
   }
 
