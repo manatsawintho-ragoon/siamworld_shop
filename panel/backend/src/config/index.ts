@@ -61,6 +61,12 @@ export const config = {
   deployDir:     optional('DEPLOY_DIR', '/app/deploy'),
   sourceRoot:    optional('SOURCE_ROOT', '/app'),
 
+  // NGINX Proxy Manager's log directory, mounted read-only from the
+  // nginx-proxy-manager_npm_data volume. Read-only is deliberate: truncating a
+  // live container log desyncs the docker log reader and hangs `docker logs`
+  // until the container restarts, so the mount makes that impossible here.
+  npmLogDir:     optional('NPM_LOG_DIR', '/npm-data/logs'),
+
   // DNS-only subdomain for MySQL (AuthMe plugin access, bypasses Cloudflare proxy)
   mysqlHostname: optional('MYSQL_HOSTNAME', ''),
 };

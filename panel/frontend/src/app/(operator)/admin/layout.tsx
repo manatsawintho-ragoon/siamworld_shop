@@ -10,7 +10,7 @@ import {
   PieChart, Store, Users, Receipt, Ticket,
   LifeBuoy, History, Settings, Sun, Moon, Megaphone,
   ChevronDown, LogOut, LayoutDashboard, Menu, X, Loader2,
-  GalleryHorizontalEnd, Flame, HardDrive
+  GalleryHorizontalEnd, Flame, HardDrive, Activity
 } from 'lucide-react';
 
 /* Sidebar groups. Thai labels are the ones people actually read, so they are
@@ -43,6 +43,7 @@ const MENU_CATEGORIES = [
       { href: '/admin/showcase', label: 'ตัวอย่างฟีเจอร์', icon: GalleryHorizontalEnd },
       { href: '/admin/support', label: 'แจ้งปัญหา', icon: LifeBuoy },
       { href: '/admin/activity', label: 'พฤติกรรมการใช้งาน', icon: Flame },
+      { href: '/admin/traffic', label: 'ทราฟฟิกร้านค้า', icon: Activity },
       { href: '/admin/audit-logs', label: 'บันทึกเหตุการณ์', icon: History },
       { href: '/admin/storage', label: 'พื้นที่จัดเก็บข้อมูล', icon: HardDrive },
       { href: '/admin/settings', label: 'ตั้งค่าระบบ', icon: Settings },
