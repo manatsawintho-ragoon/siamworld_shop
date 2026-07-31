@@ -3,6 +3,12 @@ import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { api, getToken } from '@/lib/api';
 import { useAdminAlert } from '@/components/AdminAlert';
+import {
+  toLocalInput, defaultSaleEndInput, deriveSaleDuration, toDurationMinutes, hasLiveSale,
+  type SaleDuration, type SaleDurUnit,
+} from '@/lib/saleWindow';
+
+const DEFAULT_SALE_DURATION: SaleDuration = { value: 60, unit: 'minutes' };
 
 // ─── Countdown Badge ─────────────────────────────────────────────────────────
 function CountdownBadge({ endTime }: { endTime: string }) {
@@ -145,12 +151,21 @@ export default function AdminProducts() {
     });
     setSaleLimitStock(p.stock_limit != null);
     setSaleStockVal(p.stock_limit ?? null);
-    setSaleDurValue(60);
-    setSaleDurUnit('minutes');
-    setSaleTimeMode('duration');
-    const d = new Date(); d.setDate(d.getDate() + 7);
-    setSaleEndDatetime(d.toISOString().slice(0, 16));
+    applySaleWindow(p);
     setReleaseError('');
+  };
+
+  /**
+   * Seed the duration controls from the product's live sale window so reopening
+   * shows what the owner actually set. Without this the controls snapped back to
+   * 60/minutes and re-releasing silently shortened a running sale.
+   */
+  const applySaleWindow = (p: Product) => {
+    const { value, unit } = deriveSaleDuration(p.sale_start, p.sale_end, DEFAULT_SALE_DURATION);
+    setSaleDurValue(value);
+    setSaleDurUnit(unit);
+    setSaleTimeMode('duration');
+    setSaleEndDatetime(hasLiveSale(p.sale_end) ? toLocalInput(p.sale_end) : defaultSaleEndInput());
   };
 
   const handleSave = async () => {
@@ -255,13 +270,10 @@ export default function AdminProducts() {
   // ── Sale / Release state ─────────────────────────────────
   const [saleModal,      setSaleModal]      = useState<Product | null>(null);
   const [saleLimitStock, setSaleLimitStock] = useState(false);
-  const [saleDurValue,   setSaleDurValue]   = useState(60);
-  const [saleDurUnit,    setSaleDurUnit]    = useState<'minutes' | 'hours' | 'days'>('minutes');
+  const [saleDurValue,   setSaleDurValue]   = useState(DEFAULT_SALE_DURATION.value);
+  const [saleDurUnit,    setSaleDurUnit]    = useState<SaleDurUnit>(DEFAULT_SALE_DURATION.unit);
   const [saleTimeMode,   setSaleTimeMode]   = useState<'duration' | 'datetime'>('duration');
-  const [saleEndDatetime, setSaleEndDatetime] = useState<string>(() => {
-    const d = new Date(); d.setDate(d.getDate() + 7);
-    return d.toISOString().slice(0, 16);
-  });
+  const [saleEndDatetime, setSaleEndDatetime] = useState<string>(defaultSaleEndInput);
   const [saleStockVal,   setSaleStockVal]   = useState<number | null>(null);
   const [releasing,      setReleasing]      = useState(false);
   const [stopping,       setStopping]       = useState(false);
@@ -271,12 +283,13 @@ export default function AdminProducts() {
 
   const getSaleDurationMinutes = () => {
     if (saleTimeMode === 'datetime') {
+      // saleEndDatetime is local wall clock (see toLocalInput), and new Date()
+      // parses a bare datetime-local string as local, so this subtraction is
+      // offset-free. It was not, while the field was seeded from toISOString().
       const endMs = new Date(saleEndDatetime).getTime();
       return Math.max(1, Math.round((endMs - Date.now()) / 60000));
     }
-    if (saleDurUnit === 'hours') return saleDurValue * 60;
-    if (saleDurUnit === 'days')  return saleDurValue * 60 * 24;
-    return saleDurValue;
+    return toDurationMinutes(saleDurValue, saleDurUnit);
   };
 
   const previewEndTime = () => {
@@ -598,7 +611,7 @@ export default function AdminProducts() {
                           {/* Actions */}
                           <td className="px-3 py-1.5">
                             <div className="flex gap-1 justify-center">
-                              <button onClick={() => { setSaleModal(p); setSaleLimitStock(p.stock_limit != null); setSaleStockVal(p.stock_limit ?? null); setSaleTimeMode('duration'); setSaleDurValue(60); setSaleDurUnit('minutes'); const d2 = new Date(); d2.setDate(d2.getDate() + 7); setSaleEndDatetime(d2.toISOString().slice(0, 16)); setReleaseError(''); }} title="ตั้งค่าการขาย"
+                              <button onClick={() => { setSaleModal(p); setSaleLimitStock(p.stock_limit != null); setSaleStockVal(p.stock_limit ?? null); applySaleWindow(p); setReleaseError(''); }} title="ตั้งค่าการขาย"
                                 className="w-7 h-7 flex items-center justify-center rounded-lg bg-[#16a34a] border border-green-700 text-white shadow-[0_2px_0_#0d6b2e] hover:brightness-110 active:translate-y-[1px] active:shadow-none transition-all">
                                 <i className="fas fa-rocket text-[10px]"></i>
                               </button>
@@ -910,7 +923,7 @@ export default function AdminProducts() {
                           </div>
                         ) : (
                           <input type="datetime-local" value={saleEndDatetime}
-                            min={new Date().toISOString().slice(0, 16)}
+                            min={toLocalInput(new Date())}
                             onChange={e => setSaleEndDatetime(e.target.value)}
                             className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
                           />
@@ -1346,7 +1359,7 @@ export default function AdminProducts() {
                   </div>
                 ) : (
                   <input type="datetime-local" value={saleEndDatetime}
-                    min={new Date().toISOString().slice(0, 16)}
+                    min={toLocalInput(new Date())}
                     onChange={e => setSaleEndDatetime(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
                   />

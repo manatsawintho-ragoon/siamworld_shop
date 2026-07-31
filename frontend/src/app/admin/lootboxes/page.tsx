@@ -3,6 +3,13 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { api, getToken } from '@/lib/api';
 import { useAdminAlert } from '@/components/AdminAlert';
+import {
+  toLocalInput, defaultSaleEndInput, deriveSaleDuration, toDurationMinutes, hasLiveSale,
+  type SaleDuration, type SaleDurUnit,
+} from '@/lib/saleWindow';
+
+/** Loot boxes default to a 24h promo rather than the products page's 60 minutes. */
+const DEFAULT_BOX_DURATION: SaleDuration = { value: 24, unit: 'hours' };
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -1034,13 +1041,16 @@ function BoxModal({ box, categories, saving, error, onChange, onSave, onClose, o
   // Sale settings local state
   const [limitStock,    setLimitStock]    = useState(box.stock_limit != null);
   const [limitTime,     setLimitTime]     = useState(box.sale_end != null);
-  const [durValue,      setDurValue]      = useState(24);
-  const [durUnit,       setDurUnit]       = useState<'minutes' | 'hours' | 'days'>('hours');
+  // Seeded from the box's real sale window, not a fixed default: the panel used
+  // to open at 24h regardless, so an owner who had set days read it back as
+  // hours and re-releasing silently shortened a running promo.
+  const initialDuration = deriveSaleDuration(box.sale_start, box.sale_end, DEFAULT_BOX_DURATION);
+  const [durValue,      setDurValue]      = useState(initialDuration.value);
+  const [durUnit,       setDurUnit]       = useState<SaleDurUnit>(initialDuration.unit);
   const [timeMode,      setTimeMode]      = useState<'duration' | 'datetime'>('duration');
-  const [endDatetime,   setEndDatetime]   = useState<string>(() => {
-    const d = new Date(); d.setDate(d.getDate() + 7);
-    return d.toISOString().slice(0, 16);
-  });
+  const [endDatetime,   setEndDatetime]   = useState<string>(
+    () => (hasLiveSale(box.sale_end) ? toLocalInput(box.sale_end) : defaultSaleEndInput())
+  );
   const [releasing,     setReleasing]     = useState(false);
   const [stopping,      setStopping]      = useState(false);
   const [stoppingNow,   setStoppingNow]   = useState(false);
@@ -1048,12 +1058,12 @@ function BoxModal({ box, categories, saving, error, onChange, onSave, onClose, o
 
   const getDurationMinutes = () => {
     if (timeMode === 'datetime') {
+      // endDatetime is local wall clock (toLocalInput) and new Date() parses a
+      // bare datetime-local string as local, so no offset is lost here.
       const endMs = new Date(endDatetime).getTime();
       return Math.max(1, Math.round((endMs - Date.now()) / 60000));
     }
-    if (durUnit === 'hours') return durValue * 60;
-    if (durUnit === 'days')  return durValue * 60 * 24;
-    return durValue;
+    return toDurationMinutes(durValue, durUnit);
   };
 
   const previewEndTime = () => {
@@ -1406,7 +1416,7 @@ function BoxModal({ box, categories, saving, error, onChange, onSave, onClose, o
                         ) : (
                           <input type="datetime-local"
                             value={endDatetime}
-                            min={new Date().toISOString().slice(0, 16)}
+                            min={toLocalInput(new Date())}
                             onChange={e => setEndDatetime(e.target.value)}
                             className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
                           />
