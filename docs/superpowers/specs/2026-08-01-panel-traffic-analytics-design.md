@@ -77,16 +77,18 @@ A read-only mount makes that class of mistake structurally impossible here.
 
 ## Backend structure
 
-Three files under `panel/backend/src/services/traffic/`, each with one job:
-
 | File | Responsibility | Depends on |
 |---|---|---|
-| `log-format.ts` | Pure functions: `parseProxyLine`, `normalizePath`, `isBotUA`. No I/O. | nothing |
-| `log-cursor.ts` | Per-file read position, rotation handling, bounded line iteration. | `fs` |
-| `traffic.service.ts` | Orchestration, aggregation, upserts, and the read queries the routes call. | both above |
+| `utils/trafficLog.ts` | Pure functions: `parseProxyLine`, `normalizePath`, `isBotUA`, `refererLabel`, `bucketHour`, `bucketDay`. No I/O. | nothing |
+| `services/traffic/log-cursor.ts` | Per-file read position, rotation handling, bounded reads. | `fs` |
+| `services/traffic/traffic.service.ts` | Orchestration, aggregation, upserts, and the read queries the routes call. | both above |
 
-`log-format.ts` having zero I/O is what makes the risky part (a regex against a
-log format we do not control) cheap to test exhaustively.
+The pure module lives in `utils/` rather than beside the service because that is
+where this codebase already keeps pure helpers with tests (`customDomain.ts`,
+`lifecycle.ts`, `activity-events.ts`). Its having zero I/O is what makes the
+risky part (a regex against a log format we do not control) cheap to test
+exhaustively: it is verified against 382,296 real captured lines at a 99.999%
+parse rate.
 
 ### Rotation handling
 
@@ -170,9 +172,16 @@ cheaper than a second table that differs only in what the string column means.
 
 `normalizePath` strips query strings and collapses numeric path segments
 (`/admin/users/123` -> `/admin/users/:id`). Without this, `/_next/image?url=...`
-alone would generate thousands of distinct rows per shop per day. After each
-run, `traffic_dim_daily` is pruned to the top 50 values per shop per day per
+alone would generate thousands of distinct rows per shop per day. The daily
+prune then caps `traffic_dim_daily` at the top 50 values per shop per day per
 kind.
+
+That cap must rank with an explicit tiebreak. The obvious implementation, "find
+the request count in 50th place and delete everything below it", bounds nothing
+in practice: a shop being probed by scanners has a long tail of paths tied at
+one request each, so the cutoff is 1, `requests < 1` matches no rows, and the
+group keeps growing. Ranking by `(requests DESC, value ASC)` with `ROW_NUMBER`
+makes the cap real.
 
 ### Retention
 
@@ -243,11 +252,18 @@ that quietly means something other than what it says is worse than no number:
 - `parseProxyLine` against real fixture lines: the `-` upstream_status, a `"-"`
   referer, IPv6 clients, request URIs containing quotes and spaces, and
   malformed lines that must return `null` rather than throw.
-- `normalizePath` and `isBotUA` unit tests.
+- `normalizePath`, `isBotUA`, `refererLabel` and the Bangkok bucketing.
 - Cursor rotation: write a temp log, read it, rotate it, assert no gap and no
-  double-count.
-- Ingest idempotency: run the ingester twice over the same input, assert the
-  rollup counts are unchanged.
+  double-count. Rotation fixtures follow logrotate's real order (rename, then
+  create, then compress), because unlink-then-create lets the filesystem reuse
+  the inode and models a sequence that cannot occur here.
+- Cursor partial lines: a trailing incomplete line is neither parsed nor
+  consumed, and is emitted exactly once after it is completed.
+- Bulk-upsert parameter shape: `VALUES ?` expands one array level into a row
+  list, and the doubly-wrapped form that broke the first deploy is kept
+  executable alongside it so the distinction stays visible.
+- Ingest idempotency: verified against production data. A second pass over the
+  same logs parsed 0 lines and left all counters byte-identical.
 
 ## Deploy order
 
