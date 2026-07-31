@@ -98,6 +98,11 @@ services:
       - ${SOURCE_ROOT}/deploy:/deploy          # access to new-customer.sh & customers.json
       - ${SOURCE_ROOT}:/source:ro              # read-only source for init.sql ref
       - /var/run/docker.sock:/var/run/docker.sock  # docker control for deploy
+      # NPM's per-proxy-host access logs, for the traffic analytics rollup.
+      # READ-ONLY on purpose: truncating a live container log desyncs the docker
+      # log reader and hangs `docker logs` (and the panel log viewer) until the
+      # container restarts. ro makes that mistake impossible from here.
+      - npm_data:/npm-data:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -133,6 +138,10 @@ services:
 volumes:
   panel_mysql_data:
   panel_redis_data:
+  # Owned by the nginx-proxy-manager stack, not created here.
+  npm_data:
+    external: true
+    name: nginx-proxy-manager_npm_data
 
 networks:
   panel_internal:

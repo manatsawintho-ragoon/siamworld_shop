@@ -26,6 +26,7 @@ import { npmService } from '../services/npm.service';
 import { cloudflareService } from '../services/cloudflare.service';
 import { announcementService } from '../services/announcement.service';
 import { storageService } from '../services/storage.service';
+import { trafficService } from '../services/traffic/traffic.service';
 import { archiveService } from '../services/archive.service';
 import { pool } from '../database/connection';
 import { config } from '../config/index';
@@ -626,6 +627,36 @@ router.delete('/announcements/:id', asyncRoute(async (req, res) => {
 router.get('/storage', asyncRoute(async (req, res) => {
   const report = await storageService.getReport(req.query.refresh === '1');
   res.json({ success: true, data: report });
+}));
+
+// ── Traffic ────────────────────────────────────────────────────────────────
+// Per-customer web traffic, rolled up from the NPM access logs. Answers which
+// shops are busy, which are dead, and which are serving errors to real users.
+
+/** Windows the UI offers. Anything else is rejected rather than clamped, so a
+ *  typo cannot quietly produce a chart of the wrong period. */
+const TRAFFIC_WINDOWS = [1, 7, 30, 90];
+
+function trafficDays(raw: unknown): number {
+  const n = Number(raw ?? 7);
+  if (!TRAFFIC_WINDOWS.includes(n)) {
+    throw new ValidationError(`ช่วงเวลาไม่ถูกต้อง (รองรับ ${TRAFFIC_WINDOWS.join(', ')} วัน)`);
+  }
+  return n;
+}
+
+router.get('/traffic/overview', asyncRoute(async (req, res) => {
+  const data = await trafficService.overview(trafficDays(req.query.days));
+  res.json({ success: true, data });
+}));
+
+router.get('/traffic/:shopName', asyncRoute(async (req, res) => {
+  const shopName = String(req.params.shopName);
+  if (!/^[a-z0-9][a-z0-9-]{0,29}$/.test(shopName)) {
+    throw new ValidationError('ชื่อร้านไม่ถูกต้อง');
+  }
+  const data = await trafficService.shopDetail(shopName, trafficDays(req.query.days));
+  res.json({ success: true, data });
 }));
 
 router.get('/archives', asyncRoute(async (_req, res) => {

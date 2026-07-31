@@ -82,6 +82,34 @@ export function startCronJobs(): void {
     }).catch(err => logger.error('[Cron] prune_archives failed:', err));
   });
 
+  // Every 10 minutes — roll new NPM access-log lines into per-shop traffic
+  // counters. Cheap: the busiest shop writes ~2.7MB/day, so a pass reads tens of
+  // kilobytes. The lock matters more than usual here because the rollup upserts
+  // are additive, so a concurrent second run would double-count.
+  cron.schedule('*/10 * * * *', () => {
+    withRedisLock('panel_cron_lock:traffic_ingest', 9 * 60, async () => {
+      const { trafficService } = await import('./traffic/traffic.service');
+      const s = await trafficService.ingest();
+      if (s.linesParsed) {
+        logger.info(
+          `[Cron] Traffic: ${s.linesParsed} lines across ${s.shopsTouched} shop(s) ` +
+          `from ${s.filesScanned} log(s), ${s.linesSkipped} skipped.`,
+        );
+      }
+    }).catch(err => logger.error('[Cron] traffic_ingest failed:', err));
+  });
+
+  // Run daily at 04:15 — trim traffic rollups: drop the long tail of scanner
+  // probes from the daily dimensions, then drop rows past retention.
+  cron.schedule('15 4 * * *', () => {
+    withRedisLock('panel_cron_lock:prune_traffic', 30 * 60, async () => {
+      const { trafficService } = await import('./traffic/traffic.service');
+      const trimmed = await trafficService.pruneDimensions();
+      const { hourly, dims } = await trafficService.pruneOld();
+      logger.info(`[Cron] Traffic prune: ${trimmed} tail row(s), ${hourly} hourly, ${dims} daily expired.`);
+    }).catch(err => logger.error('[Cron] prune_traffic failed:', err));
+  });
+
   // Run daily at 05:30 — report disk pressure while it is still cheap to fix.
   // The VPS reached 88% with nobody watching; this is the tripwire.
   cron.schedule('30 5 * * *', () => {
@@ -97,7 +125,7 @@ export function startCronJobs(): void {
     }).catch(err => logger.error('[Cron] disk_check failed:', err));
   });
 
-  logger.info('[Cron] Jobs scheduled (notify: 09:00, suspend: hourly, delete: 03:00, prune-activity: 04:00, prune-archives: 04:30, disk-check: 05:30)');
+  logger.info('[Cron] Jobs scheduled (notify: 09:00, suspend: hourly, delete: 03:00, traffic-ingest: */10min, prune-activity: 04:00, prune-traffic: 04:15, prune-archives: 04:30, disk-check: 05:30)');
 }
 
 /** Exposed so other services (deploy port allocation, etc.) can reuse the same primitive. */
