@@ -1,13 +1,39 @@
-import { pool } from '../database/connection';
+import { pool, Queryable } from '../database/connection';
 import { NotFoundError, PlayerOfflineError, InsufficientBalanceError, RconError, ConflictError, AppError } from '../utils/errors';
 import { logger } from '../utils/logger';
 import { RconManager } from './rcon-manager';
 import { PlayerTracker } from './player-tracker';
 import { RowDataPacket } from 'mysql2';
+
 import { v4 as uuidv4 } from 'uuid';
 import { discountService } from './discount.service';
 
 class ShopService {
+  /**
+   * Units still available for a stock-limited product.
+   *
+   * `pending` counts against stock alongside `delivered`: a pending row is an
+   * order that has already been paid for and is mid-delivery, so letting a
+   * concurrent buyer claim the same unit is exactly the oversell we are trying to
+   * prevent. `failed` and `refunded` release their units back — the money went
+   * back to the buyer, so the stock should return too.
+   *
+   * Takes the pool or an open connection so the caller decides whether this runs
+   * inside the transaction (authoritative) or outside it (advisory pre-check).
+   */
+  private async remainingStock(
+    db: Queryable,
+    productId: number,
+    stockLimit: number,
+  ): Promise<number> {
+    const [rows] = await db.execute<RowDataPacket[]>(
+      `SELECT COALESCE(SUM(quantity),0) AS sold FROM purchases
+        WHERE product_id = ? AND status IN ('pending','delivered')`,
+      [productId]
+    );
+    return Math.max(0, stockLimit - Number((rows[0] as any).sold));
+  }
+
   /**
    * Purchase flow:
    * 1. Check idempotency key
@@ -70,14 +96,11 @@ class ShopService {
       throw new AppError('สินค้านี้หยุดขายชั่วคราว', 400);
     }
 
-    // Check stock limit (counted in units, not orders)
+    // Cheap pre-check so an obviously sold-out item fails fast with an accurate
+    // "remaining" count. This is ADVISORY ONLY — it races, and the authoritative
+    // check runs under a row lock inside the transaction below.
     if (product.stock_limit != null) {
-      const [countRows] = await pool.execute<RowDataPacket[]>(
-        `SELECT COALESCE(SUM(quantity),0) AS sold FROM purchases WHERE product_id = ? AND status = 'delivered'`,
-        [productId]
-      );
-      const sold = Number((countRows[0] as any).sold);
-      const remaining = Math.max(0, Number(product.stock_limit) - sold);
+      const remaining = await this.remainingStock(pool, productId, Number(product.stock_limit));
       if (remaining <= 0) {
         throw new AppError('สินค้าหมดแล้ว', 400);
       }
@@ -111,6 +134,17 @@ class ShopService {
       if (walletRows.length === 0) throw new NotFoundError('Wallet not found');
       if (parseFloat(walletRows[0].balance) < effectivePrice) {
         throw new InsufficientBalanceError('ยอดเงินไม่เพียงพอ');
+      }
+
+      // Authoritative stock check. Serialising on the product row is what makes a
+      // limited drop actually limited: the pre-check above reads outside any lock,
+      // so N simultaneous buyers all saw the same "remaining" and all passed it.
+      // Lock order is always wallet -> product, so two buyers can never deadlock.
+      if (product.stock_limit != null) {
+        await conn.execute('SELECT id FROM products WHERE id = ? FOR UPDATE', [productId]);
+        const remaining = await this.remainingStock(conn, productId, Number(product.stock_limit));
+        if (remaining <= 0) throw new AppError('สินค้าหมดแล้ว', 400);
+        if (qty > remaining) throw new AppError(`สินค้าเหลือไม่พอ (เหลือ ${remaining} ชิ้น)`, 400);
       }
 
       // Deduct effective (post-discount) balance.
@@ -327,15 +361,38 @@ class ShopService {
 
     const [rows] = await pool.execute<RowDataPacket[]>(query, params);
 
-    // Attach server info to each product
-    for (const product of rows) {
-      const [servers] = await pool.execute<RowDataPacket[]>(
-        'SELECT s.id, s.name FROM servers s JOIN product_servers ps ON s.id = ps.server_id WHERE ps.product_id = ?',
-        [product.id]
-      );
-      product.servers = servers;
-    }
+    // One query for every product's servers, not one query PER product. This
+    // endpoint is unauthenticated AND exempt from rate limiting (see server.ts
+    // isSkipped), so the old loop turned a single anonymous GET into 1+N queries
+    // against a 20-connection pool — a catalog of 80 products meant 81 queries
+    // per request, which is a cheap way to exhaust the pool from outside.
+    await this.attachServers(rows);
     return rows;
+  }
+
+  /** Bulk-load product -> servers in a single query and attach to each row. */
+  private async attachServers(rows: RowDataPacket[]): Promise<void> {
+    if (rows.length === 0) return;
+    // Ids come from the DB as numbers, so inlining them is injection-safe and
+    // avoids building a variadic placeholder list.
+    const ids = rows.map(r => Number(r.id)).filter(Number.isFinite);
+    if (ids.length === 0) return;
+
+    const [links] = await pool.query<RowDataPacket[]>(
+      `SELECT ps.product_id, s.id, s.name
+         FROM servers s JOIN product_servers ps ON s.id = ps.server_id
+        WHERE ps.product_id IN (${ids.join(',')})`
+    );
+
+    const byProduct = new Map<number, { id: number; name: string }[]>();
+    for (const l of links) {
+      const list = byProduct.get(l.product_id) ?? [];
+      list.push({ id: l.id, name: l.name });
+      byProduct.set(l.product_id, list);
+    }
+    for (const product of rows) {
+      product.servers = byProduct.get(Number(product.id)) ?? [];
+    }
   }
 
   async getProduct(productId: number) {
@@ -378,12 +435,7 @@ class ShopService {
          (SELECT COALESCE(SUM(pu.quantity),0) FROM purchases pu WHERE pu.product_id = p.id AND pu.status = 'delivered') AS sold_count
        FROM products p LEFT JOIN categories c ON p.category_id = c.id ORDER BY p.sort_order ASC, p.id DESC`
     );
-    for (const p of rows) {
-      const [servers] = await pool.execute<RowDataPacket[]>(
-        'SELECT s.id, s.name FROM servers s JOIN product_servers ps ON s.id = ps.server_id WHERE ps.product_id = ?', [p.id]
-      );
-      p.servers = servers;
-    }
+    await this.attachServers(rows);
     return rows;
   }
 

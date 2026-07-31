@@ -4,11 +4,12 @@ import { validate } from '../middleware/validate';
 import { paymentService } from '../services/payment.service';
 import { topupSchema, trueMoneyRedeemSchema, slipVerifySchema, discountPreviewSchema } from '../validators/schemas';
 import { purchaseCooldown } from '../middleware/cooldown';
+import { blockDuringMaintenance } from '../middleware/maintenance';
 import { discountService, DiscountError } from '../services/discount.service';
 
 const router = Router();
 
-router.post('/promptpay/create', authenticate, validate(topupSchema), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/promptpay/create', authenticate, blockDuringMaintenance, validate(topupSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const result = await paymentService.createPromptPay(req.user!.userId, req.body.amount);
     res.json({ success: true, ...result });
@@ -22,7 +23,7 @@ router.post('/promptpay/confirm', authenticate, async (req: Request, res: Respon
   } catch (err) { next(err); }
 });
 
-router.post('/truemoney/redeem', authenticate, purchaseCooldown(30, 'truemoney'), validate(trueMoneyRedeemSchema), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/truemoney/redeem', authenticate, blockDuringMaintenance, purchaseCooldown(30, 'truemoney'), validate(trueMoneyRedeemSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const result = await paymentService.redeemTrueMoney(req.user!.userId, req.body.giftLink);
     res.json({
@@ -39,7 +40,7 @@ router.post('/truemoney/redeem', authenticate, purchaseCooldown(30, 'truemoney')
 //       or { payload: "QR payload string" }
 // On success: credits wallet with the amount in the slip
 // Rate limited: 30s cooldown per user after a successful verify to avoid EasySlip quota abuse
-router.post('/slip/verify', authenticate, purchaseCooldown(30, 'slip'), validate(slipVerifySchema), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/slip/verify', authenticate, blockDuringMaintenance, purchaseCooldown(30, 'slip'), validate(slipVerifySchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { base64, url, payload, expectedAmount, discountCode } = req.body;
     const result = await paymentService.verifySlip(

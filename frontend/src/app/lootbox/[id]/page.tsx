@@ -12,6 +12,7 @@ import {
   Pause, Lock, Zap, Layers, Gift, X, RotateCw,
 } from 'lucide-react';
 import { proxyImage, onProxyError } from '@/lib/imageProxy';
+import { useIdempotencyKey, isNetworkError } from '@/lib/idempotency';
 
 /* ── Types ─────────────────────────────────────────────────── */
 interface LootBoxItem {
@@ -285,6 +286,7 @@ export default function LootBoxOpenPage() {
   const spinGainRef   = useRef<GainNode | null>(null);
   const animRef       = useRef<number>(0);
   const isOpeningRef  = useRef(false);
+  const idem          = useIdempotencyKey();
 
   useEffect(() => {
     api(`/shop/lootboxes/${id}`)
@@ -355,10 +357,17 @@ export default function LootBoxOpenPage() {
 
     const minDelay = new Promise(r => setTimeout(r, 750));
     let result: { inventoryId: number; wonItem: WonItem } | null = null;
+    // One key per open. It survives a dropped connection so the retry returns the
+    // item already paid for instead of charging again and rolling a second time.
+    const idempotencyKey = idem.take(`box-${id}`);
     try {
-      const d = await api(`/shop/lootboxes/${id}/open`, { method: 'POST', token: getToken()! });
+      const d = await api(`/shop/lootboxes/${id}/open`, {
+        method: 'POST', token: getToken()!, body: { idempotencyKey },
+      });
+      idem.clear();
       result = d as unknown as { inventoryId: number; wonItem: WonItem };
     } catch (err: any) {
+      if (!isNetworkError(err)) idem.clear();
       await minDelay;
       setError(err?.message || 'เกิดข้อผิดพลาด');
       setPreparing(false); isOpeningRef.current = false; return;

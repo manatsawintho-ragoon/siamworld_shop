@@ -34,7 +34,12 @@ services:
       --skip-name-resolve
     mem_limit: 512m
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+      # Falls back to MYSQL_PASSWORD so every existing shop keeps its current
+      # root password (MYSQL_ROOT_PASSWORD only takes effect on first init, so
+      # this cannot change an already-provisioned volume). New shops should set
+      # a distinct value: the app authenticates as MYSQL_USER/MYSQL_PASSWORD, and
+      # sharing that with root means one leaked credential is two.
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-${MYSQL_PASSWORD}}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-siamsite}
       MYSQL_USER: ${MYSQL_USER:-siamsite}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
@@ -45,7 +50,7 @@ services:
       - mysql_data:/var/lib/mysql
       - ${HOST_SOURCE_ROOT}/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-${MYSQL_PASSWORD}}"]
       interval: 15s
       timeout: 5s
       retries: 5

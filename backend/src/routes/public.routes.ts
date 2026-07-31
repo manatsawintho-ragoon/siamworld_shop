@@ -29,7 +29,13 @@ router.get('/settings', async (_req: Request, res: Response, next: NextFunction)
     const publicKeys = ['shop_name', 'shop_subtitle', 'shop_description', 'welcome_message', 'currency', 'currency_symbol', 'maintenance_mode', 'logo_url', 'favicon_url', 'banner_url', 'facebook_url', 'discord_invite', 'website_bg_url', 'server_ip', 'topup_bonus_enabled', 'topup_bonus_multiplier',
       'topup_bonus_promptpay_enabled', 'topup_bonus_promptpay_multiplier',
       'topup_bonus_truemoney_enabled', 'topup_bonus_truemoney_multiplier',
-      'promptpay_enabled', 'truemoney_enabled', 'truemoney_phone', 'theme_name', 'website_logo_url',
+      // NOTE: truemoney_phone is deliberately NOT public. It is the owner's
+      // personal wallet number and the redeem flow uses it server-side only
+      // (payment.service reads it from settings); the checkout redesign removed
+      // the last UI that displayed it. Publishing it to every anonymous visitor
+      // handed out a real phone number for targeted scams. The admin panel still
+      // reads it via /admin/settings.
+      'promptpay_enabled', 'truemoney_enabled', 'theme_name', 'website_logo_url',
       // New appearance toggles (1 = visible, 0 = hidden).
       'show_lootbox_nav', 'show_download_nav', 'show_topup_rank_widget', 'show_topup_daily_widget', 'show_live_shop_widget', 'show_popular_widget',
       'show_welcome_marquee', 'show_server_status_widget', 'show_gacha_live_widget', 'show_exclusive_gacha', 'show_popular_gacha', 'show_new_arrivals',
@@ -229,8 +235,24 @@ router.get('/online-players', async (req: Request, res: Response, next: NextFunc
   } catch (err) { next(err); }
 });
 
+/**
+ * Both leaderboards below publish a username next to how much real money that
+ * player has spent — effectively a ranked list of which accounts are worth
+ * stealing. That is a deliberate product feature, but it must honour the same
+ * visibility toggle the widget does: turning the widget off in admin used to
+ * hide the UI while this endpoint kept serving the data to anyone who asked.
+ */
+async function leaderboardHidden(key: string): Promise<boolean> {
+  const v = await settingsService.get(key);
+  return v === '0' || v === 'false';
+}
+
 router.get('/topup-ranking', async (_req: Request, res: Response, next: NextFunction) => {
   try {
+    if (await leaderboardHidden('show_topup_rank_widget')) {
+      cache(res, ACTIVITY_CACHE);
+      return void res.json({ success: true, ranking: [] });
+    }
     const [rows] = await pool.execute(`
       SELECT u.username, SUM(t.amount) as total_topup 
       FROM transactions t 
@@ -273,6 +295,10 @@ router.get('/recent-purchases', async (_req: Request, res: Response, next: NextF
 // Daily top-up leaderboard (today only, latest 5)
 router.get('/daily-topup', async (_req: Request, res: Response, next: NextFunction) => {
   try {
+    if (await leaderboardHidden('show_topup_daily_widget')) {
+      cache(res, ACTIVITY_CACHE);
+      return void res.json({ success: true, daily: [] });
+    }
     const [rows] = await pool.execute(`
       SELECT u.username, SUM(t.amount) as total_topup, MAX(t.created_at) as last_topup
       FROM transactions t

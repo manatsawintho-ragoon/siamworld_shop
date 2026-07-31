@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { authenticate } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { purchaseCooldown } from '../middleware/cooldown';
+import { blockDuringMaintenance } from '../middleware/maintenance';
 import { shopService } from '../services/shop.service';
 import { lootBoxService } from '../services/loot-box.service';
 import { buyProductSchema, openLootBoxSchema } from '../validators/schemas';
@@ -46,7 +47,7 @@ router.get('/featured', async (req: Request, res: Response, next: NextFunction) 
   } catch (err) { next(err); }
 });
 
-router.post('/buy', authenticate, purchaseCooldown(3), validate(buyProductSchema), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/buy', authenticate, blockDuringMaintenance, purchaseCooldown(3), validate(buyProductSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const app = req.app;
     const rconManager = app.get('rconManager');
@@ -85,7 +86,7 @@ router.get('/lootboxes/:id', async (req: Request, res: Response, next: NextFunct
   } catch (err) { next(err); }
 });
 
-router.post('/lootboxes/:id/open', authenticate, purchaseCooldown(2, 'lootbox'), validate(openLootBoxSchema), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/lootboxes/:id/open', authenticate, blockDuringMaintenance, purchaseCooldown(2, 'lootbox'), validate(openLootBoxSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const result = await lootBoxService.openBox(
       req.user!.userId,

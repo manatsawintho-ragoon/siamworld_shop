@@ -1,18 +1,39 @@
-import { pool } from '../database/connection';
+import { pool, Queryable } from '../database/connection';
 import {
   NotFoundError,
   InsufficientBalanceError,
   RconError,
   PlayerOfflineError,
+  AppError,
 } from '../utils/errors';
 import { RconManager } from './rcon-manager';
 import { PlayerTracker } from './player-tracker';
 import { logger } from '../utils/logger';
 import { RowDataPacket } from 'mysql2';
+
 import { v4 as uuidv4 } from 'uuid';
 import { pickWeighted } from './loot-box.pick';
 
 class LootBoxService {
+  /**
+   * Boxes opened in the current sale window.
+   *
+   * Takes the pool or an open connection so the caller decides whether this runs
+   * inside the transaction (authoritative, under the box row lock) or outside it
+   * (advisory pre-check).
+   */
+  private async soldCount(
+    db: Queryable,
+    boxId: number,
+    saleStart: string | Date | null,
+  ): Promise<number> {
+    const [rows] = await db.execute<RowDataPacket[]>(
+      'SELECT COUNT(*) AS sold FROM web_inventory WHERE loot_box_id = ? AND (? IS NULL OR won_at >= ?)',
+      [boxId, saleStart ?? null, saleStart ?? null]
+    );
+    return Number((rows[0] as any).sold);
+  }
+
   // ─── Public / Shop ──────────────────────────────────────
 
   async getLootBoxes() {
@@ -61,11 +82,37 @@ class LootBoxService {
     return pickWeighted(items as unknown as (RowDataPacket & { weight: number })[]);
   }
 
+  /** Re-read a completed open so a retry returns the ORIGINAL item, not a new roll. */
+  private async findByIdempotencyKey(idemKey: string, userId: number) {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      `SELECT wi.id, wi.loot_box_item_id, wi.item_name, wi.item_image, wi.item_rarity,
+              lbi.color, lbi.description
+         FROM web_inventory wi
+         LEFT JOIN loot_box_items lbi ON lbi.id = wi.loot_box_item_id
+        WHERE wi.idempotency_key = ? AND wi.user_id = ?`,
+      [idemKey, userId]
+    );
+    if (rows.length === 0) return null;
+    const r = rows[0];
+    return {
+      inventoryId: r.id as number,
+      wonItem: {
+        id: r.loot_box_item_id as number,
+        name: r.item_name as string,
+        image: (r.item_image ?? null) as string | null,
+        rarity: r.item_rarity as string,
+        color: (r.color ?? null) as string | null,
+        description: (r.description ?? null) as string | null,
+      },
+    };
+  }
+
   /**
    * Open a loot box:
-   * 1. Verify box + items exist
-   * 2. DB transaction with row-level lock: check balance, deduct, save won item as PENDING
-   * 3. Return won item to frontend for animation only
+   * 1. Replay the result if this idempotency key was already used
+   * 2. Verify box + items exist
+   * 3. DB transaction with row-level locks: check balance + stock, deduct, save won item as PENDING
+   * 4. Return won item to frontend for animation only
    */
   async openBox(
     userId: number,
@@ -73,6 +120,18 @@ class LootBoxService {
     idempotencyKey?: string
   ) {
     const idemKey = idempotencyKey || uuidv4();
+
+    // Idempotency: a retried open (flaky connection, double click, second tab)
+    // must return the item the user already paid for rather than charging again
+    // and rolling a new one. UNIQUE(idempotency_key) below is the authoritative
+    // guard; this pre-check just avoids doing the work when we already know.
+    {
+      const already = await this.findByIdempotencyKey(idemKey, userId);
+      if (already) {
+        logger.info('Loot box open replayed from idempotency key', { userId, boxId, idemKey });
+        return already;
+      }
+    }
 
     // Verify box exists and is active
     const [boxRows] = await pool.execute<RowDataPacket[]>(
@@ -82,25 +141,24 @@ class LootBoxService {
     if (boxRows.length === 0) throw new NotFoundError('Loot box not found');
     const box = boxRows[0];
 
-    // Check if sale period has ended
+    // Check if sale period has ended. AppError (400), not a bare Error: these are
+    // ordinary "you cannot buy this right now" answers and were being served as
+    // HTTP 500 Internal Server Error, which reads to the player as a broken shop.
     if (box.sale_end && new Date(box.sale_end) < new Date()) {
-      throw new Error('การขายสิ้นสุดแล้ว');
+      throw new AppError('การขายสิ้นสุดแล้ว', 400);
     }
 
     // Check if sale is paused
     if (box.is_paused) {
-      throw new Error('กล่องสุ่มนี้หยุดจำหน่ายชั่วคราว');
+      throw new AppError('กล่องสุ่มนี้หยุดจำหน่ายชั่วคราว', 400);
     }
 
-    // Check stock limit (count only opens since current sale_start)
+    // Cheap pre-check so a sold-out box fails fast. ADVISORY ONLY — it races, and
+    // the authoritative check runs under a row lock inside the transaction below.
     if (box.stock_limit != null) {
-      const [countRows] = await pool.execute<RowDataPacket[]>(
-        'SELECT COUNT(*) AS sold FROM web_inventory WHERE loot_box_id = ? AND (? IS NULL OR won_at >= ?)',
-        [boxId, box.sale_start ?? null, box.sale_start ?? null]
-      );
-      const sold = Number((countRows[0] as any).sold);
+      const sold = await this.soldCount(pool, boxId, box.sale_start ?? null);
       if (sold >= Number(box.stock_limit)) {
-        throw new Error('กล่องสุ่มนี้หมดแล้ว');
+        throw new AppError('กล่องสุ่มนี้หมดแล้ว', 400);
       }
     }
 
@@ -131,6 +189,18 @@ class LootBoxService {
         throw new InsufficientBalanceError('ยอดเงินไม่เพียงพอ');
       }
 
+      // Authoritative stock check. Serialising on the box row is what makes a
+      // limited box actually limited — the pre-check above reads outside any lock,
+      // so simultaneous openers all saw the same count and all passed it.
+      // Lock order is always wallet -> box, matching the purchase path.
+      if (box.stock_limit != null) {
+        await conn.execute('SELECT id FROM loot_boxes WHERE id = ? FOR UPDATE', [boxId]);
+        const sold = await this.soldCount(conn, boxId, box.sale_start ?? null);
+        if (sold >= Number(box.stock_limit)) {
+          throw new AppError('กล่องสุ่มนี้หมดแล้ว', 400);
+        }
+      }
+
       // Server-side RNG — frontend receives result only after this completes
       wonItem = this.pickItem(itemRows);
 
@@ -149,8 +219,8 @@ class LootBoxService {
       // Save won item to web_inventory (PENDING — awaiting in-game delivery)
       const [invResult] = await conn.execute(
         `INSERT INTO web_inventory
-           (user_id, loot_box_id, loot_box_item_id, item_name, item_image, item_command, item_rarity, status)
-         VALUES (?,?,?,?,?,?,?,?)`,
+           (user_id, loot_box_id, loot_box_item_id, item_name, item_image, item_command, item_rarity, status, idempotency_key)
+         VALUES (?,?,?,?,?,?,?,?,?)`,
         [
           userId,
           boxId,
@@ -160,13 +230,24 @@ class LootBoxService {
           wonItem.command,
           wonItem.rarity,
           'PENDING',
+          idemKey,
         ]
       );
       inventoryId = (invResult as any).insertId;
 
       await conn.commit();
-    } catch (err) {
+    } catch (err: any) {
       await conn.rollback();
+      // Two requests raced past the pre-check with the same key. The UNIQUE index
+      // is what actually decides; the loser returns the winner's item so the user
+      // sees one open and one charge, never two.
+      if (err?.code === 'ER_DUP_ENTRY') {
+        const winner = await this.findByIdempotencyKey(idemKey, userId);
+        if (winner) {
+          logger.info('Loot box open lost the idempotency race, returning winner', { userId, boxId, idemKey });
+          return winner;
+        }
+      }
       throw err;
     } finally {
       conn.release();

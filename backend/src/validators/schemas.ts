@@ -405,6 +405,24 @@ export const reverseTopupSchema = z.object({
   reason: z.string().min(1, 'ต้องระบุเหตุผลในการยกเลิก').max(500),
 });
 
+// Admin edit of another user. PUT /admin/users/:id previously took `role`,
+// `balance` and `password` straight from the body with no schema, so a typo
+// could write an arbitrary string into users.role — a value that matches neither
+// 'user' nor 'admin' locks that account out of both the member and admin
+// surfaces. PUT /admin/users/:id/role already validated the enum; this makes the
+// two agree.
+export const adminUpdateUserSchema = z.object({
+  email:    z.string().email('อีเมลไม่ถูกต้อง').max(255).nullable().optional(),
+  password: z.string().min(8, 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร').max(255).optional(),
+  balance:  z.number({ invalid_type_error: 'ยอดเงินต้องเป็นตัวเลข' }).min(0, 'ยอดเงินต้องไม่ติดลบ').max(99_999_999).optional(),
+  role:     z.enum(['user', 'admin'], { invalid_type_error: 'Role ไม่ถูกต้อง' }).optional(),
+});
+
+export const adminTopupUserSchema = z.object({
+  amount:      z.number({ invalid_type_error: 'จำนวนเงินต้องเป็นตัวเลข' }).positive('จำนวนเงินต้องมากกว่า 0').max(99_999_999),
+  description: z.string().max(500).optional(),
+});
+
 export const grantPointsSchema = z.object({
   userId: z.number().int().positive(),
   points: z.number().int().refine(n => n !== 0, 'จำนวนแต้มต้องไม่เป็น 0'),

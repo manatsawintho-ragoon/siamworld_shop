@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import MainLayout from '@/components/MainLayout';
 import { api, getToken } from '@/lib/api';
+import { useIdempotencyKey, isNetworkError } from '@/lib/idempotency';
 import { useAuth } from '@/context/AuthContext';
 import {
   Gift, Coins, Sparkles, Package, Lock, Loader2, Check, AlertCircle, ArrowRight, Clock,
@@ -39,6 +40,7 @@ export default function RewardShopPage() {
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [redeeming, setRedeeming] = useState<number | null>(null);
+  const idem = useIdempotencyKey();
   const [feedback, setFeedback] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
   const load = useCallback(() => {
@@ -59,15 +61,20 @@ export default function RewardShopPage() {
     setRedeeming(reward.id);
     setFeedback(null);
     try {
-      // A fresh key per click: retries of THIS click dedupe, but a deliberate
-      // second redemption of the same reward is still allowed.
-      const idempotencyKey = `${reward.id}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      // Stable across retries of THIS redemption so a dropped connection cannot
+      // spend the points twice; cleared below so a deliberate second redemption
+      // of the same reward is still a separate order. Minting the key inline here
+      // (the previous approach) meant every retry carried a new key and deduped
+      // nothing.
+      const idempotencyKey = idem.take(`reward-${reward.id}`);
       await api(`/rewards/${reward.id}/redeem`, {
         method: 'POST', token: getToken()!, body: { idempotencyKey },
       });
+      idem.clear();
       setFeedback({ type: 'ok', text: `แลก "${reward.name}" สำเร็จ ไปรับของในกระเป๋าได้เลย` });
       load();
     } catch (err: any) {
+      if (!isNetworkError(err)) idem.clear();
       setFeedback({ type: 'err', text: err?.message || 'แลกของรางวัลไม่สำเร็จ' });
     } finally {
       setRedeeming(null);

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import sharp from 'sharp';
 import { fetchShopSeo } from '@/lib/serverSeo';
+import { safeFetchImage } from '@/lib/safeFetchImage';
 
 /**
  * Serve the shop's own favicon as a PNG from our own origin.
@@ -80,11 +81,15 @@ export async function GET(request: Request) {
       // 15s rather than a snappy timeout: this runs once per source, behind the
       // cache above, and what it falls back to sticks in the visitor's tab.
       // Waiting is cheaper than being wrong.
-      const upstream = await fetch(source, { cache: 'no-store', signal: AbortSignal.timeout(15000) });
-      if (!upstream.ok) return fallback(true);
+      //
+      // safeFetchImage, not bare fetch: `source` is a shop-owner-supplied URL, so
+      // an unrestricted server-side fetch would happily retrieve internal
+      // services (backend:4000, RFC1918 hosts, the cloud metadata endpoint) from
+      // inside the network and report back whether they answered.
+      const upstream = await safeFetchImage(source, { maxBytes: MAX_SOURCE_BYTES });
+      if (!upstream.ok || !upstream.buffer) return fallback(true);
 
-      buffer = Buffer.from(await upstream.arrayBuffer());
-      if (!buffer.length || buffer.length > MAX_SOURCE_BYTES) return fallback(true);
+      buffer = upstream.buffer;
 
       // A different source means the owner edited the setting, so nothing held
       // for the previous one can be asked for again - the ?v= fingerprint in the

@@ -5,7 +5,11 @@ services:
     restart: unless-stopped
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+      # Falls back to MYSQL_PASSWORD only so existing .env files keep working.
+      # Set MYSQL_ROOT_PASSWORD to a DIFFERENT value: the app authenticates with
+      # MYSQL_PASSWORD, and sharing it means a leak of the app credential is also
+      # a leak of root.
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-${MYSQL_PASSWORD}}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER:-siamsite}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}

@@ -55,11 +55,14 @@ const io = new SocketIO(server, {
 
 // ── Rate Limiting ────────────────────────────────────────────────────────────
 
-// Safe read-only paths — exempt from ALL rate limiting.
-// These are called on every page load; blocking them = shop looks broken.
+// Safe read-only paths. These are called on every page load, so they are exempt
+// from the strict AUTH limiter and get a generous limiter of their own — but not
+// an exemption from all limiting. They are unauthenticated and hit the database,
+// so "no limit at all" made them the cheapest way to load the origin from
+// outside; the catalog reads in particular fan out across products and servers.
 // NOTE: use req.originalUrl (full path) not req.path — when middleware is
 // mounted at /api/, Express strips the prefix from req.path.
-const isSkipped = (req: import('express').Request) => {
+const isPublicRead = (req: import('express').Request) => {
   if (req.method !== 'GET') return false;
   const url = req.originalUrl.split('?')[0]; // strip query string
   return (
@@ -69,6 +72,10 @@ const isSkipped = (req: import('express').Request) => {
   );
 };
 
+// Health checks stay genuinely unlimited so monitoring never trips the limiter.
+const isSkipped = (req: import('express').Request) =>
+  req.method === 'GET' && req.originalUrl.split('?')[0] === '/api/health';
+
 // Global limiter: configurable via env (default 2000 req / 15 min per real IP).
 // Now that trust proxy is fixed, each user gets their own bucket.
 const globalLimiter = rateLimit({
@@ -76,7 +83,20 @@ const globalLimiter = rateLimit({
   max: config.rateLimit.max,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: isSkipped,
+  // Public reads are metered by publicReadLimiter instead, not left unmetered.
+  skip: (req) => isSkipped(req) || isPublicRead(req),
+  message: { success: false, error: 'Too many requests, please try again later.' },
+});
+
+// Public catalog/status reads: generous enough that a real visitor browsing hard
+// (or a shared NAT full of players) never notices, low enough that a single IP
+// cannot use these unauthenticated DB-backed endpoints to hammer the origin.
+const publicReadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 300, // per IP per minute
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => !isPublicRead(req) || isSkipped(req),
   message: { success: false, error: 'Too many requests, please try again later.' },
 });
 
@@ -137,8 +157,10 @@ app.use('/api/', (_req, res, next) => {
   next();
 });
 
-// Apply global rate limiter to all API routes
+// Apply rate limiters to all API routes. Each limiter skips what the other owns,
+// so every request is metered by exactly one of them (except /api/health).
 app.use('/api/', globalLimiter);
+app.use('/api/', publicReadLimiter);
 
 // Routes — auth & setup get strict rate limit, payment gets medium limit
 app.use('/api/auth', authLimiter, authRoutes);

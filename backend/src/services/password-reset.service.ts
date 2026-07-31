@@ -5,6 +5,7 @@ import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { logger } from '../utils/logger';
 import { emailService } from './email.service';
 import { settingsService } from './settings.service';
+import { destroySession } from './session.service';
 
 /**
  * Email-OTP password reset.
@@ -157,6 +158,19 @@ class PasswordResetService {
       );
       await conn.execute('UPDATE password_reset_tokens SET used_at = NOW() WHERE id = ?', [token.id]);
       await conn.commit();
+
+      // Kick every live session for this account. The usual reason someone resets
+      // their password is that somebody else is already inside it — leaving the
+      // attacker's JWT valid for its remaining lifetime (up to 24h, 40min idle)
+      // would defeat the entire point of the reset. Best-effort: the password is
+      // already changed, so a Redis blip must not fail the reset itself.
+      try {
+        await destroySession(user.id);
+      } catch (err) {
+        logger.warn('Password reset: failed to destroy existing session', {
+          userId: user.id, error: (err as Error).message,
+        });
+      }
 
       logger.info('Password reset succeeded', { userId: user.id, username: user.username });
     } catch (err) {

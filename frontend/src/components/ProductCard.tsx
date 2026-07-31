@@ -10,6 +10,7 @@ import {
   CheckCircle2, AlertCircle, Loader2, RotateCcw,
 } from 'lucide-react';
 import { proxyImage, onProxyError } from '@/lib/imageProxy';
+import { useIdempotencyKey, isNetworkError } from '@/lib/idempotency';
 
 interface Product {
   id: number;
@@ -66,12 +67,15 @@ export default function ProductCard({ product, servers }: { product: Product; se
 
   const totalPrice = productPrice * quantity;
 
+  const idem = useIdempotencyKey();
+
   const resetModal = () => {
     setShowBuy(false);
     setResult(null);
     setQuantity(1);
     setIsGift(false);
     setGiftUsername('');
+    idem.clear();
   };
 
   const handleBuy = async () => {
@@ -80,6 +84,11 @@ export default function ProductCard({ product, servers }: { product: Product; se
       setResult({ success: false, message: 'กรุณาใส่ชื่อเพื่อนในเกมที่จะส่งของขวัญ' });
       return;
     }
+    // Stable across retries of THIS order, new when any order field changes, so a
+    // retry after a dropped connection is collapsed server-side instead of charged twice.
+    const idempotencyKey = idem.take(
+      `${product.id}|${selectedServer}|${quantity}|${isGift ? giftUsername.trim() : ''}`
+    );
     setBuying(true);
     setResult(null);
     try {
@@ -91,11 +100,15 @@ export default function ProductCard({ product, servers }: { product: Product; se
           productId: product.id,
           serverId: selectedServer,
           quantity,
-          idempotencyKey: crypto.randomUUID(),
+          idempotencyKey,
           ...(isGift && giftUsername.trim() ? { giftToUsername: giftUsername.trim() } : {}),
         },
       });
       await refresh();
+
+      // The server answered, so the order is settled either way — the next click
+      // is a new order and must not reuse this key.
+      idem.clear();
 
       if (res?.status === 'partial') {
         // Some units couldn't be delivered; the undelivered remainder was already refunded.
@@ -115,6 +128,9 @@ export default function ProductCard({ product, servers }: { product: Product; se
         resetModal();
       }
     } catch (err: unknown) {
+      // A network drop leaves it unknown whether the order landed, so keep the key
+      // and let the retry dedup. Anything the server actually answered is settled.
+      if (!isNetworkError(err)) idem.clear();
       setResult({ success: false, message: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด' });
     } finally {
       setBuying(false);

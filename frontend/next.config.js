@@ -70,11 +70,44 @@ const nextConfig = {
     ];
   },
   images: {
-    // Shop owners paste artwork URLs from wherever they host them, so the
-    // allowlist has to stay open.
+    // Shop owners paste artwork URLs from wherever they host them, but this list
+    // may NOT go back to `hostname: '**'`.
+    //
+    // `**` over http+https made /_next/image an open, UNAUTHENTICATED proxy: any
+    // visitor could hand the shop an arbitrary URL and have the Next container
+    // fetch it from inside our network — `http://backend:4000/...`,
+    // `http://169.254.169.254/...`, any RFC1918 host — and infer from the
+    // success/error/timing difference what is listening. It also let anyone use
+    // the shop as a free image-laundering hop for someone else's bandwidth.
+    //
+    // The entries below cover every host in use across the live shops (audited
+    // against products/loot_boxes/loot_box_items/slides/settings), plus the
+    // mainstream image hosts owners reach for. https only: an owner URL is
+    // effectively always https, while the interesting internal targets are http.
+    //
+    // WHEN AN OWNER REPORTS A BROKEN IMAGE, add their host here rather than
+    // widening the pattern back to '**'.
     remotePatterns: [
-      { protocol: 'https', hostname: '**' },
-      { protocol: 'http', hostname: '**' },
+      // In use on live shops today.
+      { protocol: 'https', hostname: '**.postimg.cc' },
+      { protocol: 'https', hostname: 'postimg.cc' },
+      { protocol: 'https', hostname: '**.pic.in.th' },
+      { protocol: 'https', hostname: 'pic.in.th' },
+      { protocol: 'https', hostname: '**.canva.com' },
+      { protocol: 'https', hostname: 'minecraft-max.net' },
+      { protocol: 'https', hostname: '**.gifcen.com' },
+      { protocol: 'https', hostname: 'www.gifcen.com' },
+      // Mainstream hosts owners commonly paste.
+      { protocol: 'https', hostname: '**.imgur.com' },
+      { protocol: 'https', hostname: 'imgur.com' },
+      { protocol: 'https', hostname: 'i.ibb.co' },
+      { protocol: 'https', hostname: '**.discordapp.com' },
+      { protocol: 'https', hostname: '**.discordapp.net' },
+      { protocol: 'https', hostname: '**.githubusercontent.com' },
+      { protocol: 'https', hostname: '**.googleusercontent.com' },
+      { protocol: 'https', hostname: '**.cloudinary.com' },
+      { protocol: 'https', hostname: '**.imgbb.com' },
+      { protocol: 'https', hostname: '**.siamsite.shop' },
     ],
     // AVIF first, WebP second. Owner-uploaded slide art is routinely a
     // multi-megabyte PNG; re-encoding it accounted for ~1.1MB of the image
