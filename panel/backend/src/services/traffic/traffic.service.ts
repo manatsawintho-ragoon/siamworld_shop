@@ -100,9 +100,24 @@ class Batch {
 export interface IngestSummary {
   filesScanned: number;
   linesParsed: number;
-  linesSkipped: number;
+  /** Parsed fine, but the host belongs to no subscription. Expected and benign. */
+  linesUnmapped: number;
+  /** Did not match the log format at all. Should be ~0; see UNPARSED_ALARM_RATIO. */
+  linesUnparsed: number;
   shopsTouched: number;
 }
+
+/**
+ * Above this share of unparseable lines, something changed underneath us.
+ *
+ * These two failures look identical in a single "skipped" counter but mean
+ * opposite things: an unmapped host is routine (the panel's own vhost, a removed
+ * shop), while an unparseable line means the format moved. If an NPM upgrade
+ * altered log_format, every line would become unparseable, traffic would flatline
+ * at zero, and nothing would report an error. Measured against 382k real lines
+ * the failure rate is 0.0005%, so anything approaching a percent is a signal.
+ */
+const UNPARSED_ALARM_RATIO = 0.01;
 
 export interface OverviewShop {
   shopName: string;
@@ -151,7 +166,7 @@ class TrafficService {
    */
   async ingest(): Promise<IngestSummary> {
     const summary: IngestSummary = {
-      filesScanned: 0, linesParsed: 0, linesSkipped: 0, shopsTouched: 0,
+      filesScanned: 0, linesParsed: 0, linesUnmapped: 0, linesUnparsed: 0, shopsTouched: 0,
     };
 
     let entries: string[];
@@ -190,16 +205,15 @@ class TrafficService {
       const batch = new Batch();
       for (const line of lines) {
         const parsed = parseProxyLine(line);
+        if (!parsed) { summary.linesUnparsed++; continue; }
         // A line whose host maps to no subscription is the panel itself, the
         // fallback vhost, or a shop that has since been removed. Not an error.
-        const shop = parsed ? hosts.get(parsed.host) : undefined;
-        if (!parsed || !shop) { summary.linesSkipped++; continue; }
-        if (batch.addRequest(shop, parsed.host, line)) {
-          summary.linesParsed++;
-          touched.add(shop);
-        } else {
-          summary.linesSkipped++;
-        }
+        const shop = hosts.get(parsed.host);
+        if (!shop) { summary.linesUnmapped++; continue; }
+        // parseProxyLine already succeeded above, so addRequest cannot fail here.
+        batch.addRequest(shop, parsed.host, line);
+        summary.linesParsed++;
+        touched.add(shop);
       }
 
       await this.commit(file, result.inode, result.offset, batch);
@@ -207,6 +221,17 @@ class TrafficService {
       if (result.cappedAt) {
         logger.info(`[Traffic] ${file} hit the per-pass byte cap; continuing next run.`);
       }
+    }
+
+    // A format change underneath us shows up here and nowhere else: the counters
+    // would simply stop growing, which looks exactly like a quiet fleet.
+    const seen = summary.linesParsed + summary.linesUnmapped + summary.linesUnparsed;
+    if (seen > 0 && summary.linesUnparsed / seen > UNPARSED_ALARM_RATIO) {
+      logger.error(
+        `[Traffic] ${summary.linesUnparsed}/${seen} log lines did not parse ` +
+        '(expected ~0). The NPM access log format may have changed; ' +
+        'check /etc/nginx/conf.d/include/log-proxy.conf against utils/trafficLog.ts.',
+      );
     }
 
     summary.shopsTouched = touched.size;

@@ -93,7 +93,7 @@ export function startCronJobs(): void {
       if (s.linesParsed) {
         logger.info(
           `[Cron] Traffic: ${s.linesParsed} lines across ${s.shopsTouched} shop(s) ` +
-          `from ${s.filesScanned} log(s), ${s.linesSkipped} skipped.`,
+          `from ${s.filesScanned} log(s), ${s.linesUnmapped} unmapped, ${s.linesUnparsed} unparsed.`,
         );
       }
     }).catch(err => logger.error('[Cron] traffic_ingest failed:', err));
