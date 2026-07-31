@@ -371,6 +371,16 @@ class DeployService {
         { timeout: 120000 }
       );
     }
+    // `compose down -v` drops the containers and volumes but leaves the two images
+    // it built behind, so every discontinued customer used to leak ~350MB backend
+    // + ~290MB frontend onto the disk forever. Remove them here.
+    try {
+      await execAsync(
+        `docker image rm -f "sw-${shopName}-backend" "sw-${shopName}-frontend"`,
+        { timeout: 60000 }
+      );
+      logger.info(`[Deploy] Removed images for ${shopName}`);
+    } catch { /* non-critical: images may already be gone, or never built */ }
     // shopName is regex-validated upstream, but use fs.rm to avoid any reliance on shell quoting.
     await fsp.rm(path.join(deployDir, 'customers', shopName), { recursive: true, force: true });
     // Remove from customers.json
