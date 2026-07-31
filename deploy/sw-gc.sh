@@ -115,12 +115,20 @@ echo "--- build cache older than $BUILD_CACHE_KEEP ---"
 run docker builder prune -f --filter "until=$BUILD_CACHE_KEEP"
 
 echo
-echo "--- container logs over ${LOG_TRUNCATE_MB}M ---"
-if [[ $APPLY -eq 1 ]]; then
-  sudo find /var/lib/docker/containers -name '*-json.log' \
-    -size +"${LOG_TRUNCATE_MB}M" -exec truncate -s 0 {} \; -print 2>/dev/null | wc -l
+# Container logs are NOT touched here on purpose.
+#
+# Truncating a live json.log desyncs the docker daemon's log reader: `docker
+# logs` and the panel's log viewer then hang forever for that container until it
+# is restarted. This script once did it and broke every container on the box.
+# The cap belongs in the compose `logging:` block, which a shop picks up on its
+# next recreate. Report only.
+echo "--- container logs over ${LOG_TRUNCATE_MB}M (report only) ---"
+BIG=$(sudo find /var/lib/docker/containers -name '*-json.log' -size +"${LOG_TRUNCATE_MB}M" 2>/dev/null | wc -l)
+if [[ "$BIG" -gt 0 ]]; then
+  echo "  $BIG log(s) over ${LOG_TRUNCATE_MB}M. Do NOT truncate them:"
+  echo "  run 'manage-customer.sh --action recreate --name <shop>' to apply the cap."
 else
-  echo "  [dry-run] would truncate $(sudo find /var/lib/docker/containers -name '*-json.log' -size +"${LOG_TRUNCATE_MB}M" 2>/dev/null | wc -l) log(s)"
+  echo "  none"
 fi
 
 echo
