@@ -25,6 +25,8 @@ import { walletService } from '../services/wallet.service';
 import { npmService } from '../services/npm.service';
 import { cloudflareService } from '../services/cloudflare.service';
 import { announcementService } from '../services/announcement.service';
+import { storageService } from '../services/storage.service';
+import { archiveService } from '../services/archive.service';
 import { pool } from '../database/connection';
 import { config } from '../config/index';
 import { ValidationError } from '../utils/errors';
@@ -615,6 +617,32 @@ router.delete('/announcements/:id', asyncRoute(async (req, res) => {
   if (!id) throw new ValidationError('id ไม่ถูกต้อง');
   await announcementService.remove(id);
   res.json({ success: true });
+}));
+
+// ── Storage ────────────────────────────────────────────────────────────────
+// Disk went to 88% unnoticed because nothing reported on it. These make the
+// footprint, and specifically the orphaned images, visible before it is urgent.
+
+router.get('/storage', asyncRoute(async (req, res) => {
+  const report = await storageService.getReport(req.query.refresh === '1');
+  res.json({ success: true, data: report });
+}));
+
+router.get('/archives', asyncRoute(async (_req, res) => {
+  const rows = await archiveService.listAll();
+  res.json({ success: true, data: rows });
+}));
+
+router.get('/archives/:file/download', asyncRoute(async (req, res) => {
+  // null userId = admin scope: any archive, not just one operator's own.
+  const found = await archiveService.resolveForDownload(req.params.file, null);
+  if (!found) throw new ValidationError('ไม่พบไฟล์สำรองข้อมูล หรือหมดอายุแล้ว');
+  res.download(found.path, found.row.file_name);
+}));
+
+router.post('/archives/prune', asyncRoute(async (_req, res) => {
+  const result = await archiveService.pruneExpired();
+  res.json({ success: true, data: result });
 }));
 
 export default router;

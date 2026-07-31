@@ -7,12 +7,21 @@
 #    docker compose -f panel-compose.yml --env-file panel.env up -d --build
 # ============================================================
 
+# See docker-compose.customer.yml for why the cap lives here and not in
+# /etc/docker/daemon.json (and why logrotate is the wrong tool for it).
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
 
   panel-mysql:
     image: mysql:8.0
     container_name: panel-mysql
     restart: unless-stopped
+    logging: *default-logging
     command: >
       --performance-schema=OFF
       --innodb-buffer-pool-size=128M
@@ -42,6 +51,7 @@ services:
     image: redis:7-alpine
     container_name: panel-redis
     restart: unless-stopped
+    logging: *default-logging
     volumes:
       - panel_redis_data:/data
     networks:
@@ -54,6 +64,7 @@ services:
       network: host
     container_name: panel-backend
     restart: unless-stopped
+    logging: *default-logging
     # Generous cap — builds run in the host docker daemon (pid:host), not this
     # cgroup, so the orchestrator itself stays light. Guards against a leak.
     mem_limit: 1g
@@ -108,6 +119,7 @@ services:
         PANEL_BACKEND_INTERNAL_URL: http://panel-backend:5000
     container_name: panel-frontend
     restart: unless-stopped
+    logging: *default-logging
     mem_limit: 512m
     environment:
       PANEL_BACKEND_INTERNAL_URL: http://panel-backend:5000

@@ -99,7 +99,7 @@ class NotificationService {
 
     const [subs] = await pool.execute<RowDataPacket[]>(`
       SELECT s.id, s.shop_name, s.domain, s.expires_at, s.mc_ip, s.mysql_exposed_port,
-             s.custom_hostname_id, pu.email, pu.display_name
+             s.custom_hostname_id, s.user_id, pu.email, pu.display_name
       FROM subscriptions s JOIN panel_users pu ON pu.id = s.user_id
       WHERE s.status = 'suspended'
         AND s.expires_at < DATE_SUB(NOW(), INTERVAL ? DAY)
@@ -110,7 +110,8 @@ class NotificationService {
         const { deployService } = await import('./deploy.service');
         // Permanent teardown: containers + data volume + NPM proxy host + DNS + firewall.
         await deployService.removeShop(
-          sub.shop_name, sub.domain, sub.mc_ip || undefined, sub.mysql_exposed_port || undefined
+          sub.shop_name, sub.domain, sub.mc_ip || undefined, sub.mysql_exposed_port || undefined,
+          sub.user_id, 'expired'
         );
         // Delete the Cloudflare custom hostname so it stops consuming for-SaaS quota.
         await customDomainService.onTeardown(sub.custom_hostname_id);
