@@ -2,6 +2,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { RowDataPacket } from 'mysql2';
 import { pool } from '../database/connection';
+import { config } from '../config';
 import { logger } from '../utils/logger';
 import { archiveService } from './archive.service';
 
@@ -66,14 +67,21 @@ class StorageService {
   }
 
   private async disk() {
-    // -B1 gives bytes, so there is nothing to parse loosely.
-    const { stdout } = await execAsync("df -B1 --output=size,used,avail,pcent / | tail -1");
-    const [size, used, avail, pcent] = stdout.trim().split(/\s+/);
+    // Measure config.deployDir, NOT "/". This runs inside panel-backend, where
+    // "/" is the container's own overlay; deployDir is bind-mounted from the
+    // host, so df resolves it to the real host device.
+    //
+    // -P -k only: the image is alpine, and busybox df does not implement GNU's
+    // --output or -B1 (it prints its usage text instead, which parses to zero).
+    const { stdout } = await execAsync(`df -P -k ${JSON.stringify(config.deployDir)} | tail -1`);
+    // Filesystem 1024-blocks Used Available Capacity Mounted-on
+    const cols = stdout.trim().split(/\s+/);
+    const kb = (i: number) => (Number(cols[i]) || 0) * 1024;
     return {
-      totalBytes: Number(size) || 0,
-      usedBytes: Number(used) || 0,
-      availBytes: Number(avail) || 0,
-      usedPercent: parseInt(pcent, 10) || 0,
+      totalBytes: kb(1),
+      usedBytes: kb(2),
+      availBytes: kb(3),
+      usedPercent: parseInt(cols[4], 10) || 0,
     };
   }
 
