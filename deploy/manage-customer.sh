@@ -219,6 +219,9 @@ case "$ACTION" in
         fi
         echo "Removing $NAME..."
         docker compose --project-name "sw-$NAME" --env-file "$CUSTOMER_ENV" -f "$COMPOSE_FILE" down -v
+        # down -v leaves the built images behind; drop them too or they stay on
+        # disk forever after the customer is gone.
+        docker image rm -f "sw-$NAME-backend" "sw-$NAME-frontend" 2>/dev/null || true
         rm -rf "$CUSTOMERS_DIR/$NAME"
         jq --arg n "$NAME" '.customers = [.customers[] | select(.name != $n)]' \
             "$CUSTOMERS_JSON" > /tmp/sw_customers_tmp.json
