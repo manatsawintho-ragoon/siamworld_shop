@@ -1,6 +1,7 @@
 'use client';
 import { useEffect } from 'react';
 import MainLayout from '@/components/MainLayout';
+import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useSettings } from '@/context/SettingsContext';
@@ -13,6 +14,32 @@ function methodBonus(settings: Record<string, string>, method: 'promptpay' | 'tr
   const enabled = (settings[`topup_bonus_${method}_enabled`] ?? settings['topup_bonus_enabled']) === 'true';
   const mult = parseFloat(settings[`topup_bonus_${method}_multiplier`] ?? settings['topup_bonus_multiplier'] ?? '1') || 1;
   return enabled && mult > 1 ? mult : 1;
+}
+
+/**
+ * The chooser card, as a real link when the method is open.
+ *
+ * These used to be <button onClick={() => router.push(...)}>. router.push does
+ * no prefetching, so the click was the first time the browser asked for
+ * anything: the ~49KB RSC payload and the route's JS chunk had to arrive, in
+ * sequence, before the screen could change. <Link> prefetches the route while
+ * the card is in the viewport, so by the time it is clicked the payload is
+ * already in the router cache and the navigation is instant.
+ *
+ * A closed method stays a real disabled <button> rather than a dead <a>, so it
+ * keeps the disabled semantics screen readers expect and is not focusable as a
+ * link that goes nowhere.
+ */
+function MethodCard({ href, enabled, className, children }: {
+  href: string;
+  enabled: boolean;
+  className: string;
+  children: React.ReactNode;
+}) {
+  if (!enabled) {
+    return <button type="button" disabled className={className}>{children}</button>;
+  }
+  return <Link href={href} className={className}>{children}</Link>;
 }
 
 export default function TopupSelectPage() {
@@ -55,9 +82,9 @@ export default function TopupSelectPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
           {/* PromptPay Card */}
-          <button
-            onClick={() => ppEnabled && router.push('/topup/promptpay')}
-            disabled={!ppEnabled}
+          <MethodCard
+            href="/topup/promptpay"
+            enabled={ppEnabled}
             className={`group relative bg-surface rounded-2xl border-2 overflow-hidden flex flex-col shadow-theme-sm transition-all duration-300 text-center min-h-[240px] sm:h-[300px] ${
               ppEnabled ? 'border-primary/30 hover:border-[#003b80] hover:shadow-lg' : 'border-border grayscale opacity-70 cursor-not-allowed'
             }`}
@@ -88,12 +115,12 @@ export default function TopupSelectPage() {
             <div className={`py-3.5 text-white font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 transition-colors ${ppEnabled ? 'bg-[#003b80] group-hover:bg-[#004ba3]' : 'bg-border'}`}>
               {ppEnabled ? <>เลือกช่องทางนี้ <ChevronRight className="w-2.5 h-2.5 group-hover:translate-x-1 transition-transform" strokeWidth={2.5} /></> : 'ไม่พร้อมใช้งาน'}
             </div>
-          </button>
+          </MethodCard>
 
           {/* TrueMoney Card */}
-          <button
-            onClick={() => tmnEnabled && router.push('/topup/truemoney')}
-            disabled={!tmnEnabled}
+          <MethodCard
+            href="/topup/truemoney"
+            enabled={tmnEnabled}
             className={`group relative bg-surface rounded-2xl border-2 overflow-hidden flex flex-col shadow-theme-sm transition-all duration-300 text-center min-h-[240px] sm:h-[300px] ${
               tmnEnabled ? 'border-primary/30 hover:border-[#ed1c24] hover:shadow-lg' : 'border-border grayscale opacity-70 cursor-not-allowed'
             }`}
@@ -124,7 +151,7 @@ export default function TopupSelectPage() {
             <div className={`py-3.5 text-white font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 transition-colors ${tmnEnabled ? 'bg-[#ed1c24] group-hover:bg-[#c81118]' : 'bg-border'}`}>
               {tmnEnabled ? <>เลือกช่องทางนี้ <ChevronRight className="w-2.5 h-2.5 group-hover:translate-x-1 transition-transform" strokeWidth={2.5} /></> : 'ไม่พร้อมใช้งาน'}
             </div>
-          </button>
+          </MethodCard>
         </div>
 
         {!ppEnabled && !tmnEnabled && (
