@@ -69,7 +69,13 @@ export default function TrafficPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get(`/admin/traffic/overview?days=${days}`);
+      const res = await api.get(`/api/admin/traffic/overview?days=${days}`);
+      // Guard the response shape. Without the /api prefix this request fell
+      // through to the [shopName] page route, which answers 200 text/html, so
+      // axios resolved and `res.data.data` was undefined. That rendered the
+      // "no data yet" empty state instead of an error, and the page silently
+      // claimed the fleet had no traffic. A wrong shape is a failure, not zero.
+      if (!res.data?.data?.shops) throw new Error('รูปแบบข้อมูลจาก API ไม่ถูกต้อง');
       setData(res.data.data);
     } catch (err: any) {
       setError(err?.response?.data?.message || 'โหลดข้อมูลไม่สำเร็จ');
