@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useReducedMotion, useScrollProgress } from '@/hooks/useMotion';
+import { usePromoEligibility, resolvePromoCta } from '@/hooks/usePromoEligibility';
 import Reveal, { RevealRow } from '@/components/marketing/Reveal';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { getTier, type TierKey } from '@/lib/rarity';
@@ -59,7 +60,16 @@ const DEFAULT_PROMOS: Promo[] = [
   { kind: 'intro', months: 1,           price: 99, label: 'introMonth', regularPrice: 249 },
 ];
 
-/** The single primary action on this page. Every hero/section CTA points here. */
+/**
+ * The single primary action on this page.
+ *
+ * This used to be a module-scope constant pointing every visitor at
+ * `/order?kind=trial`. A customer who had already used their trial clicked the
+ * largest button on the site and landed on "you already used your trial", which
+ * is the single most-reported confusion on the panel. The target is now resolved
+ * per viewer via resolvePromoCta(); this constant is only the signed-out default,
+ * which is also what renders before eligibility loads.
+ */
 const PRIMARY_CTA = { href: '/order?kind=trial', label: 'ctaStartTrial' };
 
 /* ── Package tiers ───────────────────────────────────────────────────
@@ -693,6 +703,28 @@ function PackageCard({
   const isIntro = planId === 'intro';
   const featured = planId === FEATURED_PLAN;
 
+  /* A promo card whose offer this viewer cannot claim still belongs on the
+     pricing grid (it explains what the ladder looks like), but its button must
+     not pretend to be claimable. It says so plainly and sends them to the
+     packages they can actually buy, instead of to a rejection screen. */
+  const eligibility = usePromoEligibility();
+  const promoSpent =
+    eligibility.loaded &&
+    eligibility.loggedIn &&
+    ((isTrial && !eligibility.trialEligible) || (isIntro && !eligibility.introEligible));
+  const ctaHref = promoSpent
+    ? '/order'
+    : isTrial
+      ? '/order?kind=trial'
+      : isIntro
+        ? '/order?kind=intro'
+        : `/order?months=${pkg.months}`;
+  const ctaLabel = promoSpent
+    ? t(isTrial ? 'ctaTrialSpent' : 'ctaIntroSpent')
+    : isTrial
+      ? t('ctaStartTrialShort')
+      : t('orderPlan');
+
   /* The free trial is not "100% off", it is free, so it skips the discount
      block entirely and lets the ฿0 speak for itself. */
   const discount = isTrial ? null : getDiscount(pkg);
@@ -846,9 +878,7 @@ function PackageCard({
             variant={featured ? 'default' : 'outline'}
             asChild
           >
-            <Link href={isTrial ? '/order?kind=trial' : (isIntro ? '/order?kind=intro' : `/order?months=${pkg.months}`)}>
-              {isTrial ? t('ctaStartTrialShort') : t('orderPlan')}
-            </Link>
+            <Link href={ctaHref}>{ctaLabel}</Link>
           </Button>
           {!isTrial && (
             <button
@@ -933,6 +963,9 @@ function LandingContent() {
   const t = useTranslations('home');
   const locale = useLocale();
   const reduceMotion = useReducedMotion();
+  // Signed-out visitors and the pre-load frame both resolve to the trial CTA,
+  // so the server-rendered markup is unchanged and there is no layout shift.
+  const primaryCta = resolvePromoCta(usePromoEligibility());
 
   const [packages, setPackages] = useState<Package[]>(DEFAULT_PACKAGES);
   const [promos, setPromos] = useState<Promo[]>(DEFAULT_PROMOS);
@@ -1067,8 +1100,8 @@ function LandingContent() {
 
             <div className="hero-pop-2 flex flex-col sm:flex-row gap-3 mb-5">
               <Button size="lg" className="cta-sweep relative overflow-hidden h-14 px-8 text-base font-semibold rounded-full shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer" asChild>
-                <Link href={PRIMARY_CTA.href}>
-                  <Icon name="rocket" className="mr-2" /> {t(PRIMARY_CTA.label)}
+                <Link href={primaryCta.href}>
+                  <Icon name="rocket" className="mr-2" /> {t(primaryCta.labelKey)}
                 </Link>
               </Button>
               <Button variant="outline" size="lg" className="h-14 px-8 text-base font-bold rounded-full cursor-pointer" asChild>

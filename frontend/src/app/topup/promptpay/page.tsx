@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import MainLayout from '@/components/MainLayout';
+import StatusScreen, { StatusDetailRow } from '@/components/StatusScreen';
 import Link from 'next/link';
 import { api, getToken } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -444,10 +445,19 @@ export default function PromptPayTopupPage() {
                   </button>
                 )}
 
+                {/* By this point the player has already transferred real money,
+                    so a bare red line reads as "my money is gone". The reason
+                    from the backend is specific; what was missing was telling
+                    them the transfer is not lost and who can fix it. */}
                 {slipError && (
-                  <div className="bg-error/10 border border-error/25 rounded-lg px-3 py-2 flex items-start gap-2">
-                    <AlertCircle className="w-3.5 h-3.5 text-error flex-shrink-0 mt-0.5" strokeWidth={2.25} />
-                    <p className="text-[11px] font-bold text-error leading-relaxed">{slipError}</p>
+                  <div className="bg-error/10 border border-error/25 rounded-lg px-3 py-2.5 space-y-1.5">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-3.5 h-3.5 text-error flex-shrink-0 mt-0.5" strokeWidth={2.25} />
+                      <p className="text-[11px] font-bold text-error leading-relaxed">{slipError}</p>
+                    </div>
+                    <p className="text-[10px] font-bold text-foreground-subtle leading-relaxed pl-[1.375rem]">
+                      เงินที่โอนไปแล้วไม่ได้หายไปไหน อัปโหลดสลิปใหม่ให้ชัดเจนอีกครั้ง หรือแจ้งแอดมินพร้อมสลิปเพื่อเติมให้ด้วยมือ
+                    </p>
                   </div>
                 )}
 
@@ -469,31 +479,50 @@ export default function PromptPayTopupPage() {
 
         {/* ── STEP 3: Success ── */}
         {step === 'success' && (
-          <div className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-5 sm:p-8 space-y-6 text-center dialog-in">
-            <div className="relative inline-block">
-              <div className="absolute inset-0 bg-success/10 rounded-full blur-2xl animate-pulse" />
-              <div className="relative w-20 h-20 rounded-2xl bg-success flex items-center justify-center text-white shadow-xl mx-auto"><Check className="w-8 h-8" strokeWidth={2.5} /></div>
-            </div>
-            <div className="space-y-1">
-              <h2 className="text-2xl font-black text-foreground tracking-tight">ทำรายการสำเร็จ!</h2>
-              <p className="text-sm font-bold text-foreground-subtle">ยอดเงินได้รับการเติมเข้า Wallet เรียบร้อยแล้ว</p>
-            </div>
-            {successMultiplier > 1 ? (
-              <div className="bg-orange-500/10 rounded-xl p-4 border border-orange-500/20 max-w-xs w-full mx-auto space-y-2">
-                <div className="flex items-center justify-between text-[11px]"><span className="font-bold text-foreground-subtle">ยอดที่โอน</span><span className="font-black text-foreground-muted">฿{successPaid.toLocaleString()}</span></div>
-                <div className="flex items-center justify-between text-[11px]"><span className="font-bold text-orange-700 flex items-center gap-1"><Zap className="w-2.5 h-2.5" strokeWidth={2.5} />โบนัส x{successMultiplier}</span><span className="font-black text-orange-700">+฿{(successAmount - successPaid).toLocaleString()}</span></div>
-                <div className="border-t border-orange-500/20 pt-2 flex items-center justify-between"><span className="text-[10px] font-black text-foreground-subtle uppercase tracking-wider">ได้รับเข้า Wallet</span><span className="text-2xl font-black text-orange-700">฿{successAmount.toLocaleString()}</span></div>
-              </div>
-            ) : (
-              <div className="bg-surface-hover rounded-xl p-4 border border-border-muted max-w-[220px] w-full mx-auto">
-                <p className="text-[9px] font-black text-foreground-subtle uppercase tracking-widest mb-0.5">จำนวนที่เติมเงิน</p>
-                <p className="text-3xl font-black text-success">฿{successAmount.toLocaleString()}</p>
-              </div>
-            )}
-            <div className="flex flex-col gap-2.5 max-w-[260px] w-full mx-auto">
-              <Link href="/shop" className="btn-primary w-full py-3 text-white font-black text-[13px] shadow-[0_4px_0_rgb(var(--color-primary-muted))] flex items-center justify-center gap-2"><ShoppingCart className="w-3.5 h-3.5" strokeWidth={2.25} /> ไปที่หน้าร้านค้า</Link>
-              <button onClick={reset} className="text-[11px] font-black text-foreground-subtle hover:text-primary transition-colors">เติมเงินรายการใหม่</button>
-            </div>
+          <div className="bg-surface rounded-xl border-2 border-primary/30 shadow-theme-sm w-full p-5 sm:p-8 dialog-in">
+            <StatusScreen
+              compact
+              variant="success"
+              title="ทำรายการสำเร็จ!"
+              description="ยอดเงินได้รับการเติมเข้า Wallet เรียบร้อยแล้ว"
+              detail={
+                successMultiplier > 1 ? (
+                  /* Bonus top-ups keep their own breakdown: the amount transferred
+                     and the amount credited differ, and hiding that difference is
+                     what makes players think they were charged wrong. */
+                  <>
+                    <StatusDetailRow label="ยอดที่โอน" value={`฿${successPaid.toLocaleString()}`} />
+                    <StatusDetailRow
+                      label={`โบนัส x${successMultiplier}`}
+                      value={`+฿${(successAmount - successPaid).toLocaleString()}`}
+                    />
+                    <div className="border-t border-border-muted pt-2 mt-2">
+                      <StatusDetailRow
+                        label="ได้รับเข้า Wallet"
+                        value={`฿${successAmount.toLocaleString()}`}
+                        strong
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <StatusDetailRow
+                    label="จำนวนที่เติมเงิน"
+                    value={`฿${successAmount.toLocaleString()}`}
+                    strong
+                  />
+                )
+              }
+              actions={
+                <>
+                  <Link href="/shop" className="btn-primary w-full py-3 text-white font-black text-[13px] shadow-[0_4px_0_rgb(var(--color-primary-muted))] flex items-center justify-center gap-2">
+                    <ShoppingCart className="w-3.5 h-3.5" strokeWidth={2.25} /> ไปที่หน้าร้านค้า
+                  </Link>
+                  <button onClick={reset} className="text-[11px] font-black text-foreground-subtle hover:text-primary transition-colors">
+                    เติมเงินรายการใหม่
+                  </button>
+                </>
+              }
+            />
           </div>
         )}
       </div>

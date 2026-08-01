@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Icon, type IconName } from '@/components/ui/icon';
+import { StatusScreen, StatusDetailRow } from '@/components/StatusScreen';
 
 interface Package { months: number; price: number; label: string; save: number }
 interface IntroPromo { price: number; regularPrice: number }
@@ -46,7 +47,8 @@ function RenewContent() {
     if (!user) return;
     api.get('/api/subscriptions').then(r => {
       setSubs(r.data.subscriptions || []);
-      setUsedIntro(!!r.data.usedIntro);
+      // Eligibility verdict, not the raw column - see subscription.service.ts.
+      setUsedIntro(!(r.data.introEligible ?? !r.data.usedIntro));
     });
     api.get('/api/subscriptions/packages').then(r => {
       setPackages(r.data.packages || []);
@@ -116,22 +118,23 @@ function RenewContent() {
         </div>
 
         {done ? (
-          <Card className="text-center max-w-md mx-auto shadow-md border-emerald-500/30">
-            <CardContent className="p-10 flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-3xl mb-6">
-                <Icon name="check" />
-              </div>
-              <h2 className="text-2xl font-bold text-foreground mb-2">{t('renewedBang')}</h2>
-              <p className="text-sm text-muted-foreground mb-8">
-                {t('shop')} <span className="font-bold text-foreground">{renewedShop}</span> {t('renewedFor')} <span className="font-bold text-primary">{selection?.label}</span>
-              </p>
-              <Button className="w-full rounded-full cursor-pointer" asChild>
+          <StatusScreen
+            variant="success"
+            title={t('renewedBang')}
+            detail={
+              <>
+                <StatusDetailRow label={t('shop')} value={renewedShop} />
+                <StatusDetailRow label={t('renewedFor')} value={selection?.label ?? '-'} strong />
+              </>
+            }
+            actions={
+              <Button className="rounded-full cursor-pointer h-12 px-8 font-bold" asChild>
                 <Link href="/dashboard">
                   <Icon name="gauge-high" className="mr-2" /> {t('backToDashboard')}
                 </Link>
               </Button>
-            </CardContent>
-          </Card>
+            }
+          />
         ) : (
           <div className="grid lg:grid-cols-[1fr_300px] gap-6">
             {/* Left: Shop + Package selection */}

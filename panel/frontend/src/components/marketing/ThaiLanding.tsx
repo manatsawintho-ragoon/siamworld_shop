@@ -1,5 +1,6 @@
 import { Link } from '@/i18n/navigation';
 import Navbar from '@/components/Navbar';
+import PromoCtaButton from '@/components/PromoCtaButton';
 import { Button } from '@/components/ui/button';
 import { getRelated, CLUSTERS, type LandingPage } from '@/lib/seo/keywords';
 import { Icon, type IconName } from '@/components/ui/icon';
@@ -90,7 +91,7 @@ export default function ThaiLanding({ page }: { page: LandingPage }) {
           <h2 className="text-xl font-bold text-foreground mb-2">เริ่มต้นวันนี้</h2>
           <p className="text-sm text-muted-foreground mb-5">ทดลองฟรี 7 วัน หรือเดือนแรกเพียง ฿99 ติดตั้งจบใน 10 นาที ไม่ต้องผูกบัตร</p>
           <div className="flex flex-wrap gap-3 justify-center">
-            <Button asChild className="h-12 px-7 rounded-2xl font-bold"><Link href="/order?kind=trial">ทดลองฟรี 7 วัน</Link></Button>
+            <PromoCtaButton className="h-12 px-7 rounded-2xl font-bold" />
             <Button asChild variant="outline" className="h-12 px-7 rounded-2xl font-bold"><Link href="/#pricing">ดูแพ็กเกจและราคา</Link></Button>
           </div>
         </section>

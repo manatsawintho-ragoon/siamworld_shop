@@ -62,8 +62,8 @@
     "selectedPromo": "Selected offer",
     "promoOncePerAccount": "The first-month offer can be used once per account",
     "trialOncePerAccount": "The free trial can be used once per account",
-    "trialUsed": "Free trial already used",
-    "introUsed": "First-month offer already used",
+    "trialUsed": "This account already opened a free trial shop",
+    "introUsed": "This account already used the first-month offer",
     "orderPlaced": "Order placed",
     "installing": "We are setting up your shop",
     "installTime": "This takes about 5 to 10 minutes",
@@ -92,7 +92,12 @@
     "easyslipFeeNote": "Plan prices exclude the EasySlip API fee of ฿{fee} per top-up",
     "subdomainLabel": "Shop subdomain",
     "serverIpLabel": "Minecraft server IP",
-    "discountPercent": "Save {percent}%"
+    "discountPercent": "Save {percent}%",
+    "trialUsedDesc": "The free trial is one per account. If your trial shop failed to install, the trial is restored automatically. Message our team if you still cannot open a shop.",
+    "introUsedDesc": "The first-month offer is one per account. Pick a regular package to open your shop now.",
+    "orderFailed": "We could not open your shop",
+    "orderFailedDesc": "Nothing was charged to your wallet. Check the reason below and try again.",
+    "reason": "Reason"
   },
   "topup": {
     "title": "Top up your wallet",
@@ -408,7 +413,13 @@
     "featuredSavingLine": "Save {percent}%, ฿{save} off, about ฿{perMonth} per month. Affordable, fewer renewals, and already discounted.",
     "easyslipFootnoteFull": "* EasySlip charges ฿{fee} per API call, only for PromptPay slip checks, and it is taken from player top-ups. It does not affect your monthly subscription. TrueMoney Angpao is free with no fee.",
     "hours24": "24/7",
-    "threeSteps": "3 steps"
+    "threeSteps": "3 steps",
+    "ctaStartIntro": "Open your shop for THB 99",
+    "ctaStartIntroShort": "Open for THB 99",
+    "ctaOpenShop": "Choose a package",
+    "ctaOpenShopShort": "Open a shop",
+    "ctaTrialSpent": "Trial already used, see packages",
+    "ctaIntroSpent": "Offer already used, see packages"
   },
   "faq": {
     "q1": "Is the 7-day free trial real, and do I need a card?",
@@ -871,5 +882,17 @@
     "updatedLabel": "Updated:",
     "pickTicket": "Pick a ticket on the left, or open a new one",
     "you": "You"
+  },
+  "status": {
+    "notFoundTitle": "We could not find that page",
+    "notFoundDesc": "It may have moved, been renamed, or the link was mistyped.",
+    "notFoundCode": "Error 404",
+    "errorTitle": "Something went wrong",
+    "errorDesc": "This page failed to load. Our team has been notified. Please try again.",
+    "errorRef": "Reference",
+    "tryAgain": "Try again",
+    "goHome": "Back to home",
+    "goDashboard": "Go to dashboard",
+    "contactSupport": "Contact support"
   }
 }

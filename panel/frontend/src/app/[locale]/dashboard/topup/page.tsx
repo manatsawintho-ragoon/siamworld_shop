@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Icon, type IconName } from '@/components/ui/icon';
+import { StatusScreen, StatusDetailRow } from '@/components/StatusScreen';
 
 // Used until live package prices load from the backend.
 const FALLBACK_PRESETS = [100, 249, 500, 599, 1000, 1099];
@@ -184,26 +185,33 @@ export default function TopupPage() {
 
         {/* ── STEP: สำเร็จ ── */}
         {step === 'done' && (
-          <Card className="text-center max-w-md mx-auto shadow-md border-emerald-500/30">
-            <CardContent className="p-10 flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-3xl mb-6">
-                <Icon name="check" />
-              </div>
-              <h2 className="text-2xl font-bold text-foreground mb-2">{t('topupSuccessBang')}</h2>
-              <p className="text-sm text-muted-foreground mb-2">{t('newBalance')}</p>
-              <p className="text-4xl font-extrabold text-primary mb-8">
-                ฿{newBalance.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-              </p>
-              <div className="flex w-full gap-3">
-                <Button className="flex-1 rounded-full cursor-pointer" variant="outline" onClick={() => { setStep('amount'); setAmount(''); setSlip(''); setSlipPreview(''); }}>
-                  <Icon name="plus" className="mr-2" />{t('topupAgain')}</Button>
-                <Button className="flex-1 rounded-full cursor-pointer" asChild>
+          <StatusScreen
+            variant="success"
+            title={t('topupSuccessBang')}
+            detail={
+              <StatusDetailRow
+                label={t('newBalance')}
+                value={`฿${newBalance.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`}
+                strong
+              />
+            }
+            actions={
+              <>
+                <Button className="rounded-full cursor-pointer h-12 px-8 font-bold" asChild>
                   <Link href="/dashboard">
-                    <Icon name="gauge-high" className="mr-2" />{t('dashboard')}</Link>
+                    <Icon name="gauge-high" className="mr-2" />{t('dashboard')}
+                  </Link>
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
+                <Button
+                  className="rounded-full cursor-pointer h-12 px-8 font-bold"
+                  variant="outline"
+                  onClick={() => { setStep('amount'); setAmount(''); setSlip(''); setSlipPreview(''); }}
+                >
+                  <Icon name="plus" className="mr-2" />{t('topupAgain')}
+                </Button>
+              </>
+            }
+          />
         )}
 
         {/* ── STEP: สแกน QR ── */}
