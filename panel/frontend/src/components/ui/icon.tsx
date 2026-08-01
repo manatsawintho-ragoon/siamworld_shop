@@ -99,7 +99,7 @@ export const ICONS = {
   'store': Store, 'store-slash': Store, 'store-medical': Store, 'shop': Store,
   // infra / tech
   'server': Server, 'microchip': Cpu, 'terminal': Terminal, 'code-branch': GitBranch, 'plug': Plug,
-  'cloud': Cloud, 'cloud-arrow-up': CloudUpload, 'signal': Signal, 'house-signal': House,
+  'cloud': Cloud, 'cloud-arrow-up': CloudUpload, 'signal': Signal, 'house-signal': House, 'house': House,
   'gauge-high': Gauge, 'bolt': Zap, 'cube': Box, 'cubes': Boxes, 'layer-group': Layers,
   // actions / ui
   'eye': Eye, 'eye-slash': EyeOff, 'copy': Copy, 'trash': Trash2, 'pen': Pen,

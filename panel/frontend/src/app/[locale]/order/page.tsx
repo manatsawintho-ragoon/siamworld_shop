@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Icon, type IconName } from '@/components/ui/icon';
+import { StatusScreen, StatusDetailRow } from '@/components/StatusScreen';
 import { useTranslations } from 'next-intl';
 
 interface Package { months: number; price: number; label: string; save: number; kind?: 'regular' | 'trial' | 'intro' }
@@ -25,6 +26,7 @@ type OrderKind = 'regular' | 'trial' | 'intro';
 
 function OrderContent() {
   const t = useTranslations('order');
+  const tStatus = useTranslations('status');
   const { user, loading, refreshUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -62,8 +64,11 @@ function OrderContent() {
       setPackages(pkgRes.data.packages || []);
       if (pkgRes.data.promos) setPromos(pkgRes.data.promos);
       if (typeof pkgRes.data.easyslipFee === 'number') setEasyslipFee(pkgRes.data.easyslipFee);
-      setUsedTrial(!!subRes.data.usedTrial);
-      setUsedIntro(!!subRes.data.usedIntro);
+      // Eligibility verdict, not the raw used_* column. A trial whose shop never
+      // provisioned is restored server-side; branching on the column alone is
+      // what told those customers they had used a trial they never received.
+      setUsedTrial(!(subRes.data.trialEligible ?? !subRes.data.usedTrial));
+      setUsedIntro(!(subRes.data.introEligible ?? !subRes.data.usedIntro));
     }).catch(() => {}).finally(() => setEligibilityLoaded(true));
   }, [user]);
 
@@ -127,40 +132,53 @@ function OrderContent() {
     </div>
   );
 
+  /* Reaching either screen below is not an error the customer made: they clicked
+     an offer that was advertised to them. The copy explains the rule, says the
+     trial is restored automatically if their shop never installed, and every
+     button here leads to something they CAN buy. */
   if (orderKind === 'trial' && usedTrial) return (
     <div className="min-h-screen bg-background transition-colors duration-300">
       <Navbar />
-      <div className="max-w-lg mx-auto px-6 py-24 text-center">
-        <div className="w-20 h-20 rounded-[2rem] bg-secondary border-2 border-border text-muted-foreground flex items-center justify-center mx-auto text-3xl mb-6">
-          <Icon name="check" />
-        </div>
-        <h2 className="text-2xl font-semibold text-foreground mb-3 tracking-tight">{t('trialUsed')}</h2>
-        <p className="text-sm text-muted-foreground font-semibold mb-8 leading-relaxed">{t('trialOncePerAccount')}<br/>{t('canBuyRegular')}</p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          {introPromo && !usedIntro && (
-            <Button className="rounded-full px-8 h-12 font-bold" onClick={() => setOrderKind('intro')}>
-              <Icon name="tag" className="mr-2" /> {t('firstMonthPrice', { price: introPromo.price })}
+      <StatusScreen
+        variant="warning"
+        icon="circle-info"
+        title={t('trialUsed')}
+        description={t('trialUsedDesc')}
+        actions={
+          <>
+            {introPromo && !usedIntro && (
+              <Button className="rounded-full px-8 h-12 font-bold" onClick={() => setOrderKind('intro')}>
+                <Icon name="tag" className="mr-2" /> {t('firstMonthPrice', { price: introPromo.price })}
+              </Button>
+            )}
+            <Button variant="secondary" className="rounded-full px-8 h-12 font-bold border border-border" onClick={() => setOrderKind('regular')}>
+              <Icon name="box-open" className="mr-2" />{t('buyRegular')}
             </Button>
-          )}
-          <Button variant="secondary" className="rounded-full px-8 h-12 font-bold border border-border" onClick={() => setOrderKind('regular')}>
-            <Icon name="box-open" className="mr-2" />{t('buyRegular')}</Button>
-        </div>
-      </div>
+            <Button variant="ghost" asChild className="rounded-full px-8 h-12 font-bold">
+              <Link href="/dashboard/support">
+                <Icon name="headset" className="mr-2" />{tStatus('contactSupport')}
+              </Link>
+            </Button>
+          </>
+        }
+      />
     </div>
   );
 
   if (orderKind === 'intro' && usedIntro) return (
     <div className="min-h-screen bg-background transition-colors duration-300">
       <Navbar />
-      <div className="max-w-lg mx-auto px-6 py-24 text-center">
-        <div className="w-20 h-20 rounded-[2rem] bg-secondary border-2 border-border text-muted-foreground flex items-center justify-center mx-auto text-3xl mb-6">
-          <Icon name="check" />
-        </div>
-        <h2 className="text-2xl font-semibold text-foreground mb-3 tracking-tight">{t('introUsed')}</h2>
-        <p className="text-sm text-muted-foreground font-semibold mb-8 leading-relaxed">{t('promoOncePerAccount')}<br/>{t('canBuyRegular')}</p>
-        <Button variant="secondary" className="rounded-full px-8 h-12 font-bold border border-border" onClick={() => setOrderKind('regular')}>
-          <Icon name="box-open" className="mr-2" />{t('buyRegular')}</Button>
-      </div>
+      <StatusScreen
+        variant="warning"
+        icon="circle-info"
+        title={t('introUsed')}
+        description={t('introUsedDesc')}
+        actions={
+          <Button variant="secondary" className="rounded-full px-8 h-12 font-bold border border-border" onClick={() => setOrderKind('regular')}>
+            <Icon name="box-open" className="mr-2" />{t('buyRegular')}
+          </Button>
+        }
+      />
     </div>
   );
 
@@ -180,20 +198,61 @@ function OrderContent() {
           </div>
         </div>
 
+        {/* The order failed. This state was previously set and never rendered:
+            handleOrder caught the error, put the wizard back on 'form', and the
+            customer was returned to the form with no explanation at all. */}
+        {error && step !== 'done' && (
+          <div className="max-w-xl mx-auto mb-8 rounded-2xl border border-destructive/40 bg-destructive/5 p-6">
+            <StatusScreen
+              compact
+              variant="error"
+              title={t('orderFailed')}
+              description={t('orderFailedDesc')}
+              detail={<StatusDetailRow label={t('reason')} value={error} />}
+              actions={
+                <Button
+                  variant="secondary"
+                  className="rounded-full px-8 h-11 font-bold border border-border"
+                  onClick={() => setError('')}
+                >
+                  <Icon name="xmark" className="mr-2" />
+                  {t('back')}
+                </Button>
+              }
+            />
+          </div>
+        )}
+
         {step === 'done' ? (
-          <Card className="text-center max-w-lg mx-auto shadow-lg border-primary/50 bg-primary/5">
-            <CardContent className="p-10 flex flex-col items-center">
-              <div className="w-20 h-20 rounded-full bg-primary/20 text-primary flex items-center justify-center text-4xl mb-6">
-                <Icon name="rocket" className="animate-bounce" />
-              </div>
-              <h2 className="text-2xl font-bold text-foreground mb-3 tracking-tight">{t('orderPlaced')}</h2>
-              <p className="text-sm text-muted-foreground mb-8 leading-relaxed font-semibold">{t('installing')}<br/>{t('installTime')}</p>
-              <Button className="w-full rounded-full cursor-pointer h-12 text-base shadow-sm" asChild>
+          /* The shop is queued, not live yet. `pending` rather than `success` on
+             purpose: it is still deploying, and telling someone "done" while a
+             10-minute build runs is how support tickets get opened. */
+          <StatusScreen
+            variant="pending"
+            icon="rocket"
+            title={t('orderPlaced')}
+            description={
+              <>
+                {t('installing')}
+                <br />
+                {t('installTime')}
+              </>
+            }
+            detail={
+              <>
+                <StatusDetailRow label={t('shopUrl')} value={`${shopName}.siamsite.shop`} />
+                <StatusDetailRow label={t('package')} value={orderLabel} strong />
+              </>
+            }
+            actions={
+              <Button className="rounded-full cursor-pointer h-12 px-8 text-base font-bold shadow-sm" asChild>
                 <Link href="/dashboard">
-                  <Icon name="gauge-high" className="mr-2" />{t('goToDashboard')}</Link>
+                  <Icon name="gauge-high" className="mr-2" />
+                  {t('goToDashboard')}
+                </Link>
               </Button>
-            </CardContent>
-          </Card>
+            }
+          />
         ) : step === 'confirm' ? (
           <Card className="max-w-xl mx-auto shadow-md border-primary/30">
             <CardHeader>

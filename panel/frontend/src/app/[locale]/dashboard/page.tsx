@@ -84,8 +84,8 @@ function DashboardContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [page, setPage] = useState(1);
-  const [usedTrial, setUsedTrial] = useState(false);
-  const [usedIntro, setUsedIntro] = useState(false);
+  const [trialSpent, setTrialSpent] = useState(false);
+  const [introSpent, setIntroSpent] = useState(false);
   const [promos, setPromos] = useState<Promo[]>([]);
   const [domainSubId, setDomainSubId] = useState<number | null>(null);
 
@@ -94,8 +94,12 @@ function DashboardContent() {
     try {
       const { data } = await api.get('/api/subscriptions');
       setSubs(data.subscriptions || []);
-      setUsedTrial(!!data.usedTrial);
-      setUsedIntro(!!data.usedIntro);
+      // "Spent" is the eligibility verdict, not the raw used_* column: a promo
+      // whose shop never provisioned is restored server-side, and the dashboard
+      // has to offer it again. `?? !data.used*` keeps this working against an
+      // older backend during a rolling deploy.
+      setTrialSpent(!(data.trialEligible ?? !data.usedTrial));
+      setIntroSpent(!(data.introEligible ?? !data.usedIntro));
       setPromos(data.promos || []);
     } catch { } finally { setLoadingSubs(false); }
   }, []);
@@ -131,7 +135,7 @@ function DashboardContent() {
   const hasActiveShop = subs.some(s => !['cancelled', 'expired'].includes(s.status));
   const trialPromo = promos.find(p => p.kind === 'trial');
   const introPromo = promos.find(p => p.kind === 'intro');
-  const showPromoBanner = !hasActiveShop && (!usedTrial || !usedIntro) && (trialPromo || introPromo);
+  const showPromoBanner = !hasActiveShop && (!trialSpent || !introSpent) && (trialPromo || introPromo);
 
   const FILTER_TABS = [
     { value: 'all', label: t('all'), icon: 'layer-group' },
@@ -181,13 +185,13 @@ function DashboardContent() {
                 </div>
              </div>
 
-             {!hasActiveShop && !usedTrial && trialPromo ? (
+             {!hasActiveShop && !trialSpent && trialPromo ? (
                <Button size="lg" asChild className="h-14 px-8 rounded-2xl font-semibold gap-3 shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20 transition-transform active:scale-95">
                  <Link href="/order?kind=trial">
                    <Icon name="rocket" /> {t('trialDays', { days: trialPromo.days })}
                  </Link>
                </Button>
-             ) : !usedIntro && introPromo ? (
+             ) : !introSpent && introPromo ? (
                <Button size="lg" asChild className="h-14 px-8 rounded-2xl font-semibold gap-3 shadow-lg shadow-primary/20 transition-transform active:scale-95">
                  <Link href="/order?kind=intro">
                    <Icon name="tag" /> {t('firstMonthAt', { price: introPromo.price })}
@@ -209,7 +213,7 @@ function DashboardContent() {
             animate={{ opacity: 1, y: 0 }}
             className="grid grid-cols-1 sm:grid-cols-2 gap-4"
           >
-            {trialPromo && !usedTrial && (
+            {trialPromo && !trialSpent && (
               <Link href="/order?kind=trial" className="group block">
                 <div className="flex items-center gap-5 p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 hover:border-emerald-500/60 hover:bg-emerald-500/15 transition-all duration-300">
                   <div className="w-12 h-12 rounded-xl bg-emerald-500 text-white flex items-center justify-center text-xl flex-shrink-0 shadow-sm shadow-emerald-500/30">
@@ -226,7 +230,7 @@ function DashboardContent() {
                 </div>
               </Link>
             )}
-            {introPromo && !usedIntro && (
+            {introPromo && !introSpent && (
               <Link href="/order?kind=intro" className="group block">
                 <div className="flex items-center gap-5 p-5 rounded-2xl bg-primary/10 border border-primary/30 hover:border-primary/60 hover:bg-primary/15 transition-all duration-300">
                   <div className="w-12 h-12 rounded-xl bg-primary text-primary-foreground flex items-center justify-center text-xl flex-shrink-0 shadow-sm shadow-primary/30">
@@ -243,7 +247,7 @@ function DashboardContent() {
                 </div>
               </Link>
             )}
-            {usedTrial && trialPromo && (
+            {trialSpent && trialPromo && (
               <div className="flex items-center gap-5 p-5 rounded-2xl bg-secondary border border-border opacity-60">
                 <div className="w-12 h-12 rounded-xl bg-secondary border border-border text-muted-foreground flex items-center justify-center text-xl flex-shrink-0">
                   <Icon name="check" />
@@ -255,7 +259,7 @@ function DashboardContent() {
                 </div>
               </div>
             )}
-            {usedIntro && introPromo && (
+            {introSpent && introPromo && (
               <div className="flex items-center gap-5 p-5 rounded-2xl bg-secondary border border-border opacity-60">
                 <div className="w-12 h-12 rounded-xl bg-secondary border border-border text-muted-foreground flex items-center justify-center text-xl flex-shrink-0">
                   <Icon name="check" />
@@ -523,15 +527,15 @@ function DashboardContent() {
                           <div className="pt-2 space-y-2">
                             {s.step === 2 ? (
                               <>
-                                {trialPromo && !usedTrial && (
+                                {trialPromo && !trialSpent && (
                                   <Button asChild className="rounded-xl w-full h-11 font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm active:scale-95 transition-all">
                                     <Link href="/order?kind=trial">
                                       <Icon name="rocket" className="mr-2" /> {t('trialDays', { days: trialPromo.days })}
                                     </Link>
                                   </Button>
                                 )}
-                                {introPromo && !usedIntro && (
-                                  <Button variant={usedTrial || !trialPromo ? 'default' : 'secondary'} asChild className="rounded-xl w-full h-11 font-bold border border-border shadow-sm active:scale-95 transition-all">
+                                {introPromo && !introSpent && (
+                                  <Button variant={trialSpent || !trialPromo ? 'default' : 'secondary'} asChild className="rounded-xl w-full h-11 font-bold border border-border shadow-sm active:scale-95 transition-all">
                                     <Link href="/order?kind=intro">
                                       <Icon name="tag" className="mr-2" /> {t('firstMonthAt', { price: introPromo.price })}
                                     </Link>

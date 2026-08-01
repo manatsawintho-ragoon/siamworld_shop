@@ -12,7 +12,8 @@ import { settingsService } from './settings.service';
 import { npmService } from './npm.service';
 import { customDomainService } from './custom-domain.service';
 import { ValidationError, ConflictError, NotFoundError } from '../utils/errors';
-import { RowDataPacket, ResultSetHeader, PoolConnection } from 'mysql2/promise';
+import { isPromoDelivered, DEPLOY_LOG_HEAD_CHARS } from '../utils/promoEligibility';
+import { RowDataPacket, ResultSetHeader, Pool, PoolConnection } from 'mysql2/promise';
 import { config } from '../config';
 
 const execAsync = promisify(exec);
@@ -30,6 +31,14 @@ const INTERNAL_SHOP_NAMES = new Set(
 );
 
 export type SubscriptionKind = 'regular' | 'trial' | 'intro';
+
+/**
+ * Why a promo is or is not offered to this user.
+ *   available - claimable right now
+ *   consumed  - already delivered to them once
+ *   disabled  - the operator has switched the promo off entirely
+ */
+export type PromoReason = 'available' | 'consumed' | 'disabled';
 
 class SubscriptionService {
   async getPackages() {
@@ -140,8 +149,17 @@ class SubscriptionService {
       if (!u) throw new NotFoundError('ไม่พบบัญชี');
 
       if (kind === 'trial' || kind === 'intro') {
-        if (kind === 'trial' && u.used_trial) throw new ConflictError('คุณใช้สิทธิ์ทดลองฟรีไปแล้ว');
-        if (kind === 'intro' && u.used_intro) throw new ConflictError('คุณใช้สิทธิ์โปรเดือนแรกไปแล้ว');
+        // The consumed flag alone is not grounds to refuse: re-check whether the
+        // promo was ever actually delivered. Runs inside the same FOR UPDATE block
+        // as the flag read, so two concurrent orders cannot both pass this gate.
+        const flagged = kind === 'trial' ? !!u.used_trial : !!u.used_intro;
+        if (flagged && await this.hasDeliveredPromo(conn, userId, kind)) {
+          throw new ConflictError(
+            kind === 'trial'
+              ? 'บัญชีนี้เคยเปิดร้านทดลองฟรีไปแล้ว สิทธิ์ทดลองใช้ได้ 1 ครั้งต่อบัญชี เลือกแพ็กเกจปกติหรือโปรเดือนแรกเพื่อเปิดร้านต่อได้เลย'
+              : 'บัญชีนี้เคยใช้โปรเดือนแรกไปแล้ว สิทธิ์นี้ใช้ได้ 1 ครั้งต่อบัญชี เลือกแพ็กเกจปกติเพื่อเปิดร้านต่อได้เลย'
+          );
+        }
 
         // IP cap: only blocks if SAME IP claimed the same kind within the last 30 days.
         // Older claims do NOT block — protects against legit cases where one IP is shared
@@ -250,7 +268,9 @@ class SubscriptionService {
         'SELECT used_intro FROM panel_users WHERE id = ?', [userId]
       );
       if (!userRow[0]) throw new NotFoundError('ไม่พบบัญชี');
-      if (userRow[0].used_intro) throw new ConflictError('คุณใช้สิทธิ์โปรเดือนแรกไปแล้ว');
+      if (userRow[0].used_intro && await this.hasDeliveredPromo(pool, userId, 'intro')) {
+        throw new ConflictError('บัญชีนี้เคยใช้โปรเดือนแรกไปแล้ว สิทธิ์นี้ใช้ได้ 1 ครั้งต่อบัญชี เลือกแพ็กเกจปกติเพื่อต่ออายุร้านได้เลย');
+      }
 
       price = Number(settings['intro_price'] || 99);
       renewMonths = 1;
@@ -334,10 +354,49 @@ class SubscriptionService {
       'SELECT used_trial, used_intro FROM panel_users WHERE id = ?', [userId]
     );
     const u = rows[0];
+    const usedTrial = !!(u?.used_trial);
+    const usedIntro = !!(u?.used_intro);
+
+    const settings = await settingsService.getAll();
+    const trialOffered = settings['enable_trial'] !== '0';
+    const introOffered = settings['enable_intro'] !== '0';
+
+    // A consumed flag is not the last word: a trial whose shop never provisioned
+    // was never actually delivered. See hasDeliveredPromo().
+    const trialDelivered = usedTrial ? await this.hasDeliveredPromo(pool, userId, 'trial') : false;
+    const introDelivered = usedIntro ? await this.hasDeliveredPromo(pool, userId, 'intro') : false;
+
+    const trialReason: PromoReason = !trialOffered ? 'disabled' : trialDelivered ? 'consumed' : 'available';
+    const introReason: PromoReason = !introOffered ? 'disabled' : introDelivered ? 'consumed' : 'available';
+
     return {
-      usedTrial: !!(u?.used_trial),
-      usedIntro: !!(u?.used_intro),
+      // Raw columns stay exposed for accounting/back-compat.
+      usedTrial,
+      usedIntro,
+      // What the UI must branch on.
+      trialEligible: trialReason === 'available',
+      introEligible: introReason === 'available',
+      trialReason,
+      introReason,
     };
+  }
+
+  /**
+   * Did a promo the user is flagged as having consumed actually get delivered?
+   * The per-row rule (and why it is what it is) lives in utils/promoEligibility.
+   */
+  private async hasDeliveredPromo(
+    conn: Pool | PoolConnection,
+    userId: number,
+    kind: 'trial' | 'intro'
+  ): Promise<boolean> {
+    // deploy_log can be hundreds of KB, and only its first line is a verdict.
+    const [rows] = await conn.execute<RowDataPacket[]>(
+      `SELECT status, LEFT(deploy_log, ${DEPLOY_LOG_HEAD_CHARS}) AS deploy_log_head
+         FROM subscriptions WHERE user_id = ? AND kind = ?`,
+      [userId, kind]
+    );
+    return rows.some(r => isPromoDelivered(r.status, r.deploy_log_head));
   }
 
   async getMySubscriptions(userId: number) {
