@@ -32,12 +32,20 @@ export interface SaleDuration {
  * back to toISOString() — that is UTC and silently shortens every sale.
  * Mirrors the helper already used by admin/rewards and admin/news.
  */
-export function toLocalInput(value: string | Date | null | undefined): string {
-  if (!value) return '';
-  const d = value instanceof Date ? value : new Date(value);
-  if (isNaN(d.getTime())) return '';
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
-}
+/**
+ * Re-export, not a fourth implementation.
+ *
+ * This function existed independently here and in three admin pages. The copies
+ * drifted - one emitted UTC into a control that reads local wall clock - and
+ * that is what produced the sale-duration bug. The single implementation now
+ * lives in components/admin/datetime/thaiDate.ts.
+ *
+ * Still needed here: products/page.tsx and lootboxes/page.tsx call it to seed
+ * their sale-end state (`hasLiveSale(...) ? toLocalInput(...) : defaultSaleEndInput()`),
+ * independently of any input element.
+ */
+import { toLocalInput } from '@/components/admin/datetime/thaiDate';
+export { toLocalInput };
 
 /** Seven days out, formatted for a datetime-local input, in local time. */
 export function defaultSaleEndInput(): string {

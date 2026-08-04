@@ -1,7 +1,8 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState , useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { api, getToken } from '@/lib/api';
+import { DateTimeField, TimeField, addYears, checkDailyWindow } from '@/components/admin/datetime';
 import { useAdminAlert } from '@/components/AdminAlert';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -113,21 +114,11 @@ function getStatusInfo(c: Campaign): { label: string; className: string; dot: st
   return { label: 'นอกช่วงเวลา', className: 'bg-gray-100 text-gray-500 border-gray-200', dot: 'bg-gray-400' };
 }
 
-// ─── Datetime <-> datetime-local helpers ────────────────────────────────────
-// <input type="datetime-local"> has no timezone: the browser reads and writes
-// its value as LOCAL wall clock. Both helpers must therefore agree on local,
-// or the round trip silently shifts the window by the UTC offset (7h here) on
-// every edit-and-resave. fromLocalInput already parses as local, so
-// toLocalInput must emit local wall clock too - NOT toISOString(), which is UTC.
-const toLocalInput = (iso: string) => {
-  try {
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return '';
-    return new Date(d.getTime() - d.getTimezoneOffset() * 60_000)
-      .toISOString().slice(0, 16);
-  } catch { return ''; }
-};
-const fromLocalInput = (value: string) => new Date(value).toISOString();
+// The local <-> ISO pair lives in @/components/admin/datetime (thaiDate.ts).
+// It used to be copied into this file, news and rewards, plus lib/saleWindow -
+// four copies that drifted into the sale-duration bug.
+import { toLocalInput, fromLocalInput as fromLocalInputOrNull } from '@/components/admin/datetime';
+const fromLocalInput = (value: string) => fromLocalInputOrNull(value) ?? '';
 
 const fmtWindow = (iso: string) =>
   new Date(iso).toLocaleString('th-TH', { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -175,9 +166,22 @@ export default function AdminCampaigns() {
 
   useEffect(load, []);
 
-  const openCreate = () => { setForm({ ...emptyForm }); setError(''); setFieldErrors([]); };
+  // The stored window, captured at open. disablePast floors to the EARLIER of
+  // now and this, so a campaign that already started stays editable. It MUST be
+  // null when creating: create and edit share one modal and one form object, so
+  // a stale ref would let a new campaign inherit the edited one's floor.
+  const originalRef = useRef<{ startsAt: Date | null; endsAt: Date | null }>({ startsAt: null, endsAt: null });
+
+  const openCreate = () => {
+    originalRef.current = { startsAt: null, endsAt: null };
+    setForm({ ...emptyForm }); setError(''); setFieldErrors([]);
+  };
 
   const openEdit = (c: Campaign) => {
+    originalRef.current = {
+      startsAt: c.starts_at ? new Date(c.starts_at) : null,
+      endsAt: c.ends_at ? new Date(c.ends_at) : null,
+    };
     setForm({
       id: c.id,
       name: c.name,
@@ -540,13 +544,30 @@ export default function AdminCampaigns() {
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <label className="block text-[11px] font-bold text-gray-500 mb-1">เวลาเริ่ม *</label>
-                  <input type="datetime-local" value={form.startsAt} onChange={e => setForm({ ...form, startsAt: e.target.value })}
-                    className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" />
+                  <DateTimeField
+                    value={form.startsAt}
+                    onChange={v => setForm({ ...form, startsAt: v })}
+                    bounds={{
+                      disablePast: true,
+                      originalValue: originalRef.current.startsAt,
+                      pairMax: form.endsAt ? new Date(form.endsAt) : null,
+                    }}
+                    placeholder="เลือกวันเริ่ม"
+                  />
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-gray-500 mb-1">เวลาสิ้นสุด *</label>
-                  <input type="datetime-local" value={form.endsAt} onChange={e => setForm({ ...form, endsAt: e.target.value })}
-                    className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" />
+                  <DateTimeField
+                    value={form.endsAt}
+                    onChange={v => setForm({ ...form, endsAt: v })}
+                    bounds={{
+                      disablePast: true,
+                      originalValue: originalRef.current.endsAt,
+                      pairMin: form.startsAt ? new Date(form.startsAt) : null,
+                      policyMax: addYears(form.startsAt ? new Date(form.startsAt) : new Date(), 1),
+                    }}
+                    placeholder="เลือกวันสิ้นสุด"
+                  />
                 </div>
               </div>
 
@@ -564,15 +585,42 @@ export default function AdminCampaigns() {
                     <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${form.dailyStartTime !== null ? 'translate-x-4' : 'translate-x-0'}`} />
                   </button>
                 </div>
-                {form.dailyStartTime !== null && (
-                  <div className="flex gap-2 items-center">
-                    <input type="time" value={form.dailyStartTime || ''} onChange={e => setForm({ ...form, dailyStartTime: e.target.value })}
-                      className="flex-1 px-2.5 py-1.5 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" />
-                    <span className="text-gray-400 text-xs">-</span>
-                    <input type="time" value={form.dailyEndTime || ''} onChange={e => setForm({ ...form, dailyEndTime: e.target.value })}
-                      className="flex-1 px-2.5 py-1.5 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20" />
-                  </div>
-                )}
+                {form.dailyStartTime !== null && (() => {
+                  // These are Bangkok wall clock, not the browser's zone: the
+                  // backend evaluates them against a fixed offset. The window
+                  // may legitimately cross midnight (a 22:00-02:00 night bonus),
+                  // so the only invalid case is start === end.
+                  const check = checkDailyWindow(form.dailyStartTime, form.dailyEndTime);
+                  return (
+                    <>
+                      <div className="flex gap-2 items-center">
+                        <TimeField
+                          value={form.dailyStartTime}
+                          onChange={v => setForm({ ...form, dailyStartTime: v })}
+                          aria-label="เวลาเริ่มรายวัน"
+                          className="flex-1"
+                        />
+                        <span className="text-gray-400 text-xs">-</span>
+                        <TimeField
+                          value={form.dailyEndTime}
+                          onChange={v => setForm({ ...form, dailyEndTime: v })}
+                          aria-label="เวลาสิ้นสุดรายวัน"
+                          className="flex-1"
+                        />
+                      </div>
+                      <p className="text-[9.5px] text-gray-400">ใช้เวลาไทย (Asia/Bangkok)</p>
+                      {check.crossesMidnight && (
+                        <p className="text-[10px] text-blue-600 flex items-center gap-1">
+                          <i className="fas fa-moon text-[9px]"></i>
+                          ข้ามคืน: {form.dailyStartTime} ถึง {form.dailyEndTime} ของวันถัดไป
+                        </p>
+                      )}
+                      {check.error && (
+                        <p className="text-[10px] font-medium text-red-500">{check.error}</p>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Weekday restriction */}
