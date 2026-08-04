@@ -1,7 +1,8 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { api, getToken } from '@/lib/api';
+import { DateTimeField, addYears } from '@/components/admin/datetime';
 import { useAdminAlert } from '@/components/AdminAlert';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -72,17 +73,10 @@ const FIELD_LABELS: Record<string, string> = {
   visible_from: 'เริ่มแสดง', visible_until: 'หยุดแสดง',
 };
 
-// ─── Datetime <-> datetime-local helpers ────────────────────────────────────
-// datetime-local has no timezone: it reads/writes LOCAL wall clock, so both
-// helpers must agree on local or every edit-and-resave shifts the window by the
-// 7h offset. Do not "simplify" toLocalInput back to toISOString() (that is UTC).
-const toLocalInput = (iso: string | null) => {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return '';
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
-};
-const fromLocalInput = (value: string) => (value ? new Date(value).toISOString() : null);
+// The local <-> ISO pair lives in @/components/admin/datetime (thaiDate.ts).
+// It used to be copied into this file, campaigns and rewards/news, plus
+// lib/saleWindow - four copies that drifted into the sale-duration bug.
+import { toLocalInput, fromLocalInput } from '@/components/admin/datetime';
 
 const fmtWindow = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString('th-TH', { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : null;
@@ -152,9 +146,23 @@ export default function AdminRewards() {
 
   const openLog = () => { setTab('log'); if (!logLoaded) loadLog(); };
 
-  const openCreate = () => { setForm({ ...emptyForm }); setError(''); setFieldErrors([]); };
+  // Stored window captured at open; null when creating. Create and edit share
+  // one modal and one form object, so a stale ref would let a new reward
+  // inherit the edited one's floor.
+  const originalRef = useRef<{ visibleFrom: Date | null; visibleUntil: Date | null }>(
+    { visibleFrom: null, visibleUntil: null }
+  );
+
+  const openCreate = () => {
+    originalRef.current = { visibleFrom: null, visibleUntil: null };
+    setForm({ ...emptyForm }); setError(''); setFieldErrors([]);
+  };
 
   const openEdit = (r: Reward) => {
+    originalRef.current = {
+      visibleFrom: r.visible_from ? new Date(r.visible_from) : null,
+      visibleUntil: r.visible_until ? new Date(r.visible_until) : null,
+    };
     setForm({
       id: r.id,
       name: r.name,
@@ -584,14 +592,33 @@ export default function AdminRewards() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1.5">เริ่มแสดง</label>
-                  <input type="datetime-local" value={form.visibleFrom} onChange={e => setForm({ ...form, visibleFrom: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-gray-400" />
+                  <DateTimeField
+                    value={form.visibleFrom}
+                    onChange={v => setForm({ ...form, visibleFrom: v })}
+                    clearable
+                    placeholder="เว้นว่าง = แสดงทันที"
+                    bounds={{
+                      disablePast: true,
+                      originalValue: originalRef.current.visibleFrom,
+                      pairMax: form.visibleUntil ? new Date(form.visibleUntil) : null,
+                    }}
+                  />
                   <p className="text-[11px] text-gray-400 mt-1">เว้นว่าง = แสดงทันที</p>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1.5">หยุดแสดง</label>
-                  <input type="datetime-local" value={form.visibleUntil} onChange={e => setForm({ ...form, visibleUntil: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-gray-400" />
+                  <DateTimeField
+                    value={form.visibleUntil}
+                    onChange={v => setForm({ ...form, visibleUntil: v })}
+                    clearable
+                    placeholder="เว้นว่าง = ไม่มีกำหนดจบ"
+                    bounds={{
+                      disablePast: true,
+                      originalValue: originalRef.current.visibleUntil,
+                      pairMin: form.visibleFrom ? new Date(form.visibleFrom) : null,
+                      policyMax: addYears(form.visibleFrom ? new Date(form.visibleFrom) : new Date(), 1),
+                    }}
+                  />
                   <p className="text-[11px] text-gray-400 mt-1">เว้นว่าง = ไม่มีกำหนดจบ</p>
                 </div>
               </div>

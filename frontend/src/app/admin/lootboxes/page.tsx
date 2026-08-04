@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { api, getToken } from '@/lib/api';
 import { useAdminAlert } from '@/components/AdminAlert';
+import { DateTimeField, addYears } from '@/components/admin/datetime';
 import {
   toLocalInput, defaultSaleEndInput, deriveSaleDuration, toDurationMinutes, hasLiveSale,
   type SaleDuration, type SaleDurUnit,
@@ -1414,11 +1415,11 @@ function BoxModal({ box, categories, saving, error, onChange, onSave, onClose, o
                             </select>
                           </div>
                         ) : (
-                          <input type="datetime-local"
+                          <DateTimeField
                             value={endDatetime}
-                            min={toLocalInput(new Date())}
-                            onChange={e => setEndDatetime(e.target.value)}
-                            className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                            onChange={setEndDatetime}
+                            bounds={{ disablePast: true, policyMax: addYears(new Date(), 1) }}
+                            placeholder="เลือกวันสิ้นสุด"
                           />
                         )}
                         <p className="text-[9px] text-amber-600 flex items-center gap-1">

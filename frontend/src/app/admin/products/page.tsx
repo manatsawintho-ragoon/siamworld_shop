@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { api, getToken } from '@/lib/api';
 import { useAdminAlert } from '@/components/AdminAlert';
+import { DateTimeField, addYears } from '@/components/admin/datetime';
 import {
   toLocalInput, defaultSaleEndInput, deriveSaleDuration, toDurationMinutes, hasLiveSale,
   type SaleDuration, type SaleDurUnit,
@@ -922,10 +923,11 @@ export default function AdminProducts() {
                             </select>
                           </div>
                         ) : (
-                          <input type="datetime-local" value={saleEndDatetime}
-                            min={toLocalInput(new Date())}
-                            onChange={e => setSaleEndDatetime(e.target.value)}
-                            className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
+                          <DateTimeField
+                            value={saleEndDatetime}
+                            onChange={setSaleEndDatetime}
+                            bounds={{ disablePast: true, policyMax: addYears(new Date(), 1) }}
+                            placeholder="เลือกวันสิ้นสุด"
                           />
                         )}
                         <p className="text-[9px] text-gray-400 flex items-center gap-1">
@@ -1358,11 +1360,12 @@ export default function AdminProducts() {
                     </select>
                   </div>
                 ) : (
-                  <input type="datetime-local" value={saleEndDatetime}
-                    min={toLocalInput(new Date())}
-                    onChange={e => setSaleEndDatetime(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:border-[#637469] focus:ring-2 focus:ring-[#637469]/20"
-                  />
+                  <DateTimeField
+                            value={saleEndDatetime}
+                            onChange={setSaleEndDatetime}
+                            bounds={{ disablePast: true, policyMax: addYears(new Date(), 1) }}
+                            placeholder="เลือกวันสิ้นสุด"
+                          />
                 )}
                 <p className="text-[10px] text-gray-400 flex items-center gap-1">
                   <i className="fas fa-calendar-check text-[9px]"></i>

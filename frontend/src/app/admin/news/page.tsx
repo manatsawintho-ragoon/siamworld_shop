@@ -1,7 +1,8 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { api, getToken } from '@/lib/api';
+import { DateTimeField, addYears } from '@/components/admin/datetime';
 import { useAdminAlert } from '@/components/AdminAlert';
 import { NEWS_CATEGORIES, NEWS_CATEGORY_ORDER, type NewsCategory } from '@/lib/news';
 
@@ -74,14 +75,10 @@ const CATEGORY_ADMIN: Record<NewsCategory, string> = {
   general:     'bg-gray-100 text-gray-500 border-gray-200',
 };
 
-// ─── datetime-local helpers (local wall-clock, see campaigns page) ───────────
-const toLocalInput = (iso: string | null) => {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return '';
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
-};
-const fromLocalInput = (value: string) => (value ? new Date(value).toISOString() : null);
+// The local <-> ISO pair lives in @/components/admin/datetime (thaiDate.ts).
+// It used to be copied into this file, campaigns and rewards/news, plus
+// lib/saleWindow - four copies that drifted into the sale-duration bug.
+import { toLocalInput, fromLocalInput } from '@/components/admin/datetime';
 
 const fmtDate = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString('th-TH', { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : null;
@@ -136,7 +133,16 @@ export default function AdminNews() {
   };
   const openTrash = () => { setTab('trash'); if (!trashLoaded) loadTrash(); };
 
-  const openCreate = () => { setForm({ ...emptyForm, images: [{ url: '', caption: '' }], video: { url: '', caption: '' } }); setSlugTouched(false); setError(''); setFieldErrors([]); };
+  // Stored window captured at open; null when creating. Create and edit share
+  // one modal and one form object, so a stale ref would let a new article
+  // inherit the edited one's floor.
+  const originalRef = useRef<{ expiresAt: Date | null }>({ expiresAt: null });
+
+  const openCreate = () => {
+    originalRef.current = { expiresAt: null };
+    setForm({ ...emptyForm, images: [{ url: '', caption: '' }], video: { url: '', caption: '' } });
+    setSlugTouched(false); setError(''); setFieldErrors([]);
+  };
 
   const openEdit = async (n: NewsItem) => {
     try {
@@ -144,6 +150,7 @@ export default function AdminNews() {
       const full = d.news as NewsItem & { body: string | null; media: { type: string; url: string; caption: string | null }[] };
       const imgs = (full.media || []).filter(m => m.type === 'image').map(m => ({ url: m.url, caption: m.caption || '' }));
       const vid = (full.media || []).find(m => m.type === 'youtube');
+      originalRef.current = { expiresAt: full.expires_at ? new Date(full.expires_at) : null };
       setForm({
         id: full.id,
         title: full.title,
@@ -548,14 +555,29 @@ export default function AdminNews() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1.5">เวลาเผยแพร่</label>
-                  <input type="datetime-local" value={form.publishedAt} onChange={e => setForm({ ...form, publishedAt: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-gray-400" />
+                  <DateTimeField
+                    value={form.publishedAt}
+                    onChange={v => setForm({ ...form, publishedAt: v })}
+                    clearable
+                    placeholder="เว้นว่าง = ฉบับร่าง"
+                    bounds={{ pairMax: form.expiresAt ? new Date(form.expiresAt) : null }}
+                  />
                   <p className="text-[11px] text-gray-400 mt-1">เว้นว่าง = ฉบับร่าง (ยังไม่แสดง), ตั้งเวลาอนาคต = ตั้งเวลาโพสต์</p>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1.5">เวลาหมดอายุ</label>
-                  <input type="datetime-local" value={form.expiresAt} onChange={e => setForm({ ...form, expiresAt: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-gray-400" />
+                  <DateTimeField
+                    value={form.expiresAt}
+                    onChange={v => setForm({ ...form, expiresAt: v })}
+                    clearable
+                    placeholder="เว้นว่าง = ไม่มีกำหนด"
+                    bounds={{
+                      disablePast: true,
+                      originalValue: originalRef.current.expiresAt,
+                      pairMin: form.publishedAt ? new Date(form.publishedAt) : null,
+                      policyMax: addYears(form.publishedAt ? new Date(form.publishedAt) : new Date(), 1),
+                    }}
+                  />
                   <p className="text-[11px] text-gray-400 mt-1">เว้นว่าง = ไม่มีกำหนด</p>
                 </div>
               </div>
