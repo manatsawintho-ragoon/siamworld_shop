@@ -4,6 +4,7 @@ import { NotFoundError, ValidationError } from '../utils/errors';
 import { logger } from '../utils/logger';
 import { campaignService } from './campaign.service';
 import { planBurn, isRewardVisibleAt, checkRedeemable, RedeemBlock } from './reward.logic';
+import { testFlag } from './test-purchase';
 
 export interface RewardRow extends RowDataPacket {
   id: number;
@@ -112,7 +113,7 @@ class RewardService {
    * loot-box win, so there is no window where an RCON timeout costs a player
    * their points.
    */
-  async redeem(userId: number, rewardId: number, idempotencyKey?: string | null): Promise<{
+  async redeem(userId: number, rewardId: number, idempotencyKey?: string | null, redeemerRole?: string): Promise<{
     redemptionId: number;
     inventoryId: number;
     pointsSpent: number;
@@ -206,9 +207,9 @@ class RewardService {
       const [invRes] = await conn.execute<ResultSetHeader>(
         `INSERT INTO web_inventory
            (user_id, loot_box_id, loot_box_item_id, source, reward_id,
-            item_name, item_image, item_command, item_rarity, status)
-         VALUES (?, NULL, NULL, 'reward', ?, ?, ?, ?, 'common', 'PENDING')`,
-        [userId, rewardId, reward.name, reward.image, reward.command]
+            item_name, item_image, item_command, item_rarity, status, is_test)
+         VALUES (?, NULL, NULL, 'reward', ?, ?, ?, ?, 'common', 'PENDING', ?)`,
+        [userId, rewardId, reward.name, reward.image, reward.command, testFlag(redeemerRole)]
       );
       const inventoryId = invRes.insertId;
 

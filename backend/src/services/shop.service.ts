@@ -7,6 +7,7 @@ import { RowDataPacket } from 'mysql2';
 
 import { v4 as uuidv4 } from 'uuid';
 import { discountService } from './discount.service';
+import { testFlag } from './test-purchase';
 
 class ShopService {
   /**
@@ -20,6 +21,11 @@ class ShopService {
    *
    * Takes the pool or an open connection so the caller decides whether this runs
    * inside the transaction (authoritative) or outside it (advisory pre-check).
+   *
+   * `is_test = 0` excludes admin test buys: testing that a 10-piece limited drop
+   * delivers correctly must not burn one of the 10. This matches what the shop
+   * page shows - the sold counter ignores test buys too, so "sold 0 of 10" and
+   * "9 remaining" can never disagree.
    */
   private async remainingStock(
     db: Queryable,
@@ -28,10 +34,21 @@ class ShopService {
   ): Promise<number> {
     const [rows] = await db.execute<RowDataPacket[]>(
       `SELECT COALESCE(SUM(quantity),0) AS sold FROM purchases
-        WHERE product_id = ? AND status IN ('pending','delivered')`,
+        WHERE product_id = ? AND status IN ('pending','delivered') AND is_test = 0`,
       [productId]
     );
     return Math.max(0, stockLimit - Number((rows[0] as any).sold));
+  }
+
+  /**
+   * Read a purchase's test flag, for rows written alongside it (refunds).
+   * Takes the open connection so it sees the same transaction's view.
+   */
+  private async purchaseTestFlag(db: Queryable, purchaseId: number): Promise<number> {
+    const [rows] = await db.execute<RowDataPacket[]>(
+      'SELECT is_test FROM purchases WHERE id = ?', [purchaseId]
+    );
+    return rows.length ? Number((rows[0] as any).is_test) || 0 : 0;
   }
 
   /**
@@ -54,7 +71,13 @@ class ShopService {
     giftToUsername?: string,
     discountCode?: string,
     quantity: number = 1,
+    buyerRole?: string,
   ) {
+    // An admin buying is testing delivery, not making a sale. Judged by the
+    // BUYER's role even for gifts: the admin is the one testing and the money
+    // left the admin's wallet.
+    const isTest = testFlag(buyerRole);
+
     // One order can buy N units; clamp to the same 1-99 range the UI/validator enforce.
     const qty = Math.max(1, Math.min(99, Math.floor(Number(quantity) || 1)));
 
@@ -152,8 +175,8 @@ class ShopService {
 
       // Create purchase record using effective TOTAL price so refund + history match.
       const [purchaseResult] = await conn.execute(
-        'INSERT INTO purchases (user_id, product_id, server_id, quantity, price, status, idempotency_key) VALUES (?,?,?,?,?,?,?)',
-        [userId, productId, serverId, qty, effectivePrice, 'pending', idemKey]
+        'INSERT INTO purchases (user_id, product_id, server_id, quantity, price, status, idempotency_key, is_test) VALUES (?,?,?,?,?,?,?,?)',
+        [userId, productId, serverId, qty, effectivePrice, 'pending', idemKey, isTest]
       );
       purchaseId = (purchaseResult as any).insertId;
 
@@ -164,8 +187,8 @@ class ShopService {
         ? `${baseDesc} (โค้ด ${discountRow.code} -฿${discountRow.amount.toFixed(2)})`
         : baseDesc;
       await conn.execute(
-        'INSERT INTO transactions (user_id, amount, type, method, status, reference, description) VALUES (?,?,?,?,?,?,?)',
-        [userId, -effectivePrice, 'purchase', 'wallet', 'success', `purchase:${purchaseId}`, txDesc]
+        'INSERT INTO transactions (user_id, amount, type, method, status, reference, description, is_test) VALUES (?,?,?,?,?,?,?,?)',
+        [userId, -effectivePrice, 'purchase', 'wallet', 'success', `purchase:${purchaseId}`, txDesc, isTest]
       );
 
       // Consume discount inside the same tx so a rollback (insufficient stock,
@@ -261,6 +284,10 @@ class ShopService {
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
+      // Carry the purchase's test flag onto the refund. Without it a test buy's
+      // refund is a real-money row: the dashboard hides the purchase but shows
+      // an orphan "คืนเงิน" in recent transactions.
+      const isTest = await this.purchaseTestFlag(conn, purchaseId);
       await conn.execute(
         'UPDATE purchases SET status = ?, quantity = ?, price = ?, rcon_response = ? WHERE id = ?',
         ['delivered', deliveredUnits, deliveredTotal, JSON.stringify(results), purchaseId]
@@ -268,9 +295,9 @@ class ShopService {
       if (refundAmount > 0) {
         await conn.execute('UPDATE wallets SET balance = balance + ? WHERE user_id = ?', [refundAmount, userId]);
         await conn.execute(
-          'INSERT INTO transactions (user_id, amount, type, method, status, reference, description) VALUES (?,?,?,?,?,?,?)',
+          'INSERT INTO transactions (user_id, amount, type, method, status, reference, description, is_test) VALUES (?,?,?,?,?,?,?,?)',
           [userId, refundAmount, 'refund', 'system', 'success', `purchase:${purchaseId}`,
-            `คืนเงินบางส่วน ${productName} (ส่งได้ ${deliveredUnits}/${requested} ชิ้น)`]
+            `คืนเงินบางส่วน ${productName} (ส่งได้ ${deliveredUnits}/${requested} ชิ้น)`, isTest]
         );
       }
       await conn.commit();
@@ -287,11 +314,14 @@ class ShopService {
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
+      // See reconcilePartial: the refund inherits the purchase's test flag so a
+      // test buy never leaks into the ledger through its own reversal.
+      const isTest = await this.purchaseTestFlag(conn, purchaseId);
       await conn.execute('UPDATE purchases SET status = ? WHERE id = ?', ['refunded', purchaseId]);
       await conn.execute('UPDATE wallets SET balance = balance + ? WHERE user_id = ?', [amount, userId]);
       await conn.execute(
-        'INSERT INTO transactions (user_id, amount, type, method, status, description) VALUES (?,?,?,?,?,?)',
-        [userId, amount, 'refund', 'system', 'success', `คืนเงิน ${productName}: ${reason}`]
+        'INSERT INTO transactions (user_id, amount, type, method, status, description, is_test) VALUES (?,?,?,?,?,?,?)',
+        [userId, amount, 'refund', 'system', 'success', `คืนเงิน ${productName}: ${reason}`, isTest]
       );
       await conn.commit();
       logger.info('Purchase refunded', { purchaseId, userId, amount, reason });
@@ -349,7 +379,7 @@ class ShopService {
   async getProducts(serverId?: number) {
     let query = `SELECT p.*,
                    c.name as category_name, c.slug as category_slug, c.icon as category_icon,
-                   (SELECT COALESCE(SUM(pu.quantity),0) FROM purchases pu WHERE pu.product_id = p.id AND pu.status = 'delivered') AS sold_count
+                   (SELECT COALESCE(SUM(pu.quantity),0) FROM purchases pu WHERE pu.product_id = p.id AND pu.status = 'delivered' AND pu.is_test = 0) AS sold_count
                  FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.active = 1`;
     const params: (string | number)[] = [];
 
@@ -398,7 +428,7 @@ class ShopService {
   async getProduct(productId: number) {
     const [rows] = await pool.execute<RowDataPacket[]>(
       `SELECT p.*, c.name as category_name,
-         (SELECT COALESCE(SUM(pu.quantity),0) FROM purchases pu WHERE pu.product_id = p.id AND pu.status = 'delivered') AS sold_count
+         (SELECT COALESCE(SUM(pu.quantity),0) FROM purchases pu WHERE pu.product_id = p.id AND pu.status = 'delivered' AND pu.is_test = 0) AS sold_count
        FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.id = ?`,
       [productId]
     );
@@ -432,7 +462,7 @@ class ShopService {
   async getAllProducts() {
     const [rows] = await pool.execute<RowDataPacket[]>(
       `SELECT p.*, c.name as category_name,
-         (SELECT COALESCE(SUM(pu.quantity),0) FROM purchases pu WHERE pu.product_id = p.id AND pu.status = 'delivered') AS sold_count
+         (SELECT COALESCE(SUM(pu.quantity),0) FROM purchases pu WHERE pu.product_id = p.id AND pu.status = 'delivered' AND pu.is_test = 0) AS sold_count
        FROM products p LEFT JOIN categories c ON p.category_id = c.id ORDER BY p.sort_order ASC, p.id DESC`
     );
     await this.attachServers(rows);
@@ -554,16 +584,31 @@ class ShopService {
     }
   }
 
-  async getPurchases(page: number = 1, limit: number = 20) {
+  /**
+   * The admin purchase log. Unlike every analytics query, this one KEEPS test
+   * buys by default: it owns rcon_response, so it is where the owner confirms
+   * that the item they test-bought actually got delivered in-game.
+   *
+   * `scope` narrows it: 'real' hides test buys, 'test' shows only those.
+   */
+  async getPurchases(page: number = 1, limit: number = 20, scope: 'all' | 'real' | 'test' = 'all') {
     const offset = (page - 1) * limit;
+    const where = scope === 'real' ? 'WHERE p.is_test = 0'
+                : scope === 'test' ? 'WHERE p.is_test = 1'
+                : '';
     const [rows] = await pool.execute<RowDataPacket[]>(
       `SELECT p.*, u.username, COALESCE(pr.name, '(ลบแล้ว)') as product_name, s.name as server_name
        FROM purchases p JOIN users u ON p.user_id = u.id LEFT JOIN products pr ON p.product_id = pr.id
        JOIN servers s ON p.server_id = s.id
+       ${where}
        ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
       [String(limit), String(offset)]
     );
-    const [countResult] = await pool.execute<RowDataPacket[]>('SELECT COUNT(*) as total FROM purchases');
+    // Count must carry the same predicate or the pager offers pages that are
+    // empty once the filter is applied.
+    const [countResult] = await pool.execute<RowDataPacket[]>(
+      `SELECT COUNT(*) as total FROM purchases p ${where}`
+    );
     return { purchases: rows, pagination: { page, totalPages: Math.ceil(countResult[0].total / limit), total: countResult[0].total } };
   }
 

@@ -13,6 +13,7 @@ import { RowDataPacket } from 'mysql2';
 
 import { v4 as uuidv4 } from 'uuid';
 import { pickWeighted } from './loot-box.pick';
+import { testFlag } from './test-purchase';
 
 class LootBoxService {
   /**
@@ -28,7 +29,7 @@ class LootBoxService {
     saleStart: string | Date | null,
   ): Promise<number> {
     const [rows] = await db.execute<RowDataPacket[]>(
-      'SELECT COUNT(*) AS sold FROM web_inventory WHERE loot_box_id = ? AND (? IS NULL OR won_at >= ?)',
+      'SELECT COUNT(*) AS sold FROM web_inventory WHERE loot_box_id = ? AND is_test = 0 AND (? IS NULL OR won_at >= ?)',
       [boxId, saleStart ?? null, saleStart ?? null]
     );
     return Number((rows[0] as any).sold);
@@ -41,11 +42,11 @@ class LootBoxService {
       SELECT lb.*,
              COUNT(wi.id) AS total_opens,
              (SELECT COUNT(*) FROM web_inventory wi2
-              WHERE wi2.loot_box_id = lb.id
+              WHERE wi2.loot_box_id = lb.id AND wi2.is_test = 0
                 AND (lb.sale_start IS NULL OR wi2.won_at >= lb.sale_start)) AS sold_count,
              lbc.name AS category_name, lbc.color AS category_color
       FROM loot_boxes lb
-      LEFT JOIN web_inventory wi ON wi.loot_box_id = lb.id
+      LEFT JOIN web_inventory wi ON wi.loot_box_id = lb.id AND wi.is_test = 0
       LEFT JOIN loot_box_categories lbc ON lbc.id = lb.category_id
       WHERE lb.active = 1
         AND (lb.sale_end IS NULL OR lb.sale_end > DATE_SUB(NOW(), INTERVAL 5 MINUTE))
@@ -59,7 +60,7 @@ class LootBoxService {
     const [boxes] = await pool.execute<RowDataPacket[]>(
       `SELECT lb.*,
          (SELECT COUNT(*) FROM web_inventory wi
-          WHERE wi.loot_box_id = lb.id
+          WHERE wi.loot_box_id = lb.id AND wi.is_test = 0
             AND (lb.sale_start IS NULL OR wi.won_at >= lb.sale_start)) AS sold_count
        FROM loot_boxes lb WHERE lb.id = ? AND lb.active = 1
          AND (lb.sale_end IS NULL OR lb.sale_end > DATE_SUB(NOW(), INTERVAL 5 MINUTE))`,
@@ -117,8 +118,12 @@ class LootBoxService {
   async openBox(
     userId: number,
     boxId: number,
-    idempotencyKey?: string
+    idempotencyKey?: string,
+    openerRole?: string,
   ) {
+    // An admin opening a box is testing the reward + delivery, not spending.
+    // Keeps it out of sold_count, gacha revenue and the dashboard.
+    const isTest = testFlag(openerRole);
     const idemKey = idempotencyKey || uuidv4();
 
     // Idempotency: a retried open (flaky connection, double click, second tab)
@@ -212,15 +217,15 @@ class LootBoxService {
 
       // Record transaction
       await conn.execute(
-        'INSERT INTO transactions (user_id, amount, type, method, status, description) VALUES (?,?,?,?,?,?)',
-        [userId, -price, 'purchase', 'wallet', 'success', `เปิดกล่อง ${box.name}`]
+        'INSERT INTO transactions (user_id, amount, type, method, status, description, is_test) VALUES (?,?,?,?,?,?,?)',
+        [userId, -price, 'purchase', 'wallet', 'success', `เปิดกล่อง ${box.name}`, isTest]
       );
 
       // Save won item to web_inventory (PENDING — awaiting in-game delivery)
       const [invResult] = await conn.execute(
         `INSERT INTO web_inventory
-           (user_id, loot_box_id, loot_box_item_id, item_name, item_image, item_command, item_rarity, status, idempotency_key)
-         VALUES (?,?,?,?,?,?,?,?,?)`,
+           (user_id, loot_box_id, loot_box_item_id, item_name, item_image, item_command, item_rarity, status, idempotency_key, is_test)
+         VALUES (?,?,?,?,?,?,?,?,?,?)`,
         [
           userId,
           boxId,
@@ -231,6 +236,7 @@ class LootBoxService {
           wonItem.rarity,
           'PENDING',
           idemKey,
+          isTest,
         ]
       );
       inventoryId = (invResult as any).insertId;
@@ -397,7 +403,7 @@ class LootBoxService {
     const [rows] = await pool.execute<RowDataPacket[]>(`
       SELECT lb.*,
         (SELECT COUNT(*) FROM web_inventory wi
-         WHERE wi.loot_box_id = lb.id
+         WHERE wi.loot_box_id = lb.id AND wi.is_test = 0
            AND (lb.sale_start IS NULL OR wi.won_at >= lb.sale_start)) AS sold_count
       FROM loot_boxes lb
       ORDER BY lb.sort_order ASC, lb.id DESC

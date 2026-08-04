@@ -15,6 +15,9 @@ interface LogEntry {
   amount: number | null;
   ref_id: string | null;
   status_extra: string | null;
+  /** 1 = an admin test buy: charged and delivered for real, but excluded from
+   *  every sold count and dashboard number. See migration 037. */
+  is_test?: number;
   ts: string;
 }
 
@@ -23,6 +26,7 @@ type TypeFilter =
   | 'topup' | 'purchase' | 'lootbox' | 'redeem'
   | 'admin_action';
 type RoleFilter = 'all' | 'admin' | 'member';
+type ScopeFilter = 'all' | 'real' | 'test';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -126,6 +130,7 @@ export default function AdminAuditLog() {
   const [totalPages, setTotalPages]   = useState(1);
   const [typeFilter, setTypeFilter]   = useState<TypeFilter>('all');
   const [roleFilter, setRoleFilter]   = useState<RoleFilter>('all');
+  const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('all');
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch]           = useState('');
   const [page, setPage]               = useState(1);
@@ -167,13 +172,13 @@ export default function AdminAuditLog() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [searchInput]);
 
-  useEffect(() => { setPage(1); }, [typeFilter, roleFilter]);
+  useEffect(() => { setPage(1); }, [typeFilter, roleFilter, scopeFilter]);
 
   const load = useCallback((silent = false) => {
     if (!silent) setLoading(true);
     const params = new URLSearchParams({
       page: String(page), limit: String(LIMIT),
-      type: typeFilter, role: roleFilter,
+      type: typeFilter, role: roleFilter, scope: scopeFilter,
       ...(search ? { search } : {}),
     });
     api(`/admin/logs?${params}`, { token: getToken()! })
@@ -184,7 +189,7 @@ export default function AdminAuditLog() {
         setLastUpdated(new Date());
       })
       .finally(() => { if (!silent) setLoading(false); });
-  }, [page, typeFilter, roleFilter, search]);
+  }, [page, typeFilter, roleFilter, scopeFilter, search]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { loadStats(); }, [loadStats]);
@@ -231,7 +236,7 @@ export default function AdminAuditLog() {
     lastSep = sep;
   }
 
-  const hasFilters = typeFilter !== 'all' || roleFilter !== 'all' || search !== '';
+  const hasFilters = typeFilter !== 'all' || roleFilter !== 'all' || scopeFilter !== 'all' || search !== '';
 
   return (
     <div className="space-y-4 max-w-[1400px] mx-auto">
@@ -368,6 +373,22 @@ export default function AdminAuditLog() {
             <i className="fas fa-chevron-down absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-[8px] pointer-events-none" />
           </div>
 
+          {/* Test-buy scope. Defaults to ทั้งหมด: this log is the one place a
+              test purchase stays visible, so the owner can confirm delivery. */}
+          <div className="relative">
+            <i className="fas fa-flask absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-[10px] pointer-events-none" />
+            <select
+              value={scopeFilter}
+              onChange={e => setScopeFilter(e.target.value as ScopeFilter)}
+              className="pl-7 pr-6 py-1.5 text-xs font-bold rounded-xl border border-gray-200 bg-white focus:outline-none focus:border-orange-400 appearance-none cursor-pointer text-gray-700"
+            >
+              <option value="all">ทั้งหมด</option>
+              <option value="real">ขายจริง</option>
+              <option value="test">ทดสอบ</option>
+            </select>
+            <i className="fas fa-chevron-down absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-[8px] pointer-events-none" />
+          </div>
+
           {/* Search */}
           <div className="relative">
             <i className="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-300 text-[11px]" />
@@ -389,7 +410,7 @@ export default function AdminAuditLog() {
           {/* Reset */}
           {hasFilters && (
             <button
-              onClick={() => { setTypeFilter('all'); setRoleFilter('all'); setSearchInput(''); }}
+              onClick={() => { setTypeFilter('all'); setRoleFilter('all'); setScopeFilter('all'); setSearchInput(''); }}
               className="text-[11px] text-gray-400 hover:text-gray-700 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors font-bold flex-shrink-0"
             >
               <i className="fas fa-rotate-left text-[9px] mr-1" />ล้าง
@@ -415,7 +436,7 @@ export default function AdminAuditLog() {
             <i className="fas fa-scroll text-5xl" />
             <p className="text-sm text-gray-400 font-medium">ไม่พบรายการ</p>
             {hasFilters && (
-              <button onClick={() => { setTypeFilter('all'); setRoleFilter('all'); setSearchInput(''); }}
+              <button onClick={() => { setTypeFilter('all'); setRoleFilter('all'); setScopeFilter('all'); setSearchInput(''); }}
                 className="text-xs text-orange-500 hover:underline">ล้างตัวกรอง</button>
             )}
           </div>
@@ -477,6 +498,17 @@ export default function AdminAuditLog() {
                           <i className={`fas ${meta.icon} text-[7px]`} />
                           {meta.label}
                         </span>
+                        {/* Test buy: charged and delivered, but kept out of every
+                            sold count and dashboard number. */}
+                        {log.is_test ? (
+                          <span
+                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold border border-amber-200 bg-amber-50 text-amber-700"
+                            title="รายการทดสอบของแอดมิน: ไม่นับในยอดขาย สถิติ และจำนวนที่ขายได้"
+                          >
+                            <i className="fas fa-flask text-[7px]" />
+                            ทดสอบ
+                          </span>
+                        ) : null}
                         {/* Purchase status */}
                         {pStatus && (
                           <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-bold border ${pStatus.cls}`}>
