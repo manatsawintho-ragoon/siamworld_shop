@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState, ReactNode } from 'react';
+import { useEffect, useRef, useState, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 const MOBILE_MAX = 640;
@@ -49,7 +49,11 @@ export function PickerSurface({ anchor, open, onClose, children, labelledBy }: P
   // Position against the trigger, and keep it there. The scroll listener is on
   // the CAPTURE phase so it also fires for the modal body scrolling, which does
   // not bubble to window.
-  useLayoutEffect(() => {
+  //
+  // useEffect, not useLayoutEffect: these render on the server first and
+  // useLayoutEffect warns there. `pos` starts null and the surface is parked at
+  // top:-9999, so there is no visible flash before the first placement.
+  useEffect(() => {
     if (!open || isMobile || !anchor) return;
 
     const place = () => {

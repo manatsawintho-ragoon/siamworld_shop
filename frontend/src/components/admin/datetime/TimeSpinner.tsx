@@ -12,6 +12,31 @@ interface Props {
 const pad = (n: number) => String(n).padStart(2, '0');
 
 /**
+ * Module scope on purpose.
+ *
+ * Declared inside TimeSpinner it would be a new component type on every render,
+ * so React would unmount and remount the input after each keystroke and the
+ * field would lose focus - one digit per click.
+ */
+function NumField({ value, onType, label }: { value: number; onType: (v: number) => void; label: string }) {
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      aria-label={label}
+      value={pad(value)}
+      onChange={e => {
+        const digits = e.target.value.replace(/\D/g, '').slice(0, 2);
+        if (digits === '') return;
+        onType(Number(digits));
+      }}
+      onFocus={e => e.currentTarget.select()}
+      className="w-11 rounded-lg border border-gray-200 bg-white py-1 text-center text-[15px] font-bold tabular-nums text-gray-800 focus:border-[#637469] focus:outline-none focus:ring-2 focus:ring-[#637469]/20"
+    />
+  );
+}
+
+/**
  * HH:MM stepper.
  *
  * Arrows step 5 minutes (friendly for a daily bonus window) but the fields
@@ -33,30 +58,14 @@ export function TimeSpinner({ hour, minute, onChange, allowed, minuteStep = 5 }:
   const current = hour * 60 + minute;
   const step = (delta: number) => commit(current + delta);
 
-  const Field = ({ value, onType, label }: { value: number; onType: (v: number) => void; label: string }) => (
-    <input
-      type="text"
-      inputMode="numeric"
-      aria-label={label}
-      value={pad(value)}
-      onChange={e => {
-        const digits = e.target.value.replace(/\D/g, '').slice(0, 2);
-        if (digits === '') return;
-        onType(Number(digits));
-      }}
-      onFocus={e => e.currentTarget.select()}
-      className="w-11 rounded-lg border border-gray-200 bg-white py-1 text-center text-[15px] font-bold tabular-nums text-gray-800 focus:border-[#637469] focus:outline-none focus:ring-2 focus:ring-[#637469]/20"
-    />
-  );
-
   return (
     <div className="flex items-center justify-center gap-2 border-t border-gray-100 px-3 py-2.5">
       <span className="text-[11px] font-medium text-gray-500">เวลา</span>
 
       <div className="flex items-center gap-1">
-        <Field value={hour} label="ชั่วโมง" onType={h => commit(Math.min(23, h) * 60 + minute)} />
+        <NumField value={hour} label="ชั่วโมง" onType={h => commit(Math.min(23, h) * 60 + minute)} />
         <span className="text-[15px] font-bold text-gray-400">:</span>
-        <Field value={minute} label="นาที" onType={m => commit(hour * 60 + Math.min(59, m))} />
+        <NumField value={minute} label="นาที" onType={m => commit(hour * 60 + Math.min(59, m))} />
       </div>
 
       <div className="flex flex-col gap-0.5">
