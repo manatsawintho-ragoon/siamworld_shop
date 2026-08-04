@@ -247,6 +247,17 @@ its `pairMax`, the end field takes the start as its `pairMin`. A `-` means the
 bound is absent, not zero. `originalValue` is supplied on all rows where
 `disablePast` is yes, and is null whenever the modal was opened via create.
 
+**Pair bounds are EXCLUSIVE; policy bounds and `disablePast` are inclusive.**
+All three backend refines use strict `>` - `endsAt > startsAt`
+(`schemas.ts:358`), `expires_at > published_at` (`:279`),
+`visible_until > visible_from` (`:388`). An inclusive pair bound would let start
+equal end through the picker and fail on save, and a zero-length window is
+exactly what an owner produces by giving both fields the same preset.
+
+The three pairs above are the complete set, and they match the backend
+one-for-one: the picker prevents the round trip, the refine remains the
+authority.
+
 **The daily window may cross midnight, and the picker must not forbid it.**
 `campaign.logic.ts:66-70` handles `start > end` on purpose:
 
@@ -387,6 +398,8 @@ chart's `scale.ts`:
   not silently invert); cross-field pairs from both directions; clamping; an
   empty companion field falling back to `now` rather than `new Date('')`;
   a stored value beyond `max` (the multi-year sale case) staying reachable.
+- Pair-bound strictness: start equal to end is rejected; one minute apart is
+  accepted.
 - Reachability extends `policyMax` but never `pairMax`: the scheduled-campaign
   case above must NOT allow start after end.
 - `min` and `disablePast` together: a field with both floors at the LATER of
