@@ -128,19 +128,33 @@ export interface FieldBounds {
 export function resolveBounds(b: FieldBounds, now: Date): { min: Date | null; max: Date | null };
 ```
 
-Past-blocking resolves as:
+Resolution, in full. `min` and `disablePast` are independent and BOTH apply -
+several fields carry both at once, so neither may be dropped:
 
 ```
-effectiveMin = disablePast
-  ? earliest(now, originalValue ?? now)
-  : min
+// floor: the explicit min, and the past-block, are combined - not alternatives
+pastFloor    = disablePast ? earliest(now, originalValue ?? now) : null
+effectiveMin = latest(min, pastFloor)            // ignores nulls
+
+// ceiling: a stored value is always reachable
+effectiveMax = originalValue ? latest(max, originalValue) : max
 ```
 
-So a campaign that started on 1 ส.ค. reopens with 1 ส.ค. still selectable and
-saveable, while 25 ก.ค. is greyed out. Editing a live record never traps the
-owner, and no new backdating gets through.
+`latest`/`earliest` skip null operands and return null only when every operand
+is null.
 
-When both `min` and `disablePast` are present the later of the two wins.
+Worked cases:
+
+- Campaign started 1 ส.ค., editing today (5 ส.ค.). `pastFloor` =
+  `earliest(5 ส.ค., 1 ส.ค.)` = 1 ส.ค. So 1 ส.ค. stays selectable and saveable
+  while 25 ก.ค. is greyed out. Editing a live record never traps the owner, and
+  no new backdating gets through.
+- `campaigns.endsAt` carries `disablePast: yes` AND `min = startsAt`. For a
+  campaign starting next month, `effectiveMin` = `latest(startsAt, now)` =
+  `startsAt`. Taking only the past-block here would floor it at `now` and let
+  the owner end the campaign before it starts - which is precisely what the
+  cross-field bound exists to prevent. This is why the two are combined rather
+  than branched.
 
 **`originalValue` MUST be the value stored on the record, captured once when the
 modal opens - never the live form state.** Every one of these pages holds a
@@ -346,6 +360,8 @@ chart's `scale.ts`:
   not silently invert); cross-field pairs from both directions; clamping; an
   empty companion field falling back to `now` rather than `new Date('')`;
   a stored value beyond `max` (the multi-year sale case) staying reachable.
+- `min` and `disablePast` together: a field with both floors at the LATER of
+  the two, never at `now` alone (the `campaigns.endsAt` case).
 - Boundary-day clamping: with `min` at 14:00 today, 09:00 today is rejected and
   14:00 today is accepted; the mirror case at `max`.
 - `originalValue` cleared on create: an edit followed by a create does not
