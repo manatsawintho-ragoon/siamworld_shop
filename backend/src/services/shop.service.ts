@@ -41,6 +41,17 @@ class ShopService {
   }
 
   /**
+   * Read a purchase's test flag, for rows written alongside it (refunds).
+   * Takes the open connection so it sees the same transaction's view.
+   */
+  private async purchaseTestFlag(db: Queryable, purchaseId: number): Promise<number> {
+    const [rows] = await db.execute<RowDataPacket[]>(
+      'SELECT is_test FROM purchases WHERE id = ?', [purchaseId]
+    );
+    return rows.length ? Number((rows[0] as any).is_test) || 0 : 0;
+  }
+
+  /**
    * Purchase flow:
    * 1. Check idempotency key
    * 2. Check player is online (from Redis)
@@ -273,6 +284,10 @@ class ShopService {
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
+      // Carry the purchase's test flag onto the refund. Without it a test buy's
+      // refund is a real-money row: the dashboard hides the purchase but shows
+      // an orphan "คืนเงิน" in recent transactions.
+      const isTest = await this.purchaseTestFlag(conn, purchaseId);
       await conn.execute(
         'UPDATE purchases SET status = ?, quantity = ?, price = ?, rcon_response = ? WHERE id = ?',
         ['delivered', deliveredUnits, deliveredTotal, JSON.stringify(results), purchaseId]
@@ -280,9 +295,9 @@ class ShopService {
       if (refundAmount > 0) {
         await conn.execute('UPDATE wallets SET balance = balance + ? WHERE user_id = ?', [refundAmount, userId]);
         await conn.execute(
-          'INSERT INTO transactions (user_id, amount, type, method, status, reference, description) VALUES (?,?,?,?,?,?,?)',
+          'INSERT INTO transactions (user_id, amount, type, method, status, reference, description, is_test) VALUES (?,?,?,?,?,?,?,?)',
           [userId, refundAmount, 'refund', 'system', 'success', `purchase:${purchaseId}`,
-            `คืนเงินบางส่วน ${productName} (ส่งได้ ${deliveredUnits}/${requested} ชิ้น)`]
+            `คืนเงินบางส่วน ${productName} (ส่งได้ ${deliveredUnits}/${requested} ชิ้น)`, isTest]
         );
       }
       await conn.commit();
@@ -299,11 +314,14 @@ class ShopService {
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
+      // See reconcilePartial: the refund inherits the purchase's test flag so a
+      // test buy never leaks into the ledger through its own reversal.
+      const isTest = await this.purchaseTestFlag(conn, purchaseId);
       await conn.execute('UPDATE purchases SET status = ? WHERE id = ?', ['refunded', purchaseId]);
       await conn.execute('UPDATE wallets SET balance = balance + ? WHERE user_id = ?', [amount, userId]);
       await conn.execute(
-        'INSERT INTO transactions (user_id, amount, type, method, status, description) VALUES (?,?,?,?,?,?)',
-        [userId, amount, 'refund', 'system', 'success', `คืนเงิน ${productName}: ${reason}`]
+        'INSERT INTO transactions (user_id, amount, type, method, status, description, is_test) VALUES (?,?,?,?,?,?,?)',
+        [userId, amount, 'refund', 'system', 'success', `คืนเงิน ${productName}: ${reason}`, isTest]
       );
       await conn.commit();
       logger.info('Purchase refunded', { purchaseId, userId, amount, reason });
