@@ -225,18 +225,27 @@ companion field is still empty its bound is simply absent rather than
 
 ## E. Per-field policy
 
-| Page | Field | disablePast | max |
-|---|---|---|---|
-| campaigns | `startsAt` | yes (original kept) | `endsAt` |
-| campaigns | `endsAt` | yes | (`startsAt` or now) + 1 year |
-| campaigns | `dailyStartTime` | n/a | n/a - see below |
-| campaigns | `dailyEndTime` | n/a | n/a - see below |
-| products | sale end | yes | now + 1 year |
-| lootboxes | sale end | yes | now + 1 year |
-| rewards | `visibleFrom` | yes (original kept) | `visibleUntil` |
-| rewards | `visibleUntil` | yes | `visibleFrom` + 1 year |
-| news | `publishedAt` | **no** | none |
-| news | `expiresAt` | yes | (`publishedAt` or now) + 1 year |
+Columns use the exact `FieldBounds` vocabulary from §D. `pairMin` / `pairMax`
+come from the companion field and are never loosened; `policyMax` is this
+design's cap and may be extended to keep a stored value reachable.
+
+| Page | Field | disablePast | pairMin | pairMax | policyMax |
+|---|---|---|---|---|---|
+| campaigns | `startsAt` | yes | - | `endsAt` | - |
+| campaigns | `endsAt` | yes | `startsAt` | - | (`startsAt` or now) + 1 year |
+| campaigns | `dailyStartTime` | n/a | n/a | n/a | n/a - see below |
+| campaigns | `dailyEndTime` | n/a | n/a | n/a | n/a - see below |
+| products | sale end | yes | - | - | now + 1 year |
+| lootboxes | sale end | yes | - | - | now + 1 year |
+| rewards | `visibleFrom` | yes | - | `visibleUntil` | - |
+| rewards | `visibleUntil` | yes | `visibleFrom` | - | `visibleFrom` + 1 year |
+| news | `publishedAt` | **no** | - | `expiresAt` | - |
+| news | `expiresAt` | yes | `publishedAt` | - | (`publishedAt` or now) + 1 year |
+
+Every window pair is guarded from both ends: the start field takes the end as
+its `pairMax`, the end field takes the start as its `pairMin`. A `-` means the
+bound is absent, not zero. `originalValue` is supplied on all rows where
+`disablePast` is yes, and is null whenever the modal was opened via create.
 
 **The daily window may cross midnight, and the picker must not forbid it.**
 `campaign.logic.ts:66-70` handles `start > end` on purpose:
