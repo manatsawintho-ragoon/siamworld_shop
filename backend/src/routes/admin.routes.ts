@@ -3,7 +3,7 @@ import { authenticate, authorize } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { pool } from '../database/connection';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
-import { adminStatsService } from '../services/admin-stats.service';
+import { adminStatsService, isSeriesRange, SERIES_RANGES } from '../services/admin-stats.service';
 import { shopService } from '../services/shop.service';
 import { lootBoxService } from '../services/loot-box.service';
 import { userService, UserListFilters } from '../services/user.service';
@@ -44,6 +44,22 @@ router.get('/stats', async (_req: Request, res: Response, next: NextFunction) =>
   try {
     const stats = await adminStatsService.getDashboardStats();
     res.json({ success: true, stats });
+  } catch (err) { next(err); }
+});
+
+/**
+ * Timeline series for the dashboard chart. Split out of /stats so the range
+ * presets can grow without growing the dashboard's first-paint payload.
+ */
+router.get('/stats/series', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const range = req.query.range ?? '30d';
+    if (!isSeriesRange(range)) {
+      res.status(400).json({ success: false, message: `range ต้องเป็น ${SERIES_RANGES.join(' / ')}` });
+      return;
+    }
+    const series = await adminStatsService.getSeries(range);
+    res.json({ success: true, series });
   } catch (err) { next(err); }
 });
 
@@ -111,7 +127,7 @@ router.get('/logs', async (req: Request, res: Response, next: NextFunction) => {
       parts.push({
         sql: `SELECT u.id as user_id, u.username, u.role,
               'register' as action_type, 'สมัครสมาชิก' as description,
-              NULL as amount, NULL as ref_id, NULL as status_extra, u.created_at as ts
+              NULL as amount, NULL as ref_id, NULL as status_extra, 0 as is_test, u.created_at as ts
               FROM users u WHERE 1=1 ${roleWhere} ${searchWhere}`,
         params: [...sp],
       });
@@ -120,7 +136,7 @@ router.get('/logs', async (req: Request, res: Response, next: NextFunction) => {
       parts.push({
         sql: `SELECT t.user_id, u.username, u.role,
               'topup' as action_type, COALESCE(t.description, 'เติมเงิน') as description,
-              t.amount as amount, t.reference as ref_id, NULL as status_extra, t.created_at as ts
+              t.amount as amount, t.reference as ref_id, NULL as status_extra, 0 as is_test, t.created_at as ts
               FROM transactions t JOIN users u ON t.user_id = u.id
               WHERE t.type = 'topup' AND t.status = 'success' ${roleWhere} ${searchWhere}`,
         params: [...sp],
@@ -130,7 +146,7 @@ router.get('/logs', async (req: Request, res: Response, next: NextFunction) => {
       parts.push({
         sql: `SELECT p.user_id, u.username, u.role,
               'purchase' as action_type, CONCAT('ซื้อ: ', COALESCE(pr.name, '(ลบแล้ว)')) as description,
-              p.price as amount, CAST(p.id AS CHAR) as ref_id, p.status as status_extra, p.created_at as ts
+              p.price as amount, CAST(p.id AS CHAR) as ref_id, p.status as status_extra, p.is_test, p.created_at as ts
               FROM purchases p JOIN users u ON p.user_id = u.id LEFT JOIN products pr ON p.product_id = pr.id
               WHERE 1=1 ${roleWhere} ${searchWhere}`,
         params: [...sp],
@@ -140,7 +156,7 @@ router.get('/logs', async (req: Request, res: Response, next: NextFunction) => {
       parts.push({
         sql: `SELECT t.user_id, u.username, u.role,
               'lootbox' as action_type, t.description,
-              ABS(t.amount) as amount, t.reference as ref_id, NULL as status_extra, t.created_at as ts
+              ABS(t.amount) as amount, t.reference as ref_id, NULL as status_extra, t.is_test, t.created_at as ts
               FROM transactions t JOIN users u ON t.user_id = u.id
               WHERE t.type = 'purchase' AND t.status = 'success' AND t.description LIKE 'เปิดกล่อง%' ${roleWhere} ${searchWhere}`,
         params: [...sp],
@@ -150,7 +166,7 @@ router.get('/logs', async (req: Request, res: Response, next: NextFunction) => {
       parts.push({
         sql: `SELECT rl.user_id, u.username, u.role,
               'redeem' as action_type, CONCAT('ใช้โค้ด: ', rc.code) as description,
-              rc.point_amount as amount, rc.code as ref_id, rc.reward_type as status_extra, rl.redeemed_at as ts
+              rc.point_amount as amount, rc.code as ref_id, rc.reward_type as status_extra, 0 as is_test, rl.redeemed_at as ts
               FROM redeem_logs rl JOIN users u ON rl.user_id = u.id JOIN redeem_codes rc ON rl.code_id = rc.id
               WHERE 1=1 ${roleWhere} ${searchWhere}`,
         params: [...sp],
@@ -169,7 +185,7 @@ router.get('/logs', async (req: Request, res: Response, next: NextFunction) => {
         parts.push({
           sql: `SELECT al.user_id, al.username, al.role,
                 al.action_type, al.description,
-                al.amount, al.ref_id, NULL as status_extra, al.created_at as ts
+                al.amount, al.ref_id, NULL as status_extra, 0 as is_test, al.created_at as ts
                 FROM audit_logs al
                 WHERE 1=1 ${auditTypeWhere} ${auditRoleWhere} ${auditSearchWhere}`,
           params: [...sp],
@@ -184,13 +200,22 @@ router.get('/logs', async (req: Request, res: Response, next: NextFunction) => {
     const union     = parts.map(p => p.sql).join(' UNION ALL ');
     const allParams = parts.flatMap(p => p.params);
 
+    // Test-buy scope. Applied to the assembled union rather than to each arm so
+    // one predicate covers them all. This log deliberately KEEPS test rows by
+    // default: it is where the owner confirms a test delivery actually worked.
+    const rawScope  = req.query.scope;
+    const scope     = rawScope === 'real' || rawScope === 'test' ? rawScope : 'all';
+    const scopeWhere = scope === 'real' ? ' WHERE is_test = 0'
+                     : scope === 'test' ? ' WHERE is_test = 1'
+                     : '';
+
     const [countRows] = await pool.execute<RowDataPacket[]>(
-      `SELECT COUNT(*) as total FROM (${union}) as _combined`, allParams
+      `SELECT COUNT(*) as total FROM (${union}) as _combined${scopeWhere}`, allParams
     );
     const total = parseInt((countRows[0] as any).total) || 0;
 
     const [rows] = await pool.execute<RowDataPacket[]>(
-      `SELECT * FROM (${union}) as _combined ORDER BY ts DESC LIMIT ${limit} OFFSET ${offset}`,
+      `SELECT * FROM (${union}) as _combined${scopeWhere} ORDER BY ts DESC LIMIT ${limit} OFFSET ${offset}`,
       allParams
     );
 
@@ -752,7 +777,9 @@ router.get('/purchases', async (req: Request, res: Response, next: NextFunction)
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
-    const data = await shopService.getPurchases(page, limit);
+    const raw = req.query.scope;
+    const scope = raw === 'real' || raw === 'test' ? raw : 'all';
+    const data = await shopService.getPurchases(page, limit, scope);
     res.json({ success: true, ...data });
   } catch (err) { next(err); }
 });

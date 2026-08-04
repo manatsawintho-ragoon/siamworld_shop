@@ -63,6 +63,7 @@ router.post('/buy', authenticate, blockDuringMaintenance, purchaseCooldown(3), v
       req.body.giftToUsername,
       req.body.discountCode,
       req.body.quantity,
+      req.user!.role,
     );
     res.json({ success: true, ...result });
   } catch (err) { next(err); }
@@ -91,7 +92,8 @@ router.post('/lootboxes/:id/open', authenticate, blockDuringMaintenance, purchas
     const result = await lootBoxService.openBox(
       req.user!.userId,
       parseInt(req.params.id),
-      req.body.idempotencyKey
+      req.body.idempotencyKey,
+      req.user!.role,
     );
     res.json({ success: true, ...result });
   } catch (err) { next(err); }

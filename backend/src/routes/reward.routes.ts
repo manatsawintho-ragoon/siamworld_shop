@@ -67,7 +67,7 @@ router.post(
         return;
       }
       const result = await rewardService.redeem(
-        req.user!.userId, rewardId, req.body.idempotencyKey ?? null
+        req.user!.userId, rewardId, req.body.idempotencyKey ?? null, req.user!.role
       );
       res.json({ success: true, ...result });
     } catch (err) { next(err); }

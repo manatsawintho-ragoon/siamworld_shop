@@ -1,14 +1,17 @@
 'use client';
-import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, getToken } from '@/lib/api';
 import { useOnlinePlayers } from '@/hooks/useOnlinePlayers';
+import { TimelineChart, SeriesPoint } from '@/components/admin/charts/TimelineChart';
+import { RangeTabs, RangeId, formatRangeCaption } from '@/components/admin/charts/RangeTabs';
+
+interface SeriesResponse { range: RangeId; from: string; to: string; points: SeriesPoint[] }
 
 interface RankEntry { username: string; total_amount: number; tx_count: number }
 interface ActivityEntry { activity_type: string; username: string; detail: string; amount: number; created_at: string }
 interface TopupEntry { id: number; username: string; amount: number; method: string; description: string; created_at: string }
 interface UserEntry { id: number; username: string; role: string; created_at: string; ip: string | null; regip: string | null }
-interface ChartEntry { month_key: string; month_label: string; new_users: number; topup_amount: number; revenue_amount: number }
 interface LootBoxEntry { name: string; image?: string; open_count: number; total_revenue: number }
 interface TopProductEntry { name: string; image?: string; purchase_count: number; total_revenue: number }
 
@@ -37,9 +40,6 @@ interface Stats {
   recentTransactions: { id: number; username: string; type: string; amount: number; description: string; status: string; created_at: string }[];
   recentTopups: TopupEntry[];
   recentUsers: UserEntry[];
-  monthlyChart: ChartEntry[];
-  dailyChart: ChartEntry[];
-  weeklyChart: ChartEntry[];
   topupRankAlltime: RankEntry[];
   topupRankMonth: RankEntry[];
   topupRankToday: RankEntry[];
@@ -47,133 +47,22 @@ interface Stats {
   comparison: Record<ComparisonKey, CompareMetric>;
 }
 
-/* ─── Mini SVG line chart with tooltip ─── */
-function MiniLineChart({ data, labels }: {
-  data: { users: number[]; topups: number[]; revenue: number[] };
-  labels: string[];
-}) {
-  const W = 700, H = 130, PX = 44, PY = 14;
-  const chartW = W - PX * 2, chartH = H - PY * 2;
-  const LABEL_H = 20;
-  const totalH = H + LABEL_H;
-  const allVals = [...data.users, ...data.topups, ...data.revenue];
-  const maxVal = Math.max(...allVals, 1);
-  const svgRef = useRef<SVGSVGElement>(null);
-  const [tipIdx, setTipIdx] = useState<number | null>(null);
-
-  const toPath = (vals: number[]) => {
-    if (vals.length < 2) return '';
-    return vals.map((v, i) => {
-      const x = PX + (i / (vals.length - 1)) * chartW;
-      const y = PY + chartH - (v / maxVal) * chartH;
-      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(' ');
-  };
-
-  const ptX = (i: number) => PX + (i / Math.max(labels.length - 1, 1)) * chartW;
-  const ptY = (v: number) => PY + chartH - (v / maxVal) * chartH;
-
-  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (!svgRef.current || labels.length === 0) return;
-    const rect = svgRef.current.getBoundingClientRect();
-    const mouseX = ((e.clientX - rect.left) / rect.width) * W;
-    const idx = Math.max(0, Math.min(labels.length - 1, Math.round((mouseX - PX) / chartW * (labels.length - 1))));
-    setTipIdx(idx);
-  };
-
-  const fmt = (n: number) => n > 999 ? `${(n / 1000).toFixed(1)}k` : n.toLocaleString();
-
-  const tip = tipIdx !== null ? {
-    x: ptX(tipIdx),
-    users: data.users[tipIdx] ?? 0,
-    revenue: data.revenue[tipIdx] ?? 0,
-    topups: data.topups[tipIdx] ?? 0,
-    label: labels[tipIdx] ?? '',
-  } : null;
-
-  const TIP_W = 168, TIP_H = 76, TIP_PAD = 10;
-
+/**
+ * Rank badge. Replaces emoji medals: .agents/context/ICONS.md rules emoji out of
+ * the UI, and 🥇 renders differently on every platform (and not at all on some
+ * Linux server fonts). The top three are carried by colour + weight instead.
+ */
+const RankBadge = ({ i }: { i: number }) => {
+  const tone = i === 0 ? 'bg-amber-100 text-amber-700 border-amber-200'
+             : i === 1 ? 'bg-gray-100 text-gray-600 border-gray-200'
+             : i === 2 ? 'bg-orange-100 text-orange-700 border-orange-200'
+             : 'bg-transparent text-gray-400 border-transparent';
   return (
-    <svg
-      ref={svgRef}
-      viewBox={`0 0 ${W} ${totalH}`}
-      className="w-full h-full block"
-      preserveAspectRatio="none"
-      onMouseMove={handleMouseMove}
-      onMouseLeave={() => setTipIdx(null)}
-      style={{ cursor: tipIdx !== null ? 'crosshair' : 'default' }}
-    >
-      {/* Grid lines — 3 only */}
-      {[0, 0.5, 1].map((pct, i) => {
-        const y = PY + chartH - pct * chartH;
-        const val = Math.round(maxVal * pct);
-        return (
-          <g key={i}>
-            <line x1={PX} y1={y} x2={W - PX} y2={y} stroke="#f0f0f0" strokeWidth="1" />
-            <text x={PX - 6} y={y + 3.5} textAnchor="end" fill="#c4c9d4" fontSize="9">{val > 999 ? `${(val / 1000).toFixed(0)}k` : val}</text>
-          </g>
-        );
-      })}
-      {/* X labels */}
-      {labels.map((label, i) => (
-        <text key={i} x={ptX(i)} y={H + 14} textAnchor="middle" fill="#c4c9d4" fontSize="9">{label}</text>
-      ))}
-      {/* Lines */}
-      <path d={toPath(data.users)} fill="none" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d={toPath(data.revenue)} fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d={toPath(data.topups)} fill="none" stroke="#a855f7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      {/* Dots */}
-      {([
-        { vals: data.users, color: '#f97316' },
-        { vals: data.revenue, color: '#3b82f6' },
-        { vals: data.topups, color: '#a855f7' },
-      ] as const).map(({ vals, color }) =>
-        vals.map((v, i) => (
-          <circle key={`${color}-${i}`} cx={ptX(i)} cy={ptY(v)} r="3" fill={color} stroke="white" strokeWidth="1.5" />
-        ))
-      )}
-      {/* Tooltip */}
-      {tip && (() => {
-        const tipX = tip.x + PX > W / 2 ? tip.x - TIP_W - 8 : tip.x + 8;
-        const tipY = PY;
-        return (
-          <g>
-            {/* Vertical guide line */}
-            <line x1={tip.x} y1={PY} x2={tip.x} y2={H} stroke="#e2e8f0" strokeWidth="1" strokeDasharray="3,2" />
-            {/* Highlight dots */}
-            {[
-              { v: tip.users, color: '#f97316' },
-              { v: tip.revenue, color: '#3b82f6' },
-              { v: tip.topups, color: '#a855f7' },
-            ].map(({ v, color }, i) => (
-              <circle key={i} cx={tip.x} cy={ptY(v)} r="5" fill={color} stroke="white" strokeWidth="2" />
-            ))}
-            {/* Box */}
-            <rect x={tipX} y={tipY} width={TIP_W} height={TIP_H} rx="6" fill="white" stroke="#e5e7eb" strokeWidth="1"
-              style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.12))' }} />
-            {/* Header */}
-            <text x={tipX + TIP_PAD} y={tipY + TIP_PAD + 10} fill="#374151" fontSize="10" fontWeight="700">{tip.label}</text>
-            <line x1={tipX + TIP_PAD} y1={tipY + TIP_PAD + 16} x2={tipX + TIP_W - TIP_PAD} y2={tipY + TIP_PAD + 16} stroke="#f3f4f6" strokeWidth="1" />
-            {/* Rows */}
-            {[
-              { color: '#f97316', label: 'สมาชิกใหม่', val: `${tip.users.toLocaleString()} คน` },
-              { color: '#3b82f6', label: 'ยอดขาย Item', val: `${fmt(tip.revenue)} ฿` },
-              { color: '#a855f7', label: 'ยอดเติมเงิน', val: `${fmt(tip.topups)} ฿` },
-            ].map(({ color, label, val }, i) => (
-              <g key={i}>
-                <circle cx={tipX + TIP_PAD + 4} cy={tipY + 36 + i * 14} r="3.5" fill={color} />
-                <text x={tipX + TIP_PAD + 13} y={tipY + 40 + i * 14} fill="#6b7280" fontSize="9.5">{label}</text>
-                <text x={tipX + TIP_W - TIP_PAD} y={tipY + 40 + i * 14} textAnchor="end" fill="#111827" fontSize="9.5" fontWeight="700">{val}</text>
-              </g>
-            ))}
-          </g>
-        );
-      })()}
-    </svg>
+    <span className={`inline-flex h-5 w-5 items-center justify-center rounded-md border text-[10px] font-black tabular-nums ${tone}`}>
+      {i + 1}
+    </span>
   );
-}
-
-const medals = ['🥇', '🥈', '🥉'];
+};
 
 const LiveBadge = ({ lastUpdated }: { lastUpdated: Date | null }) => (
   <div className="flex items-center gap-1.5">
@@ -228,7 +117,12 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const { totalOnline } = useOnlinePlayers();
-  const [chartMode, setChartMode] = useState<'day' | 'week' | 'month'>('month');
+  const [range, setRange] = useState<RangeId>('30d');
+  const [series, setSeries] = useState<SeriesResponse | null>(null);
+  const [seriesLoading, setSeriesLoading] = useState(true);
+  // Ranges already fetched this session. The series is immutable for a past
+  // window, so re-toggling between presets should not re-hit the API.
+  const seriesCache = useRef<Map<RangeId, SeriesResponse>>(new Map());
 
   const fetchStats = useCallback(() => {
     Promise.all([
@@ -247,20 +141,27 @@ export default function AdminDashboard() {
     return () => clearInterval(interval);
   }, [fetchStats]);
 
-  const chartData = useMemo(() => {
-    const chart =
-      chartMode === 'day' ? (stats?.dailyChart || []) :
-      chartMode === 'week' ? (stats?.weeklyChart || []) :
-      (stats?.monthlyChart || []);
-    return {
-      labels: chart.map(c => c.month_label),
-      data: {
-        users: chart.map(c => c.new_users),
-        topups: chart.map(c => c.topup_amount),
-        revenue: chart.map(c => c.revenue_amount),
-      }
-    };
-  }, [stats?.dailyChart, stats?.weeklyChart, stats?.monthlyChart, chartMode]);
+  useEffect(() => {
+    const cached = seriesCache.current.get(range);
+    if (cached) { setSeries(cached); setSeriesLoading(false); return; }
+
+    let cancelled = false;
+    setSeriesLoading(true);
+    api(`/admin/stats/series?range=${range}`, { token: getToken()! })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then(d => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const next = (d as any).series as SeriesResponse;
+        seriesCache.current.set(range, next);
+        // A slow response for a range the user has already navigated away from
+        // must not overwrite the one now on screen.
+        if (!cancelled) setSeries(next);
+      })
+      .catch(() => { if (!cancelled) setSeries(null); })
+      .finally(() => { if (!cancelled) setSeriesLoading(false); });
+
+    return () => { cancelled = true; };
+  }, [range]);
 
   if (loading) return (
     <div className="flex items-center justify-center py-20">
@@ -303,37 +204,16 @@ export default function AdminDashboard() {
               <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
                 <i className="fas fa-chart-line text-orange-500 text-xs"></i>
               </div>
-              <h3 className="font-bold text-gray-900 text-sm truncate">
-                สถิติระบบ ({chartMode === 'day' ? '30 วันล่าสุด' : chartMode === 'week' ? '8 สัปดาห์ล่าสุด' : '12 เดือนล่าสุด'})
-              </h3>
+              <h3 className="font-bold text-gray-900 text-sm truncate">สถิติระบบ</h3>
             </div>
-            <div className="flex bg-gray-100 rounded-lg p-0.5 flex-shrink-0">
-              {([
-                { label: 'รายวัน', mode: 'day' as const },
-                { label: 'สัปดาห์', mode: 'week' as const },
-                { label: 'เดือน', mode: 'month' as const },
-              ]).map(({ label, mode }) => (
-                <button key={mode}
-                  onClick={() => setChartMode(mode)}
-                  className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all ${
-                    chartMode === mode
-                      ? 'bg-white shadow-sm text-[#f97316]'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}>
-                  {label}
-                </button>
-              ))}
-            </div>
+            <RangeTabs value={range} onChange={setRange} disabled={seriesLoading && !series} />
           </div>
-          <div className="flex-1 flex flex-col min-h-0 px-4 pt-2 pb-3">
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <MiniLineChart data={chartData.data} labels={chartData.labels} />
-            </div>
-            <div className="flex-shrink-0 flex justify-center gap-5 pt-2 text-[10px] font-bold">
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#f97316]"></span><span className="text-gray-500">สมาชิกใหม่</span></span>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span><span className="text-gray-500">ยอดขาย Item (฿)</span></span>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-purple-500"></span><span className="text-gray-500">ยอดเติมเงิน (฿)</span></span>
-            </div>
+          <div className="flex-1 flex flex-col min-h-0 px-4 pt-3 pb-3">
+            <TimelineChart
+              points={series?.points ?? []}
+              rangeCaption={series ? formatRangeCaption(series.from, series.to) : ''}
+              loading={seriesLoading && !series}
+            />
           </div>
         </div>
 
@@ -473,7 +353,7 @@ export default function AdminDashboard() {
             {s?.topProducts?.length ? s.topProducts.slice(0, 5).map((p, i) => (
               <div key={i} className="flex items-center gap-2.5 px-4 py-2.5">
                 <div className="w-5 flex-shrink-0 flex items-center justify-center">
-                  {i < 3 ? <span className="text-sm leading-none">{medals[i]}</span> : <span className="text-[10px] font-black text-gray-500">#{i + 1}</span>}
+                  <RankBadge i={i} />
                 </div>
                 <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
                   {p.image
@@ -510,7 +390,7 @@ export default function AdminDashboard() {
             {s?.topLootBoxes?.length ? s.topLootBoxes.slice(0, 5).map((lb, i) => (
               <div key={i} className="flex items-center gap-2.5 px-4 py-2.5">
                 <div className="w-5 flex-shrink-0 flex items-center justify-center">
-                  {i < 3 ? <span className="text-sm leading-none">{medals[i]}</span> : <span className="text-[10px] font-black text-gray-500">#{i + 1}</span>}
+                  <RankBadge i={i} />
                 </div>
                 <div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0 overflow-hidden">
                   {lb.image
@@ -550,7 +430,7 @@ export default function AdminDashboard() {
             {s?.topupRankMonth?.length ? s.topupRankMonth.slice(0, 5).map((r, i) => (
               <div key={i} className="flex items-center gap-2.5 px-4 py-2.5">
                 <div className="w-5 flex-shrink-0 flex items-center justify-center">
-                  {i < 3 ? <span className="text-sm leading-none">{medals[i]}</span> : <span className="text-[10px] font-black text-gray-500">#{i + 1}</span>}
+                  <RankBadge i={i} />
                 </div>
                 <img src={`https://mc-heads.net/avatar/${r.username}/28`} alt="" className="w-8 h-8 rounded-lg flex-shrink-0" style={{ imageRendering: 'pixelated' }} />
                 <div className="flex-1 min-w-0">

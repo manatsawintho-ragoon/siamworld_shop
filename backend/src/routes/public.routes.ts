@@ -177,10 +177,10 @@ router.get('/products/popular', async (_req: Request, res: Response, next: NextF
     const [rows] = await pool.execute(
       `SELECT p.id, p.name, p.description, p.price, p.original_price, p.image, p.image2, p.image3,
               c.name as category_name,
-              COUNT(pu.id) AS sold_count
+              COALESCE(SUM(pu.quantity),0) AS sold_count
        FROM products p
        LEFT JOIN categories c ON p.category_id = c.id
-       LEFT JOIN purchases pu ON pu.product_id = p.id AND pu.status = 'delivered'
+       LEFT JOIN purchases pu ON pu.product_id = p.id AND pu.status = 'delivered' AND pu.is_test = 0
        WHERE p.active = 1
        GROUP BY p.id
        ORDER BY sold_count DESC, p.created_at DESC
@@ -197,7 +197,8 @@ router.get('/products/new-arrivals', async (_req: Request, res: Response, next: 
     const [rows] = await pool.execute(
       `SELECT p.id, p.name, p.description, p.price, p.original_price, p.image, p.image2, p.image3,
               c.name as category_name,
-              (SELECT COUNT(*) FROM purchases pu WHERE pu.product_id = p.id AND pu.status = 'delivered') AS sold_count
+              (SELECT COALESCE(SUM(pu.quantity),0) FROM purchases pu
+                WHERE pu.product_id = p.id AND pu.status = 'delivered' AND pu.is_test = 0) AS sold_count
        FROM products p
        LEFT JOIN categories c ON p.category_id = c.id
        WHERE p.active = 1
@@ -283,7 +284,7 @@ router.get('/recent-purchases', async (_req: Request, res: Response, next: NextF
       FROM purchases p
       JOIN users u ON p.user_id = u.id
       LEFT JOIN products pr ON p.product_id = pr.id
-      WHERE p.status = 'delivered'
+      WHERE p.status = 'delivered' AND p.is_test = 0
       ORDER BY p.created_at DESC
       LIMIT 8
     `);
@@ -322,10 +323,10 @@ router.get('/recent-lootbox', async (req: Request, res: Response, next: NextFunc
     const query = boxId
       ? `SELECT u.username, COALESCE(lb.name, '(ลบแล้ว)') as box_name, wi.item_name, wi.item_image, wi.item_rarity, wi.won_at
          FROM web_inventory wi JOIN users u ON wi.user_id = u.id LEFT JOIN loot_boxes lb ON wi.loot_box_id = lb.id
-         WHERE wi.loot_box_id = ? ORDER BY wi.won_at DESC LIMIT ${limit}`
+         WHERE wi.loot_box_id = ? AND wi.is_test = 0 ORDER BY wi.won_at DESC LIMIT ${limit}`
       : `SELECT u.username, COALESCE(lb.name, '(ลบแล้ว)') as box_name, wi.item_name, wi.item_image, wi.item_rarity, wi.won_at
          FROM web_inventory wi JOIN users u ON wi.user_id = u.id LEFT JOIN loot_boxes lb ON wi.loot_box_id = lb.id
-         ORDER BY wi.won_at DESC LIMIT ${limit}`;
+         WHERE wi.is_test = 0 ORDER BY wi.won_at DESC LIMIT ${limit}`;
     const [rows] = boxId
       ? await pool.execute(query, [boxId])
       : await pool.execute(query);
