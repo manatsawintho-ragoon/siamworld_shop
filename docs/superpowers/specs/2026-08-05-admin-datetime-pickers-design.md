@@ -218,10 +218,10 @@ are NOT swapped: silently inverting them would let a cross-field pair accept the
 reversed window the pair exists to prevent.
 
 Cross-field pairs are wired by passing each other's current value: the end field
-receives `min = startValue`, the start field receives `max = endValue`. Both
-directions are set so the pair cannot be crossed from either side. When the
-companion field is still empty its bound is simply absent rather than
-`new Date('')` - see the `endsAt` row below.
+receives `pairMin = startValue`, the start field receives `pairMax = endValue`.
+Both directions are set so the pair cannot be crossed from either side. When the
+companion field is still empty the bound is simply absent (null), never
+`new Date('')` - see the `endsAt` row in §E.
 
 ## E. Per-field policy
 
@@ -283,13 +283,17 @@ sit inches apart on the same form. `TimeField` therefore performs NO timezone
 conversion - it is a plain `HH:MM` string - and its label reads "(เวลาไทย)"
 so an admin on a non-Bangkok device is not silently misled.
 
-**`news.publishedAt` is unbounded in both directions on purpose.** Past values
-back-date an article, which is ordinary editorial work. Future values are the
-scheduling mechanism: `news.service.ts:273` computes
+**`news.publishedAt` carries no `disablePast` and no `policyMax`, on purpose.**
+Past values back-date an article, which is ordinary editorial work. Future values
+are the scheduling mechanism: `news.service.ts:273` computes
 `isPublished = published_at !== null && published_at.getTime() <= Date.now()`,
-so a future date means "not published yet". Adding `disablePast` here would
-remove back-dating; adding a `max` would remove scheduling. Neither is a
-tidy-up, both are regressions.
+so a future date means "not published yet". Adding `disablePast` would remove
+back-dating; adding a `policyMax` would cap how far ahead a post can be
+scheduled. Neither is a tidy-up, both are regressions.
+
+It does still carry `pairMax = expiresAt`. That is not a limit on scheduling -
+it only requires a post to be published before it expires, which
+`schemas.ts:279` enforces on save either way.
 
 The 1-year ceiling is a guard against a typo turning a สิ้นเดือน sale into a
 2569-vs-2026 mistake, not a product limit. It is a constant in one place so it
