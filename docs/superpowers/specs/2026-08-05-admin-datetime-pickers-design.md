@@ -118,10 +118,15 @@ of any input element. Only the `min={toLocalInput(new Date())}` attribute uses
 
 ```ts
 export interface FieldBounds {
-  min?: Date | null;
-  max?: Date | null;
+  /** From the companion field. Encodes an invariant: never loosened. */
+  pairMin?: Date | null;
+  pairMax?: Date | null;
+  /** Caps this design introduces (the 1-year ceiling). May be extended to
+   *  keep an existing record's stored value reachable. */
+  policyMin?: Date | null;
+  policyMax?: Date | null;
   disablePast?: boolean;
-  /** The value already stored on this record, if editing. */
+  /** The value stored on the record, captured at modal-open. Null when creating. */
   originalValue?: Date | null;
 }
 
@@ -131,13 +136,18 @@ export function resolveBounds(b: FieldBounds, now: Date): { min: Date | null; ma
 Resolution, in full. `min` and `disablePast` are independent and BOTH apply -
 several fields carry both at once, so neither may be dropped:
 
-```
-// floor: the explicit min, and the past-block, are combined - not alternatives
-pastFloor    = disablePast ? earliest(now, originalValue ?? now) : null
-effectiveMin = latest(min, pastFloor)            // ignores nulls
+A bound has two possible sources and they behave differently, so `FieldBounds`
+names them separately: **pair** bounds come from the companion field and encode
+an invariant; **policy** bounds are caps this design introduces.
 
-// ceiling: a stored value is always reachable
-effectiveMax = originalValue ? latest(max, originalValue) : max
+```
+// floor: the explicit min and the past-block are combined - not alternatives
+pastFloor    = disablePast ? earliest(now, originalValue ?? now) : null
+effectiveMin = latest(pairMin, policyMin, pastFloor)
+
+// ceiling: reachability extends the POLICY cap only
+policyCeil   = originalValue ? latest(policyMax, originalValue) : policyMax
+effectiveMax = earliest(pairMax, policyCeil)     // pairMax is never loosened
 ```
 
 `latest`/`earliest` skip null operands and return null only when every operand
@@ -149,12 +159,20 @@ Worked cases:
   `earliest(5 ส.ค., 1 ส.ค.)` = 1 ส.ค. So 1 ส.ค. stays selectable and saveable
   while 25 ก.ค. is greyed out. Editing a live record never traps the owner, and
   no new backdating gets through.
-- `campaigns.endsAt` carries `disablePast: yes` AND `min = startsAt`. For a
+- `campaigns.endsAt` carries `disablePast: yes` AND `pairMin = startsAt`. For a
   campaign starting next month, `effectiveMin` = `latest(startsAt, now)` =
   `startsAt`. Taking only the past-block here would floor it at `now` and let
   the owner end the campaign before it starts - which is precisely what the
   cross-field bound exists to prevent. This is why the two are combined rather
   than branched.
+- **Reachability must not touch a pair bound.** Editing a campaign scheduled
+  1 ก.ย. - 30 ก.ย. and pulling `endsAt` back to 5 ส.ค.: if reachability applied
+  to `pairMax`, `startsAt`'s ceiling would become `latest(5 ส.ค., 1 ก.ย.)` =
+  1 ก.ย., and the owner could save start 1 ก.ย. with end 5 ส.ค. The backend
+  would still reject it (`schemas.ts:358`), but preventing that round trip is
+  the entire point of the picker. Reachability exists so a newly-introduced cap
+  cannot strand an existing record; a pair bound encodes an invariant and stays
+  hard.
 
 **`originalValue` MUST be the value stored on the record, captured once when the
 modal opens - never the live form state.** Every one of these pages holds a
@@ -360,6 +378,8 @@ chart's `scale.ts`:
   not silently invert); cross-field pairs from both directions; clamping; an
   empty companion field falling back to `now` rather than `new Date('')`;
   a stored value beyond `max` (the multi-year sale case) staying reachable.
+- Reachability extends `policyMax` but never `pairMax`: the scheduled-campaign
+  case above must NOT allow start after end.
 - `min` and `disablePast` together: a field with both floors at the LATER of
   the two, never at `now` alone (the `campaigns.endsAt` case).
 - Boundary-day clamping: with `min` at 14:00 today, 09:00 today is rejected and
